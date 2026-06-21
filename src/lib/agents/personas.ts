@@ -1,0 +1,73 @@
+import { Persona } from "@/types";
+
+export const personas: Persona[] = [
+  {
+    id: "bull",
+    name: "Bull",
+    emoji: "🐂",
+    role: "多头主力",
+    personality: "乐观激进，看多做多倾向于忽视风险信号，坚信市场上涨趋势。对利好消息极度敏感，对利空消息选择性忽视。",
+    initialBias: 60,
+    color: "#22c55e",
+    riskTolerance: "high",
+    decisionStyle: "momentum",
+    keywords: ["突破", "新高", "牛市", "增长", "利好", "反弹", "强势"],
+    catchphrase: "趋势是朋友，永远不要与市场作对！",
+  },
+  {
+    id: "bear",
+    name: "Bear",
+    emoji: "🐻",
+    role: "空头主力",
+    personality: "悲观激进，看跌做空倾向于放大利空因素，警惕市场回调风险。对风险信号极度敏感，对利好消息持怀疑态度。",
+    initialBias: -60,
+    color: "#ef4444",
+    riskTolerance: "low",
+    decisionStyle: "contrarian",
+    keywords: ["泡沫", "风险", "回调", "崩盘", "利空", "下跌", "危机"],
+    catchphrase: "在别人贪婪时恐惧，市场终将回归理性！",
+  },
+  {
+    id: "neutral",
+    name: "Neutral",
+    emoji: "⚖️",
+    role: "理性中立",
+    personality: "价值投资派，基于基本面分析决策，不受情绪左右。关注企业内在价值、财务健康和长期增长潜力。",
+    initialBias: 0,
+    color: "#a855f7",
+    riskTolerance: "medium",
+    decisionStyle: "fundamental",
+    keywords: ["估值", "基本面", "盈利", "现金流", "ROE", "护城河", "价值"],
+    catchphrase: "价格是你付出的，价值是你得到的。",
+  },
+  {
+    id: "tech",
+    name: "Tech",
+    emoji: "📊",
+    role: "技术分析",
+    personality: "图表派，趋势跟随，关注量价关系和均线系统。相信历史会重演，价格反映一切信息。",
+    initialBias: 20,
+    color: "#3b82f6",
+    riskTolerance: "medium",
+    decisionStyle: "technical",
+    keywords: ["均线", "支撑", "阻力", "突破", "成交量", "MACD", "RSI", "形态"],
+    catchphrase: "图表不会说谎，价格反映一切！",
+  },
+  {
+    id: "macro",
+    name: "Macro",
+    emoji: "🌍",
+    role: "宏观策略",
+    personality: "关注货币政策、地缘政治和全球宏观趋势，从大局着眼。相信宏观环境决定资产价格走势。",
+    initialBias: 10,
+    color: "#f59e0b",
+    riskTolerance: "medium",
+    decisionStyle: "macro",
+    keywords: ["利率", "通胀", "GDP", "央行", "地缘", "贸易", "政策", "周期"],
+    catchphrase: "不要与美联储作对，宏观决定一切！",
+  },
+];
+
+export function getPersonaById(id: string): Persona | undefined {
+  return personas.find((p) => p.id === id);
+}
