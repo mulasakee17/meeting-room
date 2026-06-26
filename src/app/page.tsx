@@ -57,6 +57,28 @@ interface V9_5Data {
     direction: string;
     beliefStd: number;
   }> | null;
+  /** 🆕 v9.5.2: 动态权重调整 */
+  dynamicWeights?: {
+    enabled: boolean;
+    activeModes: string[];
+    modeDetails: {
+      panic: { triggered: boolean; reasons: string[] };
+      policy: { triggered: boolean; reasons: string[] };
+      value: { triggered: boolean; reasons: string[] };
+    };
+    adjustments: Record<string, {
+      agentId: string;
+      agentName: string;
+      emoji: string;
+      baseWeight: number;
+      multiplier: number;
+      finalWeight: number;
+      contributingModes: string[];
+      reason: string;
+    }>;
+    /** 动态权重下的共识值 (与静态共识对比) */
+    dynamicConsensus?: number;
+  };
 }
 
 interface V9_5AgentInfo {
@@ -324,6 +346,7 @@ export default function Home() {
                   finalConsensus={v9Final?.consensus}
                   finalDirection={v9Final?.direction}
                   timeline={timelineData ?? v9_5.timeline ?? undefined}
+                  dynamicWeights={v9_5.dynamicWeights}
                 />
               </div>
             )}

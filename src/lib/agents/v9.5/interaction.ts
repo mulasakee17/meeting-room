@@ -103,13 +103,17 @@ export function buildSocialProfiles(
  * 计算 Agent i 能看到的其他 Agent 的加权平均信念
  *
  * b̄_visible_i = Σ_{j ∈ visible_i} (b_j × w_j × conf_j) / Σ_{j ∈ visible_i} (w_j × conf_j)
+ *
+ * @param dynamicWeights — 🆕 v9.5.2: 可选的动态权重覆盖。如果提供, 用 dynamicWeights[peerId]
+ *                         替代 peerAgent.influenceWeight, 实现场景自适应的社交影响力。
  */
 function computePeerAverage(
   agentId: string,
   beliefs: Record<string, number>,
   profile: SocialProfile,
   agents: V9AgentDefinition[],
-  states: Record<string, V9AgentState>
+  states: Record<string, V9AgentState>,
+  dynamicWeights?: Record<string, number>
 ): number {
   let weightedSum = 0;
   let totalWeight = 0;
@@ -122,7 +126,9 @@ function computePeerAverage(
     const peerState = states[peerId];
     const peerConf = peerState?.confidence ?? 50;
 
-    const weight = peerAgent.influenceWeight * (peerConf / 100);
+    // 🆕 v9.5.2: 优先使用动态权重 (场景自适应), fallback 到静态基础权重
+    const influenceWeight = dynamicWeights?.[peerId] ?? peerAgent.influenceWeight;
+    const weight = influenceWeight * (peerConf / 100);
 
     weightedSum += peerBelief * weight;
     totalWeight += weight;
@@ -141,7 +147,8 @@ function updateBeliefs(
   currentBeliefs: Record<string, number>,
   profiles: SocialProfile[],
   agents: V9AgentDefinition[],
-  states: Record<string, V9AgentState>
+  states: Record<string, V9AgentState>,
+  dynamicWeights?: Record<string, number>
 ): { newBeliefs: Record<string, number>; changes: Record<string, number> } {
   const newBeliefs: Record<string, number> = {};
   const changes: Record<string, number> = {};
@@ -153,7 +160,8 @@ function updateBeliefs(
       currentBeliefs,
       profile,
       agents,
-      states
+      states,
+      dynamicWeights
     );
 
     // 边界软化: |belief| > 80 时有效 α 衰减 50%
@@ -235,6 +243,9 @@ function computeMean(values: number[]): number {
  * @param agents — v9 Agent 定义
  * @param states — v9 计算的初始 Agent 状态 (互动前)
  * @param options — 可选配置
+ * @param options.maxRounds — 最大互动轮次
+ * @param options.disabled — 禁用互动 → 直接返回初始状态
+ * @param options.dynamicWeights — 🆕 v9.5.2: 动态权重覆盖, 用于场景自适应的社交影响力
  * @returns 完整的互动结果
  */
 export function runInteraction(
@@ -244,6 +255,8 @@ export function runInteraction(
     maxRounds?: number;
     /** 禁用互动 → 直接返回初始状态 */
     disabled?: boolean;
+    /** 🆕 v9.5.2: 动态权重覆盖 (agentId → adjustedWeight) */
+    dynamicWeights?: Record<string, number>;
   }
 ): InteractionResult {
   // ── 构建社交可见性矩阵 ──
@@ -297,7 +310,8 @@ export function runInteraction(
       currentBeliefs,
       profiles,
       agents,
-      states
+      states,
+      options?.dynamicWeights
     );
 
     const values = Object.values(newBeliefs);

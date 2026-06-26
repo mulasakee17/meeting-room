@@ -215,6 +215,9 @@ export async function runSwarmV9(
       disableBlindness: config.ablation?.disableBlindness,
       previousStates,
       hysteresisFactor: 0.2,
+      // 🆕 v9.6: 传入客观市场数据 → 均值回归信号
+      marketData: { rsi: config.marketData.rsi, vix: config.marketData.vix },
+      disableMeanReversion: (config as any).disableMeanReversion === true,
     });
 
     previousStates = states;
@@ -285,6 +288,8 @@ export async function runSwarmV9(
           disableRule2_3: !useNeutralR2_3,
           disableRule4: !useNeutralR4,
         },
+        // 🆕 v9.5.2: 可配置方向阈值 (模板=-5, LLM=15)
+        directionThreshold: (config as any).directionThreshold,
       }
     );
 

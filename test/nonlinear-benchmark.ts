@@ -12,7 +12,7 @@
  * 运行: npx tsx test/nonlinear-benchmark.ts
  */
 
-import { EXPANDED_EVENTS, CuratedEvent } from "./expanded-events";
+import { EVENTS, UnifiedEvent } from "./events";
 import { runSwarmV8 } from "../src/lib/agents/v8/simulation";
 import { V6_PERSONAS } from "../src/lib/agents/v6/personas";
 import {
@@ -119,7 +119,7 @@ interface BenchmarkResult {
 
 // ==================== 辅助函数 ====================
 
-function buildBriefs(event: CuratedEvent): V6AgentBrief[] {
+function buildBriefs(event: UnifiedEvent): V6AgentBrief[] {
   return V6_PERSONAS.map((p) => {
     let direction: "bullish" | "bearish" | "neutral";
     let strength: number;
@@ -215,7 +215,7 @@ function getDirection(consensus: number): "up" | "down" | "neutral" {
  * 同时计算近似的 Kuramoto 序参量 r（基于 Agent 信念的相位一致性），
  * 用于驱动动态聚类和 Beta 漂移校准。
  */
-function runSingleEvent(event: CuratedEvent): Map<string, number[]> {
+function runSingleEvent(event: UnifiedEvent): Map<string, number[]> {
   const briefs = buildBriefs(event);
   let states = initStates(briefs);
   const informationSignals = extractInformationSignals(briefs);
@@ -296,7 +296,7 @@ async function main() {
   console.log("=".repeat(80));
   console.log("SwarmAlpha v8.0 — 非线性共识基准测试");
   console.log("=".repeat(80));
-  console.log(`事件总数: ${EXPANDED_EVENTS.length}`);
+  console.log(`事件总数: ${EVENTS.length}`);
   console.log(`测试方法: ${TEST_METHODS.map((m) => METHOD_LABELS[m as TestMethod]).join(", ")}`);
   console.log("");
 
@@ -330,7 +330,7 @@ async function main() {
     predictions: Record<string, { consensus: number; direction: string; correct: boolean }>;
   }> = [];
 
-  for (const event of EXPANDED_EVENTS) {
+  for (const event of EVENTS) {
     eventIndex++;
     const methodConsensuses = runSingleEvent(event);
 
@@ -400,7 +400,7 @@ async function main() {
       const bestR = resultMap.get(bestMethod)!;
 
       console.log(
-        `[${eventIndex}/${EXPANDED_EVENTS.length}] ` +
+        `[${eventIndex}/${EVENTS.length}] ` +
         `线性=${(linearR.correct / linearR.total * 100).toFixed(1)}% ` +
         `最佳: ${METHOD_LABELS[bestMethod]}=${(bestR.correct / bestR.total * 100).toFixed(1)}%`
       );
@@ -453,8 +453,8 @@ async function main() {
 
   // 基线对比
   const linearResult = resultMap.get("linear")!;
-  const alwaysUpAccuracy = (EXPANDED_EVENTS.filter((e) => e.actual === "up").length / EXPANDED_EVENTS.length) * 100;
-  const alwaysDownAccuracy = (EXPANDED_EVENTS.filter((e) => e.actual === "down").length / EXPANDED_EVENTS.length) * 100;
+  const alwaysUpAccuracy = (EVENTS.filter((e) => e.actual === "up").length / EVENTS.length) * 100;
+  const alwaysDownAccuracy = (EVENTS.filter((e) => e.actual === "down").length / EVENTS.length) * 100;
 
   console.log("");
   console.log("基线对比:");
@@ -481,9 +481,9 @@ async function main() {
   }
 
   // 方向分布
-  const upEvents = EXPANDED_EVENTS.filter((e) => e.actual === "up").length;
-  const downEvents = EXPANDED_EVENTS.filter((e) => e.actual === "down").length;
-  const neutralEvents = EXPANDED_EVENTS.filter((e) => e.actual === "neutral").length;
+  const upEvents = EVENTS.filter((e) => e.actual === "up").length;
+  const downEvents = EVENTS.filter((e) => e.actual === "down").length;
+  const neutralEvents = EVENTS.filter((e) => e.actual === "neutral").length;
   console.log("");
   console.log(`事件分布: Up=${upEvents} Down=${downEvents} Neutral=${neutralEvents}`);
 

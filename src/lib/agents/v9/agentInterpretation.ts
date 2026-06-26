@@ -1,5 +1,5 @@
 /**
- * Agent 因子解释层 — v9.1 五因子正交体系
+ * Agent 因子解释层 — v9.6 五因子正交体系 + 均值回归感知
  *
  * 每个 Agent 只能看到其权限内的方向因子 (强制信息盲区)。
  * uncertainty 因子始终可见 — 作为元因子调节置信度而非信念方向。
@@ -8,7 +8,13 @@
  * 核心公式:
  *   rawBelief = Σ(directionalFactor.value × weight × confidence/100) / Σ(|weight| × confidence/100)
  *   belief = applyInterpretationStyle(rawBelief)
+ *   belief = applyMeanReversion(belief, rsi, vix, agentId, style)  🆕 v9.6
  *   confidence = baseConfidence × (1 - uncertainty × sensitivity)
+ *
+ * v9.6 均值回归感知:
+ *   RSI < 20 + VIX > 40 → 极端超卖, 历史上 70%+ 概率短期反弹
+ *   不依赖 LLM 因子 — 纯基于客观市场数据的统计信号
+ *   按 Agent 类型分配不同的响应强度 (Contrarian 最激进, Panic 几乎不动)
  */
 
 import {
@@ -18,6 +24,108 @@ import {
   FactorCategory,
 } from "./types";
 import { META_FACTORS } from "./agentDefinitions";
+
+// ==================== 🆕 v9.6 双层市场感知修正 ====================
+//
+//   层级1: 统计均值回归 (VIX/RSI 客观数据)
+//   层级2: Pattern-Aware 智能体级信念修正 (LLM 模式识别)
+//
+//   两层合并在 applyMarketAwareness() 中统一执行.
+
+/**
+ * 基于 VIX/RSI 计算统计均值回归信号强度 (0~1)
+ */
+function computeMeanReversionSignal(rsi: number, vix: number): number {
+  if (rsi < 20 && vix > 40) return 1.0;
+  if (rsi < 25 && vix > 35) return 0.6;
+  if (rsi < 30 && vix > 30) return 0.3;
+  return 0;
+}
+
+/** Agent 对统计均值回归信号的响应强度 */
+const MR_AGENT_MULTIPLIER: Record<string, number> = {
+  contrarian: 2.0, value: 1.5, institution: 1.2, quant: 0.6,
+  policy: 0.4, media: 0.3, trend: 0.2, retail: 0.2, panic: 0.1,
+};
+
+/**
+ * 🆕 v9.6 统一市场感知修正
+ *
+ * 两层修正:
+ *   1. 统计均值回归: mrSignal × multiplier × patternBoost × 75 (仅对负信念)
+ *   2. Pattern-Aware: LLM 识别的事件模式 → Agent 级精细化信念调整
+ *
+ * 两层按顺序执行。Pattern-Aware 层在统计修正之后运行,
+ * 因此 MECHANICAL_SELLOFF 的 ×0.2+15 作用于已修正的信念。
+ */
+function applyMarketAwareness(
+  belief: number,
+  rsi: number | undefined,
+  vix: number | undefined,
+  agentId: string,
+  interpretationStyle: string,
+  marketPattern?: string
+): number {
+  let corrected = belief;
+
+  // ═══════════════════════════════════════════
+  // 层级 1: 统计均值回归 (VIX/RSI 客观信号)
+  // ═══════════════════════════════════════════
+  if (rsi !== undefined && vix !== undefined) {
+    const mrSignal = computeMeanReversionSignal(rsi, vix);
+    if (mrSignal > 0 && corrected < 0) {
+      // MECHANICAL_SELLOFF 模式下增强统计信号
+      const patternBoost = marketPattern === "MECHANICAL_SELLOFF" ? 2.0 : 1.0;
+      const multiplier = MR_AGENT_MULTIPLIER[agentId] ?? 0.5;
+      const shift = mrSignal * multiplier * patternBoost * 50;
+      corrected = Math.max(-100, Math.min(100, corrected + shift));
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // 层级 2: Pattern-Aware 智能体级修正
+  // ═══════════════════════════════════════════
+  const orig = corrected;
+
+  if (marketPattern === "MECHANICAL_SELLOFF") {
+    // 机械性抛售（闪崩/程序化踩踏）→ ~90% 概率快速反弹
+    if (agentId === "value" || agentId === "contrarian") {
+      corrected = corrected * 0.2 + 15;  // 极度看空 → 微看多
+    } else if (agentId === "panic") {
+      corrected = corrected * 0.3;        // 压缩恐慌
+    }
+    // 其他 Agent: 不做修改
+
+  } else if (marketPattern === "SOLVENCY_CRISIS") {
+    // 偿付危机 → 极度危险, 只放大空头, 不碰多头
+    if (corrected < 0) {
+      corrected = corrected * 1.15;       // 增强看空信心
+    }
+    // 多头保持不变 (偿付危机中抄底信号不可靠)
+
+  } else if (marketPattern === "NARRATIVE_DRIVEN") {
+    // 叙事驱动 → 故事容易过度延伸, 倾向均值回归
+    if (agentId === "contrarian") {
+      corrected = -corrected * 0.5;       // 逆势反向
+    } else if (agentId === "media") {
+      corrected = corrected * 0.3;        // 媒体噪声降权
+    }
+
+  } else if (marketPattern === "EXTERNAL_SHOCK" || !marketPattern) {
+    // 外部冲击或未知 → 保守处理, 降低抄底冲动
+    if (agentId === "value") {
+      corrected = corrected * 0.7;
+    }
+    // 其他 Agent: 不做修改
+  }
+
+  // 钳制 + 日志
+  const clamped = Math.max(-100, Math.min(100, corrected));
+  if (Math.abs(clamped - orig) > 1) {
+    console.log(`[MarketAware] ${marketPattern ?? "NONE"} ${agentId}: ${orig.toFixed(0)}→${clamped.toFixed(0)}`);
+  }
+  return clamped;
+}
 
 // ==================== 因子过滤 ====================
 
@@ -50,7 +158,8 @@ export function filterVisibleFactors(
  */
 export function computeAgentBelief(
   visibleFactors: ExtractedFactor[],
-  agent: V9AgentDefinition
+  agent: V9AgentDefinition,
+  marketData?: { rsi?: number; vix?: number; enableMeanReversion?: boolean; marketPattern?: string }
 ): { belief: number; confidence: number; interpretation: string } {
   // 分离方向因子和元因子
   const directionalFactors = visibleFactors.filter(f => !META_FACTORS.includes(f.category));
@@ -74,7 +183,18 @@ export function computeAgentBelief(
   const rawBelief = totalWeight > 0 ? weightedSum / totalWeight : 0;
 
   // ── 解释风格的非线性变换 ──
-  const belief = applyInterpretationStyle(rawBelief, agent.permissions.interpretationStyle);
+  let belief = applyInterpretationStyle(rawBelief, agent.permissions.interpretationStyle);
+
+  // ── 🆕 v9.6: 均值回归修正 (客观市场数据, 非 LLM 因子) ──
+  if (marketData?.enableMeanReversion !== false) {
+    const corrected = applyMarketAwareness(
+      belief, marketData?.rsi, marketData?.vix, agent.id, agent.permissions.interpretationStyle,
+      marketData?.marketPattern
+    );
+    if (corrected !== belief) {
+      belief = corrected;
+    }
+  }
 
   // ── 置信度 ──
   // 基础: 方向因子平均置信度
@@ -202,6 +322,10 @@ export function computeAllAgentStates(
     disableBlindness?: boolean;
     previousStates?: Record<string, V9AgentState>;
     hysteresisFactor?: number;
+    /** 🆕 v9.6: 客观市场数据 (用于均值回归信号) */
+    marketData?: { rsi: number; vix: number };
+    /** 🆕 v9.6: 禁用均值回归 (消融实验用, 默认启用) */
+    disableMeanReversion?: boolean;
   } = {}
 ): {
   states: Record<string, V9AgentState>;
@@ -211,7 +335,12 @@ export function computeAllAgentStates(
 
   for (const agent of agents) {
     const visible = filterVisibleFactors(factorVector.factors, agent, config.disableBlindness);
-    const { belief, confidence, interpretation } = computeAgentBelief(visible, agent);
+    const { belief, confidence, interpretation } = computeAgentBelief(visible, agent, {
+      rsi: config.marketData?.rsi,
+      vix: config.marketData?.vix,
+      enableMeanReversion: !config.disableMeanReversion,
+      marketPattern: (factorVector as any).metadata?.marketPattern,
+    });
 
     // 可选的磁滞 (弱证据守卫)
     let finalBelief = belief;

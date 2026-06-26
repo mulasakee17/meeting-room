@@ -11,10 +11,12 @@
 [![Lines of Code](https://img.shields.io/badge/Code-14,000_lines-orange)]()
 [![Accuracy](https://img.shields.io/badge/模板-50%25_60事件_v9.2_Hybrid-brightgreen)]()
 [![Best](https://img.shields.io/badge/最佳_LLM-51.7%25_60事件_仅Rule1_Down_100%25-success)]()
-[![Version](https://img.shields.io/badge/version-9.3-purple)]()
-[![V9.2](https://img.shields.io/badge/V9.2_Hybrid-非对称门控_+10pp_总准确_Up_22%25→50%25-green)]()
+[![Version](https://img.shields.io/badge/version-9.6-purple)]()
+[![LLM](https://img.shields.io/badge/LLM-52.2%25_203事件_Up53%25_Down81%25-brightgreen)]()
+[![Events](https://img.shields.io/badge/事件库-203_1970--2025-orange)]()
+[![V9.6](https://img.shields.io/badge/V9.6_MarketAware-双层感知_模式识别_均值回归-orange)]()
+[![V9.5](https://img.shields.io/badge/V9.5-社交互动层_+_共识度量-blue)]()
 [![V9.3](https://img.shields.io/badge/V9.3_Neutral-四规则引擎_beliefStd_LLM_58.5-blue)]()
-[![LLM](https://img.shields.io/badge/LLM模式-仅Rule1_51.7%25_Down_100%25-orange)]()
 [![Eval](https://img.shields.io/badge/评估-PROJECT__EVALUATION.md-orange)]()
 
 ---
@@ -36,9 +38,9 @@
 
 ## 🎯 这是什么？
 
-输入一条金融新闻，**8 个拥有不同决策框架和资本权重的 AI Agent** 进行涌现式市场共识推演——机构投资者、价值投资者、趋势交易者、恐慌投资者、量化基金、媒体叙事者、逆向投资者、散户——不是简单投票，而是通过影响力网络、信念扩散、资金流模拟形成市场共识。
+输入一条金融新闻，**9 个拥有不同决策框架和资本权重的 AI Agent** 进行涌现式市场共识推演——机构投资者、价值投资者、趋势交易者、恐慌投资者、量化基金、媒体叙事者、逆向投资者、散户、政策响应分析师——不是简单投票，而是通过影响力网络、信念扩散、资金流模拟形成市场共识。
 
-**v9.3 现状**：经过 11 个大版本的假设驱动演化，系统已从简单的"5 Agent LLM 投票"升级为**正交五因子 × 强制信息盲区 × 非对称门控共识 × 四规则 Neutral 检测**的 Agent-Based Market Simulation 平台。LLM 不再被要求判断涨跌——只提取 5 个严格正交因子（Liquidity/Policy/Fundamental/Narrative/Uncertainty），各 Agent 通过强制盲区产生真正的视角差异（LLM belief_std=58.5, 模板=37.6）。v9.2-Hybrid 模板模式 50.0%（Up +28pp），v9.3 仅Rule1 LLM 模式 51.7%（**Down 100%**），永远猜涨基线 60%。**不是预测工具，是 Agent-Based Market Simulation 实验平台。**
+**v9.6 现状**：经过 14 个大版本的假设驱动演化，系统已升级为**正交五因子 × 强制信息盲区 × 非对称门控 × 四规则 Neutral × Agent 社交互动 × 共识度量 × 动态权重 × 🆕 Market Awareness 双层感知**的 ABMS 平台。LLM 不仅提取 5 个正交因子——还识别事件模式（机械抛售/偿付危机/外部冲击/叙事驱动），结合 VIX/RSI 统计信号，在 Agent 级别执行精细化信念修正。203 事件 LLM 全量 52.2%（Up 53%, Down 81%），首次在**不依赖外部路由覆盖**的情况下接近永远猜涨基线。
 
 [📋 完整项目评估](PROJECT_EVALUATION.md) — 7版本演化、13项实验发现、理论上限、诚实判定
 
@@ -63,7 +65,7 @@
   涌现: PANIC_SELLING + CONTRARIAN_SURGE
 ```
 - 旧版 5 Agent 投票 → 共识 -56（严重偏空，被空头联盟绑架）
-- **v6.0 8 Agent 涌现 → 共识 -8**（机构+价值+逆向+量化 245影响力 制衡 空头140影响力）
+- **v9.5.2 9 Agent + 动态权重 → 共识 -5**（PolicyAgent 制衡 + 恐慌模式下权重自适应调整）
 
 **灵感来源：索罗斯的反思性理论（Reflexivity）**——市场参与者的认知会反过来影响市场本身。这个项目试图用 AI Agent 来模拟这个反馈循环。
 
@@ -353,6 +355,85 @@ LLM vs 模板模式差异:
   Neutral Recall     0%                57% (Full模式)
 ```
 
+### v9.5 社交互动层 + 共识度量 + v9.5.2 动态权重 (🆕 群体智慧层)
+
+在 v9.3 正交五因子引擎之上叠加三个纯增量模块（零 LLM 调用，零 v9.3 代码修改）：
+
+**v9.5 社交互动层** — Agent 观察彼此观点后更新信念：
+- 核心公式：`b_i_new = (1-α_i) × b_i_old + α_i × peer_avg_visible`
+- 可见性约束：Agent 只能看到有因子重叠的其他 Agent（天然信息茧房）
+- 收敛检测：信念变化 < 2 → 收敛，连续 3 轮 std 增长 → 发散
+- 8+1 社交开放度预设：Panic(0.70) 最易受影响，Value(0.05) 最独立，Contrarian(-0.15) 逆向
+
+**v9.5 共识度量** — 三个新指标重新定义系统输出：
+- Consensus Score (0-100)：Kuramoto 相位同步度 + 共识强度 + 一致性
+- Polarization Score (0-100)：阵营极端性 + 双峰性
+- Fragility Score (0-100)：集中度风险 + 翻转风险 + 盲区风险
+- 6 种状态标签：稳健共识 / 脆弱共识 / 两极对抗 / 认知迷雾 / 健康分歧 / 模糊共识
+
+**🆕 v9.5.2 动态权重引擎** — 场景自适应影响力调整：
+- 恐慌模式（VIX>35 / std>50 / Panic<-70）：Panic×1.40, Institution×1.15, Retail×0.70
+- 政策模式（Policy因子>70 / PolicyAgent>60）：PolicyAgent×1.40, Institution×1.15, Trend×0.80
+- 价值洼地（Fundamental<-50 ∧ Uncertainty>70）：Value×1.50, Contrarian×1.30, Trend×0.60
+- 乘法合成 + [0.3, 3.0] 钳制，Quant/Media 保持静态稳定器
+- UI 实时展示模式触发状态 + 权重调整对比 + 动态共识 vs 静态共识
+
+```
+指标               v9.3 (纯因子)      v9.5+v9.5.2 (互动+动态权重)
+Agent 数量          8                  9 (含 PolicyAgent)
+共识计算            线性+KMeans         线性+KMeans + 社交互动修正 + 动态权重
+共识质量            单一 consensus      共识/极化/脆弱性 三维指标
+市场适应            静态权重            恐慌/政策/价值 三模式自适应
+LLM 调用            1 次 (因子提取)     1 次 (因子提取, 其余全数学)
+```
+
+### 🆕 v9.5.2 V 型反弹路由仲裁 — 组合分类器 + LLM 共识
+
+**问题**: LLM 因子偏空导致 V 型反弹事件系统性误判（Up 仅 32%），但 Down 完美（100%）。
+**方案**: 在 API 层实现轻量仲裁——事件分类器 V2 检测到高置信 V_REBOUND 时覆盖为 UP。
+
+```
+路由逻辑:
+  classifyEvent(marketData) → V_REBOUND ∧ vScore > lScore × 3 ?
+    ├─ YES → UP (分类器 100% V弹 recall, 高置信双确认)
+    └─ NO  → 信任 LLM 共识 (保护 Down 100% 准确率)
+```
+
+**78 事件 LLM 模式实测**:
+
+| | 总准确率 | Up | Down | 超越永远猜涨 |
+|------|---------|-----|------|-------------|
+| LLM 基线 (threshold=+5) | 48.7% | 32% | **100%** | ❌ |
+| **+ 路由仲裁** | **66.7%** | **77%** | 75% | ✅ +10.3pp |
+| 永远猜涨基线 | 56.4% | 100% | 0% | — |
+
+> 🔑 路由仲裁触发 35/78 次（45%），净收益 +14 个正确预测。**首次在 LLM 模式 78 事件上超越永远猜涨基线。**
+
+### 🆕 v9.6 Market Awareness — 双层感知修正 (根级别)
+
+**问题**: LLM 因子 + 共识引擎在 UP 事件上系统性偏空。78→203 事件扩展后 Up 仍仅 34-48%。
+**方案**: 合并两层修正——Layer 1 统计均值回归(VIX/RSI) + Layer 2 Pattern-Aware 智能体级信念修正(LLM 模式识别)。
+
+```
+Layer 1: VIX/RSI 统计信号 → 均值回归 shift (仅对负信念)
+Layer 2: LLM 模式识别 → Agent 级精细化修正:
+  MECHANICAL_SELLOFF → Value/Contrarian: ×0.2+15, Panic: ×0.3
+  SOLVENCY_CRISIS    → 仅放大空头: ×1.15 (不碰多头)
+  NARRATIVE_DRIVEN   → Contrarian: -belief×0.5, Media: ×0.3
+  EXTERNAL_SHOCK     → Value: ×0.7 (降低抄底冲动)
+```
+
+**203 事件 LLM 全量演进**:
+
+| | Total | Up | Down |
+|------|------|-----|------|
+| LLM 旧 prompt | 45.3% | 42% | 80% |
+| + 新 prompt + Pattern | 48.8% | 48% | 80% |
+| **+ Market Awareness** | **52.2%** | **53%** | **81%** |
+| 永远猜涨基线 | 57.6% | — | — |
+
+> 🔑 从旧 prompt 到 Market Awareness：**+6.9pp 总准确率，+11pp Up，Down 始终 80%+**。首次在**不依赖外部路由覆盖**的情况下将 Up 提升至 53%。Pattern 层日志实时可见，每个 Agent 的修正可审计。
+
 ### v6.0 涌现式共识 (主干，0次LLM)
 
 ---
@@ -546,6 +627,8 @@ LLM vs 模板模式差异:
 | **v9.1 正交五因子** | 60 | **38.3% (LLM)** | 60 | **belief_std 57.9**, 盲区40点振幅, 真异质性验证 |
 | **v9.2 Hybrid门控** | 60 | **50.0% (模板)** | 0 | Up 22%→50%(+28pp), 非对称门控+模板上下文感知升级 |
 | **v9.3 Neutral引擎** | 60 | **51.7% (LLM,仅Rule1)** | 60 | 四规则引擎, LLM belief_std 58.5, Down 100%, R2∧3 首次激活 |
+| **🆕 v9.5.2 路由仲裁** | 78 | **66.7% (LLM)** | 78 | 外部覆盖: classifyEvent V弹→UP |
+| **🆕 v9.6 Market Awareness** | **203** | **52.2% (LLM)** | 203 | 根级修复: Prompt+Pattern+MR双层感知, Up 42→53%(+11pp), 203事件全量 |
 
 ### 64.3% 意味着什么（v4.1 诚实自评）
 
@@ -678,7 +761,14 @@ swarmalpha/
 │   │   │   │   ├── agentDefinitions.ts # 8+1 Agent盲区映射 (56%方向因子无重叠)
 │   │   │   │   ├── agentInterpretation.ts # Agent因子解释层 + 不确定性灵敏度
 │   │   │   │   ├── uncertaintyEngine.ts  # 共识质量双引擎 (因子层+行为层)
+│   │   │   │   ├── diagnostics.ts    # 群体行为诊断 (归因/联盟/反事实)
 │   │   │   │   ├── simulation.ts      # v9主循环: 因子提取→Agent解释→决策
+│   │   │   │   └── index.ts
+│   │   │   ├── v9.5/           # 🆕 v9.5 社交互动 + 共识度量 + 动态权重 (5文件)
+│   │   │   │   ├── types.ts           # v9.5 类型: SocialProfile, InteractionResult, ConsensusMetrics
+│   │   │   │   ├── interaction.ts     # Agent社交互动引擎 (可见性矩阵 + α传播)
+│   │   │   │   ├── metrics.ts         # 共识度量引擎 (Consensus/Polarization/Fragility)
+│   │   │   │   ├── dynamicWeights.ts  # 🆕 v9.5.2: 动态权重引擎 (三模式级联自适应)
 │   │   │   │   └── index.ts
 │   │   │   ├── personas.ts            # v5 5 Agent 人格定义
 │   │   │   ├── integratedEngine.ts    # v5 信息不对称引擎
@@ -743,6 +833,14 @@ swarmalpha/
 - [x] **v9.1 正交五因子引擎** — 旧6因子→5正交因子, 消除LLM偏空偏差, belief_std 57.9 ✅
 - [x] **v9.2 Hybrid 非对称门控** — Up 22%→50%(+28pp), 模板上下文感知升级, 反偏空护栏
 - [x] **v9.3 Neutral Detection Engine** — 四规则体系, 门控前后共识分离, LLM R2∧3 首次激活, 仅Rule1 Down 100%
+- [x] **v9.5 社交互动层** — 因子重叠可见性矩阵, α 加权的信念传播, 收敛/发散检测
+- [x] **v9.5 共识度量引擎** — Consensus/Polarization/Fragility Score, 6 种状态分类
+- [x] **v9.5.1 连续推演时间线** — 会话级存储, 3 天连续推演追踪共识演变
+- [x] **🆕 v9.5.2 动态权重引擎** — 恐慌/政策/价值洼地 三模式级联自适应, 乘法合成, UI 实时展示
+- [x] **🆕 v9.5.2 V 型反弹路由仲裁** — classifyEvent × LLM 共识双确认, 78事件 LLM 66.7%, 首次超越永远猜涨(+10.3pp)
+- [x] **🆕 v9.6 Prompt 重设计** — LLM 新增 market_pattern (4种事件模式识别)
+- [x] **🆕 v9.6 Market Awareness** — 双层感知修正 (统计均值回归 + Pattern-Aware Agent级修正), 203事件 52.2%
+- [x] 事件库 60→203 至 1970-2025 共8大类别
 - [x] 共识质量引擎调优（divergenceThreshold 45→55 ✅）
 - [x] 模板因子偏空偏差修复（中文政策关键词 + 恢复信号 + 反偏空护栏）
 - [x] Neutral 引擎架构验证（LLM Neutral Recall 57%, 仅Rule1 51.7% 总准确率）
@@ -753,16 +851,21 @@ swarmalpha/
 - [ ] 仅Rule1+R2∧3 组合验证（当前已独立验证, 需组合测试）
 - [ ] LLM 模式 Neutral Recall > 20% 且总准确率 ≥ 45%（当前 Full 31.7%, 需更精准的规则组合）
 
+### 短期（v9.5.2→v9.6）
+- [x] ~~动态权重引擎 — 三模式级联自适应~~ ✅ v9.5.2 已完成
+- [x] ~~共识度量仪表盘 — 三维指标实时可视化~~ ✅ v9.5 已完成
+- [ ] 非线性共识聚合 v2（修剪均值 + 中位数共识，目标 A/B差异 >15pt）
+- [ ] 动态权重 VIX 实时数据接入（当前用推断/模板值）
+
 ### 中期（架构融合）
-- [ ] v8.1 动态K 共识聚合 + v9.3 Neutral 引擎 = 完整共识管道
-- [ ] 非线性共识聚合 v2（自适应修剪 + 动态权重，目标 A/B差异 >15pt）
+- [ ] v9.3 Neutral + v9.5 互动 + v9.5.2 动态权重 = 完整共识管道
 - [ ] 事件库 60→200（需要更系统的历史数据采集方法）
 - [ ] 真实价格序列回测（当前仅方向预测）
 
 ### 长期（产品化）
-- [ ] 前端 UI 重构 — v7 涌现行为 + 反身性闭环实时可视化
+- [ ] 前端 UI 重构 — 涌现行为 + 反身性闭环实时可视化
 - [ ] Docker 一键部署
-- [ ] 交易信号回测：基于修剪共识的策略夏普比率
+- [ ] 交易信号回测：基于动态权重共识的策略夏普比率
 - [ ] 多资产跨市场反馈环（股市→债市→汇市→商品）
 
 ---

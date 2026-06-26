@@ -20,7 +20,7 @@
  *   belief_std
  */
 
-import { EXPANDED_EVENTS, CuratedEvent } from "./expanded-events";
+import { EVENTS, UnifiedEvent } from "./events";
 import { runSwarmV9 } from "../src/lib/agents/v9/simulation";
 import { V9SimConfig, V9Direction } from "../src/lib/agents/v9/types";
 
@@ -29,7 +29,7 @@ import { V9SimConfig, V9Direction } from "../src/lib/agents/v9/types";
 const USE_LLM = process.argv.includes("--llm");
 console.log(`🧪 V9.3 Neutral Engine 消融 — 模式: ${USE_LLM ? "🤖 LLM" : "📋 模板"}`);
 
-const ALL_EVENTS = EXPANDED_EVENTS;
+const ALL_EVENTS = EVENTS;
 
 // ==================== 消融变体 ====================
 

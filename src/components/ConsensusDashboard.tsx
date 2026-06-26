@@ -68,6 +68,27 @@ interface TimelineEntry {
   beliefStd: number;
 }
 
+interface DynamicWeightsData {
+  enabled: boolean;
+  activeModes: string[];
+  modeDetails: {
+    panic: { triggered: boolean; reasons: string[] };
+    policy: { triggered: boolean; reasons: string[] };
+    value: { triggered: boolean; reasons: string[] };
+  };
+  adjustments: Record<string, {
+    agentId: string;
+    agentName: string;
+    emoji: string;
+    baseWeight: number;
+    multiplier: number;
+    finalWeight: number;
+    contributingModes: string[];
+    reason: string;
+  }>;
+  dynamicConsensus?: number;
+}
+
 interface ConsensusDashboardProps {
   metrics: MetricsData;
   interactionRounds?: InteractionRoundData[];
@@ -79,6 +100,8 @@ interface ConsensusDashboardProps {
   finalDirection?: string;
   timeline?: TimelineEntry[];
   loading?: boolean;
+  /** 🆕 v9.5.2: 动态权重数据 */
+  dynamicWeights?: DynamicWeightsData;
 }
 
 // ==================== 子组件: 环形仪表盘 ====================
@@ -555,6 +578,7 @@ export default function ConsensusDashboard({
   finalDirection,
   timeline,
   loading = false,
+  dynamicWeights,
 }: ConsensusDashboardProps) {
   if (loading) return <DashboardSkeleton />;
 
@@ -760,6 +784,205 @@ export default function ConsensusDashboard({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 🆕 v9.5.2: 动态权重面板 — 级联状态自适应权重调整 */}
+      {dynamicWeights && dynamicWeights.enabled && (
+        <div className="mt-6 p-5 rounded-xl bg-zinc-900/50 border border-zinc-800 animate-slide-up">
+          {/* 标题栏 */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⚖️</span>
+              <h3 className="text-sm font-semibold text-zinc-200">
+                动态权重引擎
+              </h3>
+              <span className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+                Cascade Dynamic Weights
+              </span>
+            </div>
+            <span
+              className={`px-2 py-0.5 rounded text-xs font-bold ${
+                dynamicWeights.activeModes.length > 0
+                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                  : "bg-zinc-800 text-zinc-500 border border-zinc-700"
+              }`}
+            >
+              {dynamicWeights.activeModes.length > 0
+                ? `${dynamicWeights.activeModes.length} 模式激活`
+                : "静态权重"}
+            </span>
+          </div>
+
+          {/* 模式检测详情 */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {(["panic", "policy", "value"] as const).map((mode) => {
+              const detail = dynamicWeights.modeDetails[mode];
+              const config = {
+                panic: { icon: "🔴", label: "恐慌模式" },
+                policy: { icon: "🏛️", label: "政策模式" },
+                value: { icon: "💎", label: "价值洼地" },
+              }[mode];
+              const triggered = detail.triggered;
+              const borderColor = triggered
+                ? mode === "panic"
+                  ? "border-red-500/30"
+                  : mode === "policy"
+                  ? "border-blue-500/30"
+                  : "border-emerald-500/30"
+                : "border-zinc-700/30";
+              const bgColor = triggered
+                ? mode === "panic"
+                  ? "bg-red-500/5"
+                  : mode === "policy"
+                  ? "bg-blue-500/5"
+                  : "bg-emerald-500/5"
+                : "bg-zinc-800/30";
+
+              return (
+                <div
+                  key={mode}
+                  className={`p-3 rounded-lg border text-xs ${borderColor} ${bgColor} ${
+                    !triggered ? "opacity-50" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span>{config.icon}</span>
+                    <span
+                      className={`font-semibold ${
+                        triggered ? "text-zinc-200" : "text-zinc-500"
+                      }`}
+                    >
+                      {config.label}
+                    </span>
+                    <span
+                      className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${
+                        triggered
+                          ? "bg-amber-500/20 text-amber-300"
+                          : "bg-zinc-800 text-zinc-600"
+                      }`}
+                    >
+                      {triggered ? "触发" : "—"}
+                    </span>
+                  </div>
+                  {triggered &&
+                    detail.reasons.map((r, i) => (
+                      <div
+                        key={i}
+                        className="text-[10px] text-zinc-400 mt-0.5 leading-relaxed"
+                      >
+                        • {r}
+                      </div>
+                    ))}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 权重调整条形图 */}
+          {dynamicWeights.activeModes.length > 0 && (
+            <>
+              <div className="text-xs font-semibold text-zinc-400 mb-3">
+                权重调整对比
+              </div>
+              <div className="space-y-2">
+                {Object.values(dynamicWeights.adjustments)
+                  .filter((a) => a.contributingModes.length > 0)
+                  .sort(
+                    (a, b) =>
+                      Math.abs(b.multiplier - 1) -
+                      Math.abs(a.multiplier - 1)
+                  )
+                  .map((adj) => {
+                    const maxW = Math.max(
+                      ...Object.values(dynamicWeights.adjustments).map(
+                        (x) => x.finalWeight
+                      ),
+                      100
+                    );
+                    const barPct = (adj.finalWeight / maxW) * 100;
+                    const delta =
+                      adj.multiplier > 1
+                        ? `+${Math.round((adj.multiplier - 1) * 100)}%`
+                        : adj.multiplier < 1
+                        ? `${Math.round((adj.multiplier - 1) * 100)}%`
+                        : "—";
+
+                    return (
+                      <div key={adj.agentId} className="flex items-center gap-2">
+                        <span className="text-sm w-5 text-center">
+                          {adj.emoji}
+                        </span>
+                        <span className="text-xs text-zinc-300 w-16 truncate">
+                          {adj.agentName}
+                        </span>
+                        <div className="flex-1 h-5 bg-zinc-800 rounded-full overflow-hidden relative">
+                          <div
+                            className={`absolute top-0 left-0 h-full rounded-full transition-all duration-700 ${
+                              adj.multiplier > 1
+                                ? "bg-emerald-500/50"
+                                : adj.multiplier < 1
+                                ? "bg-red-500/40"
+                                : "bg-zinc-500/30"
+                            }`}
+                            style={{ width: `${Math.min(100, barPct)}%` }}
+                          />
+                          <span className="absolute top-0 left-0 w-full h-full flex items-center px-2 text-[10px] font-mono text-white/80">
+                            {adj.baseWeight} → {adj.finalWeight}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[10px] font-mono w-10 text-right ${
+                            adj.multiplier > 1
+                              ? "text-emerald-400"
+                              : adj.multiplier < 1
+                              ? "text-red-400"
+                              : "text-zinc-500"
+                          }`}
+                        >
+                          {delta}
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* 动态共识对比 */}
+              {dynamicWeights.dynamicConsensus !== undefined && (
+                <div className="mt-4 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700 flex items-center justify-between">
+                  <span className="text-xs text-zinc-400">
+                    <span className="font-semibold text-amber-300">动态共识</span>
+                    <span className="text-zinc-600 mx-2">vs</span>
+                    <span className="text-zinc-500">静态共识</span>
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-mono font-bold text-amber-300">
+                      {dynamicWeights.dynamicConsensus > 0 ? "+" : ""}
+                      {dynamicWeights.dynamicConsensus.toFixed(1)}
+                    </span>
+                    <span className="text-zinc-600 text-xs">/</span>
+                    <span className="text-sm font-mono text-zinc-500">
+                      {finalConsensus !== undefined
+                        ? `${finalConsensus > 0 ? "+" : ""}${finalConsensus.toFixed(1)}`
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* 静态稳定器提示 */}
+              <div className="mt-3 text-[10px] text-zinc-600 leading-relaxed">
+                💡 Quant (量化) 和 Media (媒体) 在所有模式中保持静态权重 — 量化模型不受情绪影响，媒体动态调整留待后续版本。
+              </div>
+            </>
+          )}
+
+          {/* 未触发任何模式 */}
+          {dynamicWeights.activeModes.length === 0 && (
+            <div className="text-xs text-zinc-500 text-center py-3">
+              📊 当前市场状态未触发任何场景模式 — 所有 Agent 保持静态权重。尝试输入含恐慌情绪或政策干预的新闻以激活动态权重。
+            </div>
+          )}
         </div>
       )}
     </div>

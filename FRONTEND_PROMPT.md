@@ -164,6 +164,26 @@ Content-Type: application/json
         description: string;
       } | null;
 
+      // 🆕 v9.5.2: 动态权重引擎
+      dynamicWeights?: {
+        enabled: boolean;                // 是否启用 (false=静态权重)
+        activeModes: string[];           // 触发的模式 ["panic","policy","value"]
+        modeDetails: {
+          panic:  { triggered: boolean; reasons: string[] };
+          policy: { triggered: boolean; reasons: string[] };
+          value:  { triggered: boolean; reasons: string[] };
+        };
+        adjustments: Record<string, {    // agentId → 调整详情
+          agentId: string; agentName: string; emoji: string;
+          baseWeight: number;            // 原始影响力权重
+          multiplier: number;            // 合成乘数 (钳制到0.3-3.0)
+          finalWeight: number;           // 调整后权重
+          contributingModes: string[];   // 哪些模式贡献了乘数
+          reason: string;                // 人类可读解释
+        }>;
+        dynamicConsensus?: number;       // 动态权重重算的共识值 (vs 静态共识)
+      };
+
       timeline?: Array<{                 // 连续推演3天数据
         sequenceIndex: number;           // 0|1|2
         news: string;

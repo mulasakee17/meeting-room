@@ -1,4 +1,6 @@
-# SwarmAlpha v9.5 十天升级方案
+> ⚠️ **ARCHIVED** — 此文档为历史规划文件。v9.5 已于 2026-06-25 发布，v9.5.1 和 v9.5.2（动态权重引擎）后续已完成。当前项目状态请参考 [README.md](./README.md) 和 [RUNTIME.md](./RUNTIME.md)。
+
+# SwarmAlpha v9.5 十天升级方案 (ARCHIVED)
 
 ## Financial Collective Intelligence Laboratory
 

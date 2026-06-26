@@ -7,19 +7,19 @@
  * 运行: npx tsx test/verified-backtest.ts
  */
 
-import { CURATED_EVENTS, CuratedEvent } from "./curated-events";
+import { EVENTS, UnifiedEvent } from "./events";
 import { classifyEvent, ClassifierInput } from "../src/lib/calibration/eventClassifierV2";
 
 // ============ Simulated LLM (consistent baseline) ============
 
-function simulateLLM(event: CuratedEvent): { consensus: number; direction: string } {
-  const d = event.knownData;
+function simulateLLM(event: UnifiedEvent): { consensus: number; direction: string } {
+  const d = event;
 
   // Neutral start with real de-biasing
   let pred = 0;
 
   // Bearish: proportional to drop
-  pred -= Math.min(40, d.dropFromPeak * 1.8);
+  pred -= Math.min(40, d.drop * 1.8);
 
   // VIX fear
   if (d.vix > 40) pred -= 12;
@@ -36,11 +36,11 @@ function simulateLLM(event: CuratedEvent): { consensus: number; direction: strin
   if (d.vix > 35 && d.rsi < 25) pred += 15;
 
   // Policy response
-  const hasPolicy = /注入|购债|QE|救助|降息|宽松|紧急|emergency|宣布|联合|担保|设立/i.test(d.knownPolicyAction);
+  const hasPolicy = /注入|购债|QE|救助|降息|宽松|紧急|emergency|宣布|联合|担保|设立/i.test(d.knownPolicyAction ?? "");
   if (hasPolicy) pred += 15;
 
   // Structural damage
-  if (/杠杆|强制平仓|违约|破产|系统性|传染/i.test(d.knownVulnerability)) pred -= 8;
+  if (/杠杆|强制平仓|违约|破产|系统性|传染/i.test(d.knownVulnerability ?? "")) pred -= 8;
 
   pred = Math.max(-100, Math.min(100, pred));
   const dir = pred > 5 ? "up" : pred < -5 ? "down" : "neutral";
@@ -49,9 +49,9 @@ function simulateLLM(event: CuratedEvent): { consensus: number; direction: strin
 
 // ============ Calibration (simplified) ============
 
-function calibrate(event: CuratedEvent): { pred: number; dir: string } {
-  const d = event.knownData;
-  let pred = -d.dropFromPeak * 1.5;
+function calibrate(event: UnifiedEvent): { pred: number; dir: string } {
+  const d = event;
+  let pred = -d.drop * 1.5;
 
   // RSI oversold
   if (d.rsi < 15) pred += 60;
@@ -67,12 +67,12 @@ function calibrate(event: CuratedEvent): { pred: number; dir: string } {
   else if (d.vix > 35) pred -= 8;
 
   // Policy
-  const hasPolicy = /注入|购债|QE|救助|降息|宽松|紧急|宣布|联合|担保|设立/i.test(d.knownPolicyAction);
+  const hasPolicy = /注入|购债|QE|救助|降息|宽松|紧急|宣布|联合|担保|设立/i.test(d.knownPolicyAction ?? "");
   if (hasPolicy) pred += 15;
 
   // Vulnerability
-  if (/杠杆|强制/i.test(d.knownVulnerability)) pred -= 6;
-  if (/违约|破产/i.test(d.knownVulnerability)) pred -= 6;
+  if (/杠杆|强制/i.test(d.knownVulnerability ?? "")) pred -= 6;
+  if (/违约|破产/i.test(d.knownVulnerability ?? "")) pred -= 6;
 
   pred = Math.max(-100, Math.min(100, pred));
   const dir = pred > 10 ? "up" : pred < -10 ? "down" : "neutral";
@@ -82,21 +82,21 @@ function calibrate(event: CuratedEvent): { pred: number; dir: string } {
 // ============ Hybrid (v4.3 logic) ============
 
 function hybridPredict(
-  event: CuratedEvent,
+  event: UnifiedEvent,
   cal: { pred: number; dir: string },
   llm: { consensus: number; direction: string }
 ): { pred: number; dir: string } {
-  const d = event.knownData;
-  const vix = d.vix, rsi = d.rsi, drop = d.dropFromPeak;
-  const hasPolicy = /注入|购债|QE|救助|降息|宽松|紧急|宣布|联合|担保|设立/i.test(d.knownPolicyAction);
-  const hasCB = /央行|美联储|fed|ECB|BOJ|降息|利率|购债|QE|注入|购买|设立|救助|担保/i.test(d.knownPolicyAction);
-  const hasLev = /杠杆|强制平仓|爆仓/i.test(d.knownVulnerability);
-  const hasSolv = /违约|破产|系统性|传染/i.test(d.knownVulnerability);
+  const d = event;
+  const vix = d.vix, rsi = d.rsi, drop = d.drop;
+  const hasPolicy = /注入|购债|QE|救助|降息|宽松|紧急|宣布|联合|担保|设立/i.test(d.knownPolicyAction ?? "");
+  const hasCB = /央行|美联储|fed|ECB|BOJ|降息|利率|购债|QE|注入|购买|设立|救助|担保/i.test(d.knownPolicyAction ?? "");
+  const hasLev = /杠杆|强制平仓|爆仓/i.test(d.knownVulnerability ?? "");
+  const hasSolv = /违约|破产|系统性|传染/i.test(d.knownVulnerability ?? "");
 
   // Data-driven classifier
   const cls = classifyEvent({
     vix, rsi, dropMagnitude: drop,
-    volatility: d.recentVolatility, volumeSpike: d.volumeSpike,
+    volatility: d.recentVolatility ?? 0, volumeSpike: d.volumeSpike ?? 1,
     hasPolicyResponse: hasPolicy,
     hasCentralBankAction: hasCB,
     hasLeverageDamage: hasLev,
@@ -157,9 +157,9 @@ function run() {
   let calCorrect = 0, llmCorrect = 0, hybridCorrect = 0;
 
   // Baseline
-  const upCount = CURATED_EVENTS.filter(e => e.actualOutcome.direction === "up").length;
-  const downCount = CURATED_EVENTS.filter(e => e.actualOutcome.direction === "down").length;
-  const neutralCount = CURATED_EVENTS.filter(e => e.actualOutcome.direction === "neutral").length;
+  const upCount = EVENTS.filter(e => e.actual === "up").length;
+  const downCount = EVENTS.filter(e => e.actual === "down").length;
+  const neutralCount = EVENTS.filter(e => e.actual === "neutral").length;
 
   console.log(`事件分布: ${upCount} up / ${downCount} down / ${neutralCount} neutral`);
   console.log(`永远猜涨基线: ${upCount}/40 = ${(upCount/40*100).toFixed(0)}%`);
@@ -168,20 +168,20 @@ function run() {
   console.log("事件".padEnd(32) + " | 实际 | 校准 | LLM  | 混合 | 分类");
   console.log("-".repeat(95));
 
-  for (const ev of CURATED_EVENTS) {
-    const actual = ev.actualOutcome.direction;
+  for (const ev of EVENTS) {
+    const actual = ev.actual;
     const cal = calibrate(ev);
     const llm = simulateLLM(ev);
     const hyb = hybridPredict(ev, cal, llm);
 
     // Get classifier for display
-    const hasPolicy = /注入|购债|QE|救助|降息|宽松|紧急|宣布|联合|担保|设立/i.test(ev.knownData.knownPolicyAction);
-    const hasCB = /央行|美联储|fed|ECB|BOJ|降息|利率|购债|QE|注入|购买|设立|救助|担保/i.test(ev.knownData.knownPolicyAction);
-    const hasLev = /杠杆|强制平仓|爆仓/i.test(ev.knownData.knownVulnerability);
-    const hasSolv = /违约|破产|系统性|传染/i.test(ev.knownData.knownVulnerability);
+    const hasPolicy = /注入|购债|QE|救助|降息|宽松|紧急|宣布|联合|担保|设立/i.test(ev.knownPolicyAction ?? "");
+    const hasCB = /央行|美联储|fed|ECB|BOJ|降息|利率|购债|QE|注入|购买|设立|救助|担保/i.test(ev.knownPolicyAction ?? "");
+    const hasLev = /杠杆|强制平仓|爆仓/i.test(ev.knownVulnerability ?? "");
+    const hasSolv = /违约|破产|系统性|传染/i.test(ev.knownVulnerability ?? "");
     const cls = classifyEvent({
-      vix: ev.knownData.vix, rsi: ev.knownData.rsi, dropMagnitude: ev.knownData.dropFromPeak,
-      volatility: ev.knownData.recentVolatility, volumeSpike: ev.knownData.volumeSpike,
+      vix: ev.vix, rsi: ev.rsi, dropMagnitude: ev.drop,
+      volatility: ev.recentVolatility ?? 0, volumeSpike: ev.volumeSpike ?? 1,
       hasPolicyResponse: hasPolicy, hasCentralBankAction: hasCB,
       hasLeverageDamage: hasLev, hasSolvencyDamage: hasSolv,
     });

@@ -92,6 +92,10 @@ interface NeutralInputs {
     disableRule2_3?: boolean;
     disableRule4?: boolean;
   };
+  /** 🆕 v9.5.2: 方向判定阈值。consensus >= this → UP, else → DOWN。
+   *  默认 15 (NEUTRAL_ENGINE.weakConsensusThreshold)。
+   *  模板模式可降至 -5~0 以补偿模板因子偏弱的问题。 */
+  directionThreshold?: number;
 }
 
 interface NeutralTrace {
@@ -203,10 +207,13 @@ export function makeDecision(
   let confidence: number;
   let trace: NeutralTrace | undefined;
 
+  // 🆕 v9.5.2: 可配置的方向阈值 (模板模式可用 -5, LLM 模式保持 15)
+  const dirThreshold = neutralInputs?.directionThreshold ?? NEUTRAL_ENGINE.weakConsensusThreshold;
+
   if (disableUncertainty) {
     // 消融: 关闭所有 Neutral 检测 → 纯方向判定
-    direction = consensus >= NEUTRAL_ENGINE.weakConsensusThreshold ? "UP"
-      : consensus <= -NEUTRAL_ENGINE.weakConsensusThreshold ? "DOWN"
+    direction = consensus >= dirThreshold ? "UP"
+      : consensus <= -dirThreshold ? "DOWN"
       : "NEUTRAL";
     confidence = Math.min(95, Math.round(Math.abs(consensus) * 0.5 + 30));
   } else if (neutralInputs) {
@@ -228,8 +235,8 @@ export function makeDecision(
       // 信心: Neutral 时降低, 由触发规则决定
       confidence = Math.max(10, 50 - (trace.rule1_fired ? 15 : 0) - (trace.rule4_fired ? 15 : 0) - ((trace.rule2_fired && trace.rule3_fired) ? 20 : 0));
     } else {
-      // 方向判定: consensus >= 15 → UP, else → DOWN
-      direction = consensus >= NEUTRAL_ENGINE.weakConsensusThreshold ? "UP" : "DOWN";
+      // 方向判定: consensus >= threshold → UP, else → DOWN
+      direction = consensus >= dirThreshold ? "UP" : "DOWN";
       const consensusStrength = Math.min(50, Math.abs(consensus) * 0.5);
       const agreementBonus = Math.max(0, 30 - beliefStd * 0.3);
       confidence = Math.min(95, Math.round(consensusStrength + agreementBonus));
@@ -240,7 +247,7 @@ export function makeDecision(
       direction = "NEUTRAL";
       confidence = Math.max(10, 60 - uncertainty.score);
     } else {
-      direction = consensus > 10 ? "UP" : consensus < -10 ? "DOWN" : "NEUTRAL";
+      direction = consensus > dirThreshold ? "UP" : consensus < -dirThreshold ? "DOWN" : "NEUTRAL";
       const consensusStrength = Math.min(50, Math.abs(consensus) * 0.5);
       const agreementBonus = Math.max(0, 30 - beliefStd * 0.3);
       confidence = Math.min(95, Math.round(consensusStrength + agreementBonus));

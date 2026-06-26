@@ -1,4 +1,4 @@
-# SwarmAlpha v9.5.1 — 前端 API 契约
+# SwarmAlpha v9.5.2 — 前端 API 契约
 
 > 给前端 AI 的完整接口文档。照此实现即可，无需阅读引擎代码。
 
@@ -29,6 +29,7 @@ interface SwarmRequest {
   sessionId?: string;                   // 连续推演会话 ID (Date.now().toString())
   sequenceIndex?: number;               // 0 | 1 | 2 (第几天)
   disableInteraction?: boolean;         // 设为 true 跳过互动层 (回退 v9.3)
+  enableDynamicWeights?: boolean;       // 设为 true 启用动态权重系统 (v9.5.2)
 }
 ```
 
@@ -230,6 +231,24 @@ interface V9_5Data {
     effect: "convergence" | "polarization" | "minimal";
     description: string;
   } | null;
+
+  dynamicWeights?: {                 // 动态权重系统
+    enabled: boolean;                 // 是否启用动态权重
+    activeModes: string[];            // 激活的模式 (e.g. ['panic', 'policy'])
+    modeDetails: {
+      panic: { triggered: boolean; reasons: string[] };
+      policy: { triggered: boolean; reasons: string[] };
+      value: { triggered: boolean; reasons: string[] };
+    };
+    adjustments: Record<string, {     // agentId → 权重调整详情
+      baseWeight: number;             // 基础权重
+      multiplier: number;             // 动态乘数
+      finalWeight: number;            // 最终权重
+      contributingModes: string[];    // 哪些模式贡献了调整
+      reason: string;                 // 调整原因
+    }>;
+    dynamicConsensus?: number;        // 动态重新加权的共识值 (可对比静态共识)
+  };
 
   timeline?: {                       // ★ 连续推演时间线 (3天趋势)
     sequenceIndex: number;           // 0|1|2

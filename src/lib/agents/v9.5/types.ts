@@ -112,6 +112,30 @@ export interface ConsensusMetrics {
 
 // ==================== v9.5 完整输出 ====================
 
+/** 动态权重 — Agent 级别调整详情 */
+export interface AgentWeightAdjustment {
+  agentId: string;
+  agentName: string;
+  emoji: string;
+  baseWeight: number;
+  multiplier: number;
+  finalWeight: number;
+  contributingModes: string[];
+  reason: string;
+}
+
+/** 动态权重计算结果 */
+export interface DynamicWeightResult {
+  weights: Record<string, number>;
+  activeModes: string[];
+  adjustments: Record<string, AgentWeightAdjustment>;
+  modeDetails: {
+    panic: { triggered: boolean; reasons: string[] };
+    policy: { triggered: boolean; reasons: string[] };
+    value: { triggered: boolean; reasons: string[] };
+  };
+}
+
 /** v9.5 在 v9.3 结果之上的扩展 */
 export interface V9_5Extension {
   /** Agent 互动结果 (如果启用互动层) */
@@ -130,5 +154,16 @@ export interface V9_5Extension {
     };
     consensusShift: number;
     stdChange: number;
+  };
+  /** 🆕 v9.5.2: 动态权重调整结果 */
+  dynamicWeights?: {
+    enabled: boolean;
+    activeModes: string[];
+    modeDetails: {
+      panic: { triggered: boolean; reasons: string[] };
+      policy: { triggered: boolean; reasons: string[] };
+      value: { triggered: boolean; reasons: string[] };
+    };
+    adjustments: Record<string, AgentWeightAdjustment>;
   };
 }

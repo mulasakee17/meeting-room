@@ -97,16 +97,48 @@ Factor 5 — Uncertainty (不确定性):
 注意: Uncertainty 不能有负数。
 
 ========================
+Step 1 — 市场事件模式 (market_pattern)
+========================
+
+将事件分类为以下四种模式之一:
+
+"MECHANICAL_SELLOFF" — 程序化/算法/技术性机械抛售。基本面未受损，价格将均值回归。
+  例: 1987黑色星期一、2010闪电崩盘、2018 Volmageddon
+
+"SOLVENCY_CRISIS" — 偿付能力或结构性金融危机。违约/破产/系统性风险。基本面真实受损。
+  例: 2008雷曼、2001安然、2023瑞信
+
+"EXTERNAL_SHOCK" — 外来突发事件。非金融内生。取决于政策响应。
+  例: 2001 911、2020 COVID、2022俄乌战争
+
+"NARRATIVE_DRIVEN" — 叙事/情绪驱动。无流动性和偿付问题。由故事/FOMO/恐慌推动。
+  例: 2021 GameStop、2025 DeepSeek冲击、1996非理性繁荣
+
+========================
+Step 2 — 五个正交因子
+========================
+
+Factor 1 — Liquidity (流动性): -100~+100。负=收紧, 正=宽松。
+Factor 2 — Policy Support (政策支持): -100~+100。负=收紧, 正=降息/救助。
+Factor 3 — Fundamental Impact (基本面): -100~+100。负=恶化, 正=改善。
+  ⚠️ 如果 market_pattern 是 MECHANICAL_SELLOFF: fundamental 应接近0（基本面未受损）
+  ⚠️ 如果 market_pattern 是 SOLVENCY_CRISIS: fundamental 可以大幅为负
+Factor 4 — Narrative Momentum (叙事动量): -100~+100。负=无传播, 正=持续热点。
+Factor 5 — Uncertainty (不确定性): 0~100。不能为负。
+
+========================
 输出格式
 ========================
 
 {
-  "liquidity": number,
-  "policy": number,
-  "fundamental": number,
-  "narrative": number,
-  "uncertainty": number,
+  "market_pattern": "MECHANICAL_SELLOFF",
+  "liquidity": -90,
+  "policy": 80,
+  "fundamental": -20,
+  "narrative": 70,
+  "uncertainty": 90,
   "reasoning": {
+      "pattern": "程序化交易引发连锁抛售，基本面未受损",
       "liquidity": "...",
       "policy": "...",
       "fundamental": "...",
@@ -114,17 +146,6 @@ Factor 5 — Uncertainty (不确定性):
       "uncertainty": "..."
   }
 }
-
-========================
-核心要求
-========================
-
-1. 每个因子必须独立推理。
-2. 禁止多个因子重复表达同一个意思。
-3. 如果所有因子同方向，重新审查并寻找反向维度。
-4. 允许出现混合结构，例如:
-   Liquidity -80, Policy +70, Fundamental -60, Narrative +40, Uncertainty 90
-5. 目标不是预测涨跌。目标是构建可审计、可解释、低相关性的因子表示。
 
 返回严格 JSON (无 markdown 包裹):`;
 
@@ -254,12 +275,19 @@ export async function extractFactors(
       }
     }
 
+    // 🆕 v9.6: 市场事件模式 (用于均值回归感知层)
+    const marketPattern = String(parsed.market_pattern || "").trim();
+    const validPatterns = ["MECHANICAL_SELLOFF", "SOLVENCY_CRISIS", "EXTERNAL_SHOCK", "NARRATIVE_DRIVEN"];
+    const pattern = validPatterns.includes(marketPattern) ? marketPattern : undefined;
+
     const result: FactorVector = {
       factors,
       metadata: {
         newsSummary: parsed.newsSummary || news.slice(0, 100),
         detectedAnomalies: parsed.detectedAnomalies || [],
         timestamp: new Date().toISOString(),
+        // 🆕 v9.6: LLM 识别的事件模式
+        marketPattern: pattern,
       },
     };
     if (!isDemoMode()) {

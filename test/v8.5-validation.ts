@@ -12,7 +12,7 @@
  *   4. 分门别类审计报告
  */
 
-import { EXPANDED_EVENTS, CuratedEvent } from "./expanded-events";
+import { EVENTS, UnifiedEvent } from "./events";
 import { V6_PERSONAS } from "../src/lib/agents/v6/personas";
 import {
   computeNonlinearConsensus,
@@ -116,7 +116,7 @@ function saveLLMCache(cache: LLMBriefCache): void {
   fs.writeFileSync(LLM_CACHE_FILE, JSON.stringify(cache, null, 2), "utf-8");
 }
 
-async function generateLLMBriefs(event: CuratedEvent): Promise<{
+async function generateLLMBriefs(event: UnifiedEvent): Promise<{
   briefs: V6AgentBrief[];
   coreContradiction: string;
 } | null> {
@@ -195,7 +195,7 @@ async function generateLLMBriefs(event: CuratedEvent): Promise<{
   }
 }
 
-async function getBriefs(event: CuratedEvent): Promise<V6AgentBrief[]> {
+async function getBriefs(event: UnifiedEvent): Promise<V6AgentBrief[]> {
   if (!USE_LLM) return buildBriefs(event);
 
   // 检查缓存
@@ -223,7 +223,7 @@ async function getBriefs(event: CuratedEvent): Promise<V6AgentBrief[]> {
 
 // ==================== 工具函数 ====================
 
-function buildBriefs(event: CuratedEvent): V6AgentBrief[] {
+function buildBriefs(event: UnifiedEvent): V6AgentBrief[] {
   // ── P0-1: 银行危机政策兜底（扩大触发: 偿付或杠杆 + 政策）──
   const isPolicyBailout = (event.hasSolvency || event.hasLeverage) && event.hasPolicy;
 
@@ -434,7 +434,7 @@ interface SingleRunResult {
 }
 
 async function runSingleEvent(
-  event: CuratedEvent,
+  event: UnifiedEvent,
   config: NonlinearConsensusConfig,
   noiseStd: number = 0,
   /** 预取的简报（MC 复用），不传则自动获取 */
@@ -497,7 +497,7 @@ async function runSingleEvent(
 
 // ==================== 1. 全量基准测试 ====================
 
-async function runFullBenchmark(events: CuratedEvent[], label: string) {
+async function runFullBenchmark(events: UnifiedEvent[], label: string) {
   const results = {
     linear: { total: 0, correct: 0, upC: 0, upT: 0, downC: 0, downT: 0, neutC: 0, neutT: 0 },
     staticCluster: { total: 0, correct: 0, upC: 0, upT: 0, downC: 0, downT: 0, neutC: 0, neutT: 0 },
@@ -563,7 +563,7 @@ interface MCResult {
 }
 
 async function runMonteCarlo(
-  events: CuratedEvent[],
+  events: UnifiedEvent[],
   config: NonlinearConsensusConfig,
   noiseStd: number,
   runs: number
@@ -627,7 +627,7 @@ async function main() {
   console.log("╚══════════════════════════════════════════════════════════════════════════════╝");
   console.log("");
 
-  const ALL_EVENTS = EXPANDED_EVENTS;
+  const ALL_EVENTS = EVENTS;
   const N = ALL_EVENTS.length;
 
   console.log(`📊 事件库: ${N} 个历史事件`);

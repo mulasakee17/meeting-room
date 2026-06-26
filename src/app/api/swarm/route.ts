@@ -17,6 +17,8 @@ import {
   LLMPredictionInput,
   HybridPredictionResult,
 } from "@/lib/calibration/hybridPredictor";
+// 🆕 v9.5.2: V型反弹路由仲裁
+import { classifyEvent, ClassifierInput } from "@/lib/calibration/eventClassifierV2";
 
 // 真实市场数据
 import { fetchRealMarketParams } from "@/lib/market-data/realMarketParams";
@@ -31,6 +33,8 @@ import { runSwarmV9 } from "@/lib/agents/v9";
 
 // v9.5 共识度量引擎 + Agent 互动层
 import { runInteraction, computeAllMetrics, computeInteractionEffect, formatInteractionSummary } from "@/lib/agents/v9.5";
+// 🆕 v9.5.2: 动态权重引擎
+import { computeDynamicWeights, formatDynamicWeightSummary } from "@/lib/agents/v9.5/dynamicWeights";
 
 // 演示容灾兜底 — DEMO_MODE 下 LLM 失败时返回预计算完整响应
 import { FALLBACK_RESPONSE } from "@/lib/demo-fallback";
@@ -322,6 +326,46 @@ export async function POST(req: NextRequest) {
 
         const v9Result = await runSwarmV9(v9Config, !!config);
 
+        // ── 🆕 v9.5.2: V 型反弹路由仲裁 ──
+        // 组合事件分类器 V2 (V_REBOUND 100% recall) + LLM 共识 (DOWN 100% recall)
+        const enableVRoute = (body as any).enableVRoute !== false; // 默认开启
+        let routingDecision: "classifier_v_rebound" | "consensus_llm_trusted" | "disabled" = "disabled";
+        let routingDirection: string = v9Result.finalDecision.direction;
+        let classifierLabel: string = "disabled";
+
+        if (enableVRoute) {
+          // 构建 ClassifierInput (从真实市场数据或事件推断)
+          const classifierInput: ClassifierInput = {
+            vix: v9Config.marketData.vix,
+            rsi: v9Config.marketData.rsi,
+            dropMagnitude: v9Config.marketData.dropMagnitude,
+            volatility: marketSnapshot?.volatility ?? (
+              v9Config.marketData.dropMagnitude > 15 ? 0.04 :
+              v9Config.marketData.dropMagnitude > 8 ? 0.028 :
+              v9Config.marketData.dropMagnitude > 3 ? 0.02 : 0.015
+            ),
+            volumeSpike: marketSnapshot?.volumeSpike ?? 1.0,
+            hasPolicyResponse: v9Config.marketData.hasPolicyResponse,
+            hasCentralBankAction: v9Config.marketData.hasPolicyResponse,
+            hasLeverageDamage: v9Config.marketData.hasLeverageDamage,
+            hasSolvencyDamage: v9Config.marketData.hasSolvencyDamage,
+          };
+
+          const cr = classifyEvent(classifierInput);
+          classifierLabel = cr.pattern;
+
+          // 🔑 双确认: V_REBOUND ∧ vScore > lScore × 3 → 高置信 V 弹
+          if (cr.pattern === "V_REBOUND" && cr.vScore > cr.lScore * 3) {
+            routingDirection = "UP";
+            routingDecision = "classifier_v_rebound";
+            console.log(
+              `⚡ [ROUTER] V-REBOUND (vScore=${cr.vScore.toFixed(2)} lScore=${cr.lScore.toFixed(2)} ratio=${(cr.vScore / Math.max(0.01, cr.lScore)).toFixed(1)}x) → ${v9Result.finalDecision.direction}→UP | cons=${v9Result.finalDecision.consensus.toFixed(1)}`
+            );
+          } else {
+            routingDecision = "consensus_llm_trusted";
+          }
+        }
+
         // ── v9.5: Agent 互动层 + 共识度量 ──
         const enableInteraction = (body as any).disableInteraction !== true;
         const finalRound = v9Result.rounds[v9Result.rounds.length - 1];
@@ -340,9 +384,58 @@ export async function POST(req: NextRequest) {
             previousBelief: 0,
           };
         }
+
+        // ── 🆕 v9.5.2: 动态权重引擎 ──
+        const enableDynamicWeights = (body as any).enableDynamicWeights === true;
+        let dynamicWeightResult: ReturnType<typeof computeDynamicWeights> | undefined;
+
+        if (enableDynamicWeights) {
+          // 构建市场快照
+          const marketSnapshot = {
+            vix: v9Config.marketData.vix,
+            rsi: v9Config.marketData.rsi,
+            beliefStd: v9Result.finalDecision.beliefStd,
+          };
+
+          // 获取因子向量 (从第一轮结果)
+          const factorVector = v9Result.rounds[0]?.factorVector;
+          if (factorVector) {
+            dynamicWeightResult = computeDynamicWeights(
+              v9Agents,
+              factorVector,
+              marketSnapshot,
+              agentStatesMap as Record<string, any>,
+              true
+            );
+
+            // 控制台日志: 动态权重诊断
+            const weightSummary = formatDynamicWeightSummary(dynamicWeightResult);
+            console.log(weightSummary);
+
+            // 将动态权重注入 agentStatesMap (用于互动层 + 后续度量)
+            if (dynamicWeightResult.activeModes.length > 0) {
+              console.log(
+                `[V9.5.2] 🎯 动态权重已激活: ${dynamicWeightResult.activeModes.join(", ")} — ` +
+                Object.values(dynamicWeightResult.adjustments)
+                  .filter(a => a.contributingModes.length > 0)
+                  .map(a => `${a.agentName}(${a.baseWeight}→${a.finalWeight})`)
+                  .join(" ")
+              );
+            }
+          } else {
+            console.warn("[V9.5.2] ⚠️ 因子向量缺失, 动态权重退回静态模式");
+          }
+        }
+
+        // 传入动态权重运行互动
         const interaction = enableInteraction
-          ? runInteraction(v9Agents, agentStatesMap)
-          : runInteraction(v9Agents, agentStatesMap, { disabled: true });
+          ? runInteraction(v9Agents, agentStatesMap, {
+              dynamicWeights: dynamicWeightResult?.weights,
+            })
+          : runInteraction(v9Agents, agentStatesMap, {
+              disabled: true,
+              dynamicWeights: dynamicWeightResult?.weights,
+            });
 
         if (enableInteraction && interaction.totalRounds > 0) {
           console.log(`[V9.5] 🧬 Agent 互动: ${interaction.totalRounds} 轮, ${interaction.convergenceType}`);
@@ -400,6 +493,27 @@ export async function POST(req: NextRequest) {
           timeline = [...session];
         }
 
+        // ── 🆕 v9.5.2: 动态共识 (用动态权重重新计算加权共识) ──
+        let dynamicConsensus: number | undefined;
+        const dynamicConsensusDirection: string | undefined = undefined as any;
+
+        if (dynamicWeightResult && dynamicWeightResult.activeModes.length > 0) {
+          const finalInteractionBeliefs = interaction.finalBeliefs;
+          let weightedSum = 0;
+          let totalWeight = 0;
+          for (const agent of v9Agents) {
+            const belief = finalInteractionBeliefs[agent.id] ?? agentStatesMap[agent.id]?.belief ?? 0;
+            const conf = agentStatesMap[agent.id]?.confidence ?? 50;
+            const dw = dynamicWeightResult.weights[agent.id] ?? agent.influenceWeight;
+            weightedSum += belief * dw * (conf / 100);
+            totalWeight += dw * (conf / 100);
+          }
+          dynamicConsensus = totalWeight > 0
+            ? Math.round((weightedSum / totalWeight) * 100) / 100
+            : v9Result.finalDecision.consensus;
+        }
+        // ── end v9.5.2 dynamicConsensus ──
+
         const v9_5 = {
           interaction: enableInteraction && interaction.totalRounds > 0 ? {
             totalRounds: interaction.totalRounds,
@@ -448,6 +562,27 @@ export async function POST(req: NextRequest) {
           },
           comparison: comparison ?? undefined,
           timeline,  // 🆕 v9.5.1: 连续推演时间线
+          // 🆕 v9.5.2: 动态权重扩展
+          dynamicWeights: enableDynamicWeights ? {
+            enabled: true,
+            activeModes: dynamicWeightResult?.activeModes ?? [],
+            modeDetails: dynamicWeightResult?.modeDetails ?? {
+              panic: { triggered: false, reasons: [] },
+              policy: { triggered: false, reasons: [] },
+              value: { triggered: false, reasons: [] },
+            },
+            adjustments: dynamicWeightResult?.adjustments ?? {},
+            dynamicConsensus: dynamicConsensus ?? v9Result.finalDecision.consensus,
+          } : {
+            enabled: false,
+            activeModes: [],
+            modeDetails: {
+              panic: { triggered: false, reasons: [] },
+              policy: { triggered: false, reasons: [] },
+              value: { triggered: false, reasons: [] },
+            },
+            adjustments: {},
+          },
         };
 
         return NextResponse.json(
@@ -484,6 +619,13 @@ export async function POST(req: NextRequest) {
                 neutralTrace: v9Result.finalDecision.neutralTrace,
               },
               ablationMetrics: v9Result.ablationMetrics,
+              // 🆕 v9.5.2: V 型反弹路由仲裁结果
+              routing: {
+                finalDirection: routingDirection,
+                decision: routingDecision,
+                classifierLabel,
+                consensusRaw: v9Result.finalDecision.consensus,
+              },
               diagnostics: v9Result.diagnostics,
               // 🆕 v9.5 扩展
               v9_5,
@@ -799,6 +941,9 @@ export async function GET(req: NextRequest) {
       "v6: 影响力加权共识 + 资金流 + 价格形成",
       "v6: 动态市场Regime检测",
       "v6: 涌现行为诊断 (Herding/Panic/FOMO/Bubble)",
+      // v9.5 features
+      "v9.5: Agent 社交互动层 + 共识度量 (Consensus/Polarization/Fragility Score)",
+      "v9.5.2: 🆕 动态权重引擎 (恐慌/政策/价值洼地 三模式级联自适应)",
     ],
     usage: {
       v5_default: {
@@ -811,10 +956,22 @@ export async function GET(req: NextRequest) {
         body: { version: "v6", news: "string", rounds: "number" },
         description: "v6 涌现式市场共识 (1次LLM种子 + 纯数学多轮演化)",
       },
+      v9_withOptions: {
+        method: "POST",
+        body: {
+          version: "v9",
+          news: "string",
+          rounds: "number (1-10)",
+          enableDynamicWeights: "boolean (optional, default false)",
+          disableInteraction: "boolean (optional)",
+          ablation: "{ disablePolicyAgent?, disableUncertainty?, disableBlindness?, ... }",
+        },
+        description: "v9.3 正交五因子 + v9.5 社交互动 + v9.5.2 动态权重 (场景自适应)",
+      },
       withMarketData: {
         method: "POST",
         body: {
-          version: "v5|v6",
+          version: "v5|v6|v9",
           news: "string",
           rounds: "number",
           marketData: {

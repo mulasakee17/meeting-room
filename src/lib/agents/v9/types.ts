@@ -51,6 +51,8 @@ export interface FactorVector {
     newsSummary: string;
     detectedAnomalies: string[];
     timestamp: string;
+    /** 🆕 v9.6: LLM 识别的市场事件模式 (MECHANICAL_SELLOFF|SOLVENCY_CRISIS|EXTERNAL_SHOCK|NARRATIVE_DRIVEN) */
+    marketPattern?: string;
   };
 }
 
@@ -256,6 +258,10 @@ export interface V9SimConfig {
     hasSolvencyDamage: boolean;
   };
   rounds: number;
+  /** 🆕 v9.5.2: 方向判定阈值 (consensus>=this→UP, else→DOWN)。默认 15。模板模式建议 -5。 */
+  directionThreshold?: number;
+  /** 🆕 v9.5.2: 启用 V 型反弹路由仲裁 (classifier V_REBOUND + 高置信→强制 UP)。默认 true。 */
+  enableVRoute?: boolean;
   /** 消融实验: 禁用组件 */
   ablation?: {
     disablePolicyAgent?: boolean;
@@ -266,6 +272,8 @@ export interface V9SimConfig {
     disableNeutralRule1?: boolean;    // 禁用 Rule1 (弱共识门控)
     disableNeutralRule2_3?: boolean;  // 禁用 Rule2+3 (高分歧+低同步门控)
     disableNeutralRule4?: boolean;    // 禁用 Rule4 (高不确定性+弱共识门控)
+    /** 🆕 v9.6: 禁用均值回归感知 (消融实验用) */
+    disableMeanReversion?: boolean;
   };
 }
 
