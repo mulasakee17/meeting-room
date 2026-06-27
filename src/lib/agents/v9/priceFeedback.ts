@@ -314,7 +314,7 @@ export function computePriceSignalAdjustment(
   priceChange: number,  // 百分比，可正可负
   confidence: number
 ): number {
-  const responseCoeff = CONFIG.PRICE_SIGNAL_RESPONSE[agentId] ?? 0.3;
+  const responseCoeff = CONFIG.PRICE_SIGNAL_RESPONSE[agentId as keyof typeof CONFIG.PRICE_SIGNAL_RESPONSE] ?? 0.3;
   const confidenceFactor = confidence / 100;
 
   // 价格信号的影响因子 = 系数 * 波动幅度 * 信心

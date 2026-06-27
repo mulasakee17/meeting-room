@@ -259,6 +259,20 @@ interface Diagnostics {
     consensusMechanism: string;      // 共识形成机制
     riskFactors: string[];           // 风险因素列表
     blindnessEffect: string;         // 盲区效应
+    validationSummary: string;       // 交叉验证结果摘要
+  };
+
+  crossValidation: {                 // 🆕 v9.7: 多方法交叉验证
+    methodResults: {
+      method: string;                // "linear_baseline" | "power_law" | ...
+      consensus: number;             // 该方法的共识值
+      confidence: number;            // 该方法的置信度
+      direction: "UP" | "DOWN" | "NEUTRAL";
+    }[];
+    consensusStd: number;            // 方法间共识标准差 (越低越一致)
+    directionConsistency: number;    // 0-1, 方向一致性比例
+    confidenceLevel: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL";
+    overallScore: number;            // 0-100, 综合验证分数
   };
 }
 ```

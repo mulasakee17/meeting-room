@@ -270,7 +270,7 @@ export async function POST(req: NextRequest) {
             version: "v6.0",
             data: {
               news: v6Result.news,
-              rounds: v6Result.rounds.map(r => ({
+              rounds: v6Result.rounds.map((r: any) => ({
                 round: r.round,
                 consensus: r.consensus,
                 variance: r.variance,
@@ -284,7 +284,7 @@ export async function POST(req: NextRequest) {
                 },
                 priceChange: r.price.priceChange,
                 newPrice: r.price.newPrice,
-                emergentBehaviors: r.emergentBehaviors.map(b => ({
+                emergentBehaviors: r.emergentBehaviors.map((b: any) => ({
                   type: b.type,
                   intensity: b.intensity,
                   description: b.description,
@@ -299,7 +299,7 @@ export async function POST(req: NextRequest) {
                 priceChange: v6Result.finalPrice.priceChange,
                 netCapitalFlow: v6Result.finalCapitalFlows.netFlow,
               },
-              emergentBehaviors: v6Result.emergentBehaviors.map(b => ({
+              emergentBehaviors: v6Result.emergentBehaviors.map((b: any) => ({
                 type: b.type,
                 intensity: b.intensity,
                 description: b.description,

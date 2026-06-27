@@ -227,6 +227,7 @@ export async function runSwarmV9(
   let previousStates: Record<string, any> | undefined;
   let rSmooth: number | undefined;
   let lastNonlinearResult: NonlinearConsensusOutput | null = null;  // 🆕 v9.7: 用于返回元数据
+  let finalKuramotoR: number | undefined;  // 保存最后一轮的Kuramoto序参量
 
   // ── 🆕 v10: 价格反馈闭环状态初始化 ──
   let priceFeedbackState: PriceFeedbackState | undefined;
@@ -265,6 +266,7 @@ export async function runSwarmV9(
     // Kuramoto 序参量
     const phases = agents.map(a => beliefToPhase(states[a.id]?.belief ?? 0));
     const rRaw = computeOrderParameter(phases);
+    finalKuramotoR = rRaw;  // 保存最后一轮的Kuramoto序参量
     rSmooth = rSmooth !== undefined
       ? 0.7 * rSmooth + 0.3 * rRaw
       : rRaw;
@@ -394,7 +396,8 @@ export async function runSwarmV9(
     final.decision.direction,
     final.decision.beliefStd,
     { factors: factorVector.factors },
-    !config.ablation?.disableBlindness
+    !config.ablation?.disableBlindness,
+    finalKuramotoR
   );
 
   return {

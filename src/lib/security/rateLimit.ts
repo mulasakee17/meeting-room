@@ -37,11 +37,11 @@ const DEFAULT_CONFIG: RateLimitConfig = {
 // 定期清理过期记录（每5分钟）
 setInterval(() => {
   const now = Date.now();
-  for (const [key, record] of rateLimitStore.entries()) {
+  Array.from(rateLimitStore.entries()).forEach(([key, record]) => {
     if (record.resetTime < now) {
       rateLimitStore.delete(key);
     }
-  }
+  });
 }, 5 * 60 * 1000);
 
 /**

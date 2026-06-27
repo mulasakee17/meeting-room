@@ -648,5 +648,4 @@ export function getCategorySummary(): Array<{
   }));
 }
 
-// 导出
-export type { ExtendedBlackSwan };
+

@@ -488,7 +488,7 @@ function calculateStrength(
   strength += kdjStrength * 0.4;
   
   // 布林带位置强度 (-0.1 到 0.1)
-  const bbStrength = (volume.position - 0.5) / 5;
+  const bbStrength = (bollinger.position - 0.5) / 5;
   strength += bbStrength;
   
   // 成交量放大强度 (-0.2 到 0.2)

@@ -344,6 +344,10 @@ export function computeAllAgentStates(
     marketData?: { rsi: number; vix: number };
     /** 🆕 v9.6: 禁用均值回归 (消融实验用, 默认启用) */
     disableMeanReversion?: boolean;
+    /** 🆕 v10: 价格反馈信号 */
+    priceSignal?: { priceChange: number; momentumSignal: number; meanReversionSignal: number };
+    /** 多轮模式下的随机噪声 */
+    roundNoise?: boolean;
   } = {}
 ): {
   states: Record<string, V9AgentState>;

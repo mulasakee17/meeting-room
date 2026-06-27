@@ -22,7 +22,7 @@ export function LiveDashboard({ metrics, final }: LiveDashboardProps) {
         <ParticleBackground active={streaming} />
 
         <div className="relative z-10 mb-6 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          <span>实时群体指标</span>
+          <span>实时共识指标</span>
           {streaming && progress && (
             <motion.span
               key={`${progress.current}-${progress.total}`}
@@ -87,7 +87,7 @@ export function LiveDashboard({ metrics, final }: LiveDashboardProps) {
         <ParticleBackground active={streaming} />
 
         <div className="relative z-10 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          共识决策
+          群体决策
         </div>
 
         <AnimatePresence mode="wait">

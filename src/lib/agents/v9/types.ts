@@ -226,6 +226,28 @@ export interface CounterfactualReport {
   agentsToFlip: number;
 }
 
+/** 单个共识方法的验证结果 */
+export interface MethodValidationResult {
+  method: string;
+  consensus: number;
+  confidence: number;
+  direction: V9Direction;
+}
+
+/** 多方法交叉验证报告 */
+export interface CrossValidationReport {
+  /** 各方法结果 */
+  methodResults: MethodValidationResult[];
+  /** 方法间共识标准差 (越小越一致) */
+  consensusStd: number;
+  /** 方向一致性比例 (0-1) */
+  directionConsistency: number;
+  /** 置信度等级 */
+  confidenceLevel: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL";
+  /** 综合置信度分数 (0-100) */
+  overallScore: number;
+}
+
 /** 完整诊断报告 */
 export interface DiagnosticReport {
   /** 归因分解 */
@@ -234,6 +256,8 @@ export interface DiagnosticReport {
   coalition: CoalitionAnalysis;
   /** 反事实分析 */
   counterfactuals: CounterfactualReport;
+  /** 多方法交叉验证 */
+  crossValidation: CrossValidationReport;
   /** 诊断摘要 (可喂给 LLM 生成叙事) */
   summary: {
     /** 一句话核心诊断 */
@@ -244,6 +268,8 @@ export interface DiagnosticReport {
     riskFactors: string[];
     /** 信息盲区效应 */
     blindnessEffect: string;
+    /** 交叉验证摘要 */
+    validationSummary: string;
   };
 }
 

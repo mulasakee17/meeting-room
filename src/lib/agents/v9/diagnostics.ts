@@ -20,9 +20,21 @@ import {
   V9Direction,
   FactorCategory,
   ExtractedFactor,
+  MethodValidationResult,
+  CrossValidationReport,
 } from "./types";
 import { computeAllAgentStates } from "./agentInterpretation";
 import { META_FACTORS } from "./agentDefinitions";
+import {
+  computeLinearBaselineConsensus,
+  computePowerLawConsensus,
+  computeEntropyWeightedConsensus,
+  computeTrimmedMeanConsensus,
+  computeMedianConsensus,
+  computeWinsorizedConsensus,
+  computeGeometricMeanConsensus,
+  NonlinearConsensusInput,
+} from "./nonlinearConsensus";
 
 // ==================== 归因分解 ====================
 
@@ -298,12 +310,114 @@ export function runCounterfactuals(
   return { baselineConsensus, variants, mostInfluentialAgent, agentsToFlip };
 }
 
+// ==================== 多方法交叉验证 ====================
+
+/**
+ * 运行所有8种共识方法，计算方法间一致性
+ *
+ * 验证标准:
+ *   - 方向一致性 > 70% → HIGH
+ *   - 方向一致性 50-70% → MEDIUM
+ *   - 方向一致性 30-50% → LOW
+ *   - 方向一致性 < 30% → CRITICAL
+ *
+ * 全部纯数学，零 LLM 调用，毫秒级完成。
+ */
+export function runCrossValidation(
+  agents: V9AgentDefinition[],
+  states: Record<string, V9AgentState>,
+  kuramotoR?: number
+): CrossValidationReport {
+  const input: NonlinearConsensusInput = { agents, states, kuramotoR };
+
+  // 运行所有8种方法
+  const methodResults: MethodValidationResult[] = [
+    runMethod(input, "linear_baseline", computeLinearBaselineConsensus),
+    runMethod(input, "power_law", (i) => computePowerLawConsensus(i, 1.5)),
+    runMethod(input, "entropy_weighted", computeEntropyWeightedConsensus),
+    runMethod(input, "trimmed_mean", (i) => computeTrimmedMeanConsensus(i, 1)),
+    runMethod(input, "median", computeMedianConsensus),
+    runMethod(input, "winsorized", (i) => computeWinsorizedConsensus(i, 20, 80)),
+    runMethod(input, "geometric_mean", computeGeometricMeanConsensus),
+  ];
+
+  // 计算方向一致性
+  const directions = methodResults.map(r => r.direction);
+  const upCount = directions.filter(d => d === "UP").length;
+  const downCount = directions.filter(d => d === "DOWN").length;
+  const neutralCount = directions.filter(d => d === "NEUTRAL").length;
+
+  const maxDirectionCount = Math.max(upCount, downCount);
+  const directionConsistency = maxDirectionCount / methodResults.length;
+
+  // 计算方法间共识标准差
+  const consensusValues = methodResults.map(r => r.consensus);
+  const meanConsensus = consensusValues.reduce((a, b) => a + b, 0) / consensusValues.length;
+  const variance = consensusValues.reduce((sum, val) => sum + Math.pow(val - meanConsensus, 2), 0) / consensusValues.length;
+  const consensusStd = Math.sqrt(variance);
+
+  // 确定置信度等级
+  let confidenceLevel: CrossValidationReport["confidenceLevel"];
+  let overallScore: number;
+
+  if (directionConsistency >= 0.7 && consensusStd < 10) {
+    confidenceLevel = "HIGH";
+    overallScore = 80 + Math.round((1 - consensusStd / 10) * 20);
+  } else if (directionConsistency >= 0.5 && consensusStd < 20) {
+    confidenceLevel = "MEDIUM";
+    overallScore = 50 + Math.round(directionConsistency * 30) - Math.round(consensusStd / 2);
+  } else if (directionConsistency >= 0.3) {
+    confidenceLevel = "LOW";
+    overallScore = 20 + Math.round(directionConsistency * 40) - Math.round(consensusStd / 2);
+  } else {
+    confidenceLevel = "CRITICAL";
+    overallScore = Math.round(directionConsistency * 30);
+  }
+
+  // 钳制分数
+  overallScore = Math.max(0, Math.min(100, overallScore));
+
+  return {
+    methodResults,
+    consensusStd: Math.round(consensusStd * 100) / 100,
+    directionConsistency: Math.round(directionConsistency * 100) / 100,
+    confidenceLevel,
+    overallScore: Math.round(overallScore),
+  };
+}
+
+/** 运行单个方法并格式化结果 */
+function runMethod(
+  input: NonlinearConsensusInput,
+  name: string,
+  fn: (input: NonlinearConsensusInput) => { consensus: number; confidence: number }
+): MethodValidationResult {
+  try {
+    const result = fn(input);
+    const direction = determineDirection(result.consensus);
+    return {
+      method: name,
+      consensus: result.consensus,
+      confidence: result.confidence,
+      direction,
+    };
+  } catch {
+    return {
+      method: name,
+      consensus: 0,
+      confidence: 0,
+      direction: "NEUTRAL",
+    };
+  }
+}
+
 // ==================== 诊断摘要 ====================
 
 function buildSummary(
   attribution: AgentAttribution[],
   coalition: CoalitionAnalysis,
   counterfactuals: CounterfactualReport,
+  crossValidation: CrossValidationReport,
   baselineConsensus: number,
   baselineDirection: V9Direction,
   beliefStd: number,
@@ -394,11 +508,29 @@ function buildSummary(
     riskFactors.push(`⚠️ 共识过度依赖单一Agent: ${attribution[0].agentName} 占 ${top1Pct}% 贡献`);
   }
 
+  // 交叉验证摘要
+  const cvLevel = crossValidation.confidenceLevel;
+  const cvScore = crossValidation.overallScore;
+  const cvConsistency = Math.round(crossValidation.directionConsistency * 100);
+  const cvStd = crossValidation.consensusStd;
+
+  let validationSummary: string;
+  if (cvLevel === "HIGH") {
+    validationSummary = `✅ 多方法交叉验证通过: ${cvConsistency}%方法方向一致，方法间共识标准差${cvStd}，综合置信度${cvScore}/100。`;
+  } else if (cvLevel === "MEDIUM") {
+    validationSummary = `⚠️ 多方法交叉验证中等: ${cvConsistency}%方法方向一致，方法间共识标准差${cvStd}，综合置信度${cvScore}/100。建议谨慎对待结果。`;
+  } else if (cvLevel === "LOW") {
+    validationSummary = `🟡 多方法交叉验证较弱: ${cvConsistency}%方法方向一致，方法间共识标准差${cvStd}，综合置信度${cvScore}/100。结果可靠性低。`;
+  } else {
+    validationSummary = `🔴 多方法交叉验证失败: 方法间方向一致性仅${cvConsistency}%，综合置信度${cvScore}/100。结果高度不可靠。`;
+  }
+
   return {
     coreFinding,
     consensusMechanism,
     riskFactors: riskFactors.length > 0 ? riskFactors : ["无显著风险因素"],
     blindnessEffect,
+    validationSummary,
   };
 }
 
@@ -416,7 +548,8 @@ export function generateDiagnostics(
   direction: V9Direction,
   beliefStd: number,
   factorVector: { factors: ExtractedFactor[] },
-  blindnessActive: boolean
+  blindnessActive: boolean,
+  kuramotoR?: number
 ): DiagnosticReport {
   // 1. 归因分解
   const attribution = computeAttribution(agents, states);
@@ -429,11 +562,14 @@ export function generateDiagnostics(
     agents, states, consensus, direction, factorVector
   );
 
-  // 4. 诊断摘要
+  // 4. 多方法交叉验证
+  const crossValidation = runCrossValidation(agents, states, kuramotoR);
+
+  // 5. 诊断摘要
   const summary = buildSummary(
-    attribution, coalition, counterfactuals,
+    attribution, coalition, counterfactuals, crossValidation,
     consensus, direction, beliefStd, blindnessActive
   );
 
-  return { attribution, coalition, counterfactuals, summary };
+  return { attribution, coalition, counterfactuals, crossValidation, summary };
 }

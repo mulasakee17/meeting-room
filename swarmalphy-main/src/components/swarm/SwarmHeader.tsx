@@ -73,7 +73,7 @@ export function SwarmHeader({ onRun, canRun }: HeaderProps) {
               </span>
             </div>
             <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              群体智能实验室
+              共识动力学基础设施
             </div>
           </div>
         </div>

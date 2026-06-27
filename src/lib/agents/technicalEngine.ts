@@ -49,13 +49,14 @@ function buildTradingPrompt(
   historyContext: string,
   technicalAdvice: any
 ): string {
+  const decisionStyle = persona.decisionStyle as string;
   const strategyText = {
     momentum: "趋势跟随",
     contrarian: "逆向思维",
     fundamental: "价值投资",
     technical: "技术分析",
     macro: "宏观视角",
-  }[persona.decisionStyle] || "综合分析";
+  }[decisionStyle] || "综合分析";
 
   return `## 金融新闻
 ${news}
@@ -679,13 +680,14 @@ function buildMLTradingPrompt(
   historyContext: string,
   technicalAdvice: string
 ): string {
+  const decisionStyle = persona.decisionStyle as string;
   const strategyText = {
     momentum: "趋势跟随",
     contrarian: "逆向思维",
     fundamental: "价值投资",
     technical: "技术分析",
     macro: "宏观视角",
-  }[persona.decisionStyle] || "综合分析";
+  }[decisionStyle] || "综合分析";
 
   return `## 金融新闻
 ${news}
