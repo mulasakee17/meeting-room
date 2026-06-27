@@ -28,21 +28,11 @@
  */
 
 import { UncertaintyResult, V9Decision, V9AgentState } from "./types";
+import { NEUTRAL_CONFIG, CONSENSUS_CONFIG } from "./config";
 
-// ==================== Neutral Engine 配置 ====================
+// ==================== Neutral Engine 配置 (从集中配置读取) ====================
 
-const NEUTRAL_ENGINE = {
-  /** Rule 1: 共识绝对值低于此值 → Neutral */
-  weakConsensusThreshold: 15,
-  /** Rule 2: 信念标准差超过此值 → Neutral candidate */
-  highDisagreementThreshold: 45,
-  /** Rule 3: Kuramoto 序参量低于此值 → Neutral candidate */
-  lowSyncThreshold: 0.4,
-  /** Rule 4: 因子层 uncertainty 超过此值 → Neutral candidate */
-  highUncertaintyThreshold: 70,
-  /** Rule 4: 在高不确定性下, 共识需要超过此值才能 bypass Neutral */
-  uncertaintyConsensusFloor: 25,
-};
+const NEUTRAL_ENGINE = NEUTRAL_CONFIG;
 
 // ==================== 兼容层: 保留旧版 evaluateUncertainty 接口 ====================
 
@@ -152,9 +142,9 @@ function evaluateNeutral(
   const rule3 = !ablation?.disableRule2_3
     && kuramotoR < NEUTRAL_ENGINE.lowSyncThreshold;
 
-  // v9.5.1: Rule 4 使用融合不确定性 (LLM + VIX), 阈值从 70 降至 65
+  // v9.5.1: Rule 4 使用融合不确定性 (LLM + VIX), 阈值从 NEUTRAL_CONFIG 读取
   const rule4 = !ablation?.disableRule4
-    && effectiveUncertainty > 65
+    && effectiveUncertainty > NEUTRAL_ENGINE.highUncertaintyThreshold
     && Math.abs(consForNeutral) < NEUTRAL_ENGINE.uncertaintyConsensusFloor;
 
   // ── 最终判定 (OR + 复合条件) ──

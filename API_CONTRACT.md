@@ -1,4 +1,4 @@
-# SwarmAlpha v9.5.2 — 前端 API 契约
+# SwarmAlpha v9.7 — 前端 API 契约
 
 > 给前端 AI 的完整接口文档。照此实现即可，无需阅读引擎代码。
 
@@ -30,17 +30,70 @@ interface SwarmRequest {
   sequenceIndex?: number;               // 0 | 1 | 2 (第几天)
   disableInteraction?: boolean;         // 设为 true 跳过互动层 (回退 v9.3)
   enableDynamicWeights?: boolean;       // 设为 true 启用动态权重系统 (v9.5.2)
+
+  // ── v9.5.2 已有 ──
+  enableVRoute?: boolean;               // V型反弹路由仲裁, 默认 true
+
+  // ── 🆕 v9.7 新增 ──
+  ablation?: {                          // 消融实验 & 引擎切换 (全部可选)
+    // 非线性共识引擎 (替代默认的 linear+cluster+gating)
+    nonlinearMethod?: "linear_baseline" | "power_law" | "entropy_weighted"
+                    | "trimmed_mean" | "median" | "winsorized"
+                    | "geometric_mean" | "dynamic_ensemble";
+    // 非线性方法参数覆盖
+    nonlinearConfig?: {
+      powerAlpha?: number;              // 幂律指数, 默认 1.5 (>1 放大极端)
+      trimCount?: number;               // 修剪数量, 默认 1
+      winsorLowerPct?: number;          // 缩尾下界百分位, 默认 20
+      winsorUpperPct?: number;          // 缩尾上界百分位, 默认 80
+      ensembleMethods?: string[];       // 集成方法列表, 默认全部 6 种
+    };
+
+    // 其他消融开关 (已有)
+    disablePolicyAgent?: boolean;       // 禁用政策Agent
+    disableBlindness?: boolean;         // 关闭信息盲区
+    disableClustering?: boolean;        // 禁用聚类共识 (回退纯线性)
+    disableUncertainty?: boolean;       // 关闭不确定性引擎
+    disableNeutralRule1?: boolean;      // 禁用弱共识检测
+    disableNeutralRule2_3?: boolean;    // 禁用高分歧+低同步检测
+    disableNeutralRule4?: boolean;      // 禁用高不确定+弱共识检测
+    disableMeanReversion?: boolean;     // 禁用均值回归感知 (v9.6)
+  };
 }
 ```
 
 ### 请求示例
 
 ```json
+// 基础请求 (使用默认 hybrid gating)
 {
   "version": "v9",
   "news": "美联储紧急降息50个基点超出市场预期",
   "rounds": 2,
   "llmConfig": { "provider": "deepseek", "model": "deepseek-chat" }
+}
+
+// 🆕 v9.7: 使用非线性共识引擎 (推荐 dynamic_ensemble)
+{
+  "version": "v9",
+  "news": "2020年3月新冠疫情全球爆发美股四次熔断",
+  "rounds": 3,
+  "llmConfig": { "provider": "deepseek", "model": "deepseek-chat" },
+  "ablation": {
+    "nonlinearMethod": "dynamic_ensemble"
+  }
+}
+
+// 使用特定非线性方法 + 自定义参数
+{
+  "version": "v9",
+  "news": "...",
+  "rounds": 3,
+  "llmConfig": { "provider": "deepseek", "model": "deepseek-chat" },
+  "ablation": {
+    "nonlinearMethod": "trimmed_mean",
+    "nonlinearConfig": { "trimCount": 2 }
+  }
 }
 ```
 
@@ -51,7 +104,7 @@ interface SwarmRequest {
 ```typescript
 interface SwarmResponse {
   success: true;
-  version: "v9.5";                      // 版本标识
+  version: "v9.7";                      // 版本标识
   data: {
     news: string;                       // 回显新闻
     factorVector: FactorVector;         // 5 个正交因子
@@ -64,8 +117,26 @@ interface SwarmResponse {
       blindnessActive: boolean;
       beliefStdHistory: number[];
     };
+    // 🆕 v9.7: 非线性共识元数据 (启用 nonlinearMethod 时填充)
+    nonlinearConsensus?: {
+      method: string;                   // 使用的方法名
+      individualResults?: {             // 集成模式下各方法的独立结果
+        method: string;
+        consensus: number;
+        confidence: number;
+        signalQuality: number;          // 0-1, 集成权重
+      }[];
+      ensembleWeights?: Record<string, number>;  // method → 集成权重
+    };
     v9_5: V9_5Data;                     // ★ 核心: 互动+指标+时间线
     v9_5Agents: AgentInfo[];            // Agent 元信息
+    // 🆕 v9.5.2: V型反弹路由仲裁
+    routing: {
+      finalDirection: string;           // 仲裁后的最终方向
+      decision: "classifier_v_rebound" | "consensus_llm_trusted" | "disabled";
+      classifierLabel: string;          // V_REBOUND | L_DECLINE | W_RECOVERY | U_SLOW
+      consensusRaw: number;             // 仲裁前的原始共识值
+    };
   };
   rateLimit: {
     remaining: number;
@@ -276,7 +347,80 @@ interface AgentInfo {
 
 ---
 
-## 5. 颜色编码规则
+## 5. 🆕 v9.7 非线性共识引擎
+
+### 概述
+
+v9.3 的默认共识管线是 `线性加权 → K-Means聚类 → 非对称门控`。线性共识的数学性质（输出永远在输入凸包内）是信息论硬天花板。v9.7 提供 **8 种非线性共识方法**，通过 `ablation.nonlinearMethod` 激活。
+
+### 方法速查
+
+| 方法 | `nonlinearMethod` | 特性 | 推荐场景 |
+|------|-------------------|------|---------|
+| 线性基线 | `"linear_baseline"` | 原始加权平均，用于对照 | 基线对比 |
+| 幂律共识 | `"power_law"` | 放大极端信念 (α=1.5) | 信号明确时 |
+| 熵权共识 | `"entropy_weighted"` | 分歧大→压缩权重 | 噪音环境 |
+| **修剪均值** | `"trimmed_mean"` | 移除极端值后加权 | 🥇 **推荐: 总准确率最高** |
+| 加权中位数 | `"median"` | 完全免疫极端值 | Down 事件检测 |
+| 缩尾共识 | `"winsorized"` | 限幅不移除 | 保守场景 |
+| 几何平均 | `"geometric_mean"` | 零信念强抑制 | 异常值多时 |
+| **动态集成** | `"dynamic_ensemble"` | 6方法信号质量加权 | 🥈 **推荐: 最稳定** |
+
+### 203 事件基准 (模板模式)
+
+| 方法 | 总准确率 | Up | Down | vs线性差异 |
+|------|---------|-----|------|-----------|
+| 修剪均值 | **39.4%** | 42% | 39% | 4.0pt |
+| 动态集成 | 37.9% | 38% | 41% | 4.6pt |
+| 幂律共识 | 36.0% | **44%** | 2% | 4.1pt |
+| 加权中位数 | 32.0% | 21% | **50%** | **16.4pt** |
+| 线性基线 | 33.0% | 38% | 2% | — |
+
+> 永远猜涨基线: 57.6%。注意: 这些是纯模板模式（零 LLM）的数据。LLM 模式 + 完整 v9 管线可显著提升。
+
+### 前端展示建议
+
+当 `data.nonlinearConsensus` 存在时:
+- 显示当前使用的方法名和置信度
+- 如果是 `dynamic_ensemble`，展示各子方法的 consensus 和权重分布
+- 对比 `final.consensus`（非线性）与原始共识的差异
+
+```
+┌─ 🔮 非线性共识: 动态集成 ─────────────────────────────┐
+│  集成共识: +12.5                                       │
+│  ┌──────────┬──────────┬──────────┬──────────┐        │
+│  │ 幂律 35% │ 修剪 30% │ 中位数 20%│ 几何 15% │        │
+│  │  +15.2   │  +10.8   │   +8.3   │  +12.1   │        │
+│  └──────────┴──────────┴──────────┴──────────┘        │
+│  vs 线性共识: Δ = +4.6pt                               │
+└───────────────────────────────────────────────────────┘
+```
+
+### 自定义参数
+
+```json
+{
+  "ablation": {
+    "nonlinearMethod": "power_law",
+    "nonlinearConfig": {
+      "powerAlpha": 2.0,
+      "trimCount": 2,
+      "winsorLowerPct": 10,
+      "winsorUpperPct": 90,
+      "ensembleMethods": ["power_law", "trimmed_mean", "median"]
+    }
+  }
+}
+```
+
+- `powerAlpha`: 默认 1.5。>1 更激进放大极端信号，<1 压缩极端信号
+- `trimCount`: 默认 1。从两端各移除几个 Agent
+- `winsorLowerPct/UpperPct`: 缩尾百分位，默认 20/80
+- `ensembleMethods`: 集成包含的方法列表，默认全部 6 种
+
+---
+
+## 6. 颜色编码规则
 
 Agent 信念值 → 颜色：
 
@@ -296,9 +440,9 @@ Agent 信念值 → 颜色：
 
 ---
 
-## 6. 前端需要渲染的组件
+## 7. 前端需要渲染的组件
 
-### 6.1 ConsensusDashboard（核心新增）
+### 7.1 ConsensusDashboard（核心新增）
 
 Props 接口：
 
@@ -322,7 +466,7 @@ interface ConsensusDashboardProps {
 }
 ```
 
-### 6.2 需要渲染的子组件
+### 7.2 需要渲染的子组件
 
 | 优先级 | 组件 | 数据来源 | 说明 |
 |--------|------|---------|------|
@@ -335,7 +479,7 @@ interface ConsensusDashboardProps {
 | ★★ | **时间线折线图** | `v9_5.timeline[]` | 三条线(蓝=Consensus, 橙=Polarization, 红=Fragility), X轴=Day 1/2/3 |
 | ★ | **反事实分析面板** | `diagnostics.counterfactuals.variants[]` | 列表: 每个变体显示 label + Δconsensus + 影响力等级(用颜色) |
 
-### 6.3 旧组件（已有，可复用或重写）
+### 7.3 旧组件（已有，可复用或重写）
 
 | 组件 | 数据来源 |
 |------|---------|
@@ -347,7 +491,7 @@ interface ConsensusDashboardProps {
 
 ---
 
-## 7. 连续推演 3 天 — 调用方式
+## 8. 连续推演 3 天 — 调用方式
 
 ```typescript
 const sessionId = Date.now().toString();
@@ -377,7 +521,7 @@ for (let i = 0; i < 3; i++) {
 
 ---
 
-## 8. 预置事件（建议的演示用新闻）
+## 9. 预置事件（建议的演示用新闻）
 
 ```typescript
 const PRESET_EVENTS = [
@@ -402,22 +546,25 @@ const PRESET_EVENTS = [
 
 ---
 
-## 9. 页面布局建议
+## 10. 页面布局建议
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│ 🐜 SwarmAlpha — Financial Collective Intelligence   │
-│                   Laboratory                         │
+│ 🐜 SwarmAlpha — AI Collective Belief Formation      │
+│               in Complex Systems                     │
 │                                                     │
-│ [DeepSeek ▼]  [历史记录 📋]                          │
+│ [DeepSeek ▼]  [非线性: 动态集成 ▼]  [历史记录 📋]     │
 ├─────────────────────────────────────────────────────┤
 │ [📉 2008雷曼] [🦠 2020新冠] [📈 2022加息] [💥 日股]  │  ← 预置事件
 │                                                     │
 │ [___________________输入新闻___________________]     │  ← NewsInput
-│ [🚀 开始推演]  [📈 连续推演3天]                       │
+│ [🚀 开始推演]  [📈 连续推演3天]  [⚙️ 高级设置]        │
 ├─────────────────────────────────────────────────────┤
 │                                                     │
-│ ★ ConsensusDashboard (v9.5 核心)                    │
+│ ★ ConsensusDashboard (v9.5)                         │
+│  ┌─ 🆕 非线性共识方法 ──────────────────────────-┐  │  ← v9.7 新增
+│  │ 动态集成 · 集成共识 +12.5 · vs线性 Δ=+4.6pt    │  │
+│  └──────────────────────────────────────────────┘  │
 │  ┌─ 时间线折线图 (连续推演模式) ──────────────────┐  │
 │  └──────────────────────────────────────────────┘  │
 │  ┌ 42 ───┐ ┌ 73 ───┐ ┌ 47 ───┐                    │  ← 三个仪表盘
@@ -449,7 +596,7 @@ const PRESET_EVENTS = [
 
 ---
 
-## 10. 注意事项
+## 11. 注意事项
 
 1. **所有数字字段都可能为负** — belief 是 -100~+100, consensus 也是
 2. **interaction 可能为 null** — 如果 `disableInteraction: true` 或互动层禁用

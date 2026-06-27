@@ -1,14 +1,18 @@
 /**
- * Yahoo Finance 非官方 API 数据获取模块
+ * Yahoo Finance 非官方 API 数据获取模块（增强版）
  *
- * 使用 Yahoo Finance v8 chart API 获取真实市场数据：
- * - S&P 500 (^GSPC): 价格序列 → 计算 RSI/跌幅/波动率
- * - VIX (^VIX): 恐慌指数
+ * 支持多资产类别：
+ * - 股指: S&P 500, Nasdaq, Russell 2000
+ * - 恐慌: VIX
+ * - 板块: XLF(金融), XLE(能源), XLK(科技), XLV(医疗)
+ * - 利率: 2Y, 10Y Treasury
+ * - 商品: Gold, Crude Oil
+ * - 汇率: DXY (美元指数)
  *
  * 特点：
  * - 免费、无需 API Key
- * - 内置内存缓存（TTL 5分钟），避免限流
- * - 优雅降级：API 失败返回 null，上层可降级为推断
+ * - 内置内存缓存（TTL 5分钟）
+ * - 优雅降级：API 失败返回 null
  */
 
 export interface YahooChartResult {
@@ -42,10 +46,7 @@ function getCached(symbol: string): YahooChartResult | null {
 }
 
 function setCache(symbol: string, data: YahooChartResult): void {
-  cache.set(symbol, {
-    data,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
+  cache.set(symbol, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
 // ==================== 数据获取 ====================
@@ -54,26 +55,21 @@ const YAHOO_CHART_BASE = "https://query1.finance.yahoo.com/v8/finance/chart";
 
 /**
  * 获取单个 symbol 的 OHLCV 历史数据
- *
- * @param symbol Yahoo Finance symbol (e.g. "^GSPC", "^VIX")
- * @param range  时间范围: "1mo", "3mo", "6mo", "1y"
- * @param interval 数据间隔: "1d" (日线), "1wk" (周线)
- * @returns 标准化后的 chart 数据，失败返回 null
  */
 export async function fetchYahooChart(
   symbol: string,
   range: string = "3mo",
   interval: string = "1d"
 ): Promise<YahooChartResult | null> {
-  // 先查缓存
-  const cached = getCached(symbol);
+  const cacheKey = `${symbol}:${range}:${interval}`;
+  const cached = getCached(cacheKey);
   if (cached) return cached;
 
   const url = `${YAHOO_CHART_BASE}/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`;
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10s 超时
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch(url, {
       signal: controller.signal,
@@ -104,79 +100,149 @@ export async function fetchYahooChart(
       return null;
     }
 
-    const data: YahooChartResult = {
+    // 过滤 null 值
+    const valid: YahooChartResult = {
       symbol,
-      timestamps: timestamp as number[],
-      opens: (quote.open || []) as number[],
-      highs: (quote.high || []) as number[],
-      lows: (quote.low || []) as number[],
-      closes: (quote.close || []) as number[],
-      volumes: (quote.volume || []) as number[],
+      timestamps: [],
+      opens: [],
+      highs: [],
+      lows: [],
+      closes: [],
+      volumes: [],
     };
 
-    // 过滤掉 null 值（Yahoo 有时返回 null 表示停牌日）
-    const validIndices: number[] = [];
-    for (let i = 0; i < data.closes.length; i++) {
-      if (
-        data.closes[i] != null &&
-        data.opens[i] != null &&
-        data.highs[i] != null &&
-        data.lows[i] != null
-      ) {
-        validIndices.push(i);
+    for (let i = 0; i < timestamp.length; i++) {
+      if (quote.close?.[i] != null && quote.open?.[i] != null) {
+        valid.timestamps.push(timestamp[i]);
+        valid.opens.push(quote.open[i] ?? quote.close[i]);
+        valid.highs.push(quote.high[i] ?? quote.close[i]);
+        valid.lows.push(quote.low[i] ?? quote.close[i]);
+        valid.closes.push(quote.close[i]);
+        valid.volumes.push(quote.volume[i] ?? 0);
       }
     }
 
-    const filtered: YahooChartResult = {
-      symbol,
-      timestamps: validIndices.map((i) => data.timestamps[i]),
-      opens: validIndices.map((i) => data.opens[i]),
-      highs: validIndices.map((i) => data.highs[i]),
-      lows: validIndices.map((i) => data.lows[i]),
-      closes: validIndices.map((i) => data.closes[i]),
-      volumes: validIndices.map((i) => data.volumes[i] ?? 0),
-    };
-
-    if (filtered.closes.length < 15) {
-      console.warn(`[Yahoo] ${symbol} only ${filtered.closes.length} valid data points (need >=15 for RSI)`);
+    if (valid.closes.length < 10) {
+      console.warn(`[Yahoo] ${symbol} only ${valid.closes.length} valid points`);
       return null;
     }
 
-    setCache(symbol, filtered);
-    console.log(`[Yahoo] ${symbol} fetched ${filtered.closes.length} data points (range=${range})`);
-    return filtered;
+    setCache(cacheKey, valid);
+    console.log(`[Yahoo] ${symbol}: ${valid.closes.length}pts range=${range}`);
+    return valid;
   } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") {
-      console.warn(`[Yahoo] ${symbol} request timed out`);
-    } else {
-      console.warn(`[Yahoo] ${symbol} fetch error: ${(err as Error).message}`);
-    }
+    const msg = err instanceof DOMException && err.name === "AbortError"
+      ? "timeout"
+      : (err as Error).message;
+    console.warn(`[Yahoo] ${symbol} error: ${msg}`);
     return null;
   }
 }
 
-/**
- * 获取 S&P 500 最近 3 个月日线数据
- */
+// ==================== 便捷函数 ====================
+
+/** S&P 500 — 大盘基准 */
 export async function getSP500Data(): Promise<YahooChartResult | null> {
   return fetchYahooChart("^GSPC", "3mo", "1d");
 }
 
-/**
- * 获取 VIX 最近 3 个月日线数据
- */
+/** Nasdaq Composite — 科技权重 */
+export async function getNasdaqData(): Promise<YahooChartResult | null> {
+  return fetchYahooChart("^IXIC", "3mo", "1d");
+}
+
+/** VIX — 恐慌指数 */
 export async function getVIXData(): Promise<YahooChartResult | null> {
   return fetchYahooChart("^VIX", "3mo", "1d");
 }
 
+/** 金融板块 ETF */
+export async function getFinancialsData(): Promise<YahooChartResult | null> {
+  return fetchYahooChart("XLF", "3mo", "1d");
+}
+
+/** 能源板块 ETF */
+export async function getEnergyData(): Promise<YahooChartResult | null> {
+  return fetchYahooChart("XLE", "3mo", "1d");
+}
+
+/** 科技板块 ETF */
+export async function getTechData(): Promise<YahooChartResult | null> {
+  return fetchYahooChart("XLK", "3mo", "1d");
+}
+
+/** 医疗板块 ETF */
+export async function getHealthcareData(): Promise<YahooChartResult | null> {
+  return fetchYahooChart("XLV", "3mo", "1d");
+}
+
+/** 2 年期美债收益率 */
+export async function getTreasury2YData(): Promise<YahooChartResult | null> {
+  return fetchYahooChart("2YY=F", "3mo", "1d");
+}
+
+/** 10 年期美债收益率 */
+export async function getTreasury10YData(): Promise<YahooChartResult | null> {
+  return fetchYahooChart("10Y=F", "3mo", "1d");
+}
+
+/** 黄金期货 */
+export async function getGoldData(): Promise<YahooChartResult | null> {
+  return fetchYahooChart("GC=F", "3mo", "1d");
+}
+
+/** 原油期货 */
+export async function getOilData(): Promise<YahooChartResult | null> {
+  return fetchYahooChart("CL=F", "3mo", "1d");
+}
+
+/** 美元指数 */
+export async function getDXYData(): Promise<YahooChartResult | null> {
+  return fetchYahooChart("DX-Y.NYB", "3mo", "1d");
+}
+
+// ==================== 批量获取 ====================
+
+export interface MarketSnapshot {
+  sp500: YahooChartResult | null;
+  nasdaq: YahooChartResult | null;
+  vix: YahooChartResult | null;
+  financials: YahooChartResult | null;
+  energy: YahooChartResult | null;
+  tech: YahooChartResult | null;
+  healthcare: YahooChartResult | null;
+  treasury2Y: YahooChartResult | null;
+  treasury10Y: YahooChartResult | null;
+  gold: YahooChartResult | null;
+  oil: YahooChartResult | null;
+  dxy: YahooChartResult | null;
+}
+
+/**
+ * 并行获取所有市场数据
+ * 单个 symbol 失败不影响其他
+ */
+export async function fetchMarketSnapshot(): Promise<MarketSnapshot> {
+  const [sp500, nasdaq, vix, financials, energy, tech, healthcare,
+         treasury2Y, treasury10Y, gold, oil, dxy] = await Promise.all([
+    getSP500Data(), getNasdaqData(), getVIXData(),
+    getFinancialsData(), getEnergyData(), getTechData(), getHealthcareData(),
+    getTreasury2YData(), getTreasury10YData(),
+    getGoldData(), getOilData(), getDXYData(),
+  ]);
+
+  return {
+    sp500, nasdaq, vix,
+    financials, energy, tech, healthcare,
+    treasury2Y, treasury10Y,
+    gold, oil, dxy,
+  };
+}
+
+// ==================== 历史数据 ====================
+
 /**
  * 获取指定历史日期附近的市场数据
- *
- * 取目标日期前 6 个月到后 3 个月的数据，
- * 足够计算 RSI、前高跌幅、以及验证后续实际走势。
- *
- * @param targetDate 目标日期 (YYYY-MM-DD)
- * @returns { sp500, vix } 或 null
  */
 export async function fetchHistoricalData(
   targetDate: string
@@ -211,23 +277,18 @@ export async function fetchHistoricalData(
 
       clearTimeout(timeout);
 
-      if (!response.ok) {
-        console.warn(`[Yahoo] ${symbol} @ ${targetDate} returned ${response.status}`);
-        return null;
-      }
+      if (!response.ok) return null;
 
       const json = await response.json();
       const result = json?.chart?.result?.[0];
       if (!result?.timestamp || !result?.indicators?.quote?.[0]) return null;
 
-      const { timestamp, indicators } = result;
-      const quote = indicators.quote[0];
+      const { timestamp, indicators: ind } = result;
+      const quote = ind.quote[0];
 
-      // Filter null values
       const valid: YahooChartResult = {
         symbol,
-        timestamps: [],
-        opens: [], highs: [], lows: [], closes: [], volumes: [],
+        timestamps: [], opens: [], highs: [], lows: [], closes: [], volumes: [],
       };
 
       for (let i = 0; i < timestamp.length; i++) {
@@ -241,28 +302,21 @@ export async function fetchHistoricalData(
         }
       }
 
-      if (valid.closes.length < 30) {
-        console.warn(`[Yahoo] ${symbol} @ ${targetDate} only ${valid.closes.length} points`);
-        return null;
-      }
+      if (valid.closes.length < 30) return null;
 
       setCache(cacheKey, valid);
-      console.log(`[Yahoo] ${symbol} @ ${targetDate}: ${valid.closest.length} points`);
       return valid;
-    } catch (err) {
-      console.warn(`[Yahoo] ${symbol} @ ${targetDate}: ${(err as Error).message}`);
+    } catch {
       return null;
     }
   };
 
   const [sp500, vix] = await Promise.all([fetchOne("^GSPC"), fetchOne("^VIX")]);
   if (!sp500) return null;
-  return { sp500, vix: vix ?? sp500 }; // VIX fallback to S&P (will be inaccurate but not null)
+  return { sp500, vix: vix ?? sp500 };
 }
 
-/**
- * 清除所有缓存（用于测试或强制刷新）
- */
+/** 清除所有缓存 */
 export function clearCache(): void {
   cache.clear();
   console.log("[Yahoo] Cache cleared");

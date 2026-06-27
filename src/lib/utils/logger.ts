@@ -231,7 +231,17 @@ class Logger {
   }
 }
 
-export const logger = new Logger({ level: LogLevel.INFO });
+/** 从环境变量 LOG_LEVEL 读取日志级别。silent=静默, debug=全部, info=默认 */
+function envLogLevel(): LogLevel {
+  const v = process.env.LOG_LEVEL?.toLowerCase();
+  if (v === "silent") return LogLevel.FATAL + 1; // 高于所有级别 = 静默
+  if (v === "debug") return LogLevel.DEBUG;
+  if (v === "error") return LogLevel.ERROR;
+  if (v === "warn") return LogLevel.WARN;
+  return LogLevel.INFO;
+}
+
+export const logger = new Logger({ level: envLogLevel() });
 
 export interface CategoryLogger {
   debug: (message: string, context?: Record<string, any>) => void;

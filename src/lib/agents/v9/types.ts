@@ -71,7 +71,7 @@ export interface FactorPermission {
    */
   uncertaintySensitivity: number;
   /** 该 Agent 的决策风格描述 */
-  interpretationStyle: "macro" | "value" | "momentum" | "narrative" | "statistical" | "contrarian";
+  interpretationStyle: "macro" | "value" | "momentum" | "narrative" | "statistical" | "contrarian" | "sentiment";
 }
 
 /** V9 Agent 定义 */
@@ -253,6 +253,12 @@ export interface V9SimConfig {
   news: string;
   marketData: {
     vix: number; rsi: number; dropMagnitude: number;
+    volatility?: number;
+    volumeSpike?: number;
+    sectorRotation?: number;
+    yieldCurveSpread?: number;
+    goldMomentum?: number;
+    oilMomentum?: number;
     hasPolicyResponse: boolean;
     hasLeverageDamage: boolean;
     hasSolvencyDamage: boolean;
@@ -262,6 +268,9 @@ export interface V9SimConfig {
   directionThreshold?: number;
   /** 🆕 v9.5.2: 启用 V 型反弹路由仲裁 (classifier V_REBOUND + 高置信→强制 UP)。默认 true。 */
   enableVRoute?: boolean;
+  /** 🆕 v10: 启用价格反馈闭环 (信念→订单→撮合→价格→Agent感知)。
+   *  默认 false（向后兼容），设为 true 开启。 */
+  enablePriceFeedback?: boolean;
   /** 消融实验: 禁用组件 */
   ablation?: {
     disablePolicyAgent?: boolean;
@@ -274,6 +283,13 @@ export interface V9SimConfig {
     disableNeutralRule4?: boolean;    // 禁用 Rule4 (高不确定性+弱共识门控)
     /** 🆕 v9.6: 禁用均值回归感知 (消融实验用) */
     disableMeanReversion?: boolean;
+    /** 🆕 v9.7: 非线性共识方法 (替代 linear+cluster+gating pipeline)。
+     *  可选值: "power_law" | "entropy_weighted" | "trimmed_mean" | "median"
+     *        | "winsorized" | "geometric_mean" | "dynamic_ensemble" | "linear_baseline"
+     *  设为 "dynamic_ensemble" (推荐) 自动运行全部 6 种非线性方法并加权集成。 */
+    nonlinearMethod?: string;
+    /** 🆕 v9.7: 非线性共识参数覆盖 (alpha, trimCount 等) */
+    nonlinearConfig?: Record<string, number | string | string[]>;
   };
 }
 
@@ -297,4 +313,71 @@ export interface V9SwarmResult {
   };
   /** 🆕 群体行为诊断报告 */
   diagnostics: DiagnosticReport;
+  /** 🆕 v9.7: 非线性共识元数据 (当 ablation.nonlinearMethod 设置时填充) */
+  nonlinearConsensus?: {
+    method: string;
+    individualResults?: Array<{
+      method: string;
+      consensus: number;
+      confidence: number;
+      signalQuality: number;
+    }>;
+    ensembleWeights?: Record<string, number>;
+  };
+  /** 🆕 v10: 价格反馈闭环 */
+  priceFeedback?: PriceFeedbackState;
+}
+
+// ==================== v10: 价格反馈闭环 ====================
+
+/** Agent 持仓状态 */
+export interface AgentPosition {
+  agentId: string;
+  /** 持仓数量：正=多头，负=空头 */
+  position: number;
+  /** 持仓成本价 */
+  avgCost: number;
+  /** 最大回撤 (从持仓最高点) */
+  maxDrawdown: number;
+  /** 当前浮动盈亏 */
+  unrealizedPnL: number;
+}
+
+/** 价格状态 */
+export interface PriceState {
+  currentPrice: number;
+  previousPrice: number;
+  priceChange: number;      // 百分比
+  cumulativeReturn: number; // 累计涨跌幅
+  /** 模拟波动率 */
+  volatility: number;
+}
+
+/** 订单项 */
+export interface OrderItem {
+  agentId: string;
+  direction: "BUY" | "SELL" | "HOLD";
+  size: number;            // 绝对数量
+  belief: number;          // 触发订单的信念值
+  confidence: number;      // 信心权重
+}
+
+/** 撮合结果 */
+export interface OrderMatchResult {
+  netOrderFlow: number;   // 净订单流 (正=净买入)
+  buyPressure: number;
+  sellPressure: number;
+  priceImpact: number;     // 价格变动估算
+}
+
+/** 价格反馈状态 */
+export interface PriceFeedbackState {
+  price: PriceState;
+  positions: Record<string, AgentPosition>;
+  orders: OrderItem[];
+  orderMatch: OrderMatchResult;
+  /** 是否是反馈轮 (非第一轮) */
+  isFeedbackRound: boolean;
+  /** 反馈轮次数 */
+  feedbackRound: number;
 }

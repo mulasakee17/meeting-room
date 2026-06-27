@@ -4,4 +4,17 @@ export { computeAllAgentStates, computeAgentBelief, filterVisibleFactors } from 
 export { evaluateUncertainty, makeDecision } from "./uncertaintyEngine";
 export { getAllAgents, POLICY_AGENT, V9_AGENTS, computeBlindnessStats } from "./agentDefinitions";
 export { generateDiagnostics, computeAttribution, detectCoalitions, runCounterfactuals } from "./diagnostics";
+export {
+  computeNonlinearConsensus,
+  computeLinearBaselineConsensus,
+  computePowerLawConsensus,
+  computeEntropyWeightedConsensus,
+  computeTrimmedMeanConsensus,
+  computeMedianConsensus,
+  computeWinsorizedConsensus,
+  computeGeometricMeanConsensus,
+  computeDynamicEnsembleConsensus,
+  DEFAULT_NONLINEAR_CONFIG,
+} from "./nonlinearConsensus";
+export type { NonlinearConsensusInput, NonlinearConsensusOutput, NonlinearConfig } from "./nonlinearConsensus";
 export type * from "./types";

@@ -41,6 +41,10 @@ import { FALLBACK_RESPONSE } from "@/lib/demo-fallback";
 import { getAllAgents } from "@/lib/agents/v9/agentDefinitions";
 
 // v9.5.1: 连续推演时间线存储 (服务端内存, 会话级)
+// ⚠️ Serverless 限制: 此 Map 在每次冷启动时被重置。
+//    - 长驻 Node.js 服务器: 跨请求共享, 正常工作
+//    - Vercel/Edge/AWS Lambda: 每次调用都是新的, 时间线数据不跨请求保留
+//    - 建议: 生产环境中使用 Redis/Upstash 等外部存储替代
 interface TimelineEntry {
   sequenceIndex: number;
   news: string;
@@ -52,6 +56,22 @@ interface TimelineEntry {
   beliefStd: number;
 }
 const timelineStore = new Map<string, TimelineEntry[]>();
+/** 最大会话数 — 防止长时间运行的服务中内存泄漏 */
+const MAX_TIMELINE_SESSIONS = 100;
+/** 会话 TTL (毫秒) — 超时自动清理 */
+const TIMELINE_SESSION_TTL_MS = 30 * 60 * 1000; // 30 分钟
+
+/** 清理过期 timeline 会话 */
+function pruneTimelineStore(): void {
+  if (timelineStore.size > MAX_TIMELINE_SESSIONS) {
+    const keys = Array.from(timelineStore.keys());
+    const excess = timelineStore.size - MAX_TIMELINE_SESSIONS;
+    // 删除最旧的会话
+    for (let i = 0; i < excess && i < keys.length; i++) {
+      timelineStore.delete(keys[i]);
+    }
+  }
+}
 
 // 错误消息映射
 const ERROR_MESSAGES: Record<LLMErrorType, { title: string; suggestion: string }> = {
@@ -100,6 +120,11 @@ function inferMarketParams(news: string): {
   rsi: number;
   dropMagnitude: number;
   volatility: number;
+  volumeSpike: number;
+  sectorRotation: number;
+  yieldCurveSpread: number;
+  goldMomentum: number;
+  oilMomentum: number;
   hasPolicyResponse: boolean;
   hasCentralBankAction: boolean;
   knownVulnerabilities: string[];
@@ -149,7 +174,15 @@ function inferMarketParams(news: string): {
   if (text.match(/流动性|liquidity|保证金/)) knownVulnerabilities.push("流动性紧张");
   if (text.match(/系统性|systemic|传染|连锁/)) knownVulnerabilities.push("系统性风险");
 
-  return { vix, rsi, dropMagnitude, volatility, hasPolicyResponse, hasCentralBankAction, knownVulnerabilities };
+  return {
+    vix, rsi, dropMagnitude, volatility,
+    volumeSpike: 1.0,
+    sectorRotation: 0,
+    yieldCurveSpread: -0.5,
+    goldMomentum: 0,
+    oilMomentum: 0,
+    hasPolicyResponse, hasCentralBankAction, knownVulnerabilities,
+  };
 }
 
 // ==================== API 路由 ====================
@@ -310,13 +343,21 @@ export async function POST(req: NextRequest) {
       try {
         const marketSnapshot = await getRealMarketSnapshot();
         const marketData = (body as any).marketData ?? {};
+        // 优先使用 fetchRealMarketParams 的丰富数据，降级到 marketSnapshot
+        const enrichedParams = await fetchRealMarketParams(news).catch(() => null);
         const v9Config = {
           news,
           marketData: {
-            vix: marketSnapshot?.vix ?? marketData.vix ?? 20,
-            rsi: marketSnapshot?.rsi ?? marketData.rsi ?? 50,
-            dropMagnitude: marketSnapshot?.dropFromPeak ?? marketData.dropMagnitude ?? 5,
-            hasPolicyResponse: marketData.hasPolicyResponse ?? false,
+            vix: enrichedParams?.vix ?? marketSnapshot?.vix ?? marketData.vix ?? 20,
+            rsi: enrichedParams?.rsi ?? marketSnapshot?.rsi ?? marketData.rsi ?? 50,
+            dropMagnitude: enrichedParams?.dropMagnitude ?? marketSnapshot?.dropFromPeak ?? marketData.dropMagnitude ?? 5,
+            volatility: enrichedParams?.volatility ?? marketSnapshot?.volatility ?? 0.015,
+            volumeSpike: enrichedParams?.volumeSpike ?? marketSnapshot?.volumeSpike ?? 1.0,
+            sectorRotation: enrichedParams?.sectorRotation ?? 0,
+            yieldCurveSpread: enrichedParams?.yieldCurveSpread ?? -0.5,
+            goldMomentum: enrichedParams?.goldMomentum ?? 0,
+            oilMomentum: enrichedParams?.oilMomentum ?? 0,
+            hasPolicyResponse: enrichedParams?.hasPolicyResponse ?? marketData.hasPolicyResponse ?? false,
             hasLeverageDamage: marketData.hasLeverageDamage ?? false,
             hasSolvencyDamage: marketData.hasSolvencyDamage ?? false,
           },
@@ -339,12 +380,12 @@ export async function POST(req: NextRequest) {
             vix: v9Config.marketData.vix,
             rsi: v9Config.marketData.rsi,
             dropMagnitude: v9Config.marketData.dropMagnitude,
-            volatility: marketSnapshot?.volatility ?? (
+            volatility: v9Config.marketData.volatility ?? (
               v9Config.marketData.dropMagnitude > 15 ? 0.04 :
               v9Config.marketData.dropMagnitude > 8 ? 0.028 :
               v9Config.marketData.dropMagnitude > 3 ? 0.02 : 0.015
             ),
-            volumeSpike: marketSnapshot?.volumeSpike ?? 1.0,
+            volumeSpike: v9Config.marketData.volumeSpike ?? 1.0,
             hasPolicyResponse: v9Config.marketData.hasPolicyResponse,
             hasCentralBankAction: v9Config.marketData.hasPolicyResponse,
             hasLeverageDamage: v9Config.marketData.hasLeverageDamage,
@@ -490,13 +531,12 @@ export async function POST(req: NextRequest) {
           session[sequenceIndex] = entry;
           session = session.filter(Boolean); // 去空洞
           timelineStore.set(sessionId, session);
+          pruneTimelineStore(); // 防止长驻服务中内存泄漏
           timeline = [...session];
         }
 
         // ── 🆕 v9.5.2: 动态共识 (用动态权重重新计算加权共识) ──
         let dynamicConsensus: number | undefined;
-        const dynamicConsensusDirection: string | undefined = undefined as any;
-
         if (dynamicWeightResult && dynamicWeightResult.activeModes.length > 0) {
           const finalInteractionBeliefs = interaction.finalBeliefs;
           let weightedSum = 0;
@@ -699,12 +739,11 @@ export async function POST(req: NextRequest) {
     let hybridResult: HybridPredictionResult | null = null;
     let retailSignal: { emotion: number; greedFear: string } | null = null;
     let dataSourceLabel = "INFERRED";
-    let marketParams: { vix: number; rsi: number; dropMagnitude: number } | null = null;
+    let marketParams: { vix: number; rsi: number; dropMagnitude: number; volatility: number; volumeSpike: number; sectorRotation: number; yieldCurveSpread: number; goldMomentum: number; oilMomentum: number } | null = null;
 
     try {
       // 6a. 获取市场参数 — 优先真实数据，失败降级为推断
       let params: ReturnType<typeof inferMarketParams> & { dataSource?: string };
-      let dataSourceLabel = "INFERRED";
 
       const realParams = await fetchRealMarketParams(news);
       if (realParams) {
@@ -713,6 +752,11 @@ export async function POST(req: NextRequest) {
           rsi: realParams.rsi,
           dropMagnitude: realParams.dropMagnitude,
           volatility: realParams.volatility,
+          volumeSpike: realParams.volumeSpike,
+          sectorRotation: realParams.sectorRotation,
+          yieldCurveSpread: realParams.yieldCurveSpread,
+          goldMomentum: realParams.goldMomentum,
+          oilMomentum: realParams.oilMomentum,
           hasPolicyResponse: realParams.hasPolicyResponse,
           hasCentralBankAction: realParams.hasCentralBankAction,
           knownVulnerabilities: realParams.knownVulnerabilities,
@@ -723,7 +767,15 @@ export async function POST(req: NextRequest) {
         params = { ...inferMarketParams(news), dataSource: "INFERRED" };
       }
 
-      marketParams = { vix: params.vix, rsi: params.rsi, dropMagnitude: params.dropMagnitude };
+      marketParams = {
+        vix: params.vix, rsi: params.rsi, dropMagnitude: params.dropMagnitude,
+        volatility: (params as any).volatility ?? 0.015,
+        volumeSpike: (params as any).volumeSpike ?? 1.0,
+        sectorRotation: (params as any).sectorRotation ?? 0,
+        yieldCurveSpread: (params as any).yieldCurveSpread ?? -0.5,
+        goldMomentum: (params as any).goldMomentum ?? 0,
+        oilMomentum: (params as any).oilMomentum ?? 0,
+      };
       console.log(`[API] Market data source: ${dataSourceLabel}`);
 
       // 6b. 构建 MarketState
@@ -926,9 +978,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     name: "SwarmAlpha API",
-    version: "5.0.0",
-    v6Available: true,
-    description: "多智能体金融共识推演系统 — v5 信息不对称 + v6 涌现式共识",
+    version: "9.7.0",
+    description: "复杂系统中的 AI 群体认知形成机制 — 金融市场作为实验平台. v9 正交五因子 + v9.5 社交互动 + v9.7 非线性共识",
     features: [
       // v5 features
       "5 Agent 信息不对称 LLM 共识推演",
@@ -946,16 +997,6 @@ export async function GET(req: NextRequest) {
       "v9.5.2: 🆕 动态权重引擎 (恐慌/政策/价值洼地 三模式级联自适应)",
     ],
     usage: {
-      v5_default: {
-        method: "POST",
-        body: { news: "string", rounds: "number" },
-        description: "v5 信息不对称 Agent 群 (2轮LLM辩论)",
-      },
-      v6_optIn: {
-        method: "POST",
-        body: { version: "v6", news: "string", rounds: "number" },
-        description: "v6 涌现式市场共识 (1次LLM种子 + 纯数学多轮演化)",
-      },
       v9_withOptions: {
         method: "POST",
         body: {
@@ -964,9 +1005,9 @@ export async function GET(req: NextRequest) {
           rounds: "number (1-10)",
           enableDynamicWeights: "boolean (optional, default false)",
           disableInteraction: "boolean (optional)",
-          ablation: "{ disablePolicyAgent?, disableUncertainty?, disableBlindness?, ... }",
+          ablation: "{ nonlinearMethod?, disablePolicyAgent?, disableUncertainty?, disableBlindness?, ... }",
         },
-        description: "v9.3 正交五因子 + v9.5 社交互动 + v9.5.2 动态权重 (场景自适应)",
+        description: "v9.7 正交五因子 + 社交互动 + 动态权重 + 非线性共识聚合 (群体认知实验平台)",
       },
       withMarketData: {
         method: "POST",

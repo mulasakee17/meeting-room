@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
 import "./globals.css";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "SwarmAlpha - 金融多智能体共识推演沙盒",
-  description: "多Agent博弈推演市场情绪演化",
+  title: "SwarmAlpha API — Collective Intelligence Laboratory",
+  description: "AI multi-agent consensus formation research platform API server.",
 };
 
 export default function RootLayout({
@@ -12,8 +12,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN">
-      <body className="antialiased min-h-screen bg-[#0a0a0a]">{children}</body>
+    <html lang="en">
+      <body className="antialiased min-h-screen bg-[#050505] text-[#fafafa] font-mono">
+        {children}
+      </body>
     </html>
   );
 }

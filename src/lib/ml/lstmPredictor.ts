@@ -1,10 +1,19 @@
 /**
- * LSTM 机器学习信号预测模块
- * 
- * 功能：
- * 1. 基于 LSTM 的价格预测
- * 2. 技术指标趋势预测
- * 3. 信号强度评估
+ * ⚠️ STUB MODEL — 未经过训练的占位模型
+ *
+ * 此模块实现了标准的 LSTM 前向传播架构，但权重使用零初始化
+ * （而非 Math.random()），原因:
+ *   - 项目中没有训练数据管道
+ *   - 没有预训练权重文件
+ *   - 随机权重输出的预测值看起来"合理"但实际上毫无意义
+ *
+ * 当前行为: 所有预测返回"无变化"中性信号 (HOLD, confidence=0)
+ * 用于保持 API 接口兼容性，同时明确标记预测不可靠。
+ *
+ * 未来计划:
+ *   - ONNX Runtime 加载预训练模型
+ *   - 或基于历史回测数据的增量训练
+ *   - 或替换为简单的统计基线 (EWMA)
  */
 
 import { TechnicalIndicators } from '@/lib/indicators/technical';
@@ -18,6 +27,8 @@ export interface LSTMConfig {
 }
 
 export interface LSTMPrediction {
+  /** ⚠️ 始终为 true — 此模型未训练 */
+  isStubModel: true;
   predictedPrice: number;
   predictedMA5: number;
   predictedMA20: number;
@@ -57,36 +68,54 @@ export class LSTMPredictor {
   };
 
   constructor(config: Partial<LSTMConfig> = {}) {
+    if (typeof console !== 'undefined') {
+      console.warn('[LSTM] ⚠️ STUB MODEL instantiated — 模型未训练, 预测不可靠。仅作 API 兼容占位。');
+    }
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.weights = this.initializeWeights();
   }
 
+  /**
+   * ⚠️ 零权重初始化 — STUB MODEL
+   *
+   * 所有权重初始化为 0。由于没有训练步骤，零权重确保:
+   *   1. LSTM 前向传播输出始终为 0
+   *   2. 预测结果 = "无变化" (中性信号)
+   *   3. 不产生随机噪声伪装的"预测"
+   *
+   * 当加载预训练权重时，用 loadWeights() 替换。
+   */
   private initializeWeights() {
     const { inputSize, hiddenSize, outputSize } = this.config;
     const combinedSize = inputSize + hiddenSize;
 
-    const randomMatrix = (rows: number, cols: number) => {
+    const zeroMatrix = (rows: number, cols: number): number[][] => {
       const matrix: number[][] = [];
       for (let i = 0; i < rows; i++) {
-        matrix.push(new Array(cols).fill(0).map(() => (Math.random() - 0.5) * 0.1));
+        matrix.push(new Array(cols).fill(0));
       }
       return matrix;
     };
 
     return {
-      wf: randomMatrix(hiddenSize, combinedSize),
-      wi: randomMatrix(hiddenSize, combinedSize),
-      wo: randomMatrix(hiddenSize, combinedSize),
-      wc: randomMatrix(hiddenSize, combinedSize),
+      wf: zeroMatrix(hiddenSize, combinedSize),
+      wi: zeroMatrix(hiddenSize, combinedSize),
+      wo: zeroMatrix(hiddenSize, combinedSize),
+      wc: zeroMatrix(hiddenSize, combinedSize),
       bf: new Array(hiddenSize).fill(0),
       bi: new Array(hiddenSize).fill(0),
       bo: new Array(hiddenSize).fill(0),
       bc: new Array(hiddenSize).fill(0),
       dense: {
-        w: randomMatrix(outputSize, hiddenSize),
+        w: zeroMatrix(outputSize, hiddenSize),
         b: new Array(outputSize).fill(0),
       },
     };
+  }
+
+  /** 加载预训练权重 (未来实现) */
+  loadWeights(_weights: typeof this.weights): void {
+    this.weights = _weights;
   }
 
   private sigmoid(x: number): number {
@@ -160,25 +189,30 @@ export class LSTMPredictor {
     if (predictedPrice < lastState[0]) reasonings.push('预测价格下跌');
 
     return {
+      isStubModel: true as const,
       predictedPrice: Math.round(predictedPrice * 100) / 100,
       predictedMA5: Math.round(predictedMA5 * 100) / 100,
       predictedMA20: Math.round(predictedMA20 * 100) / 100,
       predictedRSI: Math.round(predictedRSI * 10) / 10,
       predictedVolatility: Math.round(predictedVolatility * 10000) / 100,
-      confidence: Math.round(confidence),
+      confidence: 0, // ⚠️ 未训练模型 — 置信度始终为 0
       trendProbability: {
-        up: Math.round(upProb * 100),
-        down: Math.round(downProb * 100),
-        sideways: Math.round(sidewaysProb * 100),
+        up: 33,
+        down: 33,
+        sideways: 34,
       },
-      signalStrength: Math.round(signalStrength),
-      recommendation,
-      reasoning: reasonings.join('; ') || '趋势不明',
+      signalStrength: 0,
+      recommendation: 'HOLD' as const,
+      reasoning: '⚠️ STUB MODEL: 模型未训练, 预测不可靠。仅作 API 兼容占位。',
     };
   }
 
   generatePredictionReport(prediction: LSTMPrediction): string {
-    return `## LSTM 机器学习预测报告
+    return `## ⚠️ LSTM 预测报告 (STUB MODEL — 未训练)
+
+> **警告: 此模型未经过训练, 所有权重为零。预测结果不可用于实际交易决策。**
+
+### 预测详情
 
 ### 价格预测
 **预测价格**: ¥${prediction.predictedPrice.toFixed(2)}

@@ -24,6 +24,7 @@ import {
   FactorCategory,
 } from "./types";
 import { META_FACTORS } from "./agentDefinitions";
+import { MARKET_AWARENESS_CONFIG } from "./config";
 
 // ==================== 🆕 v9.6 双层市场感知修正 ====================
 //
@@ -35,18 +36,20 @@ import { META_FACTORS } from "./agentDefinitions";
 /**
  * 基于 VIX/RSI 计算统计均值回归信号强度 (0~1)
  */
+/**
+ * 基于 VIX/RSI 计算统计均值回归信号强度 (0~1)
+ * 阈值从 MARKET_AWARENESS_CONFIG.meanReversion 读取
+ */
 function computeMeanReversionSignal(rsi: number, vix: number): number {
-  if (rsi < 20 && vix > 40) return 1.0;
-  if (rsi < 25 && vix > 35) return 0.6;
-  if (rsi < 30 && vix > 30) return 0.3;
+  const { strong, moderate, weak } = MARKET_AWARENESS_CONFIG.meanReversion;
+  if (rsi < strong.rsiMax && vix > strong.vixMin) return strong.signal;
+  if (rsi < moderate.rsiMax && vix > moderate.vixMin) return moderate.signal;
+  if (rsi < weak.rsiMax && vix > weak.vixMin) return weak.signal;
   return 0;
 }
 
-/** Agent 对统计均值回归信号的响应强度 */
-const MR_AGENT_MULTIPLIER: Record<string, number> = {
-  contrarian: 2.0, value: 1.5, institution: 1.2, quant: 0.6,
-  policy: 0.4, media: 0.3, trend: 0.2, retail: 0.2, panic: 0.1,
-};
+/** Agent 对统计均值回归信号的响应强度 (从集中配置读取) */
+const MR_AGENT_MULTIPLIER: Record<string, number> = MARKET_AWARENESS_CONFIG.mrAgentMultiplier;
 
 /**
  * 🆕 v9.6 统一市场感知修正
@@ -67,6 +70,7 @@ function applyMarketAwareness(
   marketPattern?: string
 ): number {
   let corrected = belief;
+  const patterns = MARKET_AWARENESS_CONFIG.patterns;
 
   // ═══════════════════════════════════════════
   // 层级 1: 统计均值回归 (VIX/RSI 客观信号)
@@ -75,7 +79,10 @@ function applyMarketAwareness(
     const mrSignal = computeMeanReversionSignal(rsi, vix);
     if (mrSignal > 0 && corrected < 0) {
       // MECHANICAL_SELLOFF 模式下增强统计信号
-      const patternBoost = marketPattern === "MECHANICAL_SELLOFF" ? 2.0 : 1.0;
+      const msPattern = patterns.MECHANICAL_SELLOFF as { patternBoost: number };
+      const patternBoost = marketPattern === "MECHANICAL_SELLOFF"
+        ? msPattern.patternBoost
+        : 1.0;
       const multiplier = MR_AGENT_MULTIPLIER[agentId] ?? 0.5;
       const shift = mrSignal * multiplier * patternBoost * 50;
       corrected = Math.max(-100, Math.min(100, corrected + shift));
@@ -83,38 +90,49 @@ function applyMarketAwareness(
   }
 
   // ═══════════════════════════════════════════
-  // 层级 2: Pattern-Aware 智能体级修正
+  // 层级 2: Pattern-Aware 智能体级修正 (参数从 config 读取)
   // ═══════════════════════════════════════════
   const orig = corrected;
 
   if (marketPattern === "MECHANICAL_SELLOFF") {
     // 机械性抛售（闪崩/程序化踩踏）→ ~90% 概率快速反弹
+    const pat = patterns.MECHANICAL_SELLOFF as {
+      valueContrarian: { scale: number; shift: number };
+      panic: { scale: number };
+    };
     if (agentId === "value" || agentId === "contrarian") {
-      corrected = corrected * 0.2 + 15;  // 极度看空 → 微看多
+      const cfg = pat.valueContrarian;
+      corrected = corrected * cfg.scale + cfg.shift;
     } else if (agentId === "panic") {
-      corrected = corrected * 0.3;        // 压缩恐慌
+      corrected = corrected * pat.panic.scale;
     }
     // 其他 Agent: 不做修改
 
   } else if (marketPattern === "SOLVENCY_CRISIS") {
     // 偿付危机 → 极度危险, 只放大空头, 不碰多头
+    const pat = patterns.SOLVENCY_CRISIS as { bearishBoost: number };
     if (corrected < 0) {
-      corrected = corrected * 1.15;       // 增强看空信心
+      corrected = corrected * pat.bearishBoost;
     }
     // 多头保持不变 (偿付危机中抄底信号不可靠)
 
   } else if (marketPattern === "NARRATIVE_DRIVEN") {
     // 叙事驱动 → 故事容易过度延伸, 倾向均值回归
+    const pat = patterns.NARRATIVE_DRIVEN as {
+      contrarian: { scale: number };
+      media: { scale: number };
+    };
     if (agentId === "contrarian") {
-      corrected = -corrected * 0.5;       // 逆势反向
+      corrected = -corrected * Math.abs(pat.contrarian.scale);
     } else if (agentId === "media") {
-      corrected = corrected * 0.3;        // 媒体噪声降权
+      corrected = corrected * pat.media.scale;
     }
 
   } else if (marketPattern === "EXTERNAL_SHOCK" || !marketPattern) {
     // 外部冲击或未知 → 保守处理, 降低抄底冲动
+    const pat = patterns.EXTERNAL_SHOCK as { value: { scale: number } };
     if (agentId === "value") {
-      corrected = corrected * 0.7;
+      corrected = corrected * pat.value.scale;
     }
     // 其他 Agent: 不做修改
   }

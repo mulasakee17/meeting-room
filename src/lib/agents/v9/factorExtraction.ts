@@ -20,16 +20,17 @@
 
 import { FactorVector, ExtractedFactor, FactorCategory } from "./types";
 import crypto from "crypto";
+import { systemLogger } from "../../utils/logger";
 
 // ==================== 因子缓存 ====================
 // 避免对同一事件的重复 API 调用 (消融实验 5 变体 × 60 事件 = 300 调用 → 60 调用)
 
 const factorCache = new Map<string, FactorVector>();
 
-function cacheKey(news: string, marketData: { vix: number; rsi: number; dropMagnitude: number }): string {
+function cacheKey(news: string, marketData: MarketContext): string {
   // SHA-256 全文本哈希 — 杜绝 news.slice(0,100) 截断导致的语义盲区
   const hash = crypto.createHash("sha256").update(news, "utf8").digest("hex").slice(0, 16);
-  return `${hash}|VIX=${marketData.vix}|RSI=${marketData.rsi}|DRP=${marketData.dropMagnitude}`;
+  return `${hash}|V=${marketData.vix}|R=${marketData.rsi}|D=${marketData.dropMagnitude}|R=${marketData.sectorRotation}|S=${marketData.yieldCurveSpread}`;
 }
 
 /** DEMO 模式下跳过缓存 — 确保现场演示每次实时调用 */
@@ -149,9 +150,21 @@ Factor 5 — Uncertainty (不确定性): 0~100。不能为负。
 
 返回严格 JSON (无 markdown 包裹):`;
 
+export interface MarketContext {
+  vix: number;
+  rsi: number;
+  dropMagnitude: number;
+  volatility?: number;
+  volumeSpike?: number;
+  sectorRotation?: number;
+  yieldCurveSpread?: number;
+  goldMomentum?: number;
+  oilMomentum?: number;
+}
+
 export async function extractFactors(
   news: string,
-  marketData: { vix: number; rsi: number; dropMagnitude: number },
+  marketData: MarketContext,
   apiKey?: string
 ): Promise<FactorVector> {
   // 优先: 模板因子提取 (确定性, 零成本)
@@ -164,7 +177,7 @@ export async function extractFactors(
   if (!isDemoMode()) {
     const cached = factorCache.get(key);
     if (cached) {
-      console.log(`[V9] 💾 缓存命中: ${key}`);
+      systemLogger.debug(`[V9] 💾 缓存命中: ${key}`);
       return cached;
     }
   }
@@ -183,7 +196,8 @@ export async function extractFactors(
         model: "deepseek-chat",
         messages: [
           { role: "system", content: FACTOR_PROMPT },
-          { role: "user", content: `新闻: ${news}\n市场数据: VIX=${marketData.vix}, RSI=${marketData.rsi}, 跌幅=${marketData.dropMagnitude}%` },
+          { role: "user", content: `新闻: ${news}
+市场快照: VIX=${marketData.vix} RSI=${marketData.rsi} 近期跌幅=${marketData.dropMagnitude}%${marketData.volatility != null ? ` 波动率=${(marketData.volatility * 100).toFixed(1)}%` : ""}${marketData.sectorRotation != null ? ` 板块轮动=${marketData.sectorRotation > 0 ? "Value走强" : "Growth走强"}(${marketData.sectorRotation.toFixed(1)})` : ""}${marketData.yieldCurveSpread != null ? ` 2Y-10Y利差=${marketData.yieldCurveSpread}bp` : ""}${marketData.goldMomentum != null ? ` 黄金月度=${marketData.goldMomentum > 0 ? "+" : ""}${marketData.goldMomentum}%` : ""}${marketData.oilMomentum != null ? ` 原油月度=${marketData.oilMomentum > 0 ? "+" : ""}${marketData.oilMomentum}%` : ""}${marketData.volumeSpike != null ? ` 成交量异常=${marketData.volumeSpike > 1.5 ? "显著放量" : "正常"}(${marketData.volumeSpike.toFixed(1)}x)` : ""}` },
         ],
         response_format: { type: "json_object" },
         temperature: 0.3,
@@ -295,7 +309,7 @@ export async function extractFactors(
     }
     return result;
   } catch (e: any) {
-    console.error(`[V9] ❌ LLM因子提取失败: ${e.message || e} — 回退到模板`);
+    systemLogger.error(`[V9] LLM因子提取失败: ${e.message || e} — 回退到模板`);
     return templateFactorExtraction(news, marketData);
   }
 }
@@ -318,9 +332,9 @@ export async function extractFactors(
  */
 export function templateFactorExtraction(
   news: string,
-  marketData: { vix: number; rsi: number; dropMagnitude: number }
+  marketData: MarketContext
 ): FactorVector {
-  const { vix, rsi, dropMagnitude: drop } = marketData;
+  const { vix, rsi, dropMagnitude: drop, sectorRotation, goldMomentum, oilMomentum } = marketData;
 
   // ── Phase 1: 丰富关键词检测 ──
 
@@ -544,6 +558,25 @@ export function templateFactorExtraction(
 
   // 上下文调整
   if (systemicThreat && !policyNews) uncertainty = Math.min(100, uncertainty + 20);
+
+  // ── 富化市场数据调整（v9.8）──
+  // 板块轮动信号：金融 vs 科技相对强弱
+  if (sectorRotation && sectorRotation > 3) {
+    // Value rotation → 资金从成长股撤出 → 流动性收紧信号
+    liquidity = Math.max(-100, Math.min(100, liquidity - 10));
+  } else if (sectorRotation && sectorRotation < -3) {
+    // Growth rotation → 风险偏好 → 叙事增强
+    narrative = Math.max(-100, Math.min(100, narrative + 10));
+  }
+  // 商品信号：Gold 上涨 = 避险情绪
+  if (goldMomentum && goldMomentum > 3) {
+    uncertainty = Math.min(100, uncertainty + 10);
+  }
+  // 商品信号：Oil 暴涨/暴跌 = 供给冲击
+  if (oilMomentum && Math.abs(oilMomentum) > 8) {
+    uncertainty = Math.min(100, uncertainty + 8);
+    fundamental = Math.max(-100, Math.min(100, fundamental + (oilMomentum > 0 ? -10 : 5)));
+  }
   if (solvencyNews) uncertainty = Math.min(100, uncertainty + 10);
   if (majorEvent) uncertainty = Math.min(100, uncertainty + 10);
   if (recoveryNews) uncertainty = Math.max(10, uncertainty - 15);   // 恢复降低不确定
