@@ -132,6 +132,9 @@ export const RATE_LIMIT_PRESETS = {
   
   // 每天限制
   daily: { windowMs: 24 * 60 * 60 * 1000, maxRequests: 500 },
+  
+  // 实验限制：适用于批量实验
+  experiment: { windowMs: 60 * 1000, maxRequests: 5 },
 };
 
 /**

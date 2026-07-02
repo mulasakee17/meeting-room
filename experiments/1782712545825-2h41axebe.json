@@ -1,0 +1,2990 @@
+{
+  "logId": "1782712545825-2h41axebe",
+  "environment": {
+    "news": "Fed announces 25bps rate cut to support economy",
+    "marketData": {},
+    "timestamp": "2026-06-29T05:55:45.825Z"
+  },
+  "decisionTraces": [
+    {
+      "traceId": "1782712545825-j7zcpwry0",
+      "agentId": "value",
+      "round": 0,
+      "news": "Fed announces 25bps rate cut to support economy",
+      "initialState": {
+        "agentId": "value",
+        "belief": "neutral",
+        "beliefStrength": 0,
+        "evidence": [],
+        "confidence": 50,
+        "uncertainty": 50,
+        "openness": 50,
+        "preference": {
+          "riskPreference": "conservative",
+          "goal": "长期价值投资",
+          "attention": [
+            {
+              "category": "fundamental",
+              "weight": 0.4,
+              "reasoning": "专注基本面"
+            },
+            {
+              "category": "policy",
+              "weight": 0.3,
+              "reasoning": "政策影响估值"
+            },
+            {
+              "category": "narrative",
+              "weight": 0.2,
+              "reasoning": "市场情绪"
+            },
+            {
+              "category": "liquidity",
+              "weight": 0.1,
+              "reasoning": "流动性次要"
+            }
+          ]
+        },
+        "memory": {
+          "recentAccuracy": 0,
+          "recentPredictions": [
+            {
+              "timestamp": "2026-06-29T05:55:45.827Z",
+              "belief": "bullish",
+              "beliefStrength": 40.437353428150345,
+              "confidence": 20
+            }
+          ],
+          "historicalEvents": []
+        },
+        "trust": [
+          {
+            "targetAgentId": "momentum",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "policy",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "contrarian",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "quant",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          }
+        ],
+        "updatedAt": "2026-06-29T05:55:45.825Z",
+        "version": 1
+      },
+      "steps": [
+        {
+          "stepName": "perception",
+          "input": {
+            "news": "Fed announces 25bps rate cut to support economy",
+            "marketData": {},
+            "preference": {
+              "riskPreference": "conservative",
+              "goal": "长期价值投资",
+              "attention": [
+                {
+                  "category": "fundamental",
+                  "weight": 0.4,
+                  "reasoning": "专注基本面"
+                },
+                {
+                  "category": "policy",
+                  "weight": 0.3,
+                  "reasoning": "政策影响估值"
+                },
+                {
+                  "category": "narrative",
+                  "weight": 0.2,
+                  "reasoning": "市场情绪"
+                },
+                {
+                  "category": "liquidity",
+                  "weight": 0.1,
+                  "reasoning": "流动性次要"
+                }
+              ]
+            }
+          },
+          "reasoning": "分析新闻: Fed announces 25bps rate cut to support economy... 提取了1条证据",
+          "stateUpdate": {
+            "evidence": [
+              {
+                "id": "tevhfyi02",
+                "category": "policy",
+                "value": 70,
+                "confidence": 80,
+                "reasoning": "政策支持力度较大",
+                "source": "llm"
+              }
+            ]
+          },
+          "timestamp": "2026-06-29T05:55:45.825Z",
+          "llmConfidence": 80
+        },
+        {
+          "stepName": "judgment",
+          "input": {
+            "news": "Fed announces 25bps rate cut to support economy",
+            "state": {
+              "agentId": "value",
+              "belief": "neutral",
+              "beliefStrength": 0,
+              "evidence": [
+                {
+                  "id": "tevhfyi02",
+                  "category": "policy",
+                  "value": 70,
+                  "confidence": 80,
+                  "reasoning": "政策支持力度较大",
+                  "source": "llm"
+                }
+              ],
+              "confidence": 65,
+              "uncertainty": 50,
+              "openness": 50,
+              "preference": {
+                "riskPreference": "conservative",
+                "goal": "长期价值投资",
+                "attention": [
+                  {
+                    "category": "fundamental",
+                    "weight": 0.4,
+                    "reasoning": "专注基本面"
+                  },
+                  {
+                    "category": "policy",
+                    "weight": 0.3,
+                    "reasoning": "政策影响估值"
+                  },
+                  {
+                    "category": "narrative",
+                    "weight": 0.2,
+                    "reasoning": "市场情绪"
+                  },
+                  {
+                    "category": "liquidity",
+                    "weight": 0.1,
+                    "reasoning": "流动性次要"
+                  }
+                ]
+              },
+              "memory": {
+                "recentAccuracy": 0,
+                "recentPredictions": [
+                  {
+                    "timestamp": "2026-06-29T05:55:45.827Z",
+                    "belief": "bullish",
+                    "beliefStrength": 40.437353428150345,
+                    "confidence": 20
+                  }
+                ],
+                "historicalEvents": []
+              },
+              "trust": [
+                {
+                  "targetAgentId": "momentum",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "policy",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "contrarian",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "quant",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                }
+              ],
+              "updatedAt": "2026-06-29T05:55:45.825Z",
+              "version": 4
+            }
+          },
+          "reasoning": "基于1条证据，1条正面，0条负面",
+          "stateUpdate": {},
+          "timestamp": "2026-06-29T05:55:45.825Z",
+          "llmConfidence": 75
+        },
+        {
+          "stepName": "reflection",
+          "input": {
+            "state": {
+              "agentId": "value",
+              "belief": "neutral",
+              "beliefStrength": 0,
+              "evidence": [
+                {
+                  "id": "tevhfyi02",
+                  "category": "policy",
+                  "value": 70,
+                  "confidence": 80,
+                  "reasoning": "政策支持力度较大",
+                  "source": "llm"
+                }
+              ],
+              "confidence": 65,
+              "uncertainty": 50,
+              "openness": 50,
+              "preference": {
+                "riskPreference": "conservative",
+                "goal": "长期价值投资",
+                "attention": [
+                  {
+                    "category": "fundamental",
+                    "weight": 0.4,
+                    "reasoning": "专注基本面"
+                  },
+                  {
+                    "category": "policy",
+                    "weight": 0.3,
+                    "reasoning": "政策影响估值"
+                  },
+                  {
+                    "category": "narrative",
+                    "weight": 0.2,
+                    "reasoning": "市场情绪"
+                  },
+                  {
+                    "category": "liquidity",
+                    "weight": 0.1,
+                    "reasoning": "流动性次要"
+                  }
+                ]
+              },
+              "memory": {
+                "recentAccuracy": 0,
+                "recentPredictions": [
+                  {
+                    "timestamp": "2026-06-29T05:55:45.827Z",
+                    "belief": "bullish",
+                    "beliefStrength": 40.437353428150345,
+                    "confidence": 20
+                  }
+                ],
+                "historicalEvents": []
+              },
+              "trust": [
+                {
+                  "targetAgentId": "momentum",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "policy",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "contrarian",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "quant",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                }
+              ],
+              "updatedAt": "2026-06-29T05:55:45.825Z",
+              "version": 4
+            }
+          },
+          "reasoning": "证据平均置信度80，不确定性50",
+          "stateUpdate": {
+            "confidence": 65,
+            "uncertainty": 50,
+            "openness": 50
+          },
+          "timestamp": "2026-06-29T05:55:45.825Z",
+          "llmConfidence": 85
+        }
+      ],
+      "finalState": {
+        "agentId": "value",
+        "belief": "bullish",
+        "beliefStrength": 70,
+        "evidence": [
+          {
+            "id": "tevhfyi02",
+            "category": "policy",
+            "value": 70,
+            "confidence": 80,
+            "reasoning": "政策支持力度较大",
+            "source": "llm"
+          }
+        ],
+        "confidence": 48.5,
+        "uncertainty": 55,
+        "openness": 29,
+        "preference": {
+          "riskPreference": "conservative",
+          "goal": "长期价值投资",
+          "attention": [
+            {
+              "category": "fundamental",
+              "weight": 0.4,
+              "reasoning": "专注基本面"
+            },
+            {
+              "category": "policy",
+              "weight": 0.3,
+              "reasoning": "政策影响估值"
+            },
+            {
+              "category": "narrative",
+              "weight": 0.2,
+              "reasoning": "市场情绪"
+            },
+            {
+              "category": "liquidity",
+              "weight": 0.1,
+              "reasoning": "流动性次要"
+            }
+          ]
+        },
+        "memory": {
+          "recentAccuracy": 0,
+          "recentPredictions": [
+            {
+              "timestamp": "2026-06-29T05:55:45.827Z",
+              "belief": "bullish",
+              "beliefStrength": 40.437353428150345,
+              "confidence": 20
+            }
+          ],
+          "historicalEvents": []
+        },
+        "trust": [
+          {
+            "targetAgentId": "momentum",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "policy",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "contrarian",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "quant",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          }
+        ],
+        "updatedAt": "2026-06-29T05:55:45.826Z",
+        "version": 5
+      },
+      "createdAt": "2026-06-29T05:55:45.826Z"
+    },
+    {
+      "traceId": "1782712545826-4roeu9rr0",
+      "agentId": "momentum",
+      "round": 0,
+      "news": "Fed announces 25bps rate cut to support economy",
+      "initialState": {
+        "agentId": "momentum",
+        "belief": "neutral",
+        "beliefStrength": 0,
+        "evidence": [],
+        "confidence": 50,
+        "uncertainty": 50,
+        "openness": 50,
+        "preference": {
+          "riskPreference": "aggressive",
+          "goal": "短期趋势跟踪",
+          "attention": [
+            {
+              "category": "narrative",
+              "weight": 0.4,
+              "reasoning": "市场叙事驱动趋势"
+            },
+            {
+              "category": "liquidity",
+              "weight": 0.3,
+              "reasoning": "流动性推动价格"
+            },
+            {
+              "category": "uncertainty",
+              "weight": 0.2,
+              "reasoning": "波动率影响"
+            },
+            {
+              "category": "fundamental",
+              "weight": 0.1,
+              "reasoning": "基本面次要"
+            }
+          ]
+        },
+        "memory": {
+          "recentAccuracy": 0,
+          "recentPredictions": [
+            {
+              "timestamp": "2026-06-29T05:55:45.827Z",
+              "belief": "bullish",
+              "beliefStrength": 40.77761626269442,
+              "confidence": 20
+            }
+          ],
+          "historicalEvents": []
+        },
+        "trust": [
+          {
+            "targetAgentId": "value",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "policy",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "contrarian",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "quant",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          }
+        ],
+        "updatedAt": "2026-06-29T05:55:45.825Z",
+        "version": 1
+      },
+      "steps": [
+        {
+          "stepName": "perception",
+          "input": {
+            "news": "Fed announces 25bps rate cut to support economy",
+            "marketData": {},
+            "preference": {
+              "riskPreference": "aggressive",
+              "goal": "短期趋势跟踪",
+              "attention": [
+                {
+                  "category": "narrative",
+                  "weight": 0.4,
+                  "reasoning": "市场叙事驱动趋势"
+                },
+                {
+                  "category": "liquidity",
+                  "weight": 0.3,
+                  "reasoning": "流动性推动价格"
+                },
+                {
+                  "category": "uncertainty",
+                  "weight": 0.2,
+                  "reasoning": "波动率影响"
+                },
+                {
+                  "category": "fundamental",
+                  "weight": 0.1,
+                  "reasoning": "基本面次要"
+                }
+              ]
+            }
+          },
+          "reasoning": "分析新闻: Fed announces 25bps rate cut to support economy... 提取了1条证据",
+          "stateUpdate": {
+            "evidence": [
+              {
+                "id": "xg6t0q14s",
+                "category": "policy",
+                "value": 70,
+                "confidence": 80,
+                "reasoning": "政策支持力度较大",
+                "source": "llm"
+              }
+            ]
+          },
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 80
+        },
+        {
+          "stepName": "judgment",
+          "input": {
+            "news": "Fed announces 25bps rate cut to support economy",
+            "state": {
+              "agentId": "momentum",
+              "belief": "neutral",
+              "beliefStrength": 0,
+              "evidence": [
+                {
+                  "id": "xg6t0q14s",
+                  "category": "policy",
+                  "value": 70,
+                  "confidence": 80,
+                  "reasoning": "政策支持力度较大",
+                  "source": "llm"
+                }
+              ],
+              "confidence": 65,
+              "uncertainty": 50,
+              "openness": 50,
+              "preference": {
+                "riskPreference": "aggressive",
+                "goal": "短期趋势跟踪",
+                "attention": [
+                  {
+                    "category": "narrative",
+                    "weight": 0.4,
+                    "reasoning": "市场叙事驱动趋势"
+                  },
+                  {
+                    "category": "liquidity",
+                    "weight": 0.3,
+                    "reasoning": "流动性推动价格"
+                  },
+                  {
+                    "category": "uncertainty",
+                    "weight": 0.2,
+                    "reasoning": "波动率影响"
+                  },
+                  {
+                    "category": "fundamental",
+                    "weight": 0.1,
+                    "reasoning": "基本面次要"
+                  }
+                ]
+              },
+              "memory": {
+                "recentAccuracy": 0,
+                "recentPredictions": [
+                  {
+                    "timestamp": "2026-06-29T05:55:45.827Z",
+                    "belief": "bullish",
+                    "beliefStrength": 40.77761626269442,
+                    "confidence": 20
+                  }
+                ],
+                "historicalEvents": []
+              },
+              "trust": [
+                {
+                  "targetAgentId": "value",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "policy",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "contrarian",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "quant",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                }
+              ],
+              "updatedAt": "2026-06-29T05:55:45.826Z",
+              "version": 4
+            }
+          },
+          "reasoning": "基于1条证据，1条正面，0条负面",
+          "stateUpdate": {},
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 75
+        },
+        {
+          "stepName": "reflection",
+          "input": {
+            "state": {
+              "agentId": "momentum",
+              "belief": "neutral",
+              "beliefStrength": 0,
+              "evidence": [
+                {
+                  "id": "xg6t0q14s",
+                  "category": "policy",
+                  "value": 70,
+                  "confidence": 80,
+                  "reasoning": "政策支持力度较大",
+                  "source": "llm"
+                }
+              ],
+              "confidence": 65,
+              "uncertainty": 50,
+              "openness": 50,
+              "preference": {
+                "riskPreference": "aggressive",
+                "goal": "短期趋势跟踪",
+                "attention": [
+                  {
+                    "category": "narrative",
+                    "weight": 0.4,
+                    "reasoning": "市场叙事驱动趋势"
+                  },
+                  {
+                    "category": "liquidity",
+                    "weight": 0.3,
+                    "reasoning": "流动性推动价格"
+                  },
+                  {
+                    "category": "uncertainty",
+                    "weight": 0.2,
+                    "reasoning": "波动率影响"
+                  },
+                  {
+                    "category": "fundamental",
+                    "weight": 0.1,
+                    "reasoning": "基本面次要"
+                  }
+                ]
+              },
+              "memory": {
+                "recentAccuracy": 0,
+                "recentPredictions": [
+                  {
+                    "timestamp": "2026-06-29T05:55:45.827Z",
+                    "belief": "bullish",
+                    "beliefStrength": 40.77761626269442,
+                    "confidence": 20
+                  }
+                ],
+                "historicalEvents": []
+              },
+              "trust": [
+                {
+                  "targetAgentId": "value",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "policy",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "contrarian",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "quant",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                }
+              ],
+              "updatedAt": "2026-06-29T05:55:45.826Z",
+              "version": 4
+            }
+          },
+          "reasoning": "证据平均置信度80，不确定性50",
+          "stateUpdate": {
+            "confidence": 65,
+            "uncertainty": 50,
+            "openness": 50
+          },
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 85
+        }
+      ],
+      "finalState": {
+        "agentId": "momentum",
+        "belief": "bullish",
+        "beliefStrength": 70,
+        "evidence": [
+          {
+            "id": "xg6t0q14s",
+            "category": "policy",
+            "value": 70,
+            "confidence": 80,
+            "reasoning": "政策支持力度较大",
+            "source": "llm"
+          }
+        ],
+        "confidence": 48.5,
+        "uncertainty": 55,
+        "openness": 29,
+        "preference": {
+          "riskPreference": "aggressive",
+          "goal": "短期趋势跟踪",
+          "attention": [
+            {
+              "category": "narrative",
+              "weight": 0.4,
+              "reasoning": "市场叙事驱动趋势"
+            },
+            {
+              "category": "liquidity",
+              "weight": 0.3,
+              "reasoning": "流动性推动价格"
+            },
+            {
+              "category": "uncertainty",
+              "weight": 0.2,
+              "reasoning": "波动率影响"
+            },
+            {
+              "category": "fundamental",
+              "weight": 0.1,
+              "reasoning": "基本面次要"
+            }
+          ]
+        },
+        "memory": {
+          "recentAccuracy": 0,
+          "recentPredictions": [
+            {
+              "timestamp": "2026-06-29T05:55:45.827Z",
+              "belief": "bullish",
+              "beliefStrength": 40.77761626269442,
+              "confidence": 20
+            }
+          ],
+          "historicalEvents": []
+        },
+        "trust": [
+          {
+            "targetAgentId": "value",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "policy",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "contrarian",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "quant",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          }
+        ],
+        "updatedAt": "2026-06-29T05:55:45.826Z",
+        "version": 5
+      },
+      "createdAt": "2026-06-29T05:55:45.826Z"
+    },
+    {
+      "traceId": "1782712545826-q56vuw1jb",
+      "agentId": "policy",
+      "round": 0,
+      "news": "Fed announces 25bps rate cut to support economy",
+      "initialState": {
+        "agentId": "policy",
+        "belief": "neutral",
+        "beliefStrength": 0,
+        "evidence": [],
+        "confidence": 50,
+        "uncertainty": 50,
+        "openness": 50,
+        "preference": {
+          "riskPreference": "moderate",
+          "goal": "政策驱动投资",
+          "attention": [
+            {
+              "category": "policy",
+              "weight": 0.5,
+              "reasoning": "政策是核心驱动力"
+            },
+            {
+              "category": "liquidity",
+              "weight": 0.3,
+              "reasoning": "政策影响流动性"
+            },
+            {
+              "category": "fundamental",
+              "weight": 0.15,
+              "reasoning": "政策传导到基本面"
+            },
+            {
+              "category": "narrative",
+              "weight": 0.05,
+              "reasoning": "叙事次要"
+            }
+          ]
+        },
+        "memory": {
+          "recentAccuracy": 0,
+          "recentPredictions": [
+            {
+              "timestamp": "2026-06-29T05:55:45.827Z",
+              "belief": "bullish",
+              "beliefStrength": 41.30459172209846,
+              "confidence": 20
+            }
+          ],
+          "historicalEvents": []
+        },
+        "trust": [
+          {
+            "targetAgentId": "value",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "momentum",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "contrarian",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "quant",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          }
+        ],
+        "updatedAt": "2026-06-29T05:55:45.825Z",
+        "version": 1
+      },
+      "steps": [
+        {
+          "stepName": "perception",
+          "input": {
+            "news": "Fed announces 25bps rate cut to support economy",
+            "marketData": {},
+            "preference": {
+              "riskPreference": "moderate",
+              "goal": "政策驱动投资",
+              "attention": [
+                {
+                  "category": "policy",
+                  "weight": 0.5,
+                  "reasoning": "政策是核心驱动力"
+                },
+                {
+                  "category": "liquidity",
+                  "weight": 0.3,
+                  "reasoning": "政策影响流动性"
+                },
+                {
+                  "category": "fundamental",
+                  "weight": 0.15,
+                  "reasoning": "政策传导到基本面"
+                },
+                {
+                  "category": "narrative",
+                  "weight": 0.05,
+                  "reasoning": "叙事次要"
+                }
+              ]
+            }
+          },
+          "reasoning": "分析新闻: Fed announces 25bps rate cut to support economy... 提取了1条证据",
+          "stateUpdate": {
+            "evidence": [
+              {
+                "id": "pzvdkpeq8",
+                "category": "policy",
+                "value": 70,
+                "confidence": 80,
+                "reasoning": "政策支持力度较大",
+                "source": "llm"
+              }
+            ]
+          },
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 80
+        },
+        {
+          "stepName": "judgment",
+          "input": {
+            "news": "Fed announces 25bps rate cut to support economy",
+            "state": {
+              "agentId": "policy",
+              "belief": "neutral",
+              "beliefStrength": 0,
+              "evidence": [
+                {
+                  "id": "pzvdkpeq8",
+                  "category": "policy",
+                  "value": 70,
+                  "confidence": 80,
+                  "reasoning": "政策支持力度较大",
+                  "source": "llm"
+                }
+              ],
+              "confidence": 65,
+              "uncertainty": 50,
+              "openness": 50,
+              "preference": {
+                "riskPreference": "moderate",
+                "goal": "政策驱动投资",
+                "attention": [
+                  {
+                    "category": "policy",
+                    "weight": 0.5,
+                    "reasoning": "政策是核心驱动力"
+                  },
+                  {
+                    "category": "liquidity",
+                    "weight": 0.3,
+                    "reasoning": "政策影响流动性"
+                  },
+                  {
+                    "category": "fundamental",
+                    "weight": 0.15,
+                    "reasoning": "政策传导到基本面"
+                  },
+                  {
+                    "category": "narrative",
+                    "weight": 0.05,
+                    "reasoning": "叙事次要"
+                  }
+                ]
+              },
+              "memory": {
+                "recentAccuracy": 0,
+                "recentPredictions": [
+                  {
+                    "timestamp": "2026-06-29T05:55:45.827Z",
+                    "belief": "bullish",
+                    "beliefStrength": 41.30459172209846,
+                    "confidence": 20
+                  }
+                ],
+                "historicalEvents": []
+              },
+              "trust": [
+                {
+                  "targetAgentId": "value",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "momentum",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "contrarian",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "quant",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                }
+              ],
+              "updatedAt": "2026-06-29T05:55:45.826Z",
+              "version": 4
+            }
+          },
+          "reasoning": "基于1条证据，1条正面，0条负面",
+          "stateUpdate": {},
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 75
+        },
+        {
+          "stepName": "reflection",
+          "input": {
+            "state": {
+              "agentId": "policy",
+              "belief": "neutral",
+              "beliefStrength": 0,
+              "evidence": [
+                {
+                  "id": "pzvdkpeq8",
+                  "category": "policy",
+                  "value": 70,
+                  "confidence": 80,
+                  "reasoning": "政策支持力度较大",
+                  "source": "llm"
+                }
+              ],
+              "confidence": 65,
+              "uncertainty": 50,
+              "openness": 50,
+              "preference": {
+                "riskPreference": "moderate",
+                "goal": "政策驱动投资",
+                "attention": [
+                  {
+                    "category": "policy",
+                    "weight": 0.5,
+                    "reasoning": "政策是核心驱动力"
+                  },
+                  {
+                    "category": "liquidity",
+                    "weight": 0.3,
+                    "reasoning": "政策影响流动性"
+                  },
+                  {
+                    "category": "fundamental",
+                    "weight": 0.15,
+                    "reasoning": "政策传导到基本面"
+                  },
+                  {
+                    "category": "narrative",
+                    "weight": 0.05,
+                    "reasoning": "叙事次要"
+                  }
+                ]
+              },
+              "memory": {
+                "recentAccuracy": 0,
+                "recentPredictions": [
+                  {
+                    "timestamp": "2026-06-29T05:55:45.827Z",
+                    "belief": "bullish",
+                    "beliefStrength": 41.30459172209846,
+                    "confidence": 20
+                  }
+                ],
+                "historicalEvents": []
+              },
+              "trust": [
+                {
+                  "targetAgentId": "value",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "momentum",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "contrarian",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "quant",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                }
+              ],
+              "updatedAt": "2026-06-29T05:55:45.826Z",
+              "version": 4
+            }
+          },
+          "reasoning": "证据平均置信度80，不确定性50",
+          "stateUpdate": {
+            "confidence": 65,
+            "uncertainty": 50,
+            "openness": 50
+          },
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 85
+        }
+      ],
+      "finalState": {
+        "agentId": "policy",
+        "belief": "bullish",
+        "beliefStrength": 70,
+        "evidence": [
+          {
+            "id": "pzvdkpeq8",
+            "category": "policy",
+            "value": 70,
+            "confidence": 80,
+            "reasoning": "政策支持力度较大",
+            "source": "llm"
+          }
+        ],
+        "confidence": 48.5,
+        "uncertainty": 55,
+        "openness": 29,
+        "preference": {
+          "riskPreference": "moderate",
+          "goal": "政策驱动投资",
+          "attention": [
+            {
+              "category": "policy",
+              "weight": 0.5,
+              "reasoning": "政策是核心驱动力"
+            },
+            {
+              "category": "liquidity",
+              "weight": 0.3,
+              "reasoning": "政策影响流动性"
+            },
+            {
+              "category": "fundamental",
+              "weight": 0.15,
+              "reasoning": "政策传导到基本面"
+            },
+            {
+              "category": "narrative",
+              "weight": 0.05,
+              "reasoning": "叙事次要"
+            }
+          ]
+        },
+        "memory": {
+          "recentAccuracy": 0,
+          "recentPredictions": [
+            {
+              "timestamp": "2026-06-29T05:55:45.827Z",
+              "belief": "bullish",
+              "beliefStrength": 41.30459172209846,
+              "confidence": 20
+            }
+          ],
+          "historicalEvents": []
+        },
+        "trust": [
+          {
+            "targetAgentId": "value",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "momentum",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "contrarian",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "quant",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          }
+        ],
+        "updatedAt": "2026-06-29T05:55:45.826Z",
+        "version": 5
+      },
+      "createdAt": "2026-06-29T05:55:45.826Z"
+    },
+    {
+      "traceId": "1782712545826-cveg1ctwt",
+      "agentId": "contrarian",
+      "round": 0,
+      "news": "Fed announces 25bps rate cut to support economy",
+      "initialState": {
+        "agentId": "contrarian",
+        "belief": "neutral",
+        "beliefStrength": 0,
+        "evidence": [],
+        "confidence": 50,
+        "uncertainty": 50,
+        "openness": 50,
+        "preference": {
+          "riskPreference": "aggressive",
+          "goal": "逆向操作",
+          "attention": [
+            {
+              "category": "uncertainty",
+              "weight": 0.4,
+              "reasoning": "极端不确定性带来机会"
+            },
+            {
+              "category": "narrative",
+              "weight": 0.3,
+              "reasoning": "反向解读叙事"
+            },
+            {
+              "category": "fundamental",
+              "weight": 0.2,
+              "reasoning": "基本面反转信号"
+            },
+            {
+              "category": "liquidity",
+              "weight": 0.1,
+              "reasoning": "流动性变化"
+            }
+          ]
+        },
+        "memory": {
+          "recentAccuracy": 0,
+          "recentPredictions": [
+            {
+              "timestamp": "2026-06-29T05:55:45.827Z",
+              "belief": "bullish",
+              "beliefStrength": 42.118298116111646,
+              "confidence": 20
+            }
+          ],
+          "historicalEvents": []
+        },
+        "trust": [
+          {
+            "targetAgentId": "value",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "momentum",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "policy",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "quant",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          }
+        ],
+        "updatedAt": "2026-06-29T05:55:45.825Z",
+        "version": 1
+      },
+      "steps": [
+        {
+          "stepName": "perception",
+          "input": {
+            "news": "Fed announces 25bps rate cut to support economy",
+            "marketData": {},
+            "preference": {
+              "riskPreference": "aggressive",
+              "goal": "逆向操作",
+              "attention": [
+                {
+                  "category": "uncertainty",
+                  "weight": 0.4,
+                  "reasoning": "极端不确定性带来机会"
+                },
+                {
+                  "category": "narrative",
+                  "weight": 0.3,
+                  "reasoning": "反向解读叙事"
+                },
+                {
+                  "category": "fundamental",
+                  "weight": 0.2,
+                  "reasoning": "基本面反转信号"
+                },
+                {
+                  "category": "liquidity",
+                  "weight": 0.1,
+                  "reasoning": "流动性变化"
+                }
+              ]
+            }
+          },
+          "reasoning": "分析新闻: Fed announces 25bps rate cut to support economy... 提取了1条证据",
+          "stateUpdate": {
+            "evidence": [
+              {
+                "id": "60c86r3eq",
+                "category": "policy",
+                "value": 70,
+                "confidence": 80,
+                "reasoning": "政策支持力度较大",
+                "source": "llm"
+              }
+            ]
+          },
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 80
+        },
+        {
+          "stepName": "judgment",
+          "input": {
+            "news": "Fed announces 25bps rate cut to support economy",
+            "state": {
+              "agentId": "contrarian",
+              "belief": "neutral",
+              "beliefStrength": 0,
+              "evidence": [
+                {
+                  "id": "60c86r3eq",
+                  "category": "policy",
+                  "value": 70,
+                  "confidence": 80,
+                  "reasoning": "政策支持力度较大",
+                  "source": "llm"
+                }
+              ],
+              "confidence": 65,
+              "uncertainty": 50,
+              "openness": 50,
+              "preference": {
+                "riskPreference": "aggressive",
+                "goal": "逆向操作",
+                "attention": [
+                  {
+                    "category": "uncertainty",
+                    "weight": 0.4,
+                    "reasoning": "极端不确定性带来机会"
+                  },
+                  {
+                    "category": "narrative",
+                    "weight": 0.3,
+                    "reasoning": "反向解读叙事"
+                  },
+                  {
+                    "category": "fundamental",
+                    "weight": 0.2,
+                    "reasoning": "基本面反转信号"
+                  },
+                  {
+                    "category": "liquidity",
+                    "weight": 0.1,
+                    "reasoning": "流动性变化"
+                  }
+                ]
+              },
+              "memory": {
+                "recentAccuracy": 0,
+                "recentPredictions": [
+                  {
+                    "timestamp": "2026-06-29T05:55:45.827Z",
+                    "belief": "bullish",
+                    "beliefStrength": 42.118298116111646,
+                    "confidence": 20
+                  }
+                ],
+                "historicalEvents": []
+              },
+              "trust": [
+                {
+                  "targetAgentId": "value",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "momentum",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "policy",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "quant",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                }
+              ],
+              "updatedAt": "2026-06-29T05:55:45.826Z",
+              "version": 4
+            }
+          },
+          "reasoning": "基于1条证据，1条正面，0条负面",
+          "stateUpdate": {},
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 75
+        },
+        {
+          "stepName": "reflection",
+          "input": {
+            "state": {
+              "agentId": "contrarian",
+              "belief": "neutral",
+              "beliefStrength": 0,
+              "evidence": [
+                {
+                  "id": "60c86r3eq",
+                  "category": "policy",
+                  "value": 70,
+                  "confidence": 80,
+                  "reasoning": "政策支持力度较大",
+                  "source": "llm"
+                }
+              ],
+              "confidence": 65,
+              "uncertainty": 50,
+              "openness": 50,
+              "preference": {
+                "riskPreference": "aggressive",
+                "goal": "逆向操作",
+                "attention": [
+                  {
+                    "category": "uncertainty",
+                    "weight": 0.4,
+                    "reasoning": "极端不确定性带来机会"
+                  },
+                  {
+                    "category": "narrative",
+                    "weight": 0.3,
+                    "reasoning": "反向解读叙事"
+                  },
+                  {
+                    "category": "fundamental",
+                    "weight": 0.2,
+                    "reasoning": "基本面反转信号"
+                  },
+                  {
+                    "category": "liquidity",
+                    "weight": 0.1,
+                    "reasoning": "流动性变化"
+                  }
+                ]
+              },
+              "memory": {
+                "recentAccuracy": 0,
+                "recentPredictions": [
+                  {
+                    "timestamp": "2026-06-29T05:55:45.827Z",
+                    "belief": "bullish",
+                    "beliefStrength": 42.118298116111646,
+                    "confidence": 20
+                  }
+                ],
+                "historicalEvents": []
+              },
+              "trust": [
+                {
+                  "targetAgentId": "value",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "momentum",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "policy",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "quant",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                }
+              ],
+              "updatedAt": "2026-06-29T05:55:45.826Z",
+              "version": 4
+            }
+          },
+          "reasoning": "证据平均置信度80，不确定性50",
+          "stateUpdate": {
+            "confidence": 65,
+            "uncertainty": 50,
+            "openness": 50
+          },
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 85
+        }
+      ],
+      "finalState": {
+        "agentId": "contrarian",
+        "belief": "bullish",
+        "beliefStrength": 70,
+        "evidence": [
+          {
+            "id": "60c86r3eq",
+            "category": "policy",
+            "value": 70,
+            "confidence": 80,
+            "reasoning": "政策支持力度较大",
+            "source": "llm"
+          }
+        ],
+        "confidence": 48.5,
+        "uncertainty": 55,
+        "openness": 29,
+        "preference": {
+          "riskPreference": "aggressive",
+          "goal": "逆向操作",
+          "attention": [
+            {
+              "category": "uncertainty",
+              "weight": 0.4,
+              "reasoning": "极端不确定性带来机会"
+            },
+            {
+              "category": "narrative",
+              "weight": 0.3,
+              "reasoning": "反向解读叙事"
+            },
+            {
+              "category": "fundamental",
+              "weight": 0.2,
+              "reasoning": "基本面反转信号"
+            },
+            {
+              "category": "liquidity",
+              "weight": 0.1,
+              "reasoning": "流动性变化"
+            }
+          ]
+        },
+        "memory": {
+          "recentAccuracy": 0,
+          "recentPredictions": [
+            {
+              "timestamp": "2026-06-29T05:55:45.827Z",
+              "belief": "bullish",
+              "beliefStrength": 42.118298116111646,
+              "confidence": 20
+            }
+          ],
+          "historicalEvents": []
+        },
+        "trust": [
+          {
+            "targetAgentId": "value",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "momentum",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "policy",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "quant",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          }
+        ],
+        "updatedAt": "2026-06-29T05:55:45.826Z",
+        "version": 5
+      },
+      "createdAt": "2026-06-29T05:55:45.826Z"
+    },
+    {
+      "traceId": "1782712545826-9yob4ntk3",
+      "agentId": "quant",
+      "round": 0,
+      "news": "Fed announces 25bps rate cut to support economy",
+      "initialState": {
+        "agentId": "quant",
+        "belief": "neutral",
+        "beliefStrength": 0,
+        "evidence": [],
+        "confidence": 50,
+        "uncertainty": 50,
+        "openness": 50,
+        "preference": {
+          "riskPreference": "moderate",
+          "goal": "数据驱动决策",
+          "attention": [
+            {
+              "category": "fundamental",
+              "weight": 0.3,
+              "reasoning": "量化因子"
+            },
+            {
+              "category": "liquidity",
+              "weight": 0.3,
+              "reasoning": "流动性因子"
+            },
+            {
+              "category": "uncertainty",
+              "weight": 0.2,
+              "reasoning": "风险度量"
+            },
+            {
+              "category": "policy",
+              "weight": 0.1,
+              "reasoning": "政策因子"
+            },
+            {
+              "category": "narrative",
+              "weight": 0.1,
+              "reasoning": "情绪因子"
+            }
+          ]
+        },
+        "memory": {
+          "recentAccuracy": 0,
+          "recentPredictions": [
+            {
+              "timestamp": "2026-06-29T05:55:45.827Z",
+              "belief": "bullish",
+              "beliefStrength": 43.37284872699725,
+              "confidence": 20
+            }
+          ],
+          "historicalEvents": []
+        },
+        "trust": [
+          {
+            "targetAgentId": "value",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "momentum",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "policy",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "contrarian",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          }
+        ],
+        "updatedAt": "2026-06-29T05:55:45.825Z",
+        "version": 1
+      },
+      "steps": [
+        {
+          "stepName": "perception",
+          "input": {
+            "news": "Fed announces 25bps rate cut to support economy",
+            "marketData": {},
+            "preference": {
+              "riskPreference": "moderate",
+              "goal": "数据驱动决策",
+              "attention": [
+                {
+                  "category": "fundamental",
+                  "weight": 0.3,
+                  "reasoning": "量化因子"
+                },
+                {
+                  "category": "liquidity",
+                  "weight": 0.3,
+                  "reasoning": "流动性因子"
+                },
+                {
+                  "category": "uncertainty",
+                  "weight": 0.2,
+                  "reasoning": "风险度量"
+                },
+                {
+                  "category": "policy",
+                  "weight": 0.1,
+                  "reasoning": "政策因子"
+                },
+                {
+                  "category": "narrative",
+                  "weight": 0.1,
+                  "reasoning": "情绪因子"
+                }
+              ]
+            }
+          },
+          "reasoning": "分析新闻: Fed announces 25bps rate cut to support economy... 提取了1条证据",
+          "stateUpdate": {
+            "evidence": [
+              {
+                "id": "38dflnuf2",
+                "category": "policy",
+                "value": 70,
+                "confidence": 80,
+                "reasoning": "政策支持力度较大",
+                "source": "llm"
+              }
+            ]
+          },
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 80
+        },
+        {
+          "stepName": "judgment",
+          "input": {
+            "news": "Fed announces 25bps rate cut to support economy",
+            "state": {
+              "agentId": "quant",
+              "belief": "neutral",
+              "beliefStrength": 0,
+              "evidence": [
+                {
+                  "id": "38dflnuf2",
+                  "category": "policy",
+                  "value": 70,
+                  "confidence": 80,
+                  "reasoning": "政策支持力度较大",
+                  "source": "llm"
+                }
+              ],
+              "confidence": 65,
+              "uncertainty": 50,
+              "openness": 50,
+              "preference": {
+                "riskPreference": "moderate",
+                "goal": "数据驱动决策",
+                "attention": [
+                  {
+                    "category": "fundamental",
+                    "weight": 0.3,
+                    "reasoning": "量化因子"
+                  },
+                  {
+                    "category": "liquidity",
+                    "weight": 0.3,
+                    "reasoning": "流动性因子"
+                  },
+                  {
+                    "category": "uncertainty",
+                    "weight": 0.2,
+                    "reasoning": "风险度量"
+                  },
+                  {
+                    "category": "policy",
+                    "weight": 0.1,
+                    "reasoning": "政策因子"
+                  },
+                  {
+                    "category": "narrative",
+                    "weight": 0.1,
+                    "reasoning": "情绪因子"
+                  }
+                ]
+              },
+              "memory": {
+                "recentAccuracy": 0,
+                "recentPredictions": [
+                  {
+                    "timestamp": "2026-06-29T05:55:45.827Z",
+                    "belief": "bullish",
+                    "beliefStrength": 43.37284872699725,
+                    "confidence": 20
+                  }
+                ],
+                "historicalEvents": []
+              },
+              "trust": [
+                {
+                  "targetAgentId": "value",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "momentum",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "policy",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "contrarian",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                }
+              ],
+              "updatedAt": "2026-06-29T05:55:45.826Z",
+              "version": 4
+            }
+          },
+          "reasoning": "基于1条证据，1条正面，0条负面",
+          "stateUpdate": {},
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 75
+        },
+        {
+          "stepName": "reflection",
+          "input": {
+            "state": {
+              "agentId": "quant",
+              "belief": "neutral",
+              "beliefStrength": 0,
+              "evidence": [
+                {
+                  "id": "38dflnuf2",
+                  "category": "policy",
+                  "value": 70,
+                  "confidence": 80,
+                  "reasoning": "政策支持力度较大",
+                  "source": "llm"
+                }
+              ],
+              "confidence": 65,
+              "uncertainty": 50,
+              "openness": 50,
+              "preference": {
+                "riskPreference": "moderate",
+                "goal": "数据驱动决策",
+                "attention": [
+                  {
+                    "category": "fundamental",
+                    "weight": 0.3,
+                    "reasoning": "量化因子"
+                  },
+                  {
+                    "category": "liquidity",
+                    "weight": 0.3,
+                    "reasoning": "流动性因子"
+                  },
+                  {
+                    "category": "uncertainty",
+                    "weight": 0.2,
+                    "reasoning": "风险度量"
+                  },
+                  {
+                    "category": "policy",
+                    "weight": 0.1,
+                    "reasoning": "政策因子"
+                  },
+                  {
+                    "category": "narrative",
+                    "weight": 0.1,
+                    "reasoning": "情绪因子"
+                  }
+                ]
+              },
+              "memory": {
+                "recentAccuracy": 0,
+                "recentPredictions": [
+                  {
+                    "timestamp": "2026-06-29T05:55:45.827Z",
+                    "belief": "bullish",
+                    "beliefStrength": 43.37284872699725,
+                    "confidence": 20
+                  }
+                ],
+                "historicalEvents": []
+              },
+              "trust": [
+                {
+                  "targetAgentId": "value",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "momentum",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "policy",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                },
+                {
+                  "targetAgentId": "contrarian",
+                  "trustLevel": 50,
+                  "reasoning": "新建立的信任关系"
+                }
+              ],
+              "updatedAt": "2026-06-29T05:55:45.826Z",
+              "version": 4
+            }
+          },
+          "reasoning": "证据平均置信度80，不确定性50",
+          "stateUpdate": {
+            "confidence": 65,
+            "uncertainty": 50,
+            "openness": 50
+          },
+          "timestamp": "2026-06-29T05:55:45.826Z",
+          "llmConfidence": 85
+        }
+      ],
+      "finalState": {
+        "agentId": "quant",
+        "belief": "bullish",
+        "beliefStrength": 70,
+        "evidence": [
+          {
+            "id": "38dflnuf2",
+            "category": "policy",
+            "value": 70,
+            "confidence": 80,
+            "reasoning": "政策支持力度较大",
+            "source": "llm"
+          }
+        ],
+        "confidence": 48.5,
+        "uncertainty": 55,
+        "openness": 29,
+        "preference": {
+          "riskPreference": "moderate",
+          "goal": "数据驱动决策",
+          "attention": [
+            {
+              "category": "fundamental",
+              "weight": 0.3,
+              "reasoning": "量化因子"
+            },
+            {
+              "category": "liquidity",
+              "weight": 0.3,
+              "reasoning": "流动性因子"
+            },
+            {
+              "category": "uncertainty",
+              "weight": 0.2,
+              "reasoning": "风险度量"
+            },
+            {
+              "category": "policy",
+              "weight": 0.1,
+              "reasoning": "政策因子"
+            },
+            {
+              "category": "narrative",
+              "weight": 0.1,
+              "reasoning": "情绪因子"
+            }
+          ]
+        },
+        "memory": {
+          "recentAccuracy": 0,
+          "recentPredictions": [
+            {
+              "timestamp": "2026-06-29T05:55:45.827Z",
+              "belief": "bullish",
+              "beliefStrength": 43.37284872699725,
+              "confidence": 20
+            }
+          ],
+          "historicalEvents": []
+        },
+        "trust": [
+          {
+            "targetAgentId": "value",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "momentum",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "policy",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          },
+          {
+            "targetAgentId": "contrarian",
+            "trustLevel": 50,
+            "reasoning": "新建立的信任关系"
+          }
+        ],
+        "updatedAt": "2026-06-29T05:55:45.826Z",
+        "version": 5
+      },
+      "createdAt": "2026-06-29T05:55:45.826Z"
+    }
+  ],
+  "cognitiveStatesBefore": {
+    "value": {
+      "agentId": "value",
+      "belief": "neutral",
+      "beliefStrength": 0,
+      "evidence": [],
+      "confidence": 50,
+      "uncertainty": 50,
+      "openness": 50,
+      "preference": {
+        "riskPreference": "conservative",
+        "goal": "长期价值投资",
+        "attention": [
+          {
+            "category": "fundamental",
+            "weight": 0.4,
+            "reasoning": "专注基本面"
+          },
+          {
+            "category": "policy",
+            "weight": 0.3,
+            "reasoning": "政策影响估值"
+          },
+          {
+            "category": "narrative",
+            "weight": 0.2,
+            "reasoning": "市场情绪"
+          },
+          {
+            "category": "liquidity",
+            "weight": 0.1,
+            "reasoning": "流动性次要"
+          }
+        ]
+      },
+      "memory": {
+        "recentAccuracy": 0,
+        "recentPredictions": [
+          {
+            "timestamp": "2026-06-29T05:55:45.827Z",
+            "belief": "bullish",
+            "beliefStrength": 40.437353428150345,
+            "confidence": 20
+          }
+        ],
+        "historicalEvents": []
+      },
+      "trust": [
+        {
+          "targetAgentId": "momentum",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "policy",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "contrarian",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "quant",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        }
+      ],
+      "updatedAt": "2026-06-29T05:55:45.825Z",
+      "version": 1
+    },
+    "momentum": {
+      "agentId": "momentum",
+      "belief": "neutral",
+      "beliefStrength": 0,
+      "evidence": [],
+      "confidence": 50,
+      "uncertainty": 50,
+      "openness": 50,
+      "preference": {
+        "riskPreference": "aggressive",
+        "goal": "短期趋势跟踪",
+        "attention": [
+          {
+            "category": "narrative",
+            "weight": 0.4,
+            "reasoning": "市场叙事驱动趋势"
+          },
+          {
+            "category": "liquidity",
+            "weight": 0.3,
+            "reasoning": "流动性推动价格"
+          },
+          {
+            "category": "uncertainty",
+            "weight": 0.2,
+            "reasoning": "波动率影响"
+          },
+          {
+            "category": "fundamental",
+            "weight": 0.1,
+            "reasoning": "基本面次要"
+          }
+        ]
+      },
+      "memory": {
+        "recentAccuracy": 0,
+        "recentPredictions": [
+          {
+            "timestamp": "2026-06-29T05:55:45.827Z",
+            "belief": "bullish",
+            "beliefStrength": 40.77761626269442,
+            "confidence": 20
+          }
+        ],
+        "historicalEvents": []
+      },
+      "trust": [
+        {
+          "targetAgentId": "value",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "policy",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "contrarian",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "quant",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        }
+      ],
+      "updatedAt": "2026-06-29T05:55:45.825Z",
+      "version": 1
+    },
+    "policy": {
+      "agentId": "policy",
+      "belief": "neutral",
+      "beliefStrength": 0,
+      "evidence": [],
+      "confidence": 50,
+      "uncertainty": 50,
+      "openness": 50,
+      "preference": {
+        "riskPreference": "moderate",
+        "goal": "政策驱动投资",
+        "attention": [
+          {
+            "category": "policy",
+            "weight": 0.5,
+            "reasoning": "政策是核心驱动力"
+          },
+          {
+            "category": "liquidity",
+            "weight": 0.3,
+            "reasoning": "政策影响流动性"
+          },
+          {
+            "category": "fundamental",
+            "weight": 0.15,
+            "reasoning": "政策传导到基本面"
+          },
+          {
+            "category": "narrative",
+            "weight": 0.05,
+            "reasoning": "叙事次要"
+          }
+        ]
+      },
+      "memory": {
+        "recentAccuracy": 0,
+        "recentPredictions": [
+          {
+            "timestamp": "2026-06-29T05:55:45.827Z",
+            "belief": "bullish",
+            "beliefStrength": 41.30459172209846,
+            "confidence": 20
+          }
+        ],
+        "historicalEvents": []
+      },
+      "trust": [
+        {
+          "targetAgentId": "value",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "momentum",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "contrarian",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "quant",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        }
+      ],
+      "updatedAt": "2026-06-29T05:55:45.825Z",
+      "version": 1
+    },
+    "contrarian": {
+      "agentId": "contrarian",
+      "belief": "neutral",
+      "beliefStrength": 0,
+      "evidence": [],
+      "confidence": 50,
+      "uncertainty": 50,
+      "openness": 50,
+      "preference": {
+        "riskPreference": "aggressive",
+        "goal": "逆向操作",
+        "attention": [
+          {
+            "category": "uncertainty",
+            "weight": 0.4,
+            "reasoning": "极端不确定性带来机会"
+          },
+          {
+            "category": "narrative",
+            "weight": 0.3,
+            "reasoning": "反向解读叙事"
+          },
+          {
+            "category": "fundamental",
+            "weight": 0.2,
+            "reasoning": "基本面反转信号"
+          },
+          {
+            "category": "liquidity",
+            "weight": 0.1,
+            "reasoning": "流动性变化"
+          }
+        ]
+      },
+      "memory": {
+        "recentAccuracy": 0,
+        "recentPredictions": [
+          {
+            "timestamp": "2026-06-29T05:55:45.827Z",
+            "belief": "bullish",
+            "beliefStrength": 42.118298116111646,
+            "confidence": 20
+          }
+        ],
+        "historicalEvents": []
+      },
+      "trust": [
+        {
+          "targetAgentId": "value",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "momentum",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "policy",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "quant",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        }
+      ],
+      "updatedAt": "2026-06-29T05:55:45.825Z",
+      "version": 1
+    },
+    "quant": {
+      "agentId": "quant",
+      "belief": "neutral",
+      "beliefStrength": 0,
+      "evidence": [],
+      "confidence": 50,
+      "uncertainty": 50,
+      "openness": 50,
+      "preference": {
+        "riskPreference": "moderate",
+        "goal": "数据驱动决策",
+        "attention": [
+          {
+            "category": "fundamental",
+            "weight": 0.3,
+            "reasoning": "量化因子"
+          },
+          {
+            "category": "liquidity",
+            "weight": 0.3,
+            "reasoning": "流动性因子"
+          },
+          {
+            "category": "uncertainty",
+            "weight": 0.2,
+            "reasoning": "风险度量"
+          },
+          {
+            "category": "policy",
+            "weight": 0.1,
+            "reasoning": "政策因子"
+          },
+          {
+            "category": "narrative",
+            "weight": 0.1,
+            "reasoning": "情绪因子"
+          }
+        ]
+      },
+      "memory": {
+        "recentAccuracy": 0,
+        "recentPredictions": [
+          {
+            "timestamp": "2026-06-29T05:55:45.827Z",
+            "belief": "bullish",
+            "beliefStrength": 43.37284872699725,
+            "confidence": 20
+          }
+        ],
+        "historicalEvents": []
+      },
+      "trust": [
+        {
+          "targetAgentId": "value",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "momentum",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "policy",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "contrarian",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        }
+      ],
+      "updatedAt": "2026-06-29T05:55:45.825Z",
+      "version": 1
+    }
+  },
+  "communications": [
+    {
+      "sender": "value",
+      "receivers": [
+        "momentum",
+        "policy",
+        "contrarian",
+        "quant"
+      ],
+      "content": {
+        "agentId": "value",
+        "belief": "bullish",
+        "beliefStrength": 70,
+        "confidence": 48.5,
+        "evidenceSummary": [
+          "policy: 70"
+        ],
+        "reasoningSummary": "基于1条证据"
+      },
+      "responses": {
+        "momentum": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "policy": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "contrarian": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "quant": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        }
+      }
+    },
+    {
+      "sender": "momentum",
+      "receivers": [
+        "value",
+        "policy",
+        "contrarian",
+        "quant"
+      ],
+      "content": {
+        "agentId": "momentum",
+        "belief": "bullish",
+        "beliefStrength": 61.47399999999999,
+        "confidence": 36.375,
+        "evidenceSummary": [
+          "policy: 70"
+        ],
+        "reasoningSummary": "基于1条证据"
+      },
+      "responses": {
+        "value": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "policy": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "contrarian": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "quant": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        }
+      }
+    },
+    {
+      "sender": "policy",
+      "receivers": [
+        "value",
+        "momentum",
+        "contrarian",
+        "quant"
+      ],
+      "content": {
+        "agentId": "policy",
+        "belief": "bullish",
+        "beliefStrength": 54.31848468767962,
+        "confidence": 27.28125,
+        "evidenceSummary": [
+          "policy: 70"
+        ],
+        "reasoningSummary": "基于1条证据"
+      },
+      "responses": {
+        "value": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "momentum": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "contrarian": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "quant": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        }
+      }
+    },
+    {
+      "sender": "contrarian",
+      "receivers": [
+        "value",
+        "momentum",
+        "policy",
+        "quant"
+      ],
+      "content": {
+        "agentId": "contrarian",
+        "belief": "bullish",
+        "beliefStrength": 48.351789582887065,
+        "confidence": 20.4609375,
+        "evidenceSummary": [
+          "policy: 70"
+        ],
+        "reasoningSummary": "基于1条证据"
+      },
+      "responses": {
+        "value": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "momentum": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "policy": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "quant": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        }
+      }
+    },
+    {
+      "sender": "quant",
+      "receivers": [
+        "value",
+        "momentum",
+        "policy",
+        "contrarian"
+      ],
+      "content": {
+        "agentId": "quant",
+        "belief": "bullish",
+        "beliefStrength": 43.37284872699725,
+        "confidence": 20,
+        "evidenceSummary": [
+          "policy: 70"
+        ],
+        "reasoningSummary": "基于1条证据"
+      },
+      "responses": {
+        "value": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "momentum": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "policy": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        },
+        "contrarian": {
+          "trustChanged": 0,
+          "beliefChanged": false
+        }
+      }
+    }
+  ],
+  "mathUpdates": {},
+  "cognitiveStatesAfter": {
+    "value": {
+      "agentId": "value",
+      "belief": "bullish",
+      "beliefStrength": 40.437353428150345,
+      "evidence": [
+        {
+          "id": "tevhfyi02",
+          "category": "policy",
+          "value": 70,
+          "confidence": 80,
+          "reasoning": "政策支持力度较大",
+          "source": "llm"
+        }
+      ],
+      "confidence": 20,
+      "uncertainty": 55,
+      "openness": 37.868793971554894,
+      "preference": {
+        "riskPreference": "conservative",
+        "goal": "长期价值投资",
+        "attention": [
+          {
+            "category": "fundamental",
+            "weight": 0.4,
+            "reasoning": "专注基本面"
+          },
+          {
+            "category": "policy",
+            "weight": 0.3,
+            "reasoning": "政策影响估值"
+          },
+          {
+            "category": "narrative",
+            "weight": 0.2,
+            "reasoning": "市场情绪"
+          },
+          {
+            "category": "liquidity",
+            "weight": 0.1,
+            "reasoning": "流动性次要"
+          }
+        ]
+      },
+      "memory": {
+        "recentAccuracy": 0,
+        "recentPredictions": [
+          {
+            "timestamp": "2026-06-29T05:55:45.827Z",
+            "belief": "bullish",
+            "beliefStrength": 40.437353428150345,
+            "confidence": 20
+          }
+        ],
+        "historicalEvents": []
+      },
+      "trust": [
+        {
+          "targetAgentId": "momentum",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "policy",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "contrarian",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "quant",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        }
+      ],
+      "updatedAt": "2026-06-29T05:55:45.827Z",
+      "version": 10
+    },
+    "momentum": {
+      "agentId": "momentum",
+      "belief": "bullish",
+      "beliefStrength": 40.77761626269442,
+      "evidence": [
+        {
+          "id": "xg6t0q14s",
+          "category": "policy",
+          "value": 70,
+          "confidence": 80,
+          "reasoning": "政策支持力度较大",
+          "source": "llm"
+        }
+      ],
+      "confidence": 20,
+      "uncertainty": 55,
+      "openness": 37.76671512119167,
+      "preference": {
+        "riskPreference": "aggressive",
+        "goal": "短期趋势跟踪",
+        "attention": [
+          {
+            "category": "narrative",
+            "weight": 0.4,
+            "reasoning": "市场叙事驱动趋势"
+          },
+          {
+            "category": "liquidity",
+            "weight": 0.3,
+            "reasoning": "流动性推动价格"
+          },
+          {
+            "category": "uncertainty",
+            "weight": 0.2,
+            "reasoning": "波动率影响"
+          },
+          {
+            "category": "fundamental",
+            "weight": 0.1,
+            "reasoning": "基本面次要"
+          }
+        ]
+      },
+      "memory": {
+        "recentAccuracy": 0,
+        "recentPredictions": [
+          {
+            "timestamp": "2026-06-29T05:55:45.827Z",
+            "belief": "bullish",
+            "beliefStrength": 40.77761626269442,
+            "confidence": 20
+          }
+        ],
+        "historicalEvents": []
+      },
+      "trust": [
+        {
+          "targetAgentId": "value",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "policy",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "contrarian",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "quant",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        }
+      ],
+      "updatedAt": "2026-06-29T05:55:45.827Z",
+      "version": 10
+    },
+    "policy": {
+      "agentId": "policy",
+      "belief": "bullish",
+      "beliefStrength": 41.30459172209846,
+      "evidence": [
+        {
+          "id": "pzvdkpeq8",
+          "category": "policy",
+          "value": 70,
+          "confidence": 80,
+          "reasoning": "政策支持力度较大",
+          "source": "llm"
+        }
+      ],
+      "confidence": 20,
+      "uncertainty": 55,
+      "openness": 37.60862248337046,
+      "preference": {
+        "riskPreference": "moderate",
+        "goal": "政策驱动投资",
+        "attention": [
+          {
+            "category": "policy",
+            "weight": 0.5,
+            "reasoning": "政策是核心驱动力"
+          },
+          {
+            "category": "liquidity",
+            "weight": 0.3,
+            "reasoning": "政策影响流动性"
+          },
+          {
+            "category": "fundamental",
+            "weight": 0.15,
+            "reasoning": "政策传导到基本面"
+          },
+          {
+            "category": "narrative",
+            "weight": 0.05,
+            "reasoning": "叙事次要"
+          }
+        ]
+      },
+      "memory": {
+        "recentAccuracy": 0,
+        "recentPredictions": [
+          {
+            "timestamp": "2026-06-29T05:55:45.827Z",
+            "belief": "bullish",
+            "beliefStrength": 41.30459172209846,
+            "confidence": 20
+          }
+        ],
+        "historicalEvents": []
+      },
+      "trust": [
+        {
+          "targetAgentId": "value",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "momentum",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "contrarian",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "quant",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        }
+      ],
+      "updatedAt": "2026-06-29T05:55:45.827Z",
+      "version": 10
+    },
+    "contrarian": {
+      "agentId": "contrarian",
+      "belief": "bullish",
+      "beliefStrength": 42.118298116111646,
+      "evidence": [
+        {
+          "id": "60c86r3eq",
+          "category": "policy",
+          "value": 70,
+          "confidence": 80,
+          "reasoning": "政策支持力度较大",
+          "source": "llm"
+        }
+      ],
+      "confidence": 20,
+      "uncertainty": 55,
+      "openness": 37.364510565166505,
+      "preference": {
+        "riskPreference": "aggressive",
+        "goal": "逆向操作",
+        "attention": [
+          {
+            "category": "uncertainty",
+            "weight": 0.4,
+            "reasoning": "极端不确定性带来机会"
+          },
+          {
+            "category": "narrative",
+            "weight": 0.3,
+            "reasoning": "反向解读叙事"
+          },
+          {
+            "category": "fundamental",
+            "weight": 0.2,
+            "reasoning": "基本面反转信号"
+          },
+          {
+            "category": "liquidity",
+            "weight": 0.1,
+            "reasoning": "流动性变化"
+          }
+        ]
+      },
+      "memory": {
+        "recentAccuracy": 0,
+        "recentPredictions": [
+          {
+            "timestamp": "2026-06-29T05:55:45.827Z",
+            "belief": "bullish",
+            "beliefStrength": 42.118298116111646,
+            "confidence": 20
+          }
+        ],
+        "historicalEvents": []
+      },
+      "trust": [
+        {
+          "targetAgentId": "value",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "momentum",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "policy",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "quant",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        }
+      ],
+      "updatedAt": "2026-06-29T05:55:45.827Z",
+      "version": 10
+    },
+    "quant": {
+      "agentId": "quant",
+      "belief": "bullish",
+      "beliefStrength": 43.37284872699725,
+      "evidence": [
+        {
+          "id": "38dflnuf2",
+          "category": "policy",
+          "value": 70,
+          "confidence": 80,
+          "reasoning": "政策支持力度较大",
+          "source": "llm"
+        }
+      ],
+      "confidence": 20,
+      "uncertainty": 55,
+      "openness": 36.98814538190083,
+      "preference": {
+        "riskPreference": "moderate",
+        "goal": "数据驱动决策",
+        "attention": [
+          {
+            "category": "fundamental",
+            "weight": 0.3,
+            "reasoning": "量化因子"
+          },
+          {
+            "category": "liquidity",
+            "weight": 0.3,
+            "reasoning": "流动性因子"
+          },
+          {
+            "category": "uncertainty",
+            "weight": 0.2,
+            "reasoning": "风险度量"
+          },
+          {
+            "category": "policy",
+            "weight": 0.1,
+            "reasoning": "政策因子"
+          },
+          {
+            "category": "narrative",
+            "weight": 0.1,
+            "reasoning": "情绪因子"
+          }
+        ]
+      },
+      "memory": {
+        "recentAccuracy": 0,
+        "recentPredictions": [
+          {
+            "timestamp": "2026-06-29T05:55:45.827Z",
+            "belief": "bullish",
+            "beliefStrength": 43.37284872699725,
+            "confidence": 20
+          }
+        ],
+        "historicalEvents": []
+      },
+      "trust": [
+        {
+          "targetAgentId": "value",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "momentum",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "policy",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        },
+        {
+          "targetAgentId": "contrarian",
+          "trustLevel": 50,
+          "reasoning": "新建立的信任关系"
+        }
+      ],
+      "updatedAt": "2026-06-29T05:55:45.827Z",
+      "version": 10
+    }
+  },
+  "decisions": {
+    "value": {
+      "action": "HOLD",
+      "belief": "bullish",
+      "beliefStrength": 40.437353428150345,
+      "confidence": 20,
+      "reasoning": "观望 — 信念: bullish (强度: 40.4); 置信度: 20%; 不确定性: 55%; 关键证据: policy: +70",
+      "traceId": "1782712545825-j7zcpwry0"
+    },
+    "momentum": {
+      "action": "HOLD",
+      "belief": "bullish",
+      "beliefStrength": 40.77761626269442,
+      "confidence": 20,
+      "reasoning": "观望 — 信念: bullish (强度: 40.8); 置信度: 20%; 不确定性: 55%; 关键证据: policy: +70",
+      "traceId": "1782712545826-4roeu9rr0"
+    },
+    "policy": {
+      "action": "HOLD",
+      "belief": "bullish",
+      "beliefStrength": 41.30459172209846,
+      "confidence": 20,
+      "reasoning": "观望 — 信念: bullish (强度: 41.3); 置信度: 20%; 不确定性: 55%; 关键证据: policy: +70",
+      "traceId": "1782712545826-q56vuw1jb"
+    },
+    "contrarian": {
+      "action": "HOLD",
+      "belief": "bullish",
+      "beliefStrength": 42.118298116111646,
+      "confidence": 20,
+      "reasoning": "观望 — 信念: bullish (强度: 42.1); 置信度: 20%; 不确定性: 55%; 关键证据: policy: +70",
+      "traceId": "1782712545826-cveg1ctwt"
+    },
+    "quant": {
+      "action": "HOLD",
+      "belief": "bullish",
+      "beliefStrength": 43.37284872699725,
+      "confidence": 20,
+      "reasoning": "观望 — 信念: bullish (强度: 43.4); 置信度: 20%; 不确定性: 55%; 关键证据: policy: +70",
+      "traceId": "1782712545826-9yob4ntk3"
+    }
+  },
+  "createdAt": "2026-06-29T05:55:45.825Z"
+}

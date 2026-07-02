@@ -1,16 +1,15 @@
 # 🐜 SwarmAlpha
 
-> **多Agent共识动力学基础设施** — 在信息不对称的条件下，多个认知主体如何形成共识、走向分裂、或被少数派说服？
+> **LLM Multi-Agent 集体决策评价与治理研究平台** — 研究和构建 LLM Multi-Agent 集体决策的评价与治理机制，使群体决策具备高质量、可解释、可复现和抗极化的特性。
 >
-> 金融市场是第一个验证场景。核心机制是通用的，可适配任何多Agent协作场景。
+> 金融市场仅作为 Benchmark，而不是项目本身。真正保持不变的是集体决策形成机制。
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-9.7-purple" alt="version">
+  <img src="https://img.shields.io/badge/version-11.0-purple" alt="version">
   <img src="https://img.shields.io/badge/TypeScript-全栈-blue" alt="typescript">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="react">
-  <img src="https://img.shields.io/badge/引擎-Kuramoto_同步化-orange" alt="kuramoto">
-  <img src="https://img.shields.io/badge/面板-9_个交互视图-green" alt="panels">
-  <img src="https://img.shields.io/badge/数据源-12_个实时市场指标-yellow" alt="data">
+  <img src="https://img.shields.io/badge/V3-Research Runtime-orange" alt="v3">
+  <img src="https://img.shields.io/badge/领域-通用化-green" alt="domain">
   <img src="https://img.shields.io/badge/License-MIT-blue" alt="license">
 </p>
 
@@ -18,162 +17,188 @@
 
 ## 这是什么？
 
-输入任何信息（新闻、会议邀请、决策事项）。多个 Agent 各自只看到**部分信息**（信息盲区），形成信念、相互对话、达成共识或走向分裂。每一步推理都可追溯，每个假设都可消融验证。
+SwarmAlpha 是一个用于研究 **AI Agent 群体决策形成、评价与治理（Collective Decision Formation, Evaluation & Governance）** 的实验平台。
+
+核心问题：**不是研究"Agent 如何完成任务"，而是研究"多个 Agent 如何形成高质量、可信、可解释、可治理的集体决策"。**
 
 ```
-输入: "美联储意外宣布降息50个基点"
+输入: "央行宣布降息25个基点"
 
-🏦 Institution → 看到: 流动性+28 政策+35 基本面+10 盲: 叙事
-💎 Value      → 看到: 基本面+10 政策+35       盲: 流动性 叙事 不确定性
-🏄 Trend      → 看到: 叙事+40 流动性+28        盲: 政策 基本面 不确定性
-😱 Panic      → 看到: 叙事+40 不确定性25       盲: 流动性 政策 基本面
-🤖 Quant      → 看到: 全部5因子 (唯一信息对称者)
-📡 Media      → 看到: 叙事+40 政策+35          盲: 流动性 基本面 不确定性
-🦉 Contrarian → 看到: 基本面+10 叙事+40 不确定性25  盲: 流动性 政策
-🐜 Retail     → 看到: 叙事+40                  盲: 其余全部
-🏛️ Policy     → 看到: 政策+35 不确定性25 基本面+10  盲: 流动性 叙事
+🏦 Policy       → 信念: bullish (强度: 72) 置信度: 85
+💎 Value        → 信念: bullish (强度: 58) 置信度: 70
+🔥 Momentum     → 信念: bullish (强度: 65) 置信度: 78
+🔄 Contrarian   → 信念: bearish (强度: 35) 置信度: 60
+📊 Quantitative → 信念: bullish (强度: 68) 置信度: 82
 
-↓ 社交互动 × 3 轮 (信任加权信念传播)
+↓ 社交互动 × 3 轮 (动态信任传播)
 
-共识: +23.6 → UP ↑
-Kuramoto r: 0.92 (高度同步)
-共识度: 87  极化度: 17  脆弱性: 21
+群体共识: bullish (+61.8)
+共识质量: 78/100
+鲁棒性: 65/100
+多样性: 35/100
 ```
 
-**不是投票。不是平均。是微观信息不对称 → 宏观认知结构的涌现。**
+**不是投票。不是平均。是从个体认知到群体智能的涌现。**
 
 ### 核心价值
 
-- **共识质量测量**：测量共识的强度、极化程度和脆弱性
-- **反事实推演**：模拟"如果某个条件改变，共识会如何变化"
-- **通用化架构**：5大机制（信息盲区、非线性共识、Kuramoto同步、反事实推断、三维度量）全部是 domain-agnostic 的
-- **白箱可审计**：从信息提取到共识聚合，每一步都是纯数学公式
+- **决策质量评价**：测量共识的质量、鲁棒性、多样性、稳定性
+- **可解释性**：完整的 Decision Trace 记录每步推理过程
+- **可复现性**：确定性映射保证相同输入产生相同输出
+- **通用化架构**：核心机制 domain-agnostic，可适配任何多Agent场景
+- **治理机制**：研究如何干预群体决策，防止群体极化和错误共识
+- **统一运行时**：V3 Runtime 作为稳定主干，协调所有模块的生命周期
 
 ---
 
 ## 立刻体验
 
 ```bash
-# 终端 1: 启动后端 API (端口 3000)
+# 启动开发服务器 (端口 3000)
 cd swarmalpha
 npm install
 cp .env.local.example .env.local   # 可选: 填入 DeepSeek API Key
 npm run dev
 
-# 终端 2: 启动前端 UI (端口 5173)
-cd swarmalpha/swarmalphy-main
-npm install
-npm run dev
-
-# 打开 http://localhost:5173
+# 打开 http://localhost:3000
 ```
 
-**Mock 模式**默认开启——无需 API Key，无需网络，零成本体验完整 9 面板推演。点一下 Parameters 里的 Mock 按钮切换至 Live API 模式，接入真实 LLM 推理。
+**Mock 模式**默认开启——无需 API Key，无需网络，零成本体验完整功能。
 
 ---
 
-## 核心创新
+## V3 Research Runtime 架构
 
-### 1. 信息盲区 — 56% Agent 对零重叠因子
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Runtime Layer                                  │
+│  统一运行时调度器，协调所有模块的生命周期：                            │
+│  · RuntimeScheduler (核心循环调度)                                   │
+│  · RuntimeContext (统一状态容器)                                     │
+│  · EventBus (事件发布订阅)                                          │
+│  · TerminationChecker (可插拔终止策略)                               │
+│  · ObservationLayer (意见观测提取)                                   │
+│  · InferenceLayer (影响力推理与信念更新)                             │
+│  · Adapters (模块适配层)                                            │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+           ┌──────────────────┼──────────────────┐
+           ▼                  ▼                  ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│  Discussion     │  │  Evaluation     │  │  Governance     │
+│  Engine         │  │  Engine         │  │  Engine         │
+│  (意见交换)      │  │  (质量评价)      │  │  (决策治理)      │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+           │                  │                  │
+           └──────────────────┼──────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Cognitive State Layer                          │
+│  系统底座，定义认知状态变量：                                          │
+│  · belief, confidence, uncertainty, trust, openness, memory        │
+│  · Decision Trace                                                   │
+│  · FactorImportance                                                 │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Agent Layer                                    │
+│  负责接入各种 Agent（GPT、Claude、Gemini、企业Agent、私人Agent）      │
+│  重点：接口统一                                                       │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-不是 prompt 层面的"你是乐观/悲观分析师"。Agent 异质性来自**数学上正交的因子可见性**。5 个正交因子 → 每个 Agent 只看到 2-4 个 → 56% 的 Agent 对之间看不到相同的方向因子。
+### V3 Runtime 核心模块
 
-> 关闭盲区：belief_std = 17.9（伪多样性）
-> 开启盲区：belief_std = 57.9（真实视角差异，40 点振幅）
+| 模块 | 文件 | 职责 |
+|------|------|------|
+| RuntimeScheduler | `src/lib/runtime/scheduler.ts` | 核心循环调度器，协调讨论→观测→推理→评价→治理→终止检查 |
+| RuntimeContext | `src/lib/runtime/context.ts` | 统一状态容器，管理 experiment、session、task、round、state、metrics |
+| EventBus | `src/lib/runtime/eventBus.ts` | 事件发布订阅系统，支持生命周期、讨论、状态、分析、终止事件 |
+| TerminationChecker | `src/lib/runtime/termination.ts` | 可插拔终止策略：最大轮数、共识稳定、无状态变化、置信度收敛、治理限制、超时 |
+| ObservationLayer | `src/lib/observation/index.ts` | 意见观测层：提示构建、响应解析、原始观测提取 |
+| InferenceLayer | `src/lib/inference/index.ts` | 推理层：影响力计算、信念更新、状态增量推断 |
+| Adapters | `src/lib/runtime/adapters.ts` | 模块适配层：将 RuntimeContext 转换为各模块所需参数 |
+| SwarmAlphaRuntime | `src/lib/runtime/researchRuntime.ts` | 统一入口：任务提交、实验管理、报告生成 |
 
-### 2. 一次 LLM 调用，其余全部纯数学
+### Runtime 核心循环
 
-LLM 只做一件事：把新闻分解为 5 个正交因子。之后所有计算——Agent 信念、Kuramoto 同步化、非线性共识、Neutral 仲裁、反事实推断——全部是纯数学。
+```
+Discussion → Observation → Inference → State Update → Evaluation → Governance → Termination Check → Repeat or Complete
+```
 
-| | SwarmAlpha | 竞品 (TradingAgents) |
-|---|---|---|
-| 每次运行 LLM 调用 | **1 次** | 20-50 次 |
-| 单次成本 | **<¥0.05** | ¥0.5-5 |
-| 确定性 | ✅ | ❌ |
-| 零 LLM 模式 | ✅ Mock 模式 | ❌ |
+### 研究数据采集
 
-### 3. Kuramoto 同步化 — 群体协调性的数学度量
+Runtime 自动收集以下研究产物（Research Artifact）：
 
-将 Agent 信念映射到相位空间 [-π, +π]，计算序参量 r ∈ [0, 1]。r=1 = 完全同步，r=0 = 随机噪声。平均值掩盖协调性，Kuramoto r 暴露它。
-
-### 4. 反事实实验室 — 因果推断，不是相关性
-
-一键移除 Agent / 关闭盲区 / 禁用互动 → 量化共识偏移 → 评估影响级别。没有任何竞品能做受控实验。
-
-### 5. Neutral 仲裁引擎
-
-4 规则 OR 门：弱共识 / 高分歧 / 低同步 / 不确定性迷雾 → 任一触发即输出 NEUTRAL。在不确定时明确说"不知道"。
-
-### 6. 12 个实时市场数据源
-
-VIX、S&P 500、Nasdaq、金融/能源/科技 ETF、2Y/10Y 美债、黄金、原油、美元指数——Yahoo Finance 免费接口，5 分钟缓存，优雅降级。
+- **RoundSnapshot**: 每轮讨论的原始意见和状态
+- **EvaluationSnapshot**: 评价结果快照
+- **GovernanceSnapshot**: 治理干预记录
+- **StateSnapshot**: 完整状态快照序列
+- **DecisionSnapshot**: 最终决策和决策轨迹
 
 ---
 
-## 系统架构
+## V2 可解释决策框架（历史实现）
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    前端 (TanStack Start)                  │
-│  React 19 · Vite 8 · shadcn/ui · Framer Motion          │
-│  9 个交互面板 · SSE 流式推演 · 全面板同步回放             │
-└──────────────────────┬──────────────────────────────────┘
-                       │ POST /api/swarm
-                       ▼
-┌─────────────────────────────────────────────────────────┐
-│                  API 层 (Next.js 14)                      │
-│  Zod 验证 · 速率限制 · 8 类错误 · DEMO_MODE 降级          │
-└──────────────────────┬──────────────────────────────────┘
-                       ▼
-┌─────────────────────────────────────────────────────────┐
-│              市场数据层 (12 symbol 并行获取)               │
-│  Yahoo Finance · 5 分钟缓存 · 优雅降级为推断               │
-│  VIX · SPX · NDX · XLF · XLE · XLK · 2Y · 10Y ·         │
-│  Gold · Oil · DXY                                        │
-└──────────────────────┬──────────────────────────────────┘
-                       ▼
-┌─────────────────────────────────────────────────────────┐
-│              因子提取层 (1 次 LLM 或 模板)                 │
-│  正交五因子: 流动性 · 政策 · 基本面 · 叙事 · 不确定性      │
-└──────────────────────┬──────────────────────────────────┘
-                       ▼
-┌─────────────────────────────────────────────────────────┐
-│              Agent 解释层 (9 Agents, 纯数学)              │
-│  信息盲区 · 因子灵敏度 · 固有偏差 · 不确定性感知           │
-└──────────────────────┬──────────────────────────────────┘
-                       ▼
-┌─────────────────────────────────────────────────────────┐
-│              社交互动层 (信任网络, 纯数学)                  │
-│  α-开放度 · 信任加权混合 · 收敛/发散检测                   │
-└──────────────────────┬──────────────────────────────────┘
-                       ▼
-┌─────────────────────────────────────────────────────────┐
-│              共识引擎 (纯数学)                             │
-│  Kuramoto 同步化 · 8 种非线性方法 · Hybrid Gating         │
-│  Neutral 4-规则检测 · 动态权重                             │
-└──────────────────────┬──────────────────────────────────┘
-                       ▼
-┌─────────────────────────────────────────────────────────┐
-│              诊断与反事实                                  │
-│  贡献归因 · 联盟分析 · 风险因素 · 反事实变体               │
-└─────────────────────────────────────────────────────────┘
+V2 实现了"LLM 只感知不判断"的可解释决策框架，作为 V3 Runtime 的基础模块保留。
+
+### 架构原则
+
+| 原则 | 说明 |
+|------|------|
+| **LLM 只感知不判断** | LLM 负责提取证据和识别因子重要性，不做最终方向判断 |
+| **数学唯一负责演化** | 数学模型更新信念强度、信任关系、开放度等所有数值状态 |
+| **确定性决策映射** | 预定义规则将认知状态映射到 BUY/SELL/HOLD，保证实验可复现 |
+| **Decision Trace 可观测** | 完整记录每步推理过程，用于分析和解释 |
+
+### V2 API
+
+```bash
+POST /api/swarm/v2
+
+# 请求示例
+{
+  "news": "央行宣布降息25个基点",
+  "rounds": 3,
+  "useLLM": false,
+  "enableCommunication": true
+}
 ```
 
 ---
 
-## 9 面板仪表盘
+## 研究路线
 
-| # | 面板 | 回答的问题 |
-|---|---|---|
-| 01 | **实验控制台** | 输入什么新闻？怎么配置参数？ |
-| 02 | **实时仪表盘** | 共识度/极化度/脆弱性——群体此刻状态？ |
-| 03 | **因子分析** | 新闻被分解成了哪 5 个正交信号？ |
-| 04 | **Agent 社会网络** | 谁听谁的？谁的影响力最大？ |
-| 05 | **可解释时间线** | 每个 Agent 每轮的完整思维链 |
-| 06 | **共识演化** | Kuramoto r + 信念 σ 如何随时间变化？ |
-| 07 | **反事实实验室** | 移除 Panic / 关闭盲区 → 共识怎么变？ |
-| 08 | **诊断报告** | 谁贡献最大？多空联盟力量对比？风险在哪？ |
-| 09 | **实验回放** | 拖动滑块，所有面板同步回到任意时刻 |
+### 第一阶段（已完成）：Agent Cognitive Simulation
+
+关键词：Belief、Trust、Communication、Memory、Decision Trace
+
+目标：完成实验平台 ✅
+
+### 第二阶段（已完成）：Collective Decision Evaluation
+
+关键词：Consensus Quality、Collective Intelligence、Robustness、Stability
+
+目标：建立评价体系 ✅
+
+### 第三阶段（已完成）：Research Runtime
+
+关键词：Lifecycle、Scheduler、EventSystem、Termination、Artifact
+
+目标：建立统一运行时作为系统主干 ✅
+
+### 第四阶段：Multi-Agent Governance
+
+关键词：Trust Evolution、Influence、Diversity、Governance
+
+目标：建立治理机制（进行中）
+
+### 第五阶段：Agent Society
+
+关键词：Institution、Organization、Market、Society
+
+目标：研究 Agent 群体长期演化
 
 ---
 
@@ -188,33 +213,25 @@ VIX、S&P 500、Nasdaq、金融/能源/科技 ETF、2Y/10Y 美债、黄金、原
 | 后端 | Next.js 14 API Routes |
 | 类型安全 | TypeScript 全栈 · Zod 验证 |
 | LLM | DeepSeek / OpenAI / Anthropic / Local (可插拔) |
-| 市场数据 | Yahoo Finance v8 (12 symbol, 免费) |
-| 数学引擎 | Kuramoto 同步化 · 8 种非线性共识 · Hybrid Gating |
-
----
-
-## 与同类项目的差异
-
-| | SwarmAlpha | TradingAgents | MiroFish | TwinMarket |
-|---|---|---|---|---|
-| **定位** | **多Agent共识动力学基础设施** | 交易决策框架 | 社会仿真沙盒 | 学术仿真平台 |
-| **通用性** | ✅ domain-agnostic | ❌ 金融专用 | ❌ 社会专用 | ❌ 学术专用 |
-| **Agent 异质性来源** | **信息盲区**(因子可见性) | 角色 prompt | 随机人格参数 | BDI 认知框架 |
-| **LLM 调用/次** | **1** | 20-50 | 数百-数千 | 数百 |
-| **反事实实验室** | ✅ | ❌ | ❌ | ❌ |
-| **Kuramoto 同步化** | ✅ | ❌ | ❌ | ❌ |
-| **Neutral 仲裁** | ✅ 4-规则引擎 | ❌ | ❌ | ❌ |
-| **可视化面板** | 9 个交互面板 | 2-3 视图 | 3-4 视图 | 学术图表 |
-| **零成本 Mock 模式** | ✅ 浏览器直跑 | ❌ | ❌ | ❌ |
-| **全栈类型安全** | ✅ TypeScript 全栈 | ❌ Python | ❌ Python + Vue | ❌ Python |
+| 数学引擎 | 贝叶斯定理 · 信息熵 · 指数衰减 · Kuramoto 同步化 |
 
 ---
 
 ## 版本历史
 
-经过 15+ 个大版本的假设驱动迭代，从 5 Agent 投票 Demo 演进为完整的群体认知科学研究工具链：
+经过 15+ 个大版本的假设驱动迭代：
 
-- **v9.7 当前**: 非线性共识 8 方法动态集成 · 反事实实验室 · 12 符号市场数据
+- **v11.0 当前**: V3 Research Runtime — 统一运行时架构完成
+  - Runtime Layer 作为系统主干，协调 Discussion/Evaluation/Governance 三大模块
+  - 6 层架构：Runtime → Discussion/Evaluation/Governance → Cognitive State → Agent
+  - 7 个核心 Runtime 模块：Scheduler、Context、EventBus、TerminationChecker、ObservationLayer、InferenceLayer、Adapters
+  - 可插拔终止策略：6 种终止条件（最大轮数、共识稳定、无状态变化、置信度收敛、治理限制、超时）
+  - 研究数据采集：自动收集 RoundSnapshot、EvaluationSnapshot、GovernanceSnapshot、StateSnapshot、DecisionSnapshot
+- **v10.0**: V3 定位升级 — 从"多Agent金融市场模拟"升级为"LLM Multi-Agent集体决策评价与治理研究平台"
+  - 重新定义项目定位：金融仅作为 Benchmark
+  - 7 维度评价体系：Consensus、Reliability、Explainability、Robustness、Stability、Manipulation Resistance、Influence Analysis
+  - 主动治理机制：Echo Chamber、Authority Bias、Polarization 检测与干预
+- **v9.7**: 非线性共识 8 方法动态集成 · 反事实实验室 · 12 符号市场数据
 - **v9.6**: Market Awareness 双层感知修正 · 203 事件库
 - **v9.5**: 社交互动层 · 共识三维度量 · 动态权重引擎 · V 型反弹路由仲裁
 - **v9.3**: 四规则 Neutral Detection Engine
@@ -228,9 +245,7 @@ VIX、S&P 500、Nasdaq、金融/能源/科技 ETF、2Y/10Y 美债、黄金、原
 
 ## 关于作者
 
-我是一个高一学生。这个项目是用 AI 辅助、8 天内从数学公式到 9 面板动画 UI 全栈独立完成的。
-
-如果你觉得这个方向有趣，欢迎开 Issue、提 PR、或直接联系。
+我是一个高一学生。这个项目是用 AI 辅助完成的。
 
 **Vibe Coding 让我相信：好的想法 + AI 工具 = 一个人可以建造过去需要一个团队才能建造的东西。**
 

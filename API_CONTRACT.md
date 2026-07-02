@@ -1,620 +1,563 @@
-# SwarmAlpha v9.7 — 前端 API 契约
+# SwarmAlpha V3 — API 契约
 
-> 给前端 AI 的完整接口文档。照此实现即可，无需阅读引擎代码。
+> 通用 LLM Multi-Agent 集体决策评价与治理研究平台的标准化接口
 
 ---
 
-## 1. API 端点
+## 1. 核心概念
+
+### 1.1 数据模型
+
+平台以 **Decision Task** 为核心，包含：
+- **Input**: 决策输入（文本、数据、问题等）
+- **Agents**: 参与决策的 Agent 群体
+- **Interaction**: Agent 间的互动过程
+- **Evaluation**: 7 维度评价指标
+- **Governance**: 治理干预结果
+- **Output**: 最终决策结果
+
+### 1.2 评价维度
+
+| 维度 | 说明 | 范围 |
+|------|------|------|
+| Consensus | 共识强度 | 0-100 |
+| Reliability | 可靠性 | 0-100 |
+| Explainability | 可解释性 | 0-100 |
+| Robustness | 鲁棒性 | 0-100 |
+| Stability | 稳定性 | 0-100 |
+| ManipulationResistance | 抗操纵性 | 0-100 |
+| InfluenceAnalysis | 影响力分析 | 0-100 |
+
+---
+
+## 2. API 端点
+
+### 2.1 创建决策任务
 
 ```
-POST /api/swarm
+POST /api/v3/task
 Content-Type: application/json
 ```
 
----
-
-## 2. 请求体
+#### 请求体
 
 ```typescript
-interface SwarmRequest {
-  version: "v9";                        // 固定值
-  news: string;                         // 新闻文本, 1-5000 字符
-  rounds?: number;                      // 共识轮数, 1-10, 默认 3
-  llmConfig: {                          // LLM 配置
-    provider: "deepseek" | "openai" | "anthropic" | "local";
-    model: string;                      // 如 "deepseek-chat"
+interface CreateTaskRequest {
+  version: "v3";
+  title: string;
+  description: string;
+  input: {
+    type: "text" | "structured" | "question";
+    content: string | Record<string, unknown>;
+    context?: string;
   };
-
-  // ── v9.5.1 新增 ──
-  sessionId?: string;                   // 连续推演会话 ID (Date.now().toString())
-  sequenceIndex?: number;               // 0 | 1 | 2 (第几天)
-  disableInteraction?: boolean;         // 设为 true 跳过互动层 (回退 v9.3)
-  enableDynamicWeights?: boolean;       // 设为 true 启用动态权重系统 (v9.5.2)
-
-  // ── v9.5.2 已有 ──
-  enableVRoute?: boolean;               // V型反弹路由仲裁, 默认 true
-
-  // ── 🆕 v9.7 新增 ──
-  ablation?: {                          // 消融实验 & 引擎切换 (全部可选)
-    // 非线性共识引擎 (替代默认的 linear+cluster+gating)
-    nonlinearMethod?: "linear_baseline" | "power_law" | "entropy_weighted"
-                    | "trimmed_mean" | "median" | "winsorized"
-                    | "geometric_mean" | "dynamic_ensemble";
-    // 非线性方法参数覆盖
-    nonlinearConfig?: {
-      powerAlpha?: number;              // 幂律指数, 默认 1.5 (>1 放大极端)
-      trimCount?: number;               // 修剪数量, 默认 1
-      winsorLowerPct?: number;          // 缩尾下界百分位, 默认 20
-      winsorUpperPct?: number;          // 缩尾上界百分位, 默认 80
-      ensembleMethods?: string[];       // 集成方法列表, 默认全部 6 种
-    };
-
-    // 其他消融开关 (已有)
-    disablePolicyAgent?: boolean;       // 禁用政策Agent
-    disableBlindness?: boolean;         // 关闭信息盲区
-    disableClustering?: boolean;        // 禁用聚类共识 (回退纯线性)
-    disableUncertainty?: boolean;       // 关闭不确定性引擎
-    disableNeutralRule1?: boolean;      // 禁用弱共识检测
-    disableNeutralRule2_3?: boolean;    // 禁用高分歧+低同步检测
-    disableNeutralRule4?: boolean;      // 禁用高不确定+弱共识检测
-    disableMeanReversion?: boolean;     // 禁用均值回归感知 (v9.6)
+  agentConfig: {
+    provider: "autogen" | "crewai" | "langgraph" | "custom";
+    agentCount?: number;
+    agentTypes?: string[];
+    config?: Record<string, unknown>;
   };
+  llmConfig: {
+    provider: "openai" | "anthropic" | "gemini" | "deepseek" | "local";
+    model: string;
+    temperature?: number;
+  };
+  evaluationConfig?: {
+    enableAll?: boolean;
+    dimensions?: string[];
+    customMetrics?: Record<string, {
+      name: string;
+      description: string;
+      weight: number;
+    }>;
+  };
+  governanceConfig?: {
+    enableEchoChamberDetection?: boolean;
+    enableAuthorityBiasDetection?: boolean;
+    enablePolarizationDetection?: boolean;
+    interventionLevel?: "none" | "light" | "medium" | "heavy";
+  };
+  maxRounds?: number;
+  timeoutSeconds?: number;
 }
 ```
 
-### 请求示例
+#### 响应体
 
-```json
-// 基础请求 (使用默认 hybrid gating)
-{
-  "version": "v9",
-  "news": "美联储紧急降息50个基点超出市场预期",
-  "rounds": 2,
-  "llmConfig": { "provider": "deepseek", "model": "deepseek-chat" }
-}
-
-// 🆕 v9.7: 使用非线性共识引擎 (推荐 dynamic_ensemble)
-{
-  "version": "v9",
-  "news": "2020年3月新冠疫情全球爆发美股四次熔断",
-  "rounds": 3,
-  "llmConfig": { "provider": "deepseek", "model": "deepseek-chat" },
-  "ablation": {
-    "nonlinearMethod": "dynamic_ensemble"
-  }
-}
-
-// 使用特定非线性方法 + 自定义参数
-{
-  "version": "v9",
-  "news": "...",
-  "rounds": 3,
-  "llmConfig": { "provider": "deepseek", "model": "deepseek-chat" },
-  "ablation": {
-    "nonlinearMethod": "trimmed_mean",
-    "nonlinearConfig": { "trimCount": 2 }
-  }
+```typescript
+interface CreateTaskResponse {
+  success: boolean;
+  taskId: string;
+  status: "pending" | "running" | "completed" | "failed";
+  createdAt: string;
 }
 ```
 
 ---
 
-## 3. 响应体
+### 2.2 获取任务状态
+
+```
+GET /api/v3/task/:taskId
+```
+
+#### 响应体
 
 ```typescript
-interface SwarmResponse {
-  success: true;
-  version: "v9.7";                      // 版本标识
+interface GetTaskResponse {
+  success: boolean;
+  task: {
+    taskId: string;
+    title: string;
+    status: "pending" | "running" | "completed" | "failed";
+    createdAt: string;
+    startedAt?: string;
+    completedAt?: string;
+    input: TaskInput;
+    output?: TaskOutput;
+    evaluation?: EvaluationResult;
+    governance?: GovernanceResult;
+    agents?: AgentInfo[];
+    interactionHistory?: InteractionRound[];
+  };
+}
+```
+
+---
+
+### 2.3 执行决策（同步）
+
+```
+POST /api/v3/execute
+Content-Type: application/json
+```
+
+#### 请求体
+
+```typescript
+interface ExecuteRequest {
+  version: "v3";
+  input: {
+    type: "text" | "structured" | "question";
+    content: string | Record<string, unknown>;
+  };
+  agentConfig: {
+    provider: "autogen" | "crewai" | "langgraph" | "custom";
+    agentCount?: number;
+  };
+  llmConfig: {
+    provider: "openai" | "anthropic" | "gemini" | "deepseek" | "local";
+    model: string;
+  };
+  evaluationConfig?: {
+    dimensions?: string[];
+  };
+  governanceConfig?: {
+    interventionLevel?: "none" | "light" | "medium" | "heavy";
+  };
+}
+```
+
+#### 响应体
+
+```typescript
+interface ExecuteResponse {
+  success: boolean;
   data: {
-    news: string;                       // 回显新闻
-    factorVector: FactorVector;         // 5 个正交因子
-    rounds: RoundData[];                // 共识演化轮次
-    final: FinalDecision;               // 最终决策
-    diagnostics: Diagnostics;           // 群体行为诊断
-    ablationMetrics: {                  // 消融实验状态
-      policyAgentActive: boolean;
-      uncertaintyActive: boolean;
-      blindnessActive: boolean;
-      beliefStdHistory: number[];
-    };
-    // 🆕 v9.7: 非线性共识元数据 (启用 nonlinearMethod 时填充)
-    nonlinearConsensus?: {
-      method: string;                   // 使用的方法名
-      individualResults?: {             // 集成模式下各方法的独立结果
-        method: string;
-        consensus: number;
-        confidence: number;
-        signalQuality: number;          // 0-1, 集成权重
-      }[];
-      ensembleWeights?: Record<string, number>;  // method → 集成权重
-    };
-    v9_5: V9_5Data;                     // ★ 核心: 互动+指标+时间线
-    v9_5Agents: AgentInfo[];            // Agent 元信息
-    // 🆕 v9.5.2: V型反弹路由仲裁
-    routing: {
-      finalDirection: string;           // 仲裁后的最终方向
-      decision: "classifier_v_rebound" | "consensus_llm_trusted" | "disabled";
-      classifierLabel: string;          // V_REBOUND | L_DECLINE | W_RECOVERY | U_SLOW
-      consensusRaw: number;             // 仲裁前的原始共识值
-    };
-  };
-  rateLimit: {
-    remaining: number;
-    resetTime: string;
+    output: TaskOutput;
+    evaluation: EvaluationResult;
+    governance: GovernanceResult;
+    agents: AgentInfo[];
+    interactionHistory: InteractionRound[];
+    trace: DecisionTrace;
   };
 }
 ```
 
 ---
 
-## 4. 关键子类型
+### 2.4 获取评价结果
 
-### FactorVector — 五个正交因子
+```
+GET /api/v3/task/:taskId/evaluation
+```
+
+#### 响应体
 
 ```typescript
-interface FactorVector {
-  factors: {
-    category: "liquidity" | "policy" | "fundamental" | "narrative" | "uncertainty";
-    value: number;        // -100 ~ +100 (uncertainty: 0~100)
-    confidence: number;   // 0-100
-    evidence: string;     // LLM 解释原文
-  }[];
-  metadata: {
-    newsSummary: string;
-    detectedAnomalies: string[];
-    timestamp: string;    // ISO 8601
-  };
+interface EvaluationResponse {
+  success: boolean;
+  evaluation: EvaluationResult;
 }
 ```
 
-### RoundData — 单轮共识
+---
+
+### 2.5 获取治理结果
+
+```
+GET /api/v3/task/:taskId/governance
+```
+
+#### 响应体
 
 ```typescript
-interface RoundData {
-  round: number;
-  consensus: number;           // 加权共识值 -100~+100
-  direction: "UP" | "DOWN" | "NEUTRAL";
-  confidence: number;          // 0-95
-  beliefStd: number;           // Agent 信念标准差
-  neutralTrace?: {             // Neutral 四规则追踪
-    rule1_fired: boolean;      // 弱共识
-    rule2_fired: boolean;      // 高分歧
-    rule3_fired: boolean;      // 低同步
-    rule4_fired: boolean;      // 高不确定+弱共识
-    finalNeutral: boolean;     // 最终是否判 Neutral
-    gatingReason: string;      // 判定理由文本
-  };
-  agents: Record<string, {     // key = agent id
-    belief: number;            // -100~+100
-    confidence: number;        // 0-100
-    visibleFactors: string[];  // 该Agent可见的因子
-    interpretation: string;    // 因子解释记录
+interface GovernanceResponse {
+  success: boolean;
+  governance: GovernanceResult;
+}
+```
+
+---
+
+### 2.6 获取决策轨迹
+
+```
+GET /api/v3/task/:taskId/trace
+```
+
+#### 响应体
+
+```typescript
+interface TraceResponse {
+  success: boolean;
+  trace: DecisionTrace;
+}
+```
+
+---
+
+### 2.7 运行基准测试
+
+```
+POST /api/v3/benchmark
+Content-Type: application/json
+```
+
+#### 请求体
+
+```typescript
+interface BenchmarkRequest {
+  version: "v3";
+  benchmarkType: "financial" | "medical" | "legal" | "business" | "custom";
+  dataset?: string;
+  scenarios?: string[];
+  agentConfig: AgentConfig;
+  llmConfig: LLMConfig;
+}
+```
+
+#### 响应体
+
+```typescript
+interface BenchmarkResponse {
+  success: boolean;
+  benchmarkId: string;
+  results: BenchmarkResult[];
+  summary: BenchmarkSummary;
+}
+```
+
+---
+
+## 3. 数据类型定义
+
+### 3.1 TaskInput
+
+```typescript
+interface TaskInput {
+  type: "text" | "structured" | "question";
+  content: string | Record<string, unknown>;
+  context?: string;
+  metadata?: Record<string, unknown>;
+}
+```
+
+### 3.2 TaskOutput
+
+```typescript
+interface TaskOutput {
+  finalDecision: string;
+  confidence: number;
+  reasoning: string;
+  steps: DecisionStep[];
+  agentContributions: Record<string, {
+    contribution: string;
+    confidence: number;
   }>;
 }
 ```
 
-### FinalDecision — 最终决策
+### 3.3 DecisionStep
 
 ```typescript
-interface FinalDecision {
-  consensus: number;
-  direction: "UP" | "DOWN" | "NEUTRAL";
-  confidence: number;
-  beliefStd: number;
-  neutralTrace?: { /* 同上 */ };
+interface DecisionStep {
+  step: number;
+  content: string;
+  agentId: string;
+  timestamp: string;
 }
 ```
 
-### Diagnostics — 群体行为诊断
+### 3.4 EvaluationResult
 
 ```typescript
-interface Diagnostics {
-  attribution: {                     // 归因分解
-    agentId: string;
-    agentName: string;
-    emoji: string;
-    belief: number;
-    confidence: number;
-    influenceWeight: number;
-    contribution: number;            // 净贡献值
-    contributionPct: number;         // 贡献占比 0-100
-    direction: "BULLISH" | "BEARISH" | "NEUTRAL";
-    visibleFactors: string[];
-  }[];
+interface EvaluationResult {
+  overallScore: number;
+  dimensions: {
+    consensus: {
+      score: number;
+      details: string;
+    };
+    reliability: {
+      score: number;
+      details: string;
+    };
+    explainability: {
+      score: number;
+      details: string;
+    };
+    robustness: {
+      score: number;
+      details: string;
+    };
+    stability: {
+      score: number;
+      details: string;
+    };
+    manipulationResistance: {
+      score: number;
+      details: string;
+    };
+    influenceAnalysis: {
+      score: number;
+      details: string;
+    };
+  };
+  customMetrics?: Record<string, number>;
+  summary: string;
+}
+```
 
-  coalition: {                       // 联盟分析
-    bullishCoalition: {
+### 3.5 GovernanceResult
+
+```typescript
+interface GovernanceResult {
+  echoChamber: {
+    detected: boolean;
+    severity: "low" | "medium" | "high";
+    agents: string[];
+    interventionApplied?: string;
+    effect?: string;
+  };
+  authorityBias: {
+    detected: boolean;
+    severity: "low" | "medium" | "high";
+    dominantAgent?: string;
+    interventionApplied?: string;
+    effect?: string;
+  };
+  polarization: {
+    detected: boolean;
+    severity: "low" | "medium" | "high";
+    groups: {
+      label: string;
       agentIds: string[];
-      totalInfluence: number;
-      totalCapital: number;
-      weightedBelief: number;
-    };
-    bearishCoalition: { /* 同上 */ };
-    neutralAgents: string[];
-    powerRatio: number;              // 多头/空头影响力比
-    dominantCoalition: "BULLISH" | "BEARISH" | "BALANCED";
-    tension: number;                 // 0-100 对抗强度
-    swingAgents: string[];           // 关键摇摆Agent
-  };
-
-  counterfactuals: {                 // 反事实分析
-    baselineConsensus: number;
-    mostInfluentialAgent: string;
-    agentsToFlip: number;            // 需要移除几个Agent才能翻转方向
-    variants: {
-      label: string;                 // 如 "移除Panic"
-      description: string;
-      modifiedAgentId?: string;
-      disableBlindness?: boolean;
-      consensus: number;
-      direction: string;
-      deltaConsensus: number;        // 共识变化量
-      directionFlipped: boolean;     // 方向是否翻转
-      impact: "CRITICAL" | "SIGNIFICANT" | "MODERATE" | "MINIMAL";
+      belief: number;
     }[];
+    interventionApplied?: string;
+    effect?: string;
   };
-
-  summary: {                         // 诊断摘要（自然语言，可直接展示）
-    coreFinding: string;             // 核心发现
-    consensusMechanism: string;      // 共识形成机制
-    riskFactors: string[];           // 风险因素列表
-    blindnessEffect: string;         // 盲区效应
-    validationSummary: string;       // 交叉验证结果摘要
-  };
-
-  crossValidation: {                 // 🆕 v9.7: 多方法交叉验证
-    methodResults: {
-      method: string;                // "linear_baseline" | "power_law" | ...
-      consensus: number;             // 该方法的共识值
-      confidence: number;            // 该方法的置信度
-      direction: "UP" | "DOWN" | "NEUTRAL";
-    }[];
-    consensusStd: number;            // 方法间共识标准差 (越低越一致)
-    directionConsistency: number;    // 0-1, 方向一致性比例
-    confidenceLevel: "HIGH" | "MEDIUM" | "LOW" | "CRITICAL";
-    overallScore: number;            // 0-100, 综合验证分数
-  };
-}
-```
-
-### V9_5Data — ★ 前端最关心的字段
-
-```typescript
-interface V9_5Data {
-  interaction: {                     // Agent 社交互动 (可能 null)
-    totalRounds: number;             // 互动总轮数
-    convergenceType: "converged" | "diverged" | "max_rounds";
-    rounds: {                        // 每轮状态
-      round: number;
-      beliefs: Record<string, number>;       // agentId → belief
-      beliefChanges: Record<string, number>;  // agentId → Δbelief
-      meanBelief: number;
-      beliefStd: number;
-      converged: boolean;
-    }[];
-    beliefShift: Record<string, number>;     // 最终-初始信念偏移
-    consensusFormed: boolean;
-    polarizationIncreased: boolean;
-    socialProfiles: {                        // 社交可见性
-      agentId: string;
-      alpha: number;                         // 社交开放度 (-1~1)
-      visibleAgentIds: string[];             // 该Agent能看到谁
-    }[];
-  } | null;
-
-  metrics: {                         // ★★★ 三个核心指标
-    consensusScore: number;          // 共识强度 0-100
-    polarizationScore: number;       // 极化程度 0-100
-    fragilityScore: number;          // 共识脆弱性 0-100
-    stateLabel: string;              // 状态标签 (含emoji)
-    stateInterpretation: string;     // 状态解读文本
-  };
-
-  comparison?: {                     // 互动前后对比
-    consensusShift: number;          // 共识偏移
-    stdChange: number;               // 分歧变化 (<-5=收敛, >+5=极化)
-    effect: "convergence" | "polarization" | "minimal";
+  otherIssues: {
+    type: string;
+    severity: string;
     description: string;
-  } | null;
-
-  dynamicWeights?: {                 // 动态权重系统
-    enabled: boolean;                 // 是否启用动态权重
-    activeModes: string[];            // 激活的模式 (e.g. ['panic', 'policy'])
-    modeDetails: {
-      panic: { triggered: boolean; reasons: string[] };
-      policy: { triggered: boolean; reasons: string[] };
-      value: { triggered: boolean; reasons: string[] };
-    };
-    adjustments: Record<string, {     // agentId → 权重调整详情
-      baseWeight: number;             // 基础权重
-      multiplier: number;             // 动态乘数
-      finalWeight: number;            // 最终权重
-      contributingModes: string[];    // 哪些模式贡献了调整
-      reason: string;                 // 调整原因
-    }>;
-    dynamicConsensus?: number;        // 动态重新加权的共识值 (可对比静态共识)
-  };
-
-  timeline?: {                       // ★ 连续推演时间线 (3天趋势)
-    sequenceIndex: number;           // 0|1|2
-    news: string;                    // 当天新闻摘要
-    consensusScore: number;
-    polarizationScore: number;
-    fragilityScore: number;
-    consensus: number;
-    direction: string;
-    beliefStd: number;
-  }[] | null;
+  }[];
+  summary: string;
 }
 ```
 
-### AgentInfo
+### 3.6 AgentInfo
 
 ```typescript
 interface AgentInfo {
-  id: string;       // "institution" | "value" | "trend" | "panic" | "quant" | "media" | "contrarian" | "retail" | "policy"
-  name: string;     // "Institution" | "Value" | "Trend" | ...
-  emoji: string;    // "🏦" | "💎" | "🏄" | "😱" | "🤖" | "📡" | "🦉" | "🐜" | "🏛️"
-  role: string;     // 中文角色名
+  id: string;
+  name: string;
+  role: string;
+  type: string;
+  config: Record<string, unknown>;
+}
+```
+
+### 3.7 InteractionRound
+
+```typescript
+interface InteractionRound {
+  round: number;
+  messages: {
+    agentId: string;
+    content: string;
+    timestamp: string;
+  }[];
+  beliefs: Record<string, number>;
+  beliefChanges: Record<string, number>;
+  converged: boolean;
+}
+```
+
+### 3.8 DecisionTrace
+
+```typescript
+interface DecisionTrace {
+  taskId: string;
+  startTime: string;
+  endTime: string;
+  steps: {
+    phase: "input" | "agent_creation" | "interaction" | "evaluation" | "governance" | "output";
+    timestamp: string;
+    details: Record<string, unknown>;
+  }[];
+  fullLog: string;
+}
+```
+
+### 3.9 BenchmarkResult
+
+```typescript
+interface BenchmarkResult {
+  scenario: string;
+  groundTruth?: string;
+  agentDecision: string;
+  evaluation: EvaluationResult;
+  metrics: {
+    accuracy?: number;
+    precision?: number;
+    recall?: number;
+    f1?: number;
+  };
+}
+```
+
+### 3.10 BenchmarkSummary
+
+```typescript
+interface BenchmarkSummary {
+  totalScenarios: number;
+  avgEvaluationScore: number;
+  avgAccuracy?: number;
+  bestDimension: string;
+  worstDimension: string;
+  insights: string[];
 }
 ```
 
 ---
 
-## 5. 🆕 v9.7 非线性共识引擎
+## 4. 错误响应
 
-### 概述
-
-v9.3 的默认共识管线是 `线性加权 → K-Means聚类 → 非对称门控`。线性共识的数学性质（输出永远在输入凸包内）是信息论硬天花板。v9.7 提供 **8 种非线性共识方法**，通过 `ablation.nonlinearMethod` 激活。
-
-### 方法速查
-
-| 方法 | `nonlinearMethod` | 特性 | 推荐场景 |
-|------|-------------------|------|---------|
-| 线性基线 | `"linear_baseline"` | 原始加权平均，用于对照 | 基线对比 |
-| 幂律共识 | `"power_law"` | 放大极端信念 (α=1.5) | 信号明确时 |
-| 熵权共识 | `"entropy_weighted"` | 分歧大→压缩权重 | 噪音环境 |
-| **修剪均值** | `"trimmed_mean"` | 移除极端值后加权 | 🥇 **推荐: 总准确率最高** |
-| 加权中位数 | `"median"` | 完全免疫极端值 | Down 事件检测 |
-| 缩尾共识 | `"winsorized"` | 限幅不移除 | 保守场景 |
-| 几何平均 | `"geometric_mean"` | 零信念强抑制 | 异常值多时 |
-| **动态集成** | `"dynamic_ensemble"` | 6方法信号质量加权 | 🥈 **推荐: 最稳定** |
-
-### 203 事件基准 (模板模式)
-
-| 方法 | 总准确率 | Up | Down | vs线性差异 |
-|------|---------|-----|------|-----------|
-| 修剪均值 | **39.4%** | 42% | 39% | 4.0pt |
-| 动态集成 | 37.9% | 38% | 41% | 4.6pt |
-| 幂律共识 | 36.0% | **44%** | 2% | 4.1pt |
-| 加权中位数 | 32.0% | 21% | **50%** | **16.4pt** |
-| 线性基线 | 33.0% | 38% | 2% | — |
-
-> 永远猜涨基线: 57.6%。注意: 这些是纯模板模式（零 LLM）的数据。LLM 模式 + 完整 v9 管线可显著提升。
-
-### 前端展示建议
-
-当 `data.nonlinearConsensus` 存在时:
-- 显示当前使用的方法名和置信度
-- 如果是 `dynamic_ensemble`，展示各子方法的 consensus 和权重分布
-- 对比 `final.consensus`（非线性）与原始共识的差异
-
-```
-┌─ 🔮 非线性共识: 动态集成 ─────────────────────────────┐
-│  集成共识: +12.5                                       │
-│  ┌──────────┬──────────┬──────────┬──────────┐        │
-│  │ 幂律 35% │ 修剪 30% │ 中位数 20%│ 几何 15% │        │
-│  │  +15.2   │  +10.8   │   +8.3   │  +12.1   │        │
-│  └──────────┴──────────┴──────────┴──────────┘        │
-│  vs 线性共识: Δ = +4.6pt                               │
-└───────────────────────────────────────────────────────┘
+```typescript
+interface ErrorResponse {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: string;
+    suggestion?: string;
+  };
+}
 ```
 
-### 自定义参数
+---
+
+## 5. 示例
+
+### 5.1 创建决策任务
 
 ```json
 {
-  "ablation": {
-    "nonlinearMethod": "power_law",
-    "nonlinearConfig": {
-      "powerAlpha": 2.0,
-      "trimCount": 2,
-      "winsorLowerPct": 10,
-      "winsorUpperPct": 90,
-      "ensembleMethods": ["power_law", "trimmed_mean", "median"]
+  "version": "v3",
+  "title": "医疗诊断决策",
+  "description": "基于患者症状进行疾病诊断",
+  "input": {
+    "type": "structured",
+    "content": {
+      "patient": "45岁男性",
+      "symptoms": ["胸痛", "呼吸困难", "头晕"],
+      "medicalHistory": ["高血压", "糖尿病"]
+    }
+  },
+  "agentConfig": {
+    "provider": "autogen",
+    "agentCount": 5
+  },
+  "llmConfig": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "temperature": 0.7
+  },
+  "evaluationConfig": {
+    "enableAll": true
+  },
+  "governanceConfig": {
+    "interventionLevel": "medium"
+  }
+}
+```
+
+### 5.2 执行响应示例
+
+```json
+{
+  "success": true,
+  "data": {
+    "output": {
+      "finalDecision": "急性心肌梗死",
+      "confidence": 0.85,
+      "reasoning": "综合症状和病史，最可能的诊断是急性心肌梗死，建议立即进行心电图检查和心肌酶检测。",
+      "steps": [
+        {"step": 1, "content": "分析症状", "agentId": "specialist-1"},
+        {"step": 2, "content": "评估风险因素", "agentId": "specialist-2"},
+        {"step": 3, "content": "综合诊断", "agentId": "lead-doctor"}
+      ]
+    },
+    "evaluation": {
+      "overallScore": 82,
+      "dimensions": {
+        "consensus": {"score": 85, "details": "80%的Agent达成一致诊断"},
+        "reliability": {"score": 88, "details": "诊断符合临床指南"},
+        "explainability": {"score": 78, "details": "提供了清晰的推理路径"},
+        "robustness": {"score": 75, "details": "对输入变化具有一定鲁棒性"},
+        "stability": {"score": 80, "details": "决策过程稳定"},
+        "manipulationResistance": {"score": 85, "details": "未检测到操纵行为"},
+        "influenceAnalysis": {"score": 82, "details": "主导Agent影响适度"}
+      },
+      "summary": "决策质量良好，共识度高，推理清晰"
+    },
+    "governance": {
+      "echoChamber": {"detected": false, "severity": "low"},
+      "authorityBias": {"detected": false, "severity": "low"},
+      "polarization": {"detected": false, "severity": "low"},
+      "summary": "未检测到群体决策偏差"
     }
   }
 }
 ```
 
-- `powerAlpha`: 默认 1.5。>1 更激进放大极端信号，<1 压缩极端信号
-- `trimCount`: 默认 1。从两端各移除几个 Agent
-- `winsorLowerPct/UpperPct`: 缩尾百分位，默认 20/80
-- `ensembleMethods`: 集成包含的方法列表，默认全部 6 种
+---
+
+## 6. 版本兼容性
+
+| 版本 | 状态 | 说明 |
+|------|------|------|
+| v3 | ✅ 当前 | 通用接口 |
+| v9 | ⚠️ 兼容 | 金融基准测试专用 |
 
 ---
 
-## 6. 颜色编码规则
+## 7. 限流策略
 
-Agent 信念值 → 颜色：
-
-| belief 范围 | 颜色 | Tailwind | 含义 |
-|------------|------|----------|------|
-| > +15 | 绿色 | `text-emerald-400` / `bg-emerald-500` | 偏多 |
-| < -15 | 红色 | `text-red-400` / `bg-red-500` | 偏空 |
-| -15 ~ +15 | 黄色/灰色 | `text-zinc-400` | 中立 |
-
-三指标颜色：
-
-| 指标 | 低 (0-30) | 中 (30-60) | 高 (60-100) |
-|------|----------|-----------|------------|
-| Consensus | `#ef4444` 红 | `#f59e0b` 黄 | `#34d399` 绿 |
-| Polarization | `#34d399` 绿 | `#f59e0b` 黄 | `#f87171` 红 |
-| Fragility | `#34d399` 绿 | `#f59e0b` 黄 | `#ef4444` 红 |
-
----
-
-## 7. 前端需要渲染的组件
-
-### 7.1 ConsensusDashboard（核心新增）
-
-Props 接口：
-
-```typescript
-interface ConsensusDashboardProps {
-  metrics: {
-    consensusScore: number;
-    polarizationScore: number;
-    fragilityScore: number;
-    stateLabel: string;
-    stateInterpretation: string;
-  };
-  interactionRounds?: { round: number; beliefs: Record<string,number>; beliefChanges: Record<string,number>; meanBelief: number; beliefStd: number; converged: boolean }[];
-  socialProfiles?: { agentId: string; alpha: number; visibleAgentIds: string[] }[];
-  comparison?: { consensusShift: number; stdChange: number; effect: string; description: string } | null;
-  agents?: { id: string; name: string; emoji: string; role: string }[];
-  finalConsensus?: number;
-  finalDirection?: string;
-  timeline?: { sequenceIndex: number; news: string; consensusScore: number; polarizationScore: number; fragilityScore: number; consensus: number; direction: string; beliefStd: number }[];
-  loading?: boolean;
-}
-```
-
-### 7.2 需要渲染的子组件
-
-| 优先级 | 组件 | 数据来源 | 说明 |
-|--------|------|---------|------|
-| ★★★ | **三指标环形仪表盘** | `v9_5.metrics` | 三个 SVG/CSS 环形进度条, 带颜色分段和动画 |
-| ★★★ | **状态解读卡片** | `v9_5.metrics.stateLabel` + `stateInterpretation` | 大号emoji标签 + 一段解释文字 |
-| ★★★ | **互动演化柱状图** | `v9_5.interaction.rounds[]` | X轴=轮次, Y轴=belief_std, 每轮一个柱子 |
-| ★★ | **Agent 信念对比条** | `v9_5.interaction.rounds[0].beliefs` vs `rounds[last].beliefs` | 水平条: 互动前(半透明) vs 互动后(实色), belief=0 在中间 |
-| ★★ | **社交可见性迷你面板** | `v9_5.interaction.socialProfiles` | 卡片网格: Agent emoji + α值 + 可见人数 |
-| ★★ | **互动效果总结** | `v9_5.comparison` | 三个数字: 共识偏移 / 分歧变化 / 效应 (收敛/极化/微效) |
-| ★★ | **时间线折线图** | `v9_5.timeline[]` | 三条线(蓝=Consensus, 橙=Polarization, 红=Fragility), X轴=Day 1/2/3 |
-| ★ | **反事实分析面板** | `diagnostics.counterfactuals.variants[]` | 列表: 每个变体显示 label + Δconsensus + 影响力等级(用颜色) |
-
-### 7.3 旧组件（已有，可复用或重写）
-
-| 组件 | 数据来源 |
+| 端点 | 速率限制 |
 |------|---------|
-| **AgentPanel** — Agent 网格卡片 | `rounds[selected].agents` → 每个Agent: belief + confidence |
-| **EmotionChart** — 情绪折线图 | `rounds[]` → 每轮每个Agent的belief |
-| **RadarChart** — 雷达图 | `rounds[selected].agents` → 多维对比 |
-| **ConsensusBadge** — 共识结果徽章 | `final` → direction + consensus |
-| **GameLog** — 滚动日志 | `rounds[]` → 每轮每个Agent的interpretation |
-
----
-
-## 8. 连续推演 3 天 — 调用方式
-
-```typescript
-const sessionId = Date.now().toString();
-const variants = [
-  "原始新闻文本",
-  "原始新闻文本，市场开始消化预期",
-  "原始新闻文本，机构开始重新定价",
-];
-
-for (let i = 0; i < 3; i++) {
-  const res = await fetch("/api/swarm", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      version: "v9",
-      news: variants[i],
-      rounds: 2,
-      llmConfig,
-      sessionId,
-      sequenceIndex: i,  // 0, 1, 2
-    }),
-  });
-}
-
-// 最后一次响应的 data.v9_5.timeline 包含完整的 3 天数据
-```
-
----
-
-## 9. 预置事件（建议的演示用新闻）
-
-```typescript
-const PRESET_EVENTS = [
-  {
-    label: "📉 2008 雷曼",
-    news: "2008年9月，雷曼兄弟破产，全球金融市场陷入恐慌，信贷市场冻结，道琼斯单日暴跌504点。美国政府随后推出7000亿美元TARP救助计划。",
-  },
-  {
-    label: "🦠 2020 新冠崩盘",
-    news: "2020年3月，新冠疫情全球爆发，美股10天4次熔断，VIX飙升至82，全球供应链断裂，多国封锁。美联储紧急降息至零并推出无限量QE。",
-  },
-  {
-    label: "📈 2022 加息周期",
-    news: "2022年，美联储为应对40年来最高通胀，连续四次加息75个基点，科技股暴跌，纳斯达克进入熊市，全球资本回流美元资产。",
-  },
-  {
-    label: "💥 2024 日股崩盘",
-    news: "2024年8月，日本央行意外加息，日元套息交易大规模平仓，日经225单日暴跌12.4%，全球股市恐慌性抛售，VIX飙升至65。",
-  },
-];
-```
-
----
-
-## 10. 页面布局建议
-
-```
-┌─────────────────────────────────────────────────────┐
-│ 🐜 SwarmAlpha — AI Collective Belief Formation      │
-│               in Complex Systems                     │
-│                                                     │
-│ [DeepSeek ▼]  [非线性: 动态集成 ▼]  [历史记录 📋]     │
-├─────────────────────────────────────────────────────┤
-│ [📉 2008雷曼] [🦠 2020新冠] [📈 2022加息] [💥 日股]  │  ← 预置事件
-│                                                     │
-│ [___________________输入新闻___________________]     │  ← NewsInput
-│ [🚀 开始推演]  [📈 连续推演3天]  [⚙️ 高级设置]        │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│ ★ ConsensusDashboard (v9.5)                         │
-│  ┌─ 🆕 非线性共识方法 ──────────────────────────-┐  │  ← v9.7 新增
-│  │ 动态集成 · 集成共识 +12.5 · vs线性 Δ=+4.6pt    │  │
-│  └──────────────────────────────────────────────┘  │
-│  ┌─ 时间线折线图 (连续推演模式) ──────────────────┐  │
-│  └──────────────────────────────────────────────┘  │
-│  ┌ 42 ───┐ ┌ 73 ───┐ ┌ 47 ───┐                    │  ← 三个仪表盘
-│  │Consensus│ │Polariz.│ │Fragility│                  │
-│  └────────┘ └────────┘ └────────┘                    │
-│  ┌ 🟡 模糊共识 ──────────────────────────────────┐  │  ← 状态解读
-│  └──────────────────────────────────────────────┘  │
-│  ┌ 📡 信念演化过程 (柱状图) ────────────────────-┐  │
-│  └──────────────────────────────────────────────┘  │
-│  ┌ 🎭 Agent 信念对比条 ───────────────────────-┐    │
-│  └──────────────────────────────────────────────┘  │
-│  ┌ 🔗 社交可见性 ────────────────────────────-┐     │
-│  └──────────────────────────────────────────────┘  │
-│  ┌ 📊 互动效果 ──────────────────────────────-┐     │
-│  └──────────────────────────────────────────────┘  │
-│                                                     │
-│  ┌ AgentPanel ───┐ ┌ EmotionChart ──────────────┐  │
-│  │ 9张Agent卡片   │ │ 折线图                      │  │
-│  └───────────────┘ └────────────────────────────┘  │
-│                                                     │
-│  ┌ ConsensusBadge ──┐ ┌ RadarChart ──────────────┐ │
-│  │ 共识结果         │ │ 雷达图                     │  │
-│  └─────────────────┘ └───────────────────────────┘ │
-│                                                     │
-│  ┌ GameLog (滚动日志) ──────────────────────────┐   │
-│  └──────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
-## 11. 注意事项
-
-1. **所有数字字段都可能为负** — belief 是 -100~+100, consensus 也是
-2. **interaction 可能为 null** — 如果 `disableInteraction: true` 或互动层禁用
-3. **timeline 只在连续推演时存在** — 单次请求没有 timeline
-4. **LLM 调用需 1-3 秒** — 要显示加载状态
-5. **错误处理** — `success: false` 时显示 `data.error` + `data.suggestion`
-6. **暗色主题** — 背景 `#0a0a0a`, 卡片 `bg-zinc-900/50 border-zinc-800`
+| `/api/v3/task` | 60次/分钟 |
+| `/api/v3/execute` | 30次/分钟 |
+| `/api/v3/benchmark` | 10次/分钟 |

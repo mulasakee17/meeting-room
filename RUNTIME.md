@@ -1,283 +1,389 @@
-# SwarmAlpha v9.6 运行时逻辑详解
+# SwarmAlpha V3 运行时逻辑详解
 
-> 一次完整请求的逐层拆解：从浏览器输入新闻到页面渲染结果
+> 一次完整决策任务的逐层拆解：从任务输入到最终输出，涵盖评价与治理全流程
 
 ---
 
 ## 目录
 
-1. [第一层：用户触发](#第一层用户触发)
+1. [第一层：任务输入](#第一层任务输入)
 2. [第二层：API 路由门禁](#第二层api-路由门禁)
-3. [第三层：市场背景数据](#第三层市场背景数据)
-4. [第四层：v9.3 核心引擎](#第四层v93-核心引擎)
-5. [第五层：v9.5 社交互动](#第五层v95-社交互动)
-6. [第六层：v9.5.2 动态权重](#第六层v952-动态权重)
-7. [第七层：共识度量](#第七层共识度量)
+3. [第三层：Agent 框架初始化](#第三层agent-框架初始化)
+4. [第四层：决策流程执行](#第四层决策流程执行)
+5. [第五层：评价引擎](#第五层评价引擎)
+6. [第六层：治理引擎](#第六层治理引擎)
+7. [第七层：决策轨迹](#第七层决策轨迹)
 8. [第八层：响应与前端](#第八层响应与前端)
 
 ---
 
-## 第一层：用户触发
+## 第一层：任务输入
 
-用户输入新闻 → `page.tsx` 的 `handleSubmit` 发送 POST：
+用户通过 API 提交决策任务：
 
 ```json
-POST /api/swarm
+POST /api/v3/task
 {
-  "version": "v9",
-  "news": "美联储紧急降息50个基点，超出市场预期",
-  "rounds": 3,
-  "enableDynamicWeights": true,
-  "llmConfig": { "provider": "deepseek", "model": "deepseek-chat" }
+  "version": "v3",
+  "title": "医疗诊断决策",
+  "description": "基于患者症状进行疾病诊断",
+  "input": {
+    "type": "structured",
+    "content": {
+      "patient": "45岁男性",
+      "symptoms": ["胸痛", "呼吸困难", "头晕"],
+      "medicalHistory": ["高血压", "糖尿病"]
+    }
+  },
+  "agentConfig": {
+    "provider": "autogen",
+    "agentCount": 5
+  },
+  "llmConfig": {
+    "provider": "openai",
+    "model": "gpt-4o"
+  },
+  "evaluationConfig": {
+    "enableAll": true
+  },
+  "governanceConfig": {
+    "interventionLevel": "medium"
+  }
 }
 ```
 
 | 字段 | 说明 |
 |------|------|
-| `version` | `"v9"` 走 v9.3 + v9.5 + v9.5.2 完整管线 |
-| `rounds` | 共识演化轮数 (1-10) |
-| `enableDynamicWeights` | 🆕 v9.5.2: 是否启用场景自适应权重 |
-| `disableInteraction` | true 时跳过 v9.5 互动层 |
+| `input.type` | 输入类型：`text` / `structured` / `question` |
+| `agentConfig.provider` | Agent 框架：`autogen` / `crewai` / `langgraph` / `custom` |
+| `evaluationConfig` | 评价维度配置 |
+| `governanceConfig` | 治理干预级别：`none` / `light` / `medium` / `heavy` |
 
 ---
 
 ## 第二层：API 路由门禁
 
-`src/app/api/swarm/route.ts` → `POST()` 函数。
+`src/app/api/v3/task/route.ts` → `POST()` 函数。
 
-**三步门禁**：
-1. **速率限制** — 基于 IP+UA 的滑动窗口 (10次/分钟)
+**四步门禁**：
+1. **速率限制** — 基于 IP+UA 的令牌桶限流
 2. **JSON 解析** — 捕获非法 JSON 返回 400
-3. **输入验证** — XSS/SQL注入/命令注入防护 + 长度检查 (news ≤ 10000字, rounds 1-10)
+3. **输入验证** — XSS/SQL注入/命令注入防护 + 长度检查
+4. **权限验证** — API Key 认证（V3 新增）
 
-通过后根据 `version` 字段分流：`"v9"` → v9.3 核心引擎。
-
----
-
-## 第三层：市场背景数据
-
-尝试从 Yahoo Finance 获取实时 S&P 500 + VIX 数据（免费 API，5分钟内存缓存）。失败时降级为从新闻文本推断：
-
-```
-新闻关键词 → 正则提取 → 推断 VIX/RSI/跌幅
-例: "暴跌恐慌" → VIX≈35, RSI≈24, dropMagnitude≈8
-```
+通过后进入任务处理流程。
 
 ---
 
-## 第四层：v9.3 核心引擎
+## 第三层：Agent 框架初始化
 
-`src/lib/agents/v9/simulation.ts` → `runSwarmV9()`
+根据 `agentConfig.provider` 选择对应的 Agent 框架适配器：
 
-### 4.1 因子提取 (1次 LLM 调用 或 0次模板)
-
-LLM 模式发送 system prompt 要求提取 5 个正交因子：
-
-```
-Liquidity(-100..+100)  | Policy(-100..+100) | Fundamental(-100..+100)
-Narrative(-100..+100)  | Uncertainty(0..100)
-```
-
-每个因子附带 `confidence`(0-100) 和 `evidence`(推理文本)。
-
-模板模式用关键词正则提取 + 中文政策词库，零 API 调用。
-
-### 4.2 Agent 因子解读 (纯数学)
-
-9 个 Agent 各只能看到其权限内的因子（强制信息盲区）：
-
-| Agent | 可见因子 | 影响力 | 资本 | 不确定性灵敏度 |
-|-------|---------|--------|------|--------------|
-| 🏦 Institution | liquidity, policy, fundamental | 90 | 95 | 0.6 |
-| 💎 Value | fundamental | 60 | 80 | -0.2 |
-| 🏄 Trend | narrative | 45 | 50 | 0.5 |
-| 😱 Panic | liquidity | 25 | 40 | 1.2 |
-| 🤖 Quant | liquidity, fundamental | 55 | 75 | 0.1 |
-| 📡 Media | narrative, policy | 70 | 10 | 0.4 |
-| 🦉 Contrarian | narrative (负权重) | 40 | 60 | -0.5 |
-| 🐜 Retail | narrative | 10 | 20 | 0.8 |
-| 🏛️ PolicyAgent | policy, liquidity | 50 | 0 | 0.3 |
-
-56% 的 Agent 对在方向因子上共享 0 个重叠 → 真正的视角差异。
-
-**四步解读**：
-1. **因子过滤** — 权限矩阵 × 因子向量 → 各 Agent 的可见因子
-2. **信念计算** — `belief = Σ(factorValue_i × factorWeight_i)`，钳制到 [-100, 100]
-3. **非线性变换** — 按 Agent 风格变换 (Value: sigmoid, Contrarian: 反向, Quant: 线性)
-4. **不确定性折扣** — `confidence = baseConf × (1 - uncertaintySensitivity × unc/100)`
-
-### 4.3 共识涌现 (每轮)
-
-**两种共识并行计算**：
-
-*线性加权共识*：
-```
-consensus = Σ(belief_i × influenceWeight_i × conf_i/100) / Σ(influenceWeight_i × conf_i/100)
+```typescript
+interface AgentFrameworkAdapter {
+  createAgents(config: AgentConfig): Agent[];
+  runInteraction(agents: Agent[], input: TaskInput): InteractionResult;
+  getAgentInfo(agents: Agent[]): AgentInfo[];
+}
 ```
 
-*K-Means 聚类共识*：1D 加权 K-means → 取权重最大簇的加权中心。
+**支持的框架**：
 
-**Kuramoto 序参量**：信念 → 相位 → r = |Σ e^(iθ_j)|/N，衡量同步度。
+| 框架 | 特点 |
+|------|------|
+| **AutoGen** | 微软开源，支持对话模式，适合复杂协作 |
+| **CrewAI** | 任务导向，支持角色分配和工具使用 |
+| **LangGraph** | 图结构工作流，支持状态持久化 |
+| **Custom** | 自定义 Agent 实现 |
 
-**非对称门控**：KMeans < -15 → 采信聚类（强空头信任聚类）；否则采信线性。
-
-### 4.4 Neutral Detection (四规则)
-
-| 规则 | 条件 | 含义 |
-|------|------|------|
-| R1 | abs(共识) < 15 (线性+聚类均弱) | 两种方法一致认为方向模糊 |
-| R2 | belief_std > 45 | Agent 高度分歧 |
-| R3 | kuramoto_r < 0.4 | 相位失同步 |
-| R4 | 融合不确定性 > 65 ∧ abs(共识) < 25 | 高不确定 + 弱信号 |
-
-R1 或 R4 或 (R2 ∧ R3) → **Neutral**，方向信号不可靠。否则按 consensus 符号判定 UP/DOWN。
-
-### 4.5 群体行为诊断
-
-纯数学的 3 层诊断（毫秒级）：
-1. **归因分解** — 每个 Agent 的净贡献 = belief × influence × conf/100
-2. **联盟分析** — 识别多头/空头/中立阵营，计算力量对比
-3. **反事实分析** — "移除最关键的 Agent 会怎样？关闭盲区共识偏移多少？"
+**Agent 创建流程**：
+1. 根据任务类型和配置生成 Agent 角色定义
+2. 分配 Agent 权限和可见信息范围
+3. 初始化 Agent 的认知状态（信念、置信度、开放度）
 
 ---
 
-## 第五层：v9.5 社交互动
+## 第四层：决策流程执行
 
-`src/lib/agents/v9.5/interaction.ts` → `runInteraction()`
+### 4.1 输入处理
 
-### 5.1 可见性矩阵
+将原始输入转换为 Agent 可理解的格式：
 
-Agent A 能看到 Agent B ⟺ A 的方向因子 ∩ B 的方向因子 ≠ ∅。
-
-- Panic 只看 liquidity → 只能看到 Institution, Quant, PolicyAgent
-- Value 只看 fundamental → 只能看到 Institution, Quant
-- Contrarian 只看 narrative → 只能看到 Trend, Media, Retail
-
-### 5.2 信念传播
-
-核心公式：`b_i_new = (1-α_i) × b_i_old + α_i × peer_avg_visible`
-
-| Agent | α 值 | 行为 |
-|-------|------|------|
-| 😱 Panic | 0.70 | 最易受影响 |
-| 🐜 Retail | 0.60 | 高度从众 |
-| 🏄 Trend | 0.50 | 关注他人 |
-| 📡 Media | 0.45 | 跟随传播 |
-| 🏛️ PolicyAgent | 0.20 | 相对独立 |
-| 🏦 Institution | 0.15 | 独立研究 |
-| 🤖 Quant | 0.10 | 模型驱动 |
-| 💎 Value | 0.05 | 最独立 |
-| 🦉 Contrarian | -0.15 | 逆向操作 |
-
-边界软化：|belief| > 80 时有效 α 衰减 50%，防止极限环振荡。
-
-### 5.3 收敛检测
-
-- 所有 Agent 变化 < 2 → 收敛
-- 连续 3 轮 std 增长 → 发散（极化而非共识）
-- 最大 10 轮
-
----
-
-## 第六层：v9.5.2 动态权重
-
-`src/lib/agents/v9.5/dynamicWeights.ts` → `computeDynamicWeights()`
-
-**纯数学，零 LLM 调用**。根据市场状态的三模式检测 + 乘法合成。
-
-### 6.1 三种模式
-
-| 模式 | 触发条件 | 逻辑 |
-|------|---------|------|
-| 🔴 恐慌 | VIX>35 / beliefStd>50 / Panic<-70 | 恐惧传染，理性被压制 |
-| 🏛️ 政策 | Policy因子>70 / PolicyAgent>60 | 政策信号明确 |
-| 💎 价值洼地 | Fundamental<-50 ∧ Uncertainty>70 / Value<-40 | 极端低估，逆向机会 |
-
-### 6.2 权重调整
-
-| Agent | 恐慌 | 政策 | 价值洼地 |
-|-------|------|------|---------|
-| 😱 Panic | ×1.40 | — | ×0.80 |
-| 🏦 Institution | ×1.15 | ×1.15 | — |
-| 🐜 Retail | ×0.70 | ×0.60 | — |
-| 🏛️ PolicyAgent | — | ×1.40 | — |
-| 🏄 Trend | — | ×0.80 | ×0.60 |
-| 💎 Value | — | — | ×1.50 |
-| 🦉 Contrarian | — | — | ×1.30 |
-| 🤖 Quant | — | — | — |
-| 📡 Media | — | — | — |
-
-多模式同时触发时**乘法合成**，钳制到 [0.3, 3.0]。
-
-### 6.3 动态共识
-
-用动态权重重新计算加权共识，与静态共识做 A/B 对比：
-
-```
-dynamicConsensus = Σ(belief_i × dynamicWeight_i × conf_i) / Σ(dynamicWeight_i × conf_i)
+```typescript
+interface ProcessedInput {
+  content: string | Record<string, unknown>;
+  context: string;
+  constraints?: string[];
+  expectedOutput?: string;
+}
 ```
 
-> 注：v9.3 核心引擎的共识仍用静态权重（保留基线）。动态权重影响 v9.5 互动层的社交影响力 + 补充的 dynamicConsensus 指标。两者并列输出，便于消融对比。
+### 4.2 Agent 独立判断
 
----
+每个 Agent 基于其可见信息独立做出判断：
 
-## 第七层：🆕 v9.6 Market Awareness — 双层感知修正
-
-`src/lib/agents/v9/agentInterpretation.ts` → `applyMarketAwareness()`
-
-**问题**：LLM 因子系统性偏空，Agent 信念清一色看跌，共识引擎无法区分 1987（反弹）和 2008（继续跌）。
-**方案**：两层修正合并在一个函数中——客观统计信号 + LLM 模式识别。
-
-### Layer 1: 统计均值回归 (VIX/RSI)
-
-```
-RSI<20 + VIX>40 → mrSignal=1.0 (历史上70%+反弹概率)
-→ shift = mrSignal × agentMultiplier × 50 (仅对负信念)
-MECHANICAL_SELLOFF 模式下 ×2.0 增强
+```typescript
+interface AgentDecision {
+  agentId: string;
+  content: string;
+  confidence: number;
+  reasoning: string;
+  belief?: number;
+}
 ```
 
-### Layer 2: Pattern-Aware 智能体级修正
+### 4.3 互动与共识形成
 
-LLM 识别的 4 种事件模式 → Agent 级精细化调整：
+Agent 间进行多轮互动，逐步收敛到共识：
 
-| 模式 | Value/Contrarian | Panic | Media | 其他空头 |
-|------|-----------------|-------|-------|---------|
-| MECHANICAL_SELLOFF | ×0.2 + 15 (翻正) | ×0.3 | — | — |
-| SOLVENCY_CRISIS | — | — | — | ×1.15 (只放大空头) |
-| NARRATIVE_DRIVEN | Contrarian: -belief×0.5 | — | ×0.3 | — |
-| EXTERNAL_SHOCK | ×0.7 (降低抄底) | — | — | — |
-
+```typescript
+interface InteractionRound {
+  round: number;
+  messages: AgentMessage[];
+  beliefs: Record<string, number>;
+  beliefChanges: Record<string, number>;
+  converged: boolean;
+}
 ```
-例: 1987 MECHANICAL_SELLOFF, Value belief=-80
-  Layer 1: MR shift +75 → -5
-  Layer 2: ×0.2+15 → 14
-  最终: Value 从-80被翻到+14 ✅
+
+**共识聚合方法**：
+
+| 方法 | 原理 | 适用场景 |
+|------|------|---------|
+| 线性加权 | Σ(belief × influence) / Σ(influence) | 基线参照 |
+| K-Means 聚类 | 发现隐藏的多数派 | 群体分裂检测 |
+| 幂律共识 | 放大极端信念 | 信号明确时 |
+| 修剪均值 | 移除极端值后平均 | 消除噪音 |
+| 动态集成 | 多方法信号质量加权 | 生产环境 |
+
+### 4.4 最终决策生成
+
+基于共识结果生成最终决策：
+
+```typescript
+interface FinalDecision {
+  content: string;
+  confidence: number;
+  reasoning: string;
+  steps: DecisionStep[];
+}
 ```
 
 ---
 
-## 第八层：共识度量
+## 第五层：评价引擎
 
-`src/lib/agents/v9.5/metrics.ts` → `computeAllMetrics()`
+评价引擎是 V3 的核心，对决策结果进行 7 维度评价：
 
-### 三个核心指标
+### 5.1 Consensus（共识强度）
 
-| 指标 | 构成 | 含义 |
-|------|------|------|
-| Consensus Score | 40% Kuramoto同步 + 30% 共识强度 + 30% 一致性 | 共识有多强 |
-| Polarization Score | 50% 极端性乘积 + 50% 双峰性 | Agent 分裂成对立阵营的程度 |
-| Fragility Score | 40% 集中度风险 + 30% 翻转风险 + 30% 盲区风险 | 共识有多容易被打破 |
+```typescript
+interface ConsensusMetric {
+  score: number;
+  kuramotoOrder: number;      // 0-1，同步度
+  beliefStd: number;          // Agent 信念标准差
+  agreementRate: number;      // 一致率
+}
+```
 
-### 状态分类
+### 5.2 Reliability（可靠性）
 
-| 共识 | 极化 | 脆弱 | 状态 |
-|------|------|------|------|
-| >60 | <30 | <30 | 🟢 稳健共识 |
-| >60 | <30 | >60 | 🟡 脆弱共识 |
-| <30 | >60 | >60 | 🔴 两极对抗 |
-| <30 | <30 | <30 | 🔵 认知迷雾 |
-| <30 | >60 | <50 | 🟠 健康分歧 |
-| 30-60 | — | — | 🟡 模糊共识 |
+```typescript
+interface ReliabilityMetric {
+  score: number;
+  crossValidationScore: number;  // 跨方法验证分数
+  consistencyScore: number;      // 一致性分数
+}
+```
+
+### 5.3 Explainability（可解释性）
+
+```typescript
+interface ExplainabilityMetric {
+  score: number;
+  reasoningLength: number;       // 推理链长度
+  attributionClarity: number;    // 归因清晰度
+  stepCoverage: number;          // 步骤覆盖率
+}
+```
+
+### 5.4 Robustness（鲁棒性）
+
+```typescript
+interface RobustnessMetric {
+  score: number;
+  perturbationTests: {
+    inputNoise: number;          // 输入扰动测试
+    agentDropout: number;        // Agent 丢失测试
+    parameterVariation: number;  // 参数变化测试
+  };
+}
+```
+
+### 5.5 Stability（稳定性）
+
+```typescript
+interface StabilityMetric {
+  score: number;
+  roundConsistency: number;      // 多轮一致性
+  timeSeriesStability: number;   // 时间序列稳定性
+}
+```
+
+### 5.6 ManipulationResistance（抗操纵性）
+
+```typescript
+interface ManipulationResistanceMetric {
+  score: number;
+  adversarialTest: number;       // 对抗性测试
+  biasDetection: number;         // 偏见检测
+}
+```
+
+### 5.7 InfluenceAnalysis（影响力分析）
+
+```typescript
+interface InfluenceAnalysisMetric {
+  score: number;
+  attribution: {
+    agentId: string;
+    contribution: number;
+    influenceWeight: number;
+  }[];
+  dominantAgent?: string;        // 主导 Agent
+}
+```
+
+### 5.8 综合评价
+
+```typescript
+interface EvaluationResult {
+  overallScore: number;
+  dimensions: {
+    consensus: ConsensusMetric;
+    reliability: ReliabilityMetric;
+    explainability: ExplainabilityMetric;
+    robustness: RobustnessMetric;
+    stability: StabilityMetric;
+    manipulationResistance: ManipulationResistanceMetric;
+    influenceAnalysis: InfluenceAnalysisMetric;
+  };
+  summary: string;
+}
+```
+
+---
+
+## 第六层：治理引擎
+
+治理引擎主动检测并干预群体决策偏差：
+
+### 6.1 Echo Chamber（回音室效应）
+
+```typescript
+interface EchoChamberDetection {
+  detected: boolean;
+  severity: "low" | "medium" | "high";
+  redundantAgents: string[];
+  intervention: {
+    type: "introduce_diversity" | "break_connections";
+    applied: boolean;
+    effect: string;
+  };
+}
+```
+
+**检测指标**：Agent 间信息冗余度 > 阈值
+
+**干预策略**：强制引入差异化信息源或打破连接
+
+### 6.2 Authority Bias（权威偏见）
+
+```typescript
+interface AuthorityBiasDetection {
+  detected: boolean;
+  severity: "low" | "medium" | "high";
+  dominantAgent: string;
+  influenceRatio: number;
+  intervention: {
+    type: "reduce_weight" | "introduce_dissent";
+    applied: boolean;
+    effect: string;
+  };
+}
+```
+
+**检测指标**：单一 Agent 影响力占比 > 阈值
+
+**干预策略**：动态调整权重或引入异议 Agent
+
+### 6.3 Group Polarization（群体极化）
+
+```typescript
+interface PolarizationDetection {
+  detected: boolean;
+  severity: "low" | "medium" | "high";
+  groups: {
+    label: string;
+    agentIds: string[];
+    belief: number;
+  }[];
+  intervention: {
+    type: "pair_opposites" | "force_reflection";
+    applied: boolean;
+    effect: string;
+  };
+}
+```
+
+**检测指标**：信念标准差持续增大
+
+**干预策略**：随机配对对立观点或强制反思
+
+### 6.4 治理结果
+
+```typescript
+interface GovernanceResult {
+  echoChamber: EchoChamberDetection;
+  authorityBias: AuthorityBiasDetection;
+  polarization: PolarizationDetection;
+  otherIssues: GovernanceIssue[];
+  summary: string;
+}
+```
+
+---
+
+## 第七层：决策轨迹
+
+完整记录从任务输入到最终输出的全生命周期：
+
+```typescript
+interface DecisionTrace {
+  taskId: string;
+  startTime: string;
+  endTime: string;
+  phases: {
+    phase: "input" | "agent_creation" | "interaction" | "evaluation" | "governance" | "output";
+    timestamp: string;
+    durationMs: number;
+    details: Record<string, unknown>;
+  }[];
+  fullLog: string;
+  artifacts: {
+    agentMessages: AgentMessage[];
+    intermediateDecisions: IntermediateDecision[];
+    evaluationMetrics: EvaluationResult;
+    governanceActions: GovernanceAction[];
+  };
+}
+```
+
+**轨迹用途**：
+- 可复现性：重新运行相同任务验证结果
+- 可解释性：追溯决策形成过程
+- 审计：合规性检查
+- 调试：问题排查
 
 ---
 
@@ -288,23 +394,33 @@ LLM 识别的 4 种事件模式 → Agent 级精细化调整：
 ```json
 {
   "success": true,
-  "version": "v9.5",
+  "taskId": "abc123",
+  "status": "completed",
   "data": {
-    "news": "...",
-    "factorVector": { "factors": [...], "metadata": {...} },
-    "rounds": [{ "round": 1, "consensus": -5.2, "agents": {...}, ... }],
-    "final": { "consensus": -3.8, "direction": "DOWN", "beliefStd": 42.3 },
-    "v9_5": {
-      "interaction": { "totalRounds": 3, "convergenceType": "converged", ... },
-      "metrics": { "consensusScore": 45, "polarizationScore": 62, "fragilityScore": 38, "stateLabel": "🟠 健康分歧" },
-      "dynamicWeights": {
-        "enabled": true,
-        "activeModes": ["panic"],
-        "adjustments": { "panic": { "baseWeight": 25, "finalWeight": 35, "multiplier": 1.4 } },
-        "dynamicConsensus": -6.1
-      }
+    "output": {
+      "finalDecision": "急性心肌梗死",
+      "confidence": 0.85,
+      "reasoning": "综合症状和病史...",
+      "steps": [...]
     },
-    "diagnostics": { "attribution": [...], "coalition": {...}, "counterfactuals": {...} }
+    "evaluation": {
+      "overallScore": 82,
+      "dimensions": {
+        "consensus": {"score": 85, ...},
+        "reliability": {"score": 88, ...},
+        ...
+      },
+      "summary": "决策质量良好..."
+    },
+    "governance": {
+      "echoChamber": {"detected": false, ...},
+      "authorityBias": {"detected": false, ...},
+      "polarization": {"detected": false, ...},
+      "summary": "未检测到群体决策偏差"
+    },
+    "agents": [...],
+    "interactionHistory": [...],
+    "trace": {...}
   }
 }
 ```
@@ -313,20 +429,14 @@ LLM 识别的 4 种事件模式 → Agent 级精细化调整：
 
 ```
 page.tsx
-├── ConsensusDashboard       ← 共识度量仪表盘 + 🆕 动态权重面板
-├── AgentPanel + AgentCard   ← Agent 信念 + 置信度
-├── EmotionChart             ← Chart.js 折线图 (跨轮情绪轨迹)
-├── RadarChart               ← Chart.js 雷达图 (Agent 多维对比)
-├── ConsensusBadge           ← 最终共识方向
-└── GameLog                  ← 逐轮逐 Agent 推理日志
+├── TaskInputPanel          ← 任务输入配置
+├── EvaluationDashboard     ← 7维度评价仪表盘
+├── GovernancePanel         ← 治理干预结果
+├── AgentPanel              ← Agent 状态展示
+├── InteractionTimeline     ← 互动演化时间线
+├── DecisionTraceViewer     ← 决策轨迹查看器
+└── ResultSummary           ← 最终决策摘要
 ```
-
-### 数据转换
-
-v9.5 响应 → 兼容旧 `SwarmResult` 格式：
-- `rounds[n].agents` 从 `Record<string, V9AgentState>` 转为 `AgentState[]`
-- `final.consensus` 取最后一轮的 consensus
-- `v9_5.dynamicWeights` 直接传给 `ConsensusDashboard`
 
 ---
 
@@ -334,23 +444,18 @@ v9.5 响应 → 兼容旧 `SwarmResult` 格式：
 
 | 指标 | 值 |
 |------|-----|
-| 单次请求 LLM 调用 | 1 次 (因子提取)，其余全数学 |
-| 模板模式成本 | ¥0 |
-| Agent 总数 | 9 (8 交易者 + 1 政策分析师) |
-| 方向因子盲区 Agent 对 | 56% |
-| v9.3 LLM belief_std | 58.5 |
-| v9.3 模板 belief_std | 37.6 |
-| 动态权重模式 | 3 (恐慌/政策/价值洼地) |
-| 乘数安全范围 | [0.3, 3.0] |
-| 互动最大轮次 | 10 |
-| 速率限制 | 10次/分钟/客户端 |
+| 评价维度 | 7 |
+| 治理干预类型 | 3 |
+| 支持的 Agent 框架 | 4 |
+| 共识聚合方法 | 5 |
+| 速率限制 | 60次/分钟 (任务) / 30次/分钟 (执行) |
 
 ---
 
 ## 核心设计原则
 
-1. **LLM 只提取因子，不判断方向** — 让机器做它擅长的事
-2. **强制信息盲区** — 56% Agent 对无共享因子 → 真正的视角差异
-3. **纯数学叠加层** — v9.5 互动 + 度量 + 动态权重全零 LLM 调用
-4. **可开关可对比** — 每个新功能都有 enable/disable 开关，支持消融实验
-5. **场景自适应** — 动态权重根据恐慌/政策/价值自动调整影响力分布
+1. **评价为中心** — 评价引擎是系统核心，独立于 LLM 和 Agent 框架
+2. **治理主动干预** — 检测并缓解群体决策偏差，而非被动接受结果
+3. **框架无关** — 支持多 Agent 框架接入，通过抽象接口解耦
+4. **决策可追溯** — 完整的决策轨迹，确保可复现和可解释
+5. **多维度评价** — 从共识、可靠、可解释、鲁棒等多角度评价决策质量
