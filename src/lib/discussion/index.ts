@@ -750,3 +750,5 @@ export * from "./beliefUpdate";
 export * from "./influence";
 export * from "./interactionGraph";
 export * from "./decisionTrace";
+export * from "./causalTrace";
+export * from "./influenceUtils";
