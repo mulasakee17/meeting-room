@@ -529,7 +529,59 @@ decomposeBeliefChange("agent_2", 0.5, causalGraph)
 
 ---
 
+---
+
+## 12. 自适应剂量治理 (§C — 新增)
+
+### 12.1 动机
+
+固定干预强度（权重削减 50%、反思因子 0.2、追加 1 轮）忽视了每个偏差的独特背景。自适应剂量根据三个维度动态计算干预强度。
+
+### 12.2 剂量函数
+
+**continue_discussion — 追加轮数**：
+
+$$
+\Delta T = \left\lceil T_{\max} \cdot (\theta_{\text{pre}} - \rho_t) \cdot (1 - \eta) \cdot \left(1 + \max(0, -h) \cdot 0.5\right) \right\rceil
+$$
+
+**reduce_weight — 权重削减比例**：
+
+$$
+r = \text{clamp}_{[0.2, 0.8]}\!\left(0.3 + s \cdot 0.4 \cdot (2 - \eta) \cdot \left(1 - \frac{h}{2}\right)\right)
+$$
+
+**force_reflection — 反思强度**：
+
+$$
+\phi = \text{clamp}_{[0.1, 0.6]}\!\left(0.15 + s \cdot 0.35 \cdot (1 - \eta) \cdot (1 + 0.3h)\right)
+$$
+
+**introduce_diversity — 扰动幅度**：
+
+$$
+\varepsilon = \text{clamp}_{[0.1, 0.5]}\!\left(0.15 + s \cdot 0.25 \cdot (1 - \eta)\right)
+$$
+
+其中 $s$ = 严重度 (0-1), $\eta$ = 信息利用度 (0-1), $h$ = 历史干预效果 (-1 到 1)。
+
+### 12.3 使用
+
+```typescript
+const dosage = computeAdaptiveDosage({
+  severity: severityToNumber("medium"),
+  informationCoverage: 0.6,
+  historyEffectiveness: 0.3,
+  roundProgress: 0.4,
+  agentCount: 5,
+});
+// → { additionalRounds: 3, weightReduction: 0.47, ... }
+```
+
+---
+
 > **实现对应**：所有公式均在 `src/lib/` 中有 1:1 的代码实现。
 > `src/lib/constants.ts` 包含所有可调参数的集中定义。
 > `src/lib/governance/adaptiveThresholds.ts` 实现 §10。
 > `src/lib/discussion/causalTrace.ts` 实现 §11。
+> `src/lib/governance/adaptiveDosage.ts` 实现 §12。

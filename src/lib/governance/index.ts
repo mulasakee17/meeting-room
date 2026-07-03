@@ -603,4 +603,5 @@ export class GovernanceEngine {
 export * from "./types";
 export * from "./interventions";
 export * from "./adaptiveThresholds";
+export * from "./adaptiveDosage";
 export * from "./interventions";
