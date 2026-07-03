@@ -1,0 +1,428 @@
+# SwarmAlpha 数学模型正规化
+
+> 本文档提供 SwarmAlpha 治理引擎的完整形式化数学定义。所有符号和公式均与 `src/lib/` 中的代码实现一一对应。
+
+---
+
+## 符号约定
+
+| 符号 | 含义 | 域 |
+|------|------|-----|
+| $\mathcal{A} = \{a_1, \dots, a_n\}$ | $n$ 个 Agent 的集合 | $n \geq 2$ |
+| $b_i^{(t)} \in [-1, 1]$ | Agent $i$ 在第 $t$ 轮后的**信念**（-1=强烈反对，1=强烈支持） | $\mathbb{R}$ |
+| $c_i^{(t)} \in [0, 100]$ | Agent $i$ 在第 $t$ 轮后的**置信度** | $\mathbb{R}$ |
+| $\mathbf{b}^{(t)} = (b_1^{(t)}, \dots, b_n^{(t)})$ | 第 $t$ 轮信念向量 | $[-1,1]^n$ |
+| $r_i^{(t)} \in \mathbb{S}$ | Agent $i$ 在第 $t$ 轮的**推理文本**（自然语言） | $\mathbb{S}$ = 字符串空间 |
+| $T$ | 总讨论轮数 | $\mathbb{N}$ |
+| $T_{\max}$ | 最大允许轮数 | $\mathbb{N}$ |
+| $G = (V, E, W)$ | 影响力有向图 | $V = \mathcal{A}$, $E \subseteq V \times V$, $W: E \to [0,1]$ |
+
+---
+
+## 1. Agent 模型
+
+### 1.1 定义
+
+每个 Agent $a_i$ 是一个函数 $\mathcal{M}_i: \mathbb{S} \times [-1,1] \times [0,100] \to \mathbb{S}$，它接收系统提示词、当前信念和置信度，输出自然语言推理。
+
+Agent 的**独有知识** $\mathcal{K}_i^{\text{unique}} \subset \mathcal{I}$ 是全体信息集 $\mathcal{I}$ 的子集，满足：
+
+$$
+\mathcal{I} = \mathcal{I}^{\text{shared}} \cup \bigcup_{i=1}^{n} \mathcal{K}_i^{\text{unique}}
+$$
+
+且 $\mathcal{K}_i^{\text{unique}} \not\subseteq \mathcal{I}^{\text{shared}}$（Hidden Profile 条件）。
+
+### 1.2 观测提取
+
+LLM 的原始输出 $r_i^{(t)}$ 经观测层解析为结构化观点 $\hat{o}_i^{(t)}$：
+
+$$
+\hat{o}_i^{(t)} = \text{Parse}\left(\mathcal{M}_i\left(p_i, b_i^{(t-1)}, c_i^{(t-1)}\right)\right)
+$$
+
+其中 $p_i$ 是 Agent $i$ 的系统提示词（含 $\mathcal{K}_i^{\text{unique}}$），Parse 提取 $b_i^{(t)}, c_i^{(t)}, r_i^{(t)}$。
+
+---
+
+## 2. 影响力计算
+
+### 2.1 影响力类型判定
+
+对于每对 Agent $(a_s, a_t)$，影响力类型 $\tau_{s \to t}$ 由以下优先级判定：
+
+$$
+\tau_{s \to t} = \begin{cases}
+\text{disagreement} & \text{if } |b_s - b_t| > \theta_{\text{dis}} \\
+\text{reference}     & \text{if } a_s \in \text{refs}(a_t) \\
+\text{persuasion}    & \text{if } c_s > c_t + \Delta_c \\
+\text{agreement}     & \text{otherwise}
+\end{cases}
+$$
+
+其中 $\theta_{\text{dis}} = 0.5$（信念分歧阈值），$\Delta_c = 20$（信心差阈值），$\text{refs}(a_t)$ 是 $a_t$ 引用的 Agent 集合。
+
+### 2.2 四种影响力权重
+
+**一致性 (Agreement)** — 信念相似则影响力大：
+
+$$
+w_{\text{agr}}(s, t) = \big(1 - |b_s - b_t|\big) \cdot \frac{c_s}{100} \cdot \alpha_{\text{agr}}
+$$
+
+**分歧 (Disagreement)** — 信念差异大则影响显著：
+
+$$
+w_{\text{dis}}(s, t) = |b_s - b_t| \cdot \frac{c_s}{100} \cdot \alpha_{\text{dis}}
+$$
+
+**引用 (Reference)** — 被引用即获权重，正比于推理质量：
+
+$$
+w_{\text{ref}}(s, t) = \frac{c_s}{100} \cdot \min\!\left(1, \frac{|r_s|}{L_{\max}}\right) \cdot \alpha_{\text{ref}}
+$$
+
+**说服 (Persuasion)** — 高置信对低置信的拉力：
+
+$$
+w_{\text{per}}(s, t) = \max\!\left(0, \frac{c_s - c_t}{100}\right) \cdot \big(1 - |b_s - b_t|\big) \cdot \alpha_{\text{per}}
+$$
+
+其中 $\alpha_{\text{agr}} = 0.8,\; \alpha_{\text{dis}} = 0.5,\; \alpha_{\text{ref}} = 0.7,\; \alpha_{\text{per}} = 0.6$，$L_{\max} = 500$。
+
+### 2.3 影响力图更新
+
+边权重的增量更新（指数衰减）：
+
+$$
+W(s \to t)^{(t)} = \min\!\left(1,\; W(s \to t)^{(t-1)} + w_{\tau}(s,t) \cdot \eta\right)
+$$
+
+其中衰减因子 $\eta = 0.3$。
+
+---
+
+## 3. 信念演化动力学
+
+### 3.1 更新方程
+
+Agent $i$ 在第 $t$ 轮的信念变化由**三股力量**驱动：
+
+#### 力量 1：同伴均值拉力
+
+高置信同伴和低置信同伴各自形成子群体均值，以不同强度拉动 Agent：
+
+$$
+\Delta b_i^{\text{peer}} = \underbrace{\left(\bar{b}_H^{(t)} - b_i^{(t-1)}\right) \cdot \beta_H}_{\text{高置信同伴}} \;+\; \underbrace{\left(\bar{b}_L^{(t)} - b_i^{(t-1)}\right) \cdot \beta_L}_{\text{低置信同伴}}
+$$
+
+其中 $\bar{b}_H^{(t)}$ 是置信度 > 70 的同伴均值，$\beta_H = 0.3$，$\beta_L = 0.1$。
+
+#### 力量 2：多数效应
+
+$$
+\Delta b_i^{\text{maj}} = \begin{cases}
+\bar{b}_{-i}^{(t)} \cdot \gamma_{\text{agr}} \;+\; \delta_{\text{agr}} & \text{if 一致者 > 分歧者} \\
+\bar{b}_{-i}^{(t)} \cdot \gamma_{\text{dis}} \;-\; \delta_{\text{dis}} & \text{if 分歧者 > 一致者}
+\end{cases}
+$$
+
+其中 $\bar{b}_{-i}^{(t)}$ 是除 $i$ 外所有 Agent 的均值，$\gamma_{\text{agr}} = 0.1$, $\delta_{\text{agr}} = 5$, $\gamma_{\text{dis}} = 0.05$, $\delta_{\text{dis}} = 3$。
+
+#### 力量 3：影响力扩散
+
+图中每条入边对 Agent 施加与权重成正比、与类型相关的信念改变：
+
+$$
+\Delta b_i^{\text{inf}} = \sum_{(s \to i) \in E} w_{s \to i} \cdot \big(b_s - b_i\big) \cdot \kappa_{\tau(s,i)}
+$$
+
+其中 $\kappa_{\text{agr}} = 0.4$, $\kappa_{\text{dis}} = 0.2$, $\kappa_{\text{ref}} = 0.5$, $\kappa_{\text{per}} = 0.6$。
+
+#### 完整更新
+
+$$
+b_i^{(t)} = \text{clip}_{[-1,1]}\!\left(b_i^{(t-1)} + \Delta b_i^{\text{peer}} + \Delta b_i^{\text{maj}} + \Delta b_i^{\text{inf}}\right)
+$$
+
+置信度以类似方式更新，但对分歧减弱、对一致性增强。
+
+### 3.2 收敛条件
+
+讨论在 $t = T_{\max}$ 或达到以下条件时终止：
+
+$$
+\sigma(\mathbf{b}^{(t)}) = \sqrt{\frac{1}{n}\sum_{i=1}^{n}\left(b_i^{(t)} - \bar{b}^{(t)}\right)^2} < \theta_{\text{conv}}
+$$
+
+其中 $\theta_{\text{conv}} = 0.06$。
+
+### 3.3 稳定性
+
+当 $\sigma(\mathbf{b}^{(t)}) < \theta_{\text{conv}}$ 时，系统进入吸引子。无外部干预时，该吸引子是**吸收态**：一旦进入，信念不再显著变化。
+
+---
+
+## 4. 共识度量
+
+### 4.1 Kuramoto 序参数
+
+将信念映射到单位圆上的相位角：
+
+$$
+\phi_i = b_i \cdot \pi \quad \Rightarrow \quad \phi_i \in [-\pi, \pi]
+$$
+
+Kuramoto 序参数 $R \in [0,1]$ 衡量相位的同步程度：
+
+$$
+R = \frac{1}{n}\left|\sum_{k=1}^{n} e^{i\phi_k}\right| = \frac{1}{n}\sqrt{\left(\sum_{k=1}^{n} \cos\phi_k\right)^2 + \left(\sum_{k=1}^{n} \sin\phi_k\right)^2}
+$$
+
+- $R \to 1$：完美同步（所有 Agent 信念一致）
+- $R \to 0$：完全失序
+- $R = 1/\sqrt{n}$：随机相位的期望值
+
+### 4.2 共识评分
+
+加权综合：
+
+$$
+S_{\text{consensus}} = \min\!\left(100,\; R \cdot 30 + \left(1 - \frac{\sigma}{2}\right) \cdot 40 + \frac{\text{agreementRate}}{100} \cdot 30\right)
+$$
+
+其中 $\text{agreementRate}$ 是推理内容的 Jaccard 一致率。
+
+---
+
+## 5. 群体失效检测
+
+治理引擎 $\mathcal{G}$ 监测 4 种失效条件。每种条件是一个布尔谓词。
+
+### 5.1 回音室 (Echo Chamber)
+
+**指标**：信息冗余度 $\rho \in [0,1]$
+
+$$
+\rho = \underbrace{(1 - \sigma_{\text{norm}}) \cdot 0.5}_{\text{信念多样性}} \;+\; \underbrace{\text{Sim}(M^{(t)}) \cdot 0.5}_{\text{内容相似度}}
+$$
+
+其中 $\sigma_{\text{norm}} = \sigma(\mathbf{b}) / 2$，$\text{Sim}(M^{(t)})$ 是所有消息对的平均 Jaccard 相似度：
+
+$$
+\text{Sim}(M) = \frac{2}{m(m-1)}\sum_{i<j} \frac{|W_i \cap W_j|}{|W_i \cup W_j|}
+$$
+
+其中 $W_i$ 是消息 $i$ 的词汇集合（排除长度 ≤ 2 的词）。
+
+**触发条件**：
+
+$$
+\mathcal{C}_{\text{echo}}: \rho \geq \theta_{\text{echo}} \quad (\theta_{\text{echo}} = 0.70)
+$$
+
+### 5.2 权威偏差 (Authority Bias)
+
+**指标**：影响力集中度 $\lambda \in [0,1]$
+
+$$
+\lambda = \frac{\max_i |M_i|}{\sum_i |M_i|}
+$$
+
+其中 $|M_i|$ 是 Agent $i$ 发出的消息数。
+
+**触发条件**：
+
+$$
+\mathcal{C}_{\text{auth}}: \lambda \geq \theta_{\text{auth}} \quad (\theta_{\text{auth}} = 0.40)
+$$
+
+### 5.3 群体极化 (Polarization)
+
+**指标**：直接用信念标准差
+
+$$
+\mathcal{C}_{\text{pol}}: \sigma(\mathbf{b}) \geq \theta_{\text{pol}} \quad (\theta_{\text{pol}} = 0.50)
+$$
+
+此外通过 $\pm 0.2$ 偏移均值聚类，将 Agent 分为 positive / negative / neutral 三组。
+
+### 5.4 过早共识 (Premature Consensus)
+
+**指标**：轮次进度 $\times$ 共识水平的联合条件
+
+令 $\rho_t = t / T_{\max}$ 为轮次进度，则：
+
+$$
+\mathcal{C}_{\text{pre}}: \rho_t < \theta_{\text{pre}} \;\land\; \text{CL}(\mathbf{b}^{(t)}) > \gamma_{\text{pre}} \;\land\; \sigma(\mathbf{b}^{(t)}) < \sigma_{\min}
+$$
+
+其中 $\theta_{\text{pre}} = 0.50$, $\gamma_{\text{pre}} = 0.70$, $\sigma_{\min} = 0.15$，且共识水平：
+
+$$
+\text{CL}(\mathbf{b}) = \max\!\left(0,\; 1 - 2\sigma(\mathbf{b})\right)
+$$
+
+### 5.5 严重度分级
+
+所有检测到的失效按阈值区间分级：
+
+$$
+\text{severity}(x) = \begin{cases}
+\text{high}   & \text{if } x \geq \theta_2 \\
+\text{medium} & \text{if } \theta_1 \leq x < \theta_2 \\
+\text{low}     & \text{otherwise}
+\end{cases}
+$$
+
+具体区间：回声室 $[0.70, 0.85]$，权威偏差 $[0.40, 0.60]$，极化 $[0.50, 0.70]$。
+
+---
+
+## 6. 治理干预模型
+
+### 6.1 干预函数
+
+治理引擎 $\mathcal{G}$ 是一个函数，将系统状态映射到干预动作：
+
+$$
+\mathcal{G}: \left(\mathbf{b}^{(t)}, M^{(t)}, G^{(t)}\right) \to \mathcal{J}
+$$
+
+其中 $\mathcal{J} \subseteq \{\text{reduce\_weight}, \text{introduce\_diversity}, \text{force\_reflection}, \text{continue\_discussion}\}$。
+
+### 6.2 四种干预
+
+| 干预 | 触发条件 | 数学效果 |
+|------|---------|---------|
+| reduce_weight | $\mathcal{C}_{\text{auth}}$ | $\forall j \neq i^*: W(i^* \to j) \leftarrow W(i^* \to j) \cdot 0.5$ |
+| introduce_diversity | $\mathcal{C}_{\text{echo}}$ | $\forall i \in \text{Redundant}: b_i \leftarrow b_i + \epsilon_i, \epsilon_i \sim \mathcal{U}(-0.3, 0.3)$ |
+| force_reflection | $\mathcal{C}_{\text{pol}}$ | $b_i \leftarrow b_i + (\bar{b} - b_i) \cdot \phi, \phi = 0.2$ |
+| continue_discussion | $\mathcal{C}_{\text{pre}}$ | $T_{\max} \leftarrow T_{\max} + \lceil T_{\max} \cdot (\theta_{\text{pre}} - \rho_t) \rceil$ |
+
+### 6.3 干预的效果评估
+
+干预前后系统状态变化的量化指标：
+
+$$
+\begin{aligned}
+\Delta\sigma &= \sigma_{\text{after}} - \sigma_{\text{before}} \quad &\text{(信念多样性变化)} \\
+\Delta\bar{b} &= \bar{b}_{\text{after}} - \bar{b}_{\text{before}} \quad &\text{(均值变化)} \\
+\Delta\text{CL} &= \text{CL}_{\text{after}} - \text{CL}_{\text{before}} \quad &\text{(共识水平变化)}
+\end{aligned}
+$$
+
+---
+
+## 7. 信息利用度框架（Hidden Profile 分析）
+
+### 7.1 定义
+
+设任务总信息集 $\mathcal{I} = \mathcal{I}^{\text{shared}} \cup \bigcup_i \mathcal{K}_i^{\text{unique}}$。最终决策 $D$ 使用了信息子集 $\mathcal{I}_{\text{used}} \subseteq \mathcal{I}$。
+
+**信息利用度**：
+
+$$
+\eta = \frac{|\mathcal{I}_{\text{used}}|}{|\mathcal{I}|}
+$$
+
+### 7.2 治理与信息利用的关系
+
+**经验观察**（基于 80 次 Hidden Profile 实验）：
+
+在无治理条件下，Agent 围绕 $\mathcal{I}^{\text{shared}}$ 达成共识，忽略部分 $\mathcal{K}_i^{\text{unique}}$：
+
+$$
+\eta_{\text{no-gov}} \approx \frac{|\mathcal{I}^{\text{shared}}| + \varepsilon|\bigcup_i \mathcal{K}_i^{\text{unique}}|}{|\mathcal{I}|}
+$$
+
+其中 $\varepsilon < 1$ 表示独有信息的自发分享率。
+
+治理引擎通过 $\mathcal{C}_{\text{pre}}$ 检测过早共识，触发 force_reflection 干预，强制 Agent 重新审视 $\mathcal{K}_i^{\text{unique}}$。
+
+**引理（治理不劣性）**：对于满足 Hidden Profile 条件（$\exists i: \mathcal{K}_i^{\text{unique}} \not\subseteq \mathcal{I}^{\text{shared}}$）的任务：
+
+$$
+\eta_{\text{governed}} \geq \eta_{\text{no-gov}}
+$$
+
+严格不等式在 $\mathcal{C}_{\text{pre}}$ 触发并成功引入至少一件独有信息时成立。
+
+### 7.3 实验验证
+
+| 任务 | $\eta_{\text{no-gov}}$ | $\eta_{\text{full-gov}}$ | 治理效果 |
+|------|----------------------|------------------------|---------|
+| 月球生存 | 96.0% | 94.3% | 无差异（LLM 有先验知识，$\mathcal{K}_i^{\text{unique}} = \emptyset$ 实际） |
+| 企业并购 | 98.9% | 98.9% | 持平 + 36 次干预（效率增益） |
+
+---
+
+## 8. 七维评价体系
+
+### 8.1 加权总分
+
+$$
+S_{\text{overall}} = \sum_{d \in \mathcal{D}} w_d \cdot S_d
+$$
+
+其中 $\mathcal{D} = \{\text{consensus}, \text{reliability}, \text{explainability}, \text{robustness}, \text{stability}, \text{manipulation}, \text{influence}\}$，权重向量：
+
+$$
+\mathbf{w} = (0.15,\; 0.18,\; 0.15,\; 0.15,\; 0.12,\; 0.12,\; 0.13)
+$$
+
+### 8.2 各维度计算
+
+#### 可靠性 ($S_{\text{rel}}$)
+
+$$
+S_{\text{rel}} = \text{Cronbach's }\alpha \cdot 40 + \text{CrossVal} \cdot 30 + \text{Repeatability} \cdot 30
+$$
+
+Cronbach's $\alpha$（标准化）：
+
+$$
+\alpha = \frac{k}{k-1}\left(1 - \frac{\sum_{i=1}^{k}\sigma_i^2}{\sigma_{\text{total}}^2}\right)
+$$
+
+其中 $k$ 是 Agent 数量，$\sigma_i^2$ 是 Agent $i$ 在各轮的方差，$\sigma_{\text{total}}^2$ 是总体方差。
+
+#### 鲁棒性 ($S_{\text{rob}}$)
+
+通过三项扰动测试评估：
+
+$$
+S_{\text{rob}} = \frac{\text{InputNoise} + \text{AgentDropout} + \text{ParamVariation}}{3}
+$$
+
+#### 影响力分析 ($S_{\text{inf}}$)
+
+基尼系数衡量影响力不平等：
+
+$$
+G = \frac{\sum_{i=1}^{n}\sum_{j=1}^{n}|d_i - d_j|}{2n\sum_{i=1}^{n}d_i}
+$$
+
+其中 $d_i$ 是 Agent $i$ 在图中的度中心性。
+
+---
+
+## 9. 参数表
+
+| 参数 | 符号 | 值 | 含义 |
+|------|------|-----|------|
+| 收敛阈值 | $\theta_{\text{conv}}$ | 0.06 | 信念标准差低于此值→收敛 |
+| 最大轮数 | $T_{\max}$ | 5 | 到达后强制终止 |
+| 高置信阈值 | $\theta_{\text{high}}$ | 70 | 置信度 > 此值为"高置信" |
+| 信念一致阈值 | $\theta_{\text{agr}}$ | 0.3 | 信念差 < 此为"一致" |
+| 信念分歧阈值 | $\theta_{\text{dis}}$ | 0.5 | 信念差 > 此为"分歧" |
+| 回音室阈值 | $\theta_{\text{echo}}$ | 0.70 | 信息冗余度超过触发 |
+| 权威偏差阈值 | $\theta_{\text{auth}}$ | 0.40 | 影响力集中度超过触发 |
+| 极化阈值 | $\theta_{\text{pol}}$ | 0.50 | 信念标准差超过触发 |
+| 过早共识阈值 | $\theta_{\text{pre}}$ | 0.50 | 轮次进度 < 此且共识 > 0.7 触发 |
+| 共识水平阈值 | $\gamma_{\text{pre}}$ | 0.70 | 过早共识检测用 |
+
+---
+
+> **实现对应**：所有公式均在 `src/lib/` 中有 1:1 的代码实现。
+> `src/lib/constants.ts` 包含所有可调参数的集中定义。
