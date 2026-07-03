@@ -1,5 +1,5 @@
 import type { FrameworkAdapter } from "@/lib/adapters/types";
-import type { EvaluationEngine } from "@/lib/evaluation";
+import type { LLMConfig } from "@/lib/llm/providers";
 
 export interface FinancialBenchmarkInput {
   news: string;
@@ -9,10 +9,7 @@ export interface FinancialBenchmarkInput {
 
 export interface FinancialBenchmarkOptions {
   adapter?: FrameworkAdapter;
-  llmConfig?: {
-    provider: string;
-    model: string;
-  };
+  llmConfig?: LLMConfig;
   agentCount?: number;
 }
 

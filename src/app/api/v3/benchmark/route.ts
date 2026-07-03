@@ -4,6 +4,7 @@ import { adapterRegistry } from "@/lib/adapters";
 import { sanitizeString } from "@/lib/security/validation";
 import { checkRateLimit, RATE_LIMIT_PRESETS, getClientIdentifier } from "@/lib/security/rateLimit";
 import { NextRequest } from "next/server";
+import type { LLMConfig } from "@/lib/llm/providers";
 
 interface BenchmarkRequest {
   version: "v3";
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Build adapter options for real agent execution
     const adapterProvider = body.agentConfig?.provider || "custom";
     const adapter = adapterRegistry.get(adapterProvider);
-    const llmConfig = body.llmConfig || { provider: "deepseek", model: "deepseek-chat" };
+    const llmConfig: LLMConfig = body.llmConfig || { provider: "deepseek", model: "deepseek-chat" };
     const benchmarkOptions = {
       adapter,
       llmConfig,

@@ -1,3 +1,5 @@
+import type { LLMConfig } from "../llm/providers";
+
 export type AgentFrameworkType = "autogen" | "crewai" | "langgraph" | "custom";
 
 export interface AgentConfig {
@@ -47,7 +49,7 @@ export interface TaskInput {
 
 export interface FrameworkAdapter {
   framework: AgentFrameworkType;
-  createAgents(configs: AgentConfig[], llmConfig?: any): Promise<Agent[]>;
+  createAgents(configs: AgentConfig[], llmConfig?: LLMConfig): Promise<Agent[]>;
   runInteraction(agents: Agent[], input: TaskInput): Promise<InteractionResult>;
   getAgentInfo(agents: Agent[]): AgentConfig[];
   dispose(agents: Agent[]): Promise<void>;

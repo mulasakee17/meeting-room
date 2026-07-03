@@ -7,6 +7,7 @@ import { ObservationLayer } from "../observation";
 import { InferenceLayer } from "../inference";
 import type { ObserverAgent } from "../observation";
 import type { GovernanceIssue } from "../governance/types";
+import type { EvaluationResult } from "../evaluation/types";
 import type { AgentOpinion } from "../discussion/types";
 
 export class RuntimeScheduler {
@@ -250,8 +251,8 @@ export class RuntimeScheduler {
   }
 
   private calculateDelta(
-    previous: any,
-    current: any
+    previous: EvaluationResult,
+    current: EvaluationResult,
   ): Record<string, number> {
     const delta: Record<string, number> = {};
 
@@ -331,12 +332,12 @@ export class RuntimeScheduler {
     this.context.artifact.metadata.totalRounds = this.context.round.current;
   }
 
-  private calculateGrade(evaluation: any): "excellent" | "good" | "fair" | "poor" | "critical" {
+  private calculateGrade(evaluation: { overallScore: number }): "excellent" | "good" | "fair" | "poor" | "critical" {
     const score = evaluation.overallScore;
-    if (score >= 0.8) return "excellent";
-    if (score >= 0.6) return "good";
-    if (score >= 0.4) return "fair";
-    if (score >= 0.2) return "poor";
+    if (score >= 85) return "excellent";
+    if (score >= 70) return "good";
+    if (score >= 55) return "fair";
+    if (score >= 40) return "poor";
     return "critical";
   }
 

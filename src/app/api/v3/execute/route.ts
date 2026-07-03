@@ -15,7 +15,7 @@ interface ExecuteRequest {
     agentCount?: number;
   };
   llmConfig: {
-    provider: "openai" | "anthropic" | "gemini" | "deepseek" | "local";
+    provider: "openai" | "anthropic" | "deepseek" | "local";
     model: string;
   };
   evaluationConfig?: {

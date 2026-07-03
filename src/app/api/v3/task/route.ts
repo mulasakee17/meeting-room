@@ -20,7 +20,7 @@ interface CreateTaskRequest {
     config?: Record<string, unknown>;
   };
   llmConfig: {
-    provider: "openai" | "anthropic" | "gemini" | "deepseek" | "local";
+    provider: "openai" | "anthropic" | "deepseek" | "local";
     model: string;
     temperature?: number;
   };

@@ -22,7 +22,7 @@ export interface PipelineInput {
   agentTypes?: string[];
   /** LLM 配置 */
   llmConfig: {
-    provider: "openai" | "anthropic" | "gemini" | "deepseek" | "local";
+    provider: "openai" | "anthropic" | "deepseek" | "local";
     model: string;
     temperature?: number;
   };

@@ -8,6 +8,7 @@ import {
   AgentState,
   InteractionMessage,
 } from "./types";
+import type { LLMConfig } from "../llm/providers";
 
 class AutoGenAgent implements Agent {
   constructor(
@@ -39,7 +40,7 @@ class AutoGenAgent implements Agent {
 export class AutoGenAdapter implements FrameworkAdapter {
   framework: AgentFrameworkType = "autogen";
 
-  async createAgents(configs: AgentConfig[], llmConfig?: any): Promise<Agent[]> {
+  async createAgents(configs: AgentConfig[], llmConfig?: LLMConfig): Promise<Agent[]> {
     return configs.map(config => {
       const belief = (Math.random() - 0.5) * 2;
       return new AutoGenAgent(

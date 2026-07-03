@@ -26,6 +26,8 @@ import { ObservationLayer, DefaultOpinionParser } from "../observation";
 import { InferenceLayer } from "../inference";
 import type { RawObservation, ObserverAgent, OpinionParser } from "../observation";
 import type { StateDelta } from "../inference";
+import type { EvaluationConfig } from "../evaluation/types";
+import type { GovernanceConfig } from "../governance/types";
 import {
   DISCUSSION_DEFAULT_CONVERGENCE_THRESHOLD,
   DISCUSSION_DECISION_POSITIVE_THRESHOLD,
