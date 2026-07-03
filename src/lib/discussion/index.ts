@@ -797,3 +797,4 @@ export * from "./interactionGraph";
 export * from "./decisionTrace";
 export * from "./causalTrace";
 export * from "./influenceUtils";
+export * from "./crossExamination";
