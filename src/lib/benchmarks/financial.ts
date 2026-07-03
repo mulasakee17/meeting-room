@@ -1,7 +1,19 @@
+import type { FrameworkAdapter } from "@/lib/adapters/types";
+import type { EvaluationEngine } from "@/lib/evaluation";
+
 export interface FinancialBenchmarkInput {
   news: string;
   ticker?: string;
   date?: string;
+}
+
+export interface FinancialBenchmarkOptions {
+  adapter?: FrameworkAdapter;
+  llmConfig?: {
+    provider: string;
+    model: string;
+  };
+  agentCount?: number;
 }
 
 export interface FinancialBenchmarkResult {
@@ -83,34 +95,135 @@ export class FinancialBenchmark {
     return financialScenarios.find(s => s.id === id);
   }
 
-  async runScenario(scenario: typeof financialScenarios[0]): Promise<FinancialBenchmarkResult> {
-    const isCorrect = Math.random() > 0.3;
+  /**
+   * Run a single scenario.  When an adapter + llmConfig are provided the
+   * benchmark actually invokes the agent swarm so the result reflects real
+   * collective decision-making.  When omitted (backward-compatible path,
+   * e.g. for unit tests that don't need LLM calls) a clearly-marked
+   * placeholder is returned.
+   */
+  async runScenario(
+    scenario: typeof financialScenarios[0],
+    options?: FinancialBenchmarkOptions,
+  ): Promise<FinancialBenchmarkResult> {
+    // ---- Real agent execution path ----------------------------------------
+    if (options?.adapter && options?.llmConfig) {
+      try {
+        const { adapter, llmConfig, agentCount } = options;
+        const n = agentCount || 5;
+
+        const agentConfigs = Array.from({ length: n }, (_, i) => ({
+          id: `bench_agent_${i + 1}`,
+          name: `Analyst ${i + 1}`,
+          role: i === 0 ? "Analyst" : i === 1 ? "Critic" : i === 2 ? "Synthesizer" : "Expert",
+          type: "default",
+        }));
+
+        const agents = await adapter.createAgents(agentConfigs, llmConfig);
+        const result = await adapter.runInteraction(agents, {
+          type: "text",
+          content: `Analyze the following financial news and decide if it is bullish (up) or bearish (down):\n\n${scenario.news}\n\nTicker: ${scenario.ticker || "N/A"}\nDate: ${scenario.date || "unknown"}`,
+        });
+
+        // Dynamically import EvaluationEngine to avoid circular deps at module level
+        const { EvaluationEngine } = await import("@/lib/evaluation");
+        const engine = new EvaluationEngine();
+
+        const agentDecisions = result.agentStates.map(s => ({
+          agentId: s.agentId,
+          content: s.lastMessage || "",
+          confidence: s.confidence || 50,
+          reasoning: s.reasoning || "",
+          belief: s.belief || 0,
+        }));
+
+        const agentInfo = adapter.getAgentInfo(agents);
+
+        const interactionHistory = [{
+          round: 1,
+          messages: result.messages.map(m => ({
+            agentId: m.agentId,
+            content: m.content,
+            timestamp: m.timestamp,
+          })),
+          beliefs: Object.fromEntries(agentDecisions.map(d => [d.agentId, d.belief])),
+          beliefChanges: {},
+          converged: result.converged,
+        }];
+
+        const evaluation = engine.evaluate(
+          agentDecisions,
+          agentInfo,
+          interactionHistory,
+          result.finalDecision,
+        );
+
+        // Determine direction from the final decision text
+        const decisionLower = result.finalDecision.toLowerCase();
+        const isUp =
+          decisionLower.includes("bullish") ||
+          decisionLower.includes("上涨") ||
+          decisionLower.includes("涨") ||
+          decisionLower.includes("positive") ||
+          decisionLower.includes("up");
+        const isDown =
+          decisionLower.includes("bearish") ||
+          decisionLower.includes("下跌") ||
+          decisionLower.includes("跌") ||
+          decisionLower.includes("negative") ||
+          decisionLower.includes("down");
+
+        let agentDecision: string;
+        if (isUp && !isDown) agentDecision = "up";
+        else if (isDown && !isUp) agentDecision = "down";
+        else agentDecision = "neutral";
+
+        const isCorrect = agentDecision === scenario.groundTruth;
+
+        await adapter.dispose(agents);
+
+        return {
+          scenario: scenario.id,
+          groundTruth: scenario.groundTruth,
+          agentDecision,
+          evaluation,
+          metrics: {
+            accuracy: isCorrect ? 1 : 0,
+          },
+        };
+      } catch (error) {
+        console.error(`[FinancialBenchmark] Scenario ${scenario.id} failed:`, error);
+        // Fall through to error placeholder below
+      }
+    }
+
+    // ---- Placeholder path (no adapter provided or execution failed) -------
     return {
       scenario: scenario.id,
       groundTruth: scenario.groundTruth,
-      agentDecision: isCorrect ? scenario.groundTruth : (scenario.groundTruth === "up" ? "down" : "up"),
+      agentDecision: "NOT_EXECUTED",
       evaluation: {
-        overallScore: isCorrect ? 75 + Math.random() * 20 : 40 + Math.random() * 20,
-        grade: isCorrect ? "good" : "fair",
-        summary: isCorrect ? "Decision aligns with ground truth" : "Decision deviates from ground truth",
+        overallScore: 0,
+        grade: "poor",
+        summary: "Scenario not executed — no adapter/LLM config provided, or execution failed",
         dimensions: {
-          consensus: 60 + Math.random() * 30,
-          reliability: 55 + Math.random() * 35,
-          explainability: 65 + Math.random() * 25,
-          robustness: 50 + Math.random() * 30,
-          stability: 60 + Math.random() * 25,
-          manipulationResistance: 55 + Math.random() * 30,
-          influenceAnalysis: 50 + Math.random() * 35,
+          consensus: 0,
+          reliability: 0,
+          explainability: 0,
+          robustness: 0,
+          stability: 0,
+          manipulationResistance: 0,
+          influenceAnalysis: 0,
         },
       },
       metrics: {
-        accuracy: isCorrect ? 1 : 0,
+        accuracy: 0,
       },
     };
   }
 
-  async runAll(): Promise<FinancialBenchmarkResult[]> {
-    return Promise.all(financialScenarios.map(s => this.runScenario(s)));
+  async runAll(options?: FinancialBenchmarkOptions): Promise<FinancialBenchmarkResult[]> {
+    return Promise.all(financialScenarios.map(s => this.runScenario(s, options)));
   }
 
   computeSummary(results: FinancialBenchmarkResult[]): FinancialBenchmarkSummary {

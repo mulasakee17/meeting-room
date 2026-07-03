@@ -1,0 +1,15 @@
+{
+  "taskId": "lunar",
+  "ablation": "detect-only",
+  "runIndex": 4,
+  "accuracy": 98,
+  "rounds": 5,
+  "converged": false,
+  "consensus": 82.68132296326459,
+  "reliability": 49.3,
+  "explainability": 98.7,
+  "interventions": 0,
+  "issuesDetected": [
+    "premature_consensus"
+  ]
+}

@@ -1,256 +1,146 @@
-# 🐜 SwarmAlpha
+# 🐜 SwarmAlpha V3
 
-> **LLM Multi-Agent 集体决策评价与治理研究平台** — 研究和构建 LLM Multi-Agent 集体决策的评价与治理机制，使群体决策具备高质量、可解释、可复现和抗极化的特性。
+> LLM Multi-Agent 集体决策评估与治理研究平台
 >
-> 金融市场仅作为 Benchmark，而不是项目本身。真正保持不变的是集体决策形成机制。
+> **让 AI 群体讨论不仅有结论，还有质量保证。**
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-11.0-purple" alt="version">
-  <img src="https://img.shields.io/badge/TypeScript-全栈-blue" alt="typescript">
-  <img src="https://img.shields.io/badge/React-19-61DAFB" alt="react">
-  <img src="https://img.shields.io/badge/V3-Research Runtime-orange" alt="v3">
-  <img src="https://img.shields.io/badge/领域-通用化-green" alt="domain">
-  <img src="https://img.shields.io/badge/License-MIT-blue" alt="license">
-</p>
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
+[![Tests](https://img.shields.io/badge/tests-79%20passed-green)](./test/)
+[![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 ---
 
 ## 这是什么？
 
-SwarmAlpha 是一个用于研究 **AI Agent 群体决策形成、评价与治理（Collective Decision Formation, Evaluation & Governance）** 的实验平台。
+SwarmAlpha 研究 LLM 多智能体如何做集体决策——不是如何完成任务，而是如何**高质量地**达成共识。
 
-核心问题：**不是研究"Agent 如何完成任务"，而是研究"多个 Agent 如何形成高质量、可信、可解释、可治理的集体决策"。**
+当 5 个 AI Agent 讨论一个问题时，它们会像人类一样犯错误：
+- 有人太强势 → 其他人跟风
+- 第一轮就一致 → 关键信息没讨论
+- 观点相似的互相确认 → 越聊越偏
+- 分歧太大 → 无法达成共识
 
-```
-输入: "央行宣布降息25个基点"
-
-🏦 Policy       → 信念: bullish (强度: 72) 置信度: 85
-💎 Value        → 信念: bullish (强度: 58) 置信度: 70
-🔥 Momentum     → 信念: bullish (强度: 65) 置信度: 78
-🔄 Contrarian   → 信念: bearish (强度: 35) 置信度: 60
-📊 Quantitative → 信念: bullish (强度: 68) 置信度: 82
-
-↓ 社交互动 × 3 轮 (动态信任传播)
-
-群体共识: bullish (+61.8)
-共识质量: 78/100
-鲁棒性: 65/100
-多样性: 35/100
-```
-
-**不是投票。不是平均。是从个体认知到群体智能的涌现。**
-
-### 核心价值
-
-- **决策质量评价**：测量共识的质量、鲁棒性、多样性、稳定性
-- **可解释性**：完整的 Decision Trace 记录每步推理过程
-- **可复现性**：确定性映射保证相同输入产生相同输出
-- **通用化架构**：核心机制 domain-agnostic，可适配任何多Agent场景
-- **治理机制**：研究如何干预群体决策，防止群体极化和错误共识
-- **统一运行时**：V3 Runtime 作为稳定主干，协调所有模块的生命周期
+**SwarmAlpha 的治理引擎实时检测这些问题，并主动干预——就像人类团队中的主持人。**
 
 ---
 
-## 立刻体验
+## 快速开始
 
 ```bash
-# 启动开发服务器 (端口 3000)
-cd swarmalpha
+# 1. 安装
+git clone git@github.com:mulasakee17/meeting-room.git
+cd meeting-room
 npm install
-cp .env.local.example .env.local   # 可选: 填入 DeepSeek API Key
-npm run dev
 
+# 2. 配置 API Key (可选 — Demo 模式不需要)
+cp .env.local.example .env.local
+# 编辑 .env.local，填入 DEEPSEEK_API_KEY
+
+# 3. 启动
+npm run dev
 # 打开 http://localhost:3000
 ```
 
-**Mock 模式**默认开启——无需 API Key，无需网络，零成本体验完整功能。
+**Demo 模式**：不需要 API Key，打开页面直接点"运行对比实验"即可看到效果。
 
 ---
 
-## V3 Research Runtime 架构
+## 架构
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Runtime Layer                                  │
-│  统一运行时调度器，协调所有模块的生命周期：                            │
-│  · RuntimeScheduler (核心循环调度)                                   │
-│  · RuntimeContext (统一状态容器)                                     │
-│  · EventBus (事件发布订阅)                                          │
-│  · TerminationChecker (可插拔终止策略)                               │
-│  · ObservationLayer (意见观测提取)                                   │
-│  · InferenceLayer (影响力推理与信念更新)                             │
-│  · Adapters (模块适配层)                                            │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-           ┌──────────────────┼──────────────────┐
-           ▼                  ▼                  ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│  Discussion     │  │  Evaluation     │  │  Governance     │
-│  Engine         │  │  Engine         │  │  Engine         │
-│  (意见交换)      │  │  (质量评价)      │  │  (决策治理)      │
-└─────────────────┘  └─────────────────┘  └─────────────────┘
-           │                  │                  │
-           └──────────────────┼──────────────────┘
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Cognitive State Layer                          │
-│  系统底座，定义认知状态变量：                                          │
-│  · belief, confidence, uncertainty, trust, openness, memory        │
-│  · Decision Trace                                                   │
-│  · FactorImportance                                                 │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Agent Layer                                    │
-│  负责接入各种 Agent（GPT、Claude、Gemini、企业Agent、私人Agent）      │
-│  重点：接口统一                                                       │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│               Next.js App Router                  │
+│      POST /api/v3/execute | task | benchmark      │
+├─────────────────────────────────────────────────┤
+│            Pipeline (共享执行管线)                │
+├────────┬──────────┬───────────┬─────────────────┤
+│ 讨论引擎 │ 评价引擎  │ 治理引擎   │ 观测+推理层      │
+│ (多轮)  │ (7维评分) │ (4偏差检测) │ (LLM感知→数学演化) │
+├────────┴──────────┴───────────┴─────────────────┤
+│   Agent 适配器 ← DeepSeek / OpenAI / Anthropic   │
+└─────────────────────────────────────────────────┘
 ```
 
-### V3 Runtime 核心模块
-
-| 模块 | 文件 | 职责 |
-|------|------|------|
-| RuntimeScheduler | `src/lib/runtime/scheduler.ts` | 核心循环调度器，协调讨论→观测→推理→评价→治理→终止检查 |
-| RuntimeContext | `src/lib/runtime/context.ts` | 统一状态容器，管理 experiment、session、task、round、state、metrics |
-| EventBus | `src/lib/runtime/eventBus.ts` | 事件发布订阅系统，支持生命周期、讨论、状态、分析、终止事件 |
-| TerminationChecker | `src/lib/runtime/termination.ts` | 可插拔终止策略：最大轮数、共识稳定、无状态变化、置信度收敛、治理限制、超时 |
-| ObservationLayer | `src/lib/observation/index.ts` | 意见观测层：提示构建、响应解析、原始观测提取 |
-| InferenceLayer | `src/lib/inference/index.ts` | 推理层：影响力计算、信念更新、状态增量推断 |
-| Adapters | `src/lib/runtime/adapters.ts` | 模块适配层：将 RuntimeContext 转换为各模块所需参数 |
-| SwarmAlphaRuntime | `src/lib/runtime/researchRuntime.ts` | 统一入口：任务提交、实验管理、报告生成 |
-
-### Runtime 核心循环
-
-```
-Discussion → Observation → Inference → State Update → Evaluation → Governance → Termination Check → Repeat or Complete
-```
-
-### 研究数据采集
-
-Runtime 自动收集以下研究产物（Research Artifact）：
-
-- **RoundSnapshot**: 每轮讨论的原始意见和状态
-- **EvaluationSnapshot**: 评价结果快照
-- **GovernanceSnapshot**: 治理干预记录
-- **StateSnapshot**: 完整状态快照序列
-- **DecisionSnapshot**: 最终决策和决策轨迹
+**核心理念**: LLM 只做感知（提取信念/情感），数学负责演化（共识计算、偏差检测）。快、便宜、可解释。
 
 ---
 
-## V2 可解释决策框架（历史实现）
+## 实验结果
 
-V2 实现了"LLM 只感知不判断"的可解释决策框架，作为 V3 Runtime 的基础模块保留。
+80 次对照实验，消融分析 + t 检验 + Cohen's d。
 
-### 架构原则
+详见 [`experiments/lunar_survival/REPORT.md`](experiments/lunar_survival/REPORT.md)
 
-| 原则 | 说明 |
-|------|------|
-| **LLM 只感知不判断** | LLM 负责提取证据和识别因子重要性，不做最终方向判断 |
-| **数学唯一负责演化** | 数学模型更新信念强度、信任关系、开放度等所有数值状态 |
-| **确定性决策映射** | 预定义规则将认知状态映射到 BUY/SELL/HOLD，保证实验可复现 |
-| **Decision Trace 可观测** | 完整记录每步推理过程，用于分析和解释 |
+关键发现：
+- **随机干预显著降低准确率** (d=-1.41, p<.005) — 精准检测是前提
+- **过早共识是主要失效模式** (83-93%)
+- **治理在信息不对称时有效，信息充足时静默**
 
-### V2 API
+---
+
+## 项目结构
+
+```
+src/
+├── app/
+│   ├── page.tsx              # 前端（对比模式 + Demo/Live）
+│   └── api/v3/               # API 端点
+├── lib/
+│   ├── discussion/           # 讨论引擎（多轮 Agent 交互）
+│   ├── evaluation/           # 评价引擎（7 维评分）
+│   ├── governance/           # 治理引擎（4 偏差检测 + 干预）
+│   ├── inference/            # 推理层（信念推断）
+│   ├── observation/          # 观测层（LLM 输出解析）
+│   ├── runtime/              # 运行时（调度、上下文、终止）
+│   ├── adapters/             # Agent 框架适配器
+│   ├── llm/                  # 多 LLM 提供商抽象
+│   ├── security/             # 输入验证 + 速率限制
+│   ├── benchmarks/           # 基准测试
+│   ├── pipeline.ts           # 共享执行管线
+│   ├── constants.ts          # 集中管理参数
+│   └── demo-data.ts          # Demo 模式预计算数据
+experiments/
+└── lunar_survival/           # Hidden Profile 实验
+    ├── REPORT.md             # 完整实验报告
+    ├── run.ts                # 实验运行器
+    └── data/raw/             # 80 个 JSON 数据文件
+```
+
+---
+
+## 运行测试
 
 ```bash
-POST /api/swarm/v2
-
-# 请求示例
-{
-  "news": "央行宣布降息25个基点",
-  "rounds": 3,
-  "useLLM": false,
-  "enableCommunication": true
-}
+npx vitest run          # 79 tests, 7 files
+npx vitest              # watch mode
 ```
 
 ---
 
-## 研究路线
+## 文档
 
-### 第一阶段（已完成）：Agent Cognitive Simulation
-
-关键词：Belief、Trust、Communication、Memory、Decision Trace
-
-目标：完成实验平台 ✅
-
-### 第二阶段（已完成）：Collective Decision Evaluation
-
-关键词：Consensus Quality、Collective Intelligence、Robustness、Stability
-
-目标：建立评价体系 ✅
-
-### 第三阶段（已完成）：Research Runtime
-
-关键词：Lifecycle、Scheduler、EventSystem、Termination、Artifact
-
-目标：建立统一运行时作为系统主干 ✅
-
-### 第四阶段：Multi-Agent Governance
-
-关键词：Trust Evolution、Influence、Diversity、Governance
-
-目标：建立治理机制（进行中）
-
-### 第五阶段：Agent Society
-
-关键词：Institution、Organization、Market、Society
-
-目标：研究 Agent 群体长期演化
+| 文档 | 内容 |
+|------|------|
+| [ONEPAGER.md](ONEPAGER.md) | 一页项目摘要（导师/评委用） |
+| [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) | 技术架构深度剖析 |
+| [API_CONTRACT.md](API_CONTRACT.md) | V3 API 规范 |
+| [experiments/lunar_survival/REPORT.md](experiments/lunar_survival/REPORT.md) | 消融实验完整报告 |
 
 ---
 
 ## 技术栈
 
-| 层 | 技术 |
-|---|---|
-| 前端框架 | React 19 · TanStack Start · Vite 8 |
-| UI | shadcn/ui (Radix) · TailwindCSS v4 · Framer Motion |
-| 图表与网络 | Recharts v3 · @xyflow/react v12 |
-| 状态管理 | Zustand v5 · TanStack Query |
-| 后端 | Next.js 14 API Routes |
-| 类型安全 | TypeScript 全栈 · Zod 验证 |
-| LLM | DeepSeek / OpenAI / Anthropic / Local (可插拔) |
-| 数学引擎 | 贝叶斯定理 · 信息熵 · 指数衰减 · Kuramoto 同步化 |
+TypeScript · Next.js 14 · React 18 · Tailwind CSS · Vitest · DeepSeek API
 
 ---
 
-## 版本历史
+## 作者
 
-经过 15+ 个大版本的假设驱动迭代：
+**贺孟元** — 高一学生，独立完成架构、实现、实验。
 
-- **v11.0 当前**: V3 Research Runtime — 统一运行时架构完成
-  - Runtime Layer 作为系统主干，协调 Discussion/Evaluation/Governance 三大模块
-  - 6 层架构：Runtime → Discussion/Evaluation/Governance → Cognitive State → Agent
-  - 7 个核心 Runtime 模块：Scheduler、Context、EventBus、TerminationChecker、ObservationLayer、InferenceLayer、Adapters
-  - 可插拔终止策略：6 种终止条件（最大轮数、共识稳定、无状态变化、置信度收敛、治理限制、超时）
-  - 研究数据采集：自动收集 RoundSnapshot、EvaluationSnapshot、GovernanceSnapshot、StateSnapshot、DecisionSnapshot
-- **v10.0**: V3 定位升级 — 从"多Agent金融市场模拟"升级为"LLM Multi-Agent集体决策评价与治理研究平台"
-  - 重新定义项目定位：金融仅作为 Benchmark
-  - 7 维度评价体系：Consensus、Reliability、Explainability、Robustness、Stability、Manipulation Resistance、Influence Analysis
-  - 主动治理机制：Echo Chamber、Authority Bias、Polarization 检测与干预
-- **v9.7**: 非线性共识 8 方法动态集成 · 反事实实验室 · 12 符号市场数据
-- **v9.6**: Market Awareness 双层感知修正 · 203 事件库
-- **v9.5**: 社交互动层 · 共识三维度量 · 动态权重引擎 · V 型反弹路由仲裁
-- **v9.3**: 四规则 Neutral Detection Engine
-- **v9.1**: 正交五因子架构 — 旧 6 因子互相污染 → 新 5 因子严格正交
-- **v8.1**: 聚类+动态K 71.7% — 首次超越永远猜涨基线
-- **v6-v7**: 涌现式共识 · 异质决策函数 · 反身性闭环
-
-[完整演化历史与技术评估 →](PROJECT_EVALUATION.md)
+AI 辅助开发（Claude Code），架构决策和实验设计完全自主。
 
 ---
 
-## 关于作者
-
-我是一个高一学生。这个项目是用 AI 辅助完成的。
-
-**Vibe Coding 让我相信：好的想法 + AI 工具 = 一个人可以建造过去需要一个团队才能建造的东西。**
-
----
-
-## License
-
-MIT License — 详见 [LICENSE](./LICENSE)
+> *"不是让 AI 做决定，而是确保 AI 做的决定经得起审视。"*

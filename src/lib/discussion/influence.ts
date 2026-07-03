@@ -1,53 +1,14 @@
 import { InfluenceStrategy, InfluenceContext, InfluenceType, AgentOpinion, InteractionGraph, InteractionEdge } from "./types";
+import { determineInfluenceType, computeInfluenceWeight } from "./influenceUtils";
+import { INFLUENCE_EDGE_DECAY_FACTOR } from "../constants";
 
 export class RuleBasedInfluence implements InfluenceStrategy {
   name: string = "rule_based";
 
   compute(context: InfluenceContext): number {
     const { influenceType, sourceOpinion, targetOpinion } = context;
-
-    let weight = 0;
-
-    switch (influenceType) {
-      case "agreement":
-        weight = this.computeAgreementWeight(sourceOpinion, targetOpinion);
-        break;
-      case "disagreement":
-        weight = this.computeDisagreementWeight(sourceOpinion, targetOpinion);
-        break;
-      case "reference":
-        weight = this.computeReferenceWeight(sourceOpinion, targetOpinion);
-        break;
-      case "persuasion":
-        weight = this.computePersuasionWeight(sourceOpinion, targetOpinion);
-        break;
-    }
-
+    const weight = computeInfluenceWeight(influenceType, sourceOpinion, targetOpinion);
     return Math.max(0, Math.min(1, weight));
-  }
-
-  private computeAgreementWeight(source: AgentOpinion, target: AgentOpinion): number {
-    const beliefSimilarity = 1 - Math.abs(source.belief - target.belief);
-    const confidenceBonus = source.confidence / 100;
-    return beliefSimilarity * confidenceBonus * 0.8;
-  }
-
-  private computeDisagreementWeight(source: AgentOpinion, target: AgentOpinion): number {
-    const beliefDiff = Math.abs(source.belief - target.belief);
-    const confidenceBonus = source.confidence / 100;
-    return beliefDiff * confidenceBonus * 0.5;
-  }
-
-  private computeReferenceWeight(source: AgentOpinion, target: AgentOpinion): number {
-    const sourceConfidence = source.confidence / 100;
-    const reasoningQuality = Math.min(1, source.reasoning.length / 500);
-    return sourceConfidence * reasoningQuality * 0.7;
-  }
-
-  private computePersuasionWeight(source: AgentOpinion, target: AgentOpinion): number {
-    const confidenceDiff = (source.confidence - target.confidence) / 100;
-    const beliefDiff = Math.abs(source.belief - target.belief);
-    return Math.max(0, confidenceDiff) * (1 - beliefDiff) * 0.6;
   }
 
   applyInfluences(agentId: string, allOpinions: AgentOpinion[], graph: InteractionGraph, roundNumber: number): void {
@@ -68,15 +29,7 @@ export class RuleBasedInfluence implements InfluenceStrategy {
     const changes: Array<{ type: 'update' | 'add'; edge: InteractionEdge }> = [];
 
     for (const sourceOpinion of influencers) {
-      let influenceType: InfluenceType = "agreement";
-
-      if (Math.abs(sourceOpinion.belief - targetOpinion.belief) > 0.5) {
-        influenceType = "disagreement";
-      } else if (targetOpinion.referencedAgents.includes(sourceOpinion.agentId)) {
-        influenceType = "reference";
-      } else if (sourceOpinion.confidence > targetOpinion.confidence + 20) {
-        influenceType = "persuasion";
-      }
+      const influenceType = determineInfluenceType(sourceOpinion, targetOpinion);
 
       const weight = this.compute({
         agentId: sourceOpinion.agentId,
@@ -94,7 +47,7 @@ export class RuleBasedInfluence implements InfluenceStrategy {
       if (existingEdge) {
         changes.push({
           type: 'update',
-          edge: { ...existingEdge, weight: Math.max(0, Math.min(1, existingEdge.weight + weight * 0.3)) },
+          edge: { ...existingEdge, weight: Math.max(0, Math.min(1, existingEdge.weight + weight * INFLUENCE_EDGE_DECAY_FACTOR)) },
         });
       } else {
         changes.push({

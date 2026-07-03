@@ -25,10 +25,11 @@ export class CustomAgent implements Agent {
     public name: string,
     public role: string,
     public type: string,
-    llmConfig: LLMConfig
+    llmConfig: LLMConfig,
+    customPrompt?: string,
   ) {
     this.llmConfig = llmConfig;
-    this.systemPrompt = this.buildSystemPrompt();
+    this.systemPrompt = customPrompt || this.buildSystemPrompt();
     this.currentBelief = (Math.random() - 0.5) * 2;
     this.currentConfidence = 70 + Math.random() * 30;
   }
@@ -45,15 +46,13 @@ export class CustomAgent implements Agent {
 
     return `You are an AI Agent named "${this.name}" with the role "${this.role}". ${rolePrompts[this.role] || rolePrompts.Default}
 
-Answer the user's question in Chinese. Return your response as a JSON object with the following fields:
-- reasoning: your detailed analysis and reasoning
-- evidence: array of evidence points
-- belief: number between -1 and 1 (negative = against, positive = for)
-- confidence: number between 0 and 100
-- nextOpinion: what you want to discuss next
-- referencedAgents: array of agent IDs you reference or respond to
+Answer the user's question in Chinese. You MUST return ONLY a JSON object with exactly these two fields:
+- emotion: a number between -100 and 100 indicating your sentiment (-100 = strongly negative, 0 = neutral, 100 = strongly positive)
+- reasoning: a string with your detailed analysis
 
-JSON format required, no extra text.`;
+Example: {"emotion": 60, "reasoning": "基于...分析，我认为..."}
+
+No other fields. No other text. Just the JSON.`;
   }
 
   async sendMessage(message: string): Promise<string> {
@@ -144,8 +143,8 @@ export class CustomAdapter implements FrameworkAdapter {
       model: "deepseek-chat",
     };
 
-    return configs.map(config => 
-      new CustomAgent(config.id, config.name, config.role, config.type, defaultConfig)
+    return configs.map(config =>
+      new CustomAgent(config.id, config.name, config.role, config.type, defaultConfig, config.config?.customPrompt as string | undefined)
     );
   }
 

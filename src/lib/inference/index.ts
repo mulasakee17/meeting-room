@@ -1,6 +1,17 @@
 import type { StateDelta, EdgeDelta, InfluenceCalculation, InferenceConfig, InfluenceCalculator, BeliefInferrer } from "./types";
 import type { AgentOpinion, InteractionGraph, InteractionEdge, InfluenceType } from "../discussion/types";
 import type { CollectiveDecisionState, RuntimeContext } from "../runtime/types";
+import { determineInfluenceType, computeInfluenceWeight, computeInfluenceImpact } from "../discussion/influenceUtils";
+import {
+  INFLUENCE_EDGE_DECAY_FACTOR,
+  INFLUENCE_CONFIDENCE_NORM_FACTOR,
+  INFERENCE_HIGH_CONF_AMPLIFICATION,
+  INFERENCE_HIGH_CONF_WEIGHT_THRESHOLD,
+  BELIEF_MIN,
+  BELIEF_MAX,
+  CONFIDENCE_MIN,
+  CONFIDENCE_MAX,
+} from "../constants";
 
 class RuleBasedInfluenceCalculator implements InfluenceCalculator {
   calculate(
@@ -15,17 +26,8 @@ class RuleBasedInfluenceCalculator implements InfluenceCalculator {
       const influencers = allOpinions.filter((o) => o.agentId !== targetOpinion.agentId);
 
       for (const sourceOpinion of influencers) {
-        let influenceType: InfluenceType = "agreement";
-
-        if (Math.abs(sourceOpinion.belief - targetOpinion.belief) > 0.5) {
-          influenceType = "disagreement";
-        } else if (targetOpinion.referencedAgents.includes(sourceOpinion.agentId)) {
-          influenceType = "reference";
-        } else if (sourceOpinion.confidence > targetOpinion.confidence + 20) {
-          influenceType = "persuasion";
-        }
-
-        const weight = this.computeWeight(influenceType, sourceOpinion, targetOpinion);
+        const influenceType = determineInfluenceType(sourceOpinion, targetOpinion);
+        const weight = computeInfluenceWeight(influenceType, sourceOpinion, targetOpinion);
 
         const existingEdge = graph.edges.find(
           (e) =>
@@ -35,10 +37,10 @@ class RuleBasedInfluenceCalculator implements InfluenceCalculator {
         );
 
         const effectiveWeight = existingEdge
-          ? Math.max(0, Math.min(1, existingEdge.weight + weight * 0.3))
+          ? Math.max(0, Math.min(1, existingEdge.weight + weight * INFLUENCE_EDGE_DECAY_FACTOR))
           : weight;
 
-        const { beliefChange, confidenceChange } = this.computeImpact(
+        const { beliefChange, confidenceChange } = computeInfluenceImpact(
           influenceType,
           effectiveWeight,
           sourceOpinion,
@@ -58,71 +60,6 @@ class RuleBasedInfluenceCalculator implements InfluenceCalculator {
     }
 
     return calculations;
-  }
-
-  private computeWeight(
-    type: InfluenceType,
-    source: AgentOpinion,
-    target: AgentOpinion
-  ): number {
-    switch (type) {
-      case "agreement": {
-        const beliefSimilarity = 1 - Math.abs(source.belief - target.belief);
-        const confidenceBonus = source.confidence / 100;
-        return beliefSimilarity * confidenceBonus * 0.8;
-      }
-      case "disagreement": {
-        const beliefDiff = Math.abs(source.belief - target.belief);
-        const confidenceBonus = source.confidence / 100;
-        return beliefDiff * confidenceBonus * 0.5;
-      }
-      case "reference": {
-        const sourceConfidence = source.confidence / 100;
-        const reasoningQuality = Math.min(1, source.reasoning.length / 500);
-        return sourceConfidence * reasoningQuality * 0.7;
-      }
-      case "persuasion": {
-        const confidenceDiff = (source.confidence - target.confidence) / 100;
-        const beliefDiff = Math.abs(source.belief - target.belief);
-        return Math.max(0, confidenceDiff) * (1 - beliefDiff) * 0.6;
-      }
-      default:
-        return 0;
-    }
-  }
-
-  private computeImpact(
-    type: InfluenceType,
-    weight: number,
-    source: AgentOpinion,
-    target: AgentOpinion
-  ): { beliefChange: number; confidenceChange: number } {
-    const beliefDiff = source.belief - target.belief;
-
-    switch (type) {
-      case "agreement":
-        return {
-          beliefChange: beliefDiff * weight * 0.4,
-          confidenceChange: weight * 3,
-        };
-      case "disagreement":
-        return {
-          beliefChange: beliefDiff * weight * 0.2,
-          confidenceChange: -weight * 2,
-        };
-      case "reference":
-        return {
-          beliefChange: beliefDiff * weight * 0.5,
-          confidenceChange: weight * 4,
-        };
-      case "persuasion":
-        return {
-          beliefChange: beliefDiff * weight * 0.6,
-          confidenceChange: weight * 5,
-        };
-      default:
-        return { beliefChange: 0, confidenceChange: 0 };
-    }
   }
 }
 

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { EvaluationEngine } from "@/lib/evaluation";
-import { GovernanceEngine } from "@/lib/governance";
-import { adapterRegistry } from "@/lib/adapters";
+import { NextRequest } from "next/server";
+import { sanitizeString } from "@/lib/security/validation";
+import { checkRateLimit, RATE_LIMIT_PRESETS, getClientIdentifier } from "@/lib/security/rateLimit";
+import { runSwarmPipeline } from "@/lib/pipeline";
 
 interface ExecuteRequest {
   version: "v3";
@@ -51,9 +52,27 @@ interface ExecuteResponse {
   };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // ---- Rate limiting ---------------------------------------------------
+    const clientId = getClientIdentifier(request);
+    const rateCheck = checkRateLimit(clientId, RATE_LIMIT_PRESETS.standard);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: { code: "RATE_LIMITED", message: "Too many requests", retryAfter: rateCheck.retryAfter } },
+        { status: 429, headers: { "Retry-After": String(rateCheck.retryAfter) } }
+      );
+    }
+
+    // ---- Parse & validate body -------------------------------------------
     const body = await request.json();
+
+    if (!body || typeof body !== "object") {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: "Request body must be a JSON object" } },
+        { status: 400 }
+      );
+    }
 
     if (body.version !== "v3") {
       return NextResponse.json(
@@ -62,136 +81,56 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!body.input || !body.input.type) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: "input.type is required" } },
+        { status: 400 }
+      );
+    }
+
     const requestData = body as ExecuteRequest;
 
-    const adapter = adapterRegistry.get(requestData.agentConfig.provider);
+    // Sanitize user-supplied content
+    if (typeof requestData.input.content === "string") {
+      requestData.input.content = sanitizeString(requestData.input.content);
+    }
 
-    const agentCount = requestData.agentConfig.agentCount || 5;
-    const agentConfigs = Array.from({ length: agentCount }, (_, i) => ({
-      id: `agent_${i + 1}`,
-      name: `Agent ${i + 1}`,
-      role: "Expert",
-      type: "default",
-    }));
+    // Validate agent config provider
+    const validProviders = ["autogen", "crewai", "langgraph", "custom"];
+    if (requestData.agentConfig.provider && !validProviders.includes(requestData.agentConfig.provider)) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: `Invalid agent provider: ${requestData.agentConfig.provider}` } },
+        { status: 400 }
+      );
+    }
 
-    const agents = await adapter.createAgents(agentConfigs, requestData.llmConfig);
-    const interactionResult = await adapter.runInteraction(agents, requestData.input);
-
-    const agentDecisions = interactionResult.agentStates.map(state => {
-      let parsedReasoning = state.reasoning || "";
-      let parsedEmotion = 0;
-      
-      if (state.lastMessage) {
-        try {
-          const parsed = JSON.parse(state.lastMessage);
-          parsedReasoning = parsed.reasoning || parsedReasoning;
-          parsedEmotion = typeof parsed.emotion === 'number' ? parsed.emotion : parsedEmotion;
-        } catch {
-          parsedReasoning = state.lastMessage;
-        }
-      }
-      
-      const normalizedBelief = Math.max(-1, Math.min(1, (parsedEmotion / 100) + (state.belief || 0) * 0.5));
-      
-      return {
-        agentId: state.agentId,
-        content: parsedReasoning || "No message",
-        confidence: state.confidence || 70 + Math.random() * 30,
-        reasoning: parsedReasoning || "Default reasoning",
-        belief: normalizedBelief,
-        emotion: parsedEmotion,
-      };
-    });
-
-    const agentInfo = adapter.getAgentInfo(agents);
-
-    const interactionHistory = [{
-      round: 1,
-      messages: interactionResult.messages.map(m => ({
-        agentId: m.agentId,
-        content: m.content,
-        timestamp: m.timestamp,
-      })),
-      beliefs: Object.fromEntries(agentDecisions.map(d => [d.agentId, d.belief || 0])),
-      beliefChanges: {},
-      converged: interactionResult.converged,
-    }];
-
-    const evaluationEngine = new EvaluationEngine();
-    const evaluation = evaluationEngine.evaluate(
-      agentDecisions,
-      agentInfo,
-      interactionHistory,
-      interactionResult.finalDecision,
-      requestData.evaluationConfig
-    );
-
-    const governanceEngine = new GovernanceEngine();
-    const agentBeliefs = agentDecisions.map(d => ({
-      agentId: d.agentId,
-      belief: d.belief || 0,
-      confidence: d.confidence,
-    }));
-
-    const messages = interactionResult.messages.map(m => ({
-      agentId: m.agentId,
-      content: m.content,
-      timestamp: m.timestamp,
-    }));
-
-    const governance = governanceEngine.diagnose(
-      agentBeliefs,
-      messages,
-      agentInfo.map(a => a.id),
-      requestData.governanceConfig
-    );
-
-    const startTime = new Date().toISOString();
-    const trace = {
-      taskId: `execute_${Date.now()}`,
-      startTime,
-      endTime: new Date().toISOString(),
-      phases: [
-        { phase: "input" as const, timestamp: startTime, durationMs: 0 },
-        { phase: "agent_creation" as const, timestamp: new Date().toISOString(), durationMs: 100 },
-        { phase: "interaction" as const, timestamp: new Date().toISOString(), durationMs: 500 },
-        { phase: "evaluation" as const, timestamp: new Date().toISOString(), durationMs: 200 },
-        { phase: "governance" as const, timestamp: new Date().toISOString(), durationMs: 100 },
-        { phase: "output" as const, timestamp: new Date().toISOString(), durationMs: 50 },
-      ],
-      fullLog: "Execute completed successfully",
-    };
+    // ---- Execute shared pipeline -----------------------------------------
+    const result = await runSwarmPipeline({
+      provider: requestData.agentConfig.provider,
+      agentCount: requestData.agentConfig.agentCount,
+      llmConfig: requestData.llmConfig,
+      input: requestData.input,
+      evaluationConfig: requestData.evaluationConfig,
+      governanceConfig: requestData.governanceConfig,
+    }, "execute");
 
     const response: ExecuteResponse = {
       success: true,
       data: {
-        output: {
-          finalDecision: interactionResult.finalDecision,
-          confidence: evaluation.overallScore / 100,
-          reasoning: "Consensus reached through multi-agent interaction",
-          steps: agentDecisions.map((d, i) => ({
-            step: i + 1,
-            content: d.content,
-            agentId: d.agentId,
-            timestamp: new Date().toISOString(),
-          })),
-          agentContributions: Object.fromEntries(agentDecisions.map(d => [
-            d.agentId,
-            { contribution: d.content, confidence: d.confidence }
-          ])),
-        },
-        evaluation,
-        governance,
-        agents: agentInfo,
-        interactionHistory,
-        trace,
+        output: result.output,
+        evaluation: result.evaluation,
+        governance: result.governance,
+        agents: result.agents,
+        interactionHistory: result.interactionHistory,
+        trace: result.trace,
       },
     };
 
     return NextResponse.json(response);
   } catch (error) {
+    console.error("[execute] Unexpected error:", error instanceof Error ? error.message : String(error));
     return NextResponse.json(
-      { success: false, error: { code: "EXECUTE_ERROR", message: "Execution failed", details: error instanceof Error ? error.message : "Unknown error" } },
+      { success: false, error: { code: "EXECUTE_ERROR", message: "Execution failed due to an internal error" } },
       { status: 500 }
     );
   }

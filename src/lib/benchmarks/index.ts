@@ -26,12 +26,12 @@ export class BenchmarkManager {
     return Array.from(this.benchmarks.keys());
   }
 
-  async runBenchmark(type: BenchmarkType): Promise<any> {
+  async runBenchmark(type: BenchmarkType, options?: Record<string, unknown>): Promise<any> {
     const benchmark = this.get(type);
     if (!benchmark) {
       throw new Error(`Benchmark type ${type} not found`);
     }
-    const results = await benchmark.runAll();
+    const results = await benchmark.runAll(options);
     const summary = benchmark.computeSummary(results);
     return { results, summary };
   }

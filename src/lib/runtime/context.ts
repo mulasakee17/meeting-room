@@ -12,17 +12,24 @@ import type {
   TimelineEntry,
   ResearchArtifact,
   ExperimentConfig,
+  StateSnapshot,
+  DiscussionAgent,
+  RoundResult,
 } from "./types";
+import type { AgentState } from "../discussion/types";
+import type { InteractionGraph, DecisionTrace } from "../discussion/types";
+import type { EvaluationConfig } from "../evaluation/types";
+import type { GovernanceConfig } from "../governance/types";
 
 class DefaultAgentPool implements AgentPool {
-  agents: any[] = [];
-  states: Map<string, any> = new Map();
+  agents: DiscussionAgent[] = [];
+  states: Map<string, AgentState> = new Map();
 
-  getAgent(id: string): any | undefined {
+  getAgent(id: string): DiscussionAgent | undefined {
     return this.agents.find((agent) => agent.id === id);
   }
 
-  getAllStates(): Map<string, any> {
+  getAllStates(): Map<string, AgentState> {
     return this.states;
   }
 }
@@ -58,8 +65,8 @@ function createDefaultRoundContext(maxRounds: number): RoundContext {
 function createDefaultState(): CollectiveDecisionState {
   return {
     agentStates: new Map(),
-    interactionGraph: { nodes: [], edges: [] } as any,
-    decisionTrace: { entries: [] } as any,
+    interactionGraph: { nodes: [], edges: [] } as InteractionGraph,
+    decisionTrace: { entries: [], enhancedEntries: [], consensusEvents: [], influenceGraph: [], beliefTrajectories: {} } as DecisionTrace,
     beliefTrajectories: {},
   };
 }
@@ -85,8 +92,8 @@ function createDefaultGovernanceContext(): GovernanceContext {
 function createDefaultConfig(): RuntimeConfig {
   return {
     termination: { conditions: [], strategy: "any" },
-    evaluation: {} as any,
-    governance: {} as any,
+    evaluation: {} as EvaluationConfig,
+    governance: {} as GovernanceConfig,
   };
 }
 
@@ -176,8 +183,8 @@ export class RuntimeContextManager {
       influenceStrategy: "",
       memoryStrategy: "",
       terminationConditions: [],
-      evaluationConfig: {} as any,
-      governanceConfig: {} as any,
+      evaluationConfig: {} as EvaluationConfig,
+      governanceConfig: {} as GovernanceConfig,
     });
 
     return this.fromExperiment(task, experiment);
@@ -190,7 +197,7 @@ export class RuntimeContextManager {
     context.round.results = undefined;
   }
 
-  static endRound(context: RuntimeContext, results?: any): void {
+  static endRound(context: RuntimeContext, results?: RoundResult): void {
     context.round.endedAt = new Date().toISOString();
     if (results) {
       context.round.results = results;
@@ -208,8 +215,115 @@ export class RuntimeContextManager {
     return Object.freeze(context);
   }
 
+  /**
+   * Deep clone a RuntimeContext, correctly preserving Map objects and handling
+   * the circular reference between session.runtimeContext and the root context.
+   *
+   * JSON.parse(JSON.stringify(...)) silently drops all Map entries (they
+   * serialize as {}), corrupting agentStates, beliefTrajectories, and the
+   * AgentPool states Map.  This implementation clones every Map field
+   * explicitly so snapshots and state diffs work correctly.
+   */
   static clone(context: RuntimeContext): RuntimeContext {
-    return JSON.parse(JSON.stringify(context));
+    // ---- leaf-level helpers ------------------------------------------------
+    const cloneMap = <K, V>(source: Map<K, V> | undefined): Map<K, V> => {
+      if (!source) return new Map();
+      return new Map(source);
+    };
+
+    // ---- CollectiveDecisionState ------------------------------------------
+    const cloneState = (state: CollectiveDecisionState): CollectiveDecisionState => ({
+      agentStates: cloneMap(state.agentStates),
+      interactionGraph: structuredClone(state.interactionGraph),
+      decisionTrace: structuredClone(state.decisionTrace),
+      beliefTrajectories: structuredClone(state.beliefTrajectories),
+    });
+
+    // ---- RuntimeMetrics ---------------------------------------------------
+    const cloneMetrics = (metrics: RuntimeMetrics): RuntimeMetrics => ({
+      evaluation: metrics.evaluation ? structuredClone(metrics.evaluation) : null,
+      previousEvaluation: metrics.previousEvaluation
+        ? structuredClone(metrics.previousEvaluation)
+        : null,
+      delta: { ...metrics.delta },
+      history: structuredClone(metrics.history),
+    });
+
+    // ---- AgentPool --------------------------------------------------------
+    const cloneAgentPool = (pool: AgentPool): AgentPool => ({
+      agents: structuredClone(pool.agents),
+      states: cloneMap(pool.states),
+      getAgent: pool.getAgent,   // function reference is safe to share
+      getAllStates: pool.getAllStates,
+    });
+
+    // ---- Session (break the circular reference) ---------------------------
+    const cloneSession = (session: Session): Session => ({
+      ...structuredClone(session),
+      runtimeContext: undefined as unknown as RuntimeContext, // patched below
+    });
+
+    // ---- Experiment, Task, Round, Config, Timeline, Artifact --------------
+    const cloneExperiment = (e: Experiment): Experiment => structuredClone(e);
+    const cloneTask = (t: Task): Task => structuredClone(t);
+    const cloneRound = (r: RoundContext): RoundContext => structuredClone(r);
+    const cloneConfig = (c: RuntimeConfig): RuntimeConfig => structuredClone(c);
+    const cloneGovernance = (g: GovernanceContext): GovernanceContext => structuredClone(g);
+    const cloneArtifact = (a: ResearchArtifact): ResearchArtifact => {
+      const cloned: ResearchArtifact = {
+        ...structuredClone(a),
+        snapshots: {
+          rounds: a.snapshots.rounds.map(r => {
+            // StateSnapshot has a Map field that structuredClone handles
+            // natively in modern runtimes; if not available we fall back
+            if (typeof structuredClone === "function") {
+              return {
+                ...structuredClone(r),
+                // structuredClone handles Maps since Node 17+
+              };
+            }
+            return JSON.parse(JSON.stringify(r)); // fallback for older runtimes
+          }),
+          states: a.snapshots.states.map(s => {
+            const cloned: StateSnapshot = {
+              ...s,
+              agentStates: cloneMap(s.agentStates),
+              interactionGraph: structuredClone(s.interactionGraph),
+              beliefTrajectories: structuredClone(s.beliefTrajectories),
+              decisionTrace: structuredClone(s.decisionTrace),
+            };
+            return cloned;
+          }),
+          evaluations: structuredClone(a.snapshots.evaluations),
+          governances: structuredClone(a.snapshots.governances),
+          decisions: structuredClone(a.snapshots.decisions),
+        },
+      };
+      return cloned;
+    };
+
+    // ---- assemble the cloned context --------------------------------------
+    const clonedSession = cloneSession(context.session);
+    const clonedAgents = cloneAgentPool(context.agents);
+
+    const cloned: RuntimeContext = {
+      experiment: cloneExperiment(context.experiment),
+      session: clonedSession,
+      task: cloneTask(context.task),
+      round: cloneRound(context.round),
+      state: cloneState(context.state),
+      metrics: cloneMetrics(context.metrics),
+      governance: cloneGovernance(context.governance),
+      agents: clonedAgents,
+      config: cloneConfig(context.config),
+      timeline: structuredClone(context.timeline),
+      artifact: cloneArtifact(context.artifact),
+    };
+
+    // Restore the circular reference on the clone
+    clonedSession.runtimeContext = cloned;
+
+    return cloned;
   }
 }
 

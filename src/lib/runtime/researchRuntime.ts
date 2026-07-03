@@ -7,10 +7,10 @@ import type {
   ResearchRuntime,
   ExperimentStatus,
   RuntimeContext,
-  RuntimeEvent,
-  EventBus,
+  RuntimeState,
+  Plugin,
   PluginRegistry,
-  TerminationCondition,
+  EventBus,
   ResearchReport,
 } from "./types";
 
@@ -20,20 +20,20 @@ import { TerminationChecker } from "./termination";
 import { RuntimeScheduler } from "./scheduler";
 
 class SimplePluginRegistry implements PluginRegistry {
-  private plugins: Map<string, Map<string, any>> = new Map();
+  private plugins: Map<string, Map<string, Plugin>> = new Map();
 
-  register(type: string, plugin: any): void {
+  register(type: string, plugin: Plugin): void {
     if (!this.plugins.has(type)) {
       this.plugins.set(type, new Map());
     }
     this.plugins.get(type)!.set(plugin.name, plugin);
   }
 
-  get(type: string, name: string): any | undefined {
+  get(type: string, name: string): Plugin | undefined {
     return this.plugins.get(type)?.get(name);
   }
 
-  getAll(type: string): any[] {
+  getAll(type: string): Plugin[] {
     return Array.from(this.plugins.get(type)?.values() || []);
   }
 
@@ -174,7 +174,7 @@ export class SwarmAlphaRuntime implements ResearchRuntime {
 
     const status: ExperimentStatus = {
       experimentId,
-      status: experiment.status as any,
+      status: experiment.status as RuntimeState,
       currentRound: context?.round.current ?? 0,
       maxRounds: experiment.config.maxRounds,
       startTime: experiment.startedAt ?? "",

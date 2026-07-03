@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { EvaluationEngine } from "@/lib/evaluation";
-import { GovernanceEngine } from "@/lib/governance";
-import { adapterRegistry } from "@/lib/adapters";
+import { NextRequest } from "next/server";
+import { sanitizeString } from "@/lib/security/validation";
+import { checkRateLimit, RATE_LIMIT_PRESETS, getClientIdentifier } from "@/lib/security/rateLimit";
+import { runSwarmPipeline } from "@/lib/pipeline";
 
 interface CreateTaskRequest {
   version: "v3";
@@ -49,19 +50,60 @@ interface CreateTaskResponse {
   createdAt: string;
 }
 
+/** Maximum age for a pending/running task before it is auto-failed (10 min). */
+const TASK_STALE_TIMEOUT_MS = 10 * 60 * 1000;
+
 let taskStore: Map<string, {
   taskId: string;
   status: "pending" | "running" | "completed" | "failed";
   request: CreateTaskRequest;
   result?: any;
+  errorMessage?: string;
   createdAt: string;
   completedAt?: string;
 }> = new Map();
 
-export async function POST(request: Request) {
+/** Periodically fail tasks that have been pending/running for too long. */
+function cleanupStaleTasks(): void {
+  const now = Date.now();
+  Array.from(taskStore.entries()).forEach(([, task]) => {
+    if (task.status === "completed" || task.status === "failed") return;
+    const age = now - new Date(task.createdAt).getTime();
+    if (age > TASK_STALE_TIMEOUT_MS) {
+      task.status = "failed";
+      task.errorMessage = "Task timed out after exceeding maximum pending duration";
+      task.completedAt = new Date().toISOString();
+    }
+  });
+}
+
+// Run cleanup every 5 minutes
+if (typeof setInterval !== "undefined") {
+  setInterval(cleanupStaleTasks, 5 * 60 * 1000);
+}
+
+export async function POST(request: NextRequest) {
   try {
+    // ---- Rate limiting ---------------------------------------------------
+    const clientId = getClientIdentifier(request);
+    const rateCheck = checkRateLimit(clientId, RATE_LIMIT_PRESETS.standard);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: { code: "RATE_LIMITED", message: "Too many requests", retryAfter: rateCheck.retryAfter } },
+        { status: 429, headers: { "Retry-After": String(rateCheck.retryAfter) } }
+      );
+    }
+
+    // ---- Parse & validate body -------------------------------------------
     const body = await request.json();
-    
+
+    if (!body || typeof body !== "object") {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: "Request body must be a JSON object" } },
+        { status: 400 }
+      );
+    }
+
     if (body.version !== "v3") {
       return NextResponse.json(
         { success: false, error: { code: "INVALID_VERSION", message: "Unsupported version" } },
@@ -69,15 +111,36 @@ export async function POST(request: Request) {
       );
     }
 
-    const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const task: typeof taskStore extends Map<string, infer V> ? V : never = {
+    // Validate required fields
+    if (!body.input || !body.input.type) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: "input.type is required" } },
+        { status: 400 }
+      );
+    }
+
+    const requestData = body as CreateTaskRequest;
+
+    // Sanitize user-supplied content
+    if (typeof requestData.input.content === "string") {
+      requestData.input.content = sanitizeString(requestData.input.content);
+    }
+    if (requestData.description) {
+      requestData.description = sanitizeString(requestData.description);
+    }
+    if (requestData.title) {
+      requestData.title = sanitizeString(requestData.title);
+    }
+
+    const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    const taskEntry = {
       taskId,
-      status: "pending",
-      request: body as CreateTaskRequest,
+      status: "pending" as const,
+      request: requestData,
       createdAt: new Date().toISOString(),
     };
-    
-    taskStore.set(taskId, task);
+
+    taskStore.set(taskId, taskEntry);
 
     setTimeout(() => {
       processTask(taskId);
@@ -87,11 +150,12 @@ export async function POST(request: Request) {
       success: true,
       taskId,
       status: "pending",
-      createdAt: task.createdAt,
+      createdAt: taskEntry.createdAt,
     };
 
     return NextResponse.json(response);
   } catch (error) {
+    console.error("[task] Unexpected error:", error instanceof Error ? error.message : String(error));
     return NextResponse.json(
       { success: false, error: { code: "INVALID_REQUEST", message: "Invalid request body" } },
       { status: 400 }
@@ -99,7 +163,17 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  const rateCheck = checkRateLimit(clientId, RATE_LIMIT_PRESETS.relaxed);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { success: false, error: { code: "RATE_LIMITED", message: "Too many requests", retryAfter: rateCheck.retryAfter } },
+      { status: 429, headers: { "Retry-After": String(rateCheck.retryAfter) } }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const taskId = searchParams.get("taskId");
 
@@ -146,113 +220,26 @@ async function processTask(taskId: string) {
   taskStore.set(taskId, task);
 
   try {
-    const adapter = adapterRegistry.get(task.request.agentConfig.provider);
-    
-    const agentCount = task.request.agentConfig.agentCount || 5;
-    const agentConfigs = Array.from({ length: agentCount }, (_, i) => ({
-      id: `agent_${i + 1}`,
-      name: `Agent ${i + 1}`,
-      role: task.request.agentConfig.agentTypes?.[i % (task.request.agentConfig.agentTypes?.length || 1)] || "Expert",
-      type: "default",
-    }));
-
-    const agents = await adapter.createAgents(agentConfigs);
-    const interactionResult = await adapter.runInteraction(agents, task.request.input);
-
-    const agentDecisions = interactionResult.agentStates.map(state => ({
-      agentId: state.agentId,
-      content: state.lastMessage || "No message",
-      confidence: state.confidence || 70 + Math.random() * 30,
-      reasoning: state.reasoning || "Default reasoning",
-      belief: state.belief || (Math.random() - 0.5) * 2,
-    }));
-
-    const agentInfo = adapter.getAgentInfo(agents);
-
-    const interactionHistory = [{
-      round: 1,
-      messages: interactionResult.messages.map(m => ({
-        agentId: m.agentId,
-        content: m.content,
-        timestamp: m.timestamp,
-      })),
-      beliefs: Object.fromEntries(agentDecisions.map(d => [d.agentId, d.belief || 0])),
-      beliefChanges: {},
-      converged: interactionResult.converged,
-    }];
-
-    const evaluationEngine = new EvaluationEngine();
-    const evaluation = evaluationEngine.evaluate(
-      agentDecisions,
-      agentInfo,
-      interactionHistory,
-      interactionResult.finalDecision,
-      task.request.evaluationConfig
-    );
-
-    const governanceEngine = new GovernanceEngine();
-    const agentBeliefs = agentDecisions.map(d => ({
-      agentId: d.agentId,
-      belief: d.belief || 0,
-      confidence: d.confidence,
-    }));
-
-    const messages = interactionResult.messages.map(m => ({
-      agentId: m.agentId,
-      content: m.content,
-      timestamp: m.timestamp,
-    }));
-
-    const governance = governanceEngine.diagnose(
-      agentBeliefs,
-      messages,
-      agentInfo.map(a => a.id),
-      task.request.governanceConfig
-    );
-
-    const trace = {
-      taskId,
-      startTime: task.createdAt,
-      endTime: new Date().toISOString(),
-      phases: [
-        { phase: "input" as const, timestamp: task.createdAt, durationMs: 0 },
-        { phase: "agent_creation" as const, timestamp: new Date().toISOString(), durationMs: 100 },
-        { phase: "interaction" as const, timestamp: new Date().toISOString(), durationMs: 500 },
-        { phase: "evaluation" as const, timestamp: new Date().toISOString(), durationMs: 200 },
-        { phase: "governance" as const, timestamp: new Date().toISOString(), durationMs: 100 },
-        { phase: "output" as const, timestamp: new Date().toISOString(), durationMs: 50 },
-      ],
-      fullLog: "Task completed successfully",
-    };
+    const result = await runSwarmPipeline({
+      provider: task.request.agentConfig.provider,
+      agentCount: task.request.agentConfig.agentCount,
+      agentTypes: task.request.agentConfig.agentTypes,
+      llmConfig: task.request.llmConfig,
+      input: task.request.input,
+      evaluationConfig: task.request.evaluationConfig,
+      governanceConfig: task.request.governanceConfig,
+    }, "task");
 
     task.status = "completed";
     task.completedAt = new Date().toISOString();
-    task.result = {
-      output: {
-        finalDecision: interactionResult.finalDecision,
-        confidence: evaluation.overallScore / 100,
-        reasoning: "Consensus reached through multi-agent interaction",
-        steps: agentDecisions.map((d, i) => ({
-          step: i + 1,
-          content: d.content,
-          agentId: d.agentId,
-          timestamp: new Date().toISOString(),
-        })),
-        agentContributions: Object.fromEntries(agentDecisions.map(d => [
-          d.agentId,
-          { contribution: d.content, confidence: d.confidence }
-        ])),
-      },
-      evaluation,
-      governance,
-      agents: agentInfo,
-      interactionHistory,
-      trace,
-    };
+    task.result = result;
+    task.result.trace.taskId = taskId;
 
     taskStore.set(taskId, task);
   } catch (error) {
+    console.error("[task] processTask failed:", error instanceof Error ? error.message : String(error));
     task.status = "failed";
+    task.errorMessage = error instanceof Error ? error.message : String(error);
     task.completedAt = new Date().toISOString();
     taskStore.set(taskId, task);
   }

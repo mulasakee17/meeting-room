@@ -1,0 +1,16 @@
+{
+  "taskId": "ma",
+  "ablation": "full",
+  "runIndex": 0,
+  "accuracy": 99,
+  "rounds": 5,
+  "converged": false,
+  "consensus": 70.37290602333351,
+  "reliability": 46.54,
+  "explainability": 100,
+  "interventions": 2,
+  "issuesDetected": [
+    "premature_consensus",
+    "polarization"
+  ]
+}

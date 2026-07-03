@@ -33,7 +33,8 @@ export interface LLMConfig {
   model: string;
   apiKey?: string;
   baseUrl?: string;
-  timeout?: number; // 超时时间（毫秒）
+  timeout?: number;   // 超时时间（毫秒）
+  temperature?: number; // 温度参数 (0-2)
 }
 
 export interface LLMResponse {
@@ -106,46 +107,58 @@ function mapStatusToErrorType(status: number): { type: LLMErrorType; isRetryable
 
 // 解析 LLM 响应
 function parseLLMResponse(content: string, provider: string): LLMResponse {
-  try {
-    const parsed = JSON.parse(content);
-    
-    // 验证必需字段
-    if (typeof parsed.emotion !== 'number' || typeof parsed.reasoning !== 'string') {
-      throw new LLMError(
-        `LLM 响应格式错误：缺少必需字段 (emotion: number, reasoning: string)`,
-        LLMErrorType.INVALID_RESPONSE,
-        undefined,
-        false
-      );
-    }
-    
-    return {
-      emotion: parsed.emotion,
-      reasoning: parsed.reasoning,
-    };
-  } catch (error) {
-    if (error instanceof LLMError) {
-      throw error;
-    }
-    
-    // 尝试从文本中提取
-    const emotionMatch = content.match(/emotion["\s:]+(-?\d+(?:\.\d+)?)/);
-    const reasoningMatch = content.match(/reasoning["\s:]+["']([^"']+)["']/);
-    
-    if (emotionMatch && reasoningMatch) {
-      return {
-        emotion: parseFloat(emotionMatch[1]),
-        reasoning: reasoningMatch[1],
-      };
-    }
-    
-    throw new LLMError(
-      `无法解析 ${provider} 响应: ${content.slice(0, 100)}...`,
-      LLMErrorType.PARSE_ERROR,
-      undefined,
-      false
-    );
+  // 1. Strip markdown code fences that some models add despite instructions
+  let cleaned = content.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "").trim();
   }
+
+  // 2. Try JSON parse
+  try {
+    const parsed = JSON.parse(cleaned);
+
+    // Accept either {emotion, reasoning} OR {belief, reasoning} as fallback
+    const emotion = typeof parsed.emotion === "number"
+      ? parsed.emotion
+      : typeof parsed.belief === "number"
+        ? Math.round(parsed.belief * 100)  // belief is -1..1, convert to -100..100
+        : 0;
+
+    const reasoning = typeof parsed.reasoning === "string"
+      ? parsed.reasoning
+      : typeof parsed.analysis === "string"
+        ? parsed.analysis
+        : typeof parsed.content === "string"
+          ? parsed.content
+          : JSON.stringify(parsed);
+
+    return { emotion, reasoning };
+  } catch {
+    // JSON parse failed — try regex fallback
+  }
+
+  // 3. Regex extraction from malformed JSON or plain text
+  const emotionMatch = cleaned.match(/emotion["\s:]*(-?\d+(?:\.\d+)?)/);
+  const reasoningMatch = cleaned.match(/reasoning["\s:]*["']([^"']{5,})["']/i);
+
+  if (emotionMatch && reasoningMatch) {
+    return {
+      emotion: parseFloat(emotionMatch[1]),
+      reasoning: reasoningMatch[1],
+    };
+  }
+
+  // 4. Last resort — treat entire response as reasoning with neutral emotion
+  if (cleaned.length > 10) {
+    return { emotion: 0, reasoning: cleaned.slice(0, 2000) };
+  }
+
+  throw new LLMError(
+    `无法解析 ${provider} 响应: ${content.slice(0, 100)}...`,
+    LLMErrorType.PARSE_ERROR,
+    undefined,
+    false
+  );
 }
 
 async function callOpenAI(
@@ -156,6 +169,7 @@ async function callOpenAI(
   const apiKey = config?.apiKey || process.env.OPENAI_API_KEY;
   const model = config?.model || "gpt-4o-mini";
   const timeout = config?.timeout || DEFAULT_TIMEOUT;
+  const temperature = config?.temperature ?? 0.7;
 
   if (!apiKey) {
     throw new LLMError(
@@ -182,7 +196,7 @@ async function callOpenAI(
             { role: "user", content: userPrompt },
           ],
           response_format: { type: "json_object" },
-          temperature: 0.7,
+          temperature,
         }),
       },
       timeout
@@ -352,6 +366,7 @@ async function callDeepSeek(
   const apiKey = config?.apiKey || process.env.DEEPSEEK_API_KEY;
   const model = config?.model || "deepseek-chat";
   const timeout = config?.timeout || DEFAULT_TIMEOUT;
+  const temperature = config?.temperature ?? 0.7;
 
   if (!apiKey) {
     throw new LLMError(
@@ -378,7 +393,7 @@ async function callDeepSeek(
             { role: "user", content: userPrompt },
           ],
           response_format: { type: "json_object" },
-          temperature: 0.7,
+          temperature,
         }),
       },
       timeout

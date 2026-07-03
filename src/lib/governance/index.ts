@@ -16,6 +16,29 @@ import {
   GovernanceState,
 } from "./types";
 import { ReduceWeightIntervention, IntroduceDiversityIntervention, ForceReflectionIntervention, ContinueDiscussionIntervention } from "./interventions";
+import {
+  GOVERNANCE_ECHO_CHAMBER_THRESHOLD,
+  GOVERNANCE_AUTHORITY_BIAS_THRESHOLD,
+  GOVERNANCE_POLARIZATION_THRESHOLD,
+  GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD,
+  GOVERNANCE_PREMATURE_CONSENSUS_LEVEL,
+  GOVERNANCE_PREMATURE_CONSENSUS_STD_THRESHOLD,
+  GOVERNANCE_SEVERITY_ECHO_CHAMBER,
+  GOVERNANCE_SEVERITY_AUTHORITY_BIAS,
+  GOVERNANCE_SEVERITY_POLARIZATION,
+  GOVERNANCE_REDUNDANT_BELIEF_DIFF,
+  GOVERNANCE_REDUNDANT_CONFIDENCE_DIFF,
+  GOVERNANCE_CLUSTER_BELIEF_OFFSET,
+  GOVERNANCE_SIMILARITY_MIN_WORD_LENGTH,
+  GOVERNANCE_STD_NORM_FACTOR,
+  GOVERNANCE_CONSENSUS_LEVEL_FACTOR,
+  GOVERNANCE_ECHO_REDUNDANCY_STD_WEIGHT,
+  GOVERNANCE_ECHO_REDUNDANCY_CONTENT_WEIGHT,
+  GOVERNANCE_PREMATURE_SEVERITY_PROGRESS_RATIO,
+  INTERVENTION_REDUCE_WEIGHT_FACTOR,
+  INTERVENTION_DIVERSITY_PERTURBATION,
+  INTERVENTION_REFLECTION_FACTOR,
+} from "../constants";
 
 export class GovernanceEngine {
   private strategies: Map<InterventionType, InterventionStrategy> = new Map();
@@ -37,10 +60,10 @@ export class GovernanceEngine {
     enablePolarizationDetection: true,
     enablePrematureConsensusDetection: true,
     interventionLevel: "medium",
-    echoChamberThreshold: 0.7,
-    authorityBiasThreshold: 0.4,
-    polarizationThreshold: 0.5,
-    prematureConsensusThreshold: 0.5,
+    echoChamberThreshold: GOVERNANCE_ECHO_CHAMBER_THRESHOLD,
+    authorityBiasThreshold: GOVERNANCE_AUTHORITY_BIAS_THRESHOLD,
+    polarizationThreshold: GOVERNANCE_POLARIZATION_THRESHOLD,
+    prematureConsensusThreshold: GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD,
     maxRounds: 3,
     currentRound: 1,
   };
@@ -115,76 +138,57 @@ export class GovernanceEngine {
     };
   }
 
+  // ---- Shared helpers for detection methods --------------------------------
+
+  /** Default "not detected" intervention */
+  private noIntervention(): { type: InterventionType; applied: boolean; effect?: string } {
+    return { type: "none", applied: false };
+  }
+
+  /** Early-exit when detection is disabled or too few agents */
+  private shouldSkipDetection(
+    enabled: boolean | undefined,
+    agentCount: number,
+    minAgents: number
+  ): boolean {
+    return !enabled || agentCount < minAgents;
+  }
+
+  // ---- Detection methods ---------------------------------------------------
+
   detectEchoChamber(
     agentBeliefs: AgentBelief[],
     messages: MessageInfo[],
     config: GovernanceConfig
   ): EchoChamberDetection {
-    if (!config.enableEchoChamberDetection) {
-      return {
-        detected: false,
-        severity: "low",
-        redundantAgents: [],
-        infoRedundancyScore: 0,
-        intervention: { type: "none", applied: false },
-      };
+    const notDetected = (): EchoChamberDetection => ({
+      detected: false, severity: "low", redundantAgents: [],
+      infoRedundancyScore: 0, intervention: this.noIntervention(),
+    });
+
+    if (this.shouldSkipDetection(config.enableEchoChamberDetection, agentBeliefs.length, 3)) {
+      return notDetected();
     }
 
-    if (agentBeliefs.length < 3) {
-      return {
-        detected: false,
-        severity: "low",
-        redundantAgents: [],
-        infoRedundancyScore: 0,
-        intervention: { type: "none", applied: false },
-      };
-    }
-
-    const beliefValues = agentBeliefs.map(b => b.belief);
-    const beliefStd = this.computeStd(beliefValues);
-    const normalizedStd = beliefStd / 2;
-
+    const beliefStd = this.computeStd(agentBeliefs.map(b => b.belief));
+    const normalizedStd = beliefStd / GOVERNANCE_STD_NORM_FACTOR;
     const contentSimilarity = this.computeContentSimilarity(messages);
-    const infoRedundancyScore = (1 - normalizedStd) * 0.5 + contentSimilarity * 0.5;
+    const infoRedundancyScore = (1 - normalizedStd) * GOVERNANCE_ECHO_REDUNDANCY_STD_WEIGHT + contentSimilarity * GOVERNANCE_ECHO_REDUNDANCY_CONTENT_WEIGHT;
 
-    const detected = infoRedundancyScore >= (config.echoChamberThreshold || 0.7);
-    const severity = this.getSeverity(infoRedundancyScore, [0.7, 0.85]);
-
-    let intervention: { type: InterventionType; applied: boolean; effect?: string } = {
-      type: "none",
-      applied: false,
-    };
-
-    if (detected && config.interventionLevel !== "none") {
-      const redundantPairs = this.findRedundantAgentPairs(agentBeliefs);
-      const flatPairs = redundantPairs.flat();
-      const uniqueSet = new Set(flatPairs);
-      const redundantAgents = Array.from(uniqueSet);
-
-      if (config.interventionLevel === "light") {
-        intervention = {
-          type: "introduce_diversity",
-          applied: true,
-          effect: `Introduced diverse information to ${redundantAgents.length} agents`,
-        };
-      } else {
-        intervention = {
-          type: "break_connections",
-          applied: true,
-          effect: `Broken connections between ${redundantPairs.length} redundant agent pairs`,
-        };
-      }
-    }
+    const detected = infoRedundancyScore >= (config.echoChamberThreshold || GOVERNANCE_ECHO_CHAMBER_THRESHOLD);
+    const severity = this.getSeverity(infoRedundancyScore, GOVERNANCE_SEVERITY_ECHO_CHAMBER);
 
     const redundantPairs = this.findRedundantAgentPairs(agentBeliefs);
-    const flatPairs = redundantPairs.flat();
-    const uniqueSet = new Set(flatPairs);
-    const redundantAgents = Array.from(uniqueSet);
+    const redundantAgents = Array.from(new Set(redundantPairs.flat()));
+
+    const intervention = (detected && config.interventionLevel !== "none")
+      ? (config.interventionLevel === "light"
+        ? { type: "introduce_diversity" as InterventionType, applied: true, effect: `Introduced diverse information to ${redundantAgents.length} agents` }
+        : { type: "break_connections" as InterventionType, applied: true, effect: `Broken connections between ${redundantPairs.length} redundant agent pairs` })
+      : this.noIntervention();
 
     return {
-      detected,
-      severity,
-      redundantAgents,
+      detected, severity, redundantAgents,
       infoRedundancyScore: Math.round(infoRedundancyScore * 100) / 100,
       intervention,
     };
@@ -195,65 +199,33 @@ export class GovernanceEngine {
     messages: MessageInfo[],
     config: GovernanceConfig
   ): AuthorityBiasDetection {
-    if (!config.enableAuthorityBiasDetection) {
-      return {
-        detected: false,
-        severity: "low",
-        influenceRatio: 0,
-        intervention: { type: "none", applied: false },
-      };
-    }
+    const notDetected = (): AuthorityBiasDetection => ({
+      detected: false, severity: "low", influenceRatio: 0,
+      intervention: this.noIntervention(),
+    });
 
-    if (agentBeliefs.length < 2) {
-      return {
-        detected: false,
-        severity: "low",
-        influenceRatio: 0,
-        intervention: { type: "none", applied: false },
-      };
+    if (this.shouldSkipDetection(config.enableAuthorityBiasDetection, agentBeliefs.length, 2)) {
+      return notDetected();
     }
 
     const messageCounts: Record<string, number> = {};
-    messages.forEach(m => {
-      messageCounts[m.agentId] = (messageCounts[m.agentId] || 0) + 1;
-    });
-
+    messages.forEach(m => { messageCounts[m.agentId] = (messageCounts[m.agentId] || 0) + 1; });
     const totalMessages = Object.values(messageCounts).reduce((a, b) => a + b, 0) || 1;
     const maxMessages = Math.max(...Object.values(messageCounts));
     const influenceRatio = maxMessages / totalMessages;
+    const dominantAgent = Object.keys(messageCounts).find(id => messageCounts[id] === maxMessages);
 
-    const dominantAgent = Object.keys(messageCounts).find(
-      id => messageCounts[id] === maxMessages
-    );
+    const detected = influenceRatio >= (config.authorityBiasThreshold || GOVERNANCE_AUTHORITY_BIAS_THRESHOLD);
+    const severity = this.getSeverity(influenceRatio, GOVERNANCE_SEVERITY_AUTHORITY_BIAS);
 
-    const detected = influenceRatio >= (config.authorityBiasThreshold || 0.4);
-    const severity = this.getSeverity(influenceRatio, [0.4, 0.6]);
-
-    let intervention: { type: InterventionType; applied: boolean; effect?: string } = {
-      type: "none",
-      applied: false,
-    };
-
-    if (detected && config.interventionLevel !== "none" && dominantAgent) {
-      if (config.interventionLevel === "light") {
-        intervention = {
-          type: "introduce_dissent",
-          applied: true,
-          effect: `Introduced dissenting agent to counter ${dominantAgent}'s influence`,
-        };
-      } else {
-        intervention = {
-          type: "reduce_weight",
-          applied: true,
-          effect: `Reduced ${dominantAgent}'s influence weight by ${(influenceRatio * 30).toFixed(0)}%`,
-        };
-      }
-    }
+    const intervention = (detected && config.interventionLevel !== "none" && dominantAgent)
+      ? (config.interventionLevel === "light"
+        ? { type: "introduce_dissent" as InterventionType, applied: true, effect: `Introduced dissenting agent to counter ${dominantAgent}'s influence` }
+        : { type: "reduce_weight" as InterventionType, applied: true, effect: `Reduced ${dominantAgent}'s influence weight by ${(influenceRatio * 30).toFixed(0)}%` })
+      : this.noIntervention();
 
     return {
-      detected,
-      severity,
-      dominantAgent,
+      detected, severity, dominantAgent,
       influenceRatio: Math.round(influenceRatio * 100) / 100,
       intervention,
     };
@@ -263,60 +235,28 @@ export class GovernanceEngine {
     agentBeliefs: AgentBelief[],
     config: GovernanceConfig
   ): PolarizationDetection {
-    if (!config.enablePolarizationDetection) {
-      return {
-        detected: false,
-        severity: "low",
-        groups: [],
-        polarizationIndex: 0,
-        intervention: { type: "none", applied: false },
-      };
+    const notDetected = (): PolarizationDetection => ({
+      detected: false, severity: "low", groups: [],
+      polarizationIndex: 0, intervention: this.noIntervention(),
+    });
+
+    if (this.shouldSkipDetection(config.enablePolarizationDetection, agentBeliefs.length, 4)) {
+      return notDetected();
     }
 
-    if (agentBeliefs.length < 4) {
-      return {
-        detected: false,
-        severity: "low",
-        groups: [],
-        polarizationIndex: 0,
-        intervention: { type: "none", applied: false },
-      };
-    }
-
-    const beliefs = agentBeliefs.map(b => b.belief);
-    const beliefStd = this.computeStd(beliefs);
-    const polarizationIndex = beliefStd;
-
-    const detected = polarizationIndex >= (config.polarizationThreshold || 0.5);
-    const severity = this.getSeverity(polarizationIndex, [0.5, 0.7]);
-
+    const polarizationIndex = this.computeStd(agentBeliefs.map(b => b.belief));
+    const detected = polarizationIndex >= (config.polarizationThreshold || GOVERNANCE_POLARIZATION_THRESHOLD);
+    const severity = this.getSeverity(polarizationIndex, GOVERNANCE_SEVERITY_POLARIZATION);
     const groups = this.clusterAgentsByBelief(agentBeliefs);
 
-    let intervention: { type: InterventionType; applied: boolean; effect?: string } = {
-      type: "none",
-      applied: false,
-    };
-
-    if (detected && config.interventionLevel !== "none") {
-      if (config.interventionLevel === "light") {
-        intervention = {
-          type: "pair_opposites",
-          applied: true,
-          effect: `Paired ${groups.length} opposing groups for discussion`,
-        };
-      } else {
-        intervention = {
-          type: "force_reflection",
-          applied: true,
-          effect: `Forced ${agentBeliefs.length} agents to reflect on opposing viewpoints`,
-        };
-      }
-    }
+    const intervention = (detected && config.interventionLevel !== "none")
+      ? (config.interventionLevel === "light"
+        ? { type: "pair_opposites" as InterventionType, applied: true, effect: `Paired ${groups.length} opposing groups for discussion` }
+        : { type: "force_reflection" as InterventionType, applied: true, effect: `Forced ${agentBeliefs.length} agents to reflect on opposing viewpoints` })
+      : this.noIntervention();
 
     return {
-      detected,
-      severity,
-      groups,
+      detected, severity, groups,
       polarizationIndex: Math.round(polarizationIndex * 100) / 100,
       intervention,
     };
@@ -326,61 +266,42 @@ export class GovernanceEngine {
     agentBeliefs: AgentBelief[],
     config: GovernanceConfig
   ): PrematureConsensusDetection {
-    if (!config.enablePrematureConsensusDetection) {
-      return {
-        detected: false,
-        severity: "low",
-        roundNumber: config.currentRound || 1,
-        maxRounds: config.maxRounds || 3,
-        beliefStd: 0,
-        consensusLevel: 0,
-        intervention: { type: "none", applied: false },
-      };
-    }
-
     const currentRound = config.currentRound || 1;
     const maxRounds = config.maxRounds || 3;
-    const threshold = config.prematureConsensusThreshold || 0.5;
+    const threshold = config.prematureConsensusThreshold || GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD;
 
-    if (agentBeliefs.length < 2 || currentRound >= maxRounds) {
-      return {
-        detected: false,
-        severity: "low",
-        roundNumber: currentRound,
-        maxRounds,
-        beliefStd: 0,
-        consensusLevel: 0,
-        intervention: { type: "none", applied: false },
-      };
+    const notDetected = (): PrematureConsensusDetection => ({
+      detected: false, severity: "low", roundNumber: currentRound,
+      maxRounds, beliefStd: 0, consensusLevel: 0,
+      intervention: this.noIntervention(),
+    });
+
+    if (this.shouldSkipDetection(config.enablePrematureConsensusDetection, agentBeliefs.length, 2)
+        || currentRound >= maxRounds) {
+      return notDetected();
     }
 
-    const beliefs = agentBeliefs.map(b => b.belief);
-    const beliefStd = this.computeStd(beliefs);
-    const consensusLevel = Math.max(0, 1 - beliefStd * 2);
-
+    const beliefStd = this.computeStd(agentBeliefs.map(b => b.belief));
+    const consensusLevel = Math.max(0, 1 - beliefStd * GOVERNANCE_CONSENSUS_LEVEL_FACTOR);
     const roundProgress = currentRound / maxRounds;
-    const detected = roundProgress < threshold && consensusLevel > 0.7 && beliefStd < 0.15;
-    const severity = detected ? (roundProgress < threshold * 0.5 ? "high" : "medium") : "low";
 
-    let intervention: { type: InterventionType; applied: boolean; effect?: string } = {
-      type: "none",
-      applied: false,
-    };
+    const detected = roundProgress < threshold
+      && consensusLevel > GOVERNANCE_PREMATURE_CONSENSUS_LEVEL
+      && beliefStd < GOVERNANCE_PREMATURE_CONSENSUS_STD_THRESHOLD;
+    const severity = detected
+      ? (roundProgress < threshold * GOVERNANCE_PREMATURE_SEVERITY_PROGRESS_RATIO ? "high" : "medium")
+      : "low";
 
-    if (detected && config.interventionLevel !== "none") {
-      const additionalRounds = Math.ceil(maxRounds * (threshold - roundProgress));
-      intervention = {
-        type: "continue_discussion",
-        applied: true,
-        effect: `Added ${additionalRounds} additional rounds to prevent premature consensus`,
-      };
-    }
+    const intervention = (detected && config.interventionLevel !== "none")
+      ? {
+          type: "continue_discussion" as InterventionType,
+          applied: true,
+          effect: `Added ${Math.ceil(maxRounds * (threshold - roundProgress))} additional rounds to prevent premature consensus`,
+        }
+      : this.noIntervention();
 
     return {
-      detected,
-      severity,
-      roundNumber: currentRound,
-      maxRounds,
+      detected, severity, roundNumber: currentRound, maxRounds,
       beliefStd: Math.round(beliefStd * 100) / 100,
       consensusLevel: Math.round(consensusLevel * 100) / 100,
       intervention,
@@ -395,7 +316,7 @@ export class GovernanceEngine {
 
   private computeContentSimilarity(messages: MessageInfo[]): number {
     if (messages.length < 2) return 0;
-    const contents = messages.map(m => m.content.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+    const contents = messages.map(m => m.content.toLowerCase().split(/\s+/).filter(w => w.length > GOVERNANCE_SIMILARITY_MIN_WORD_LENGTH));
     
     let totalSimilarity = 0;
     let pairCount = 0;
@@ -418,7 +339,7 @@ export class GovernanceEngine {
       for (let j = i + 1; j < agentBeliefs.length; j++) {
         const beliefDiff = Math.abs(agentBeliefs[i].belief - agentBeliefs[j].belief);
         const confidenceDiff = Math.abs(agentBeliefs[i].confidence - agentBeliefs[j].confidence);
-        if (beliefDiff < 0.1 && confidenceDiff < 10) {
+        if (beliefDiff < GOVERNANCE_REDUNDANT_BELIEF_DIFF && confidenceDiff < GOVERNANCE_REDUNDANT_CONFIDENCE_DIFF) {
           pairs.push([agentBeliefs[i].agentId, agentBeliefs[j].agentId]);
         }
       }
@@ -433,9 +354,9 @@ export class GovernanceEngine {
     const meanBelief = sorted.reduce((sum, b) => sum + b.belief, 0) / sorted.length;
     
     const groups: { label: string; agentIds: string[]; belief: number }[] = [];
-    const positiveAgents = sorted.filter(b => b.belief > meanBelief + 0.2);
-    const negativeAgents = sorted.filter(b => b.belief < meanBelief - 0.2);
-    const neutralAgents = sorted.filter(b => Math.abs(b.belief - meanBelief) <= 0.2);
+    const positiveAgents = sorted.filter(b => b.belief > meanBelief + GOVERNANCE_CLUSTER_BELIEF_OFFSET);
+    const negativeAgents = sorted.filter(b => b.belief < meanBelief - GOVERNANCE_CLUSTER_BELIEF_OFFSET);
+    const neutralAgents = sorted.filter(b => Math.abs(b.belief - meanBelief) <= GOVERNANCE_CLUSTER_BELIEF_OFFSET);
     
     if (positiveAgents.length > 0) {
       groups.push({
@@ -554,7 +475,7 @@ export class GovernanceEngine {
       interventions.push({
         type: "reduce_weight",
         targetAgentId: result.authorityBias.dominantAgent,
-        parameters: { reductionFactor: 0.5 },
+        parameters: { reductionFactor: INTERVENTION_REDUCE_WEIGHT_FACTOR },
         effect: "",
         applied: false,
       });
@@ -564,7 +485,7 @@ export class GovernanceEngine {
       interventions.push({
         type: "introduce_diversity",
         targetAgents: result.echoChamber.redundantAgents,
-        parameters: { perturbationAmount: 0.3 },
+        parameters: { perturbationAmount: INTERVENTION_DIVERSITY_PERTURBATION },
         effect: "",
         applied: false,
       });
@@ -574,12 +495,12 @@ export class GovernanceEngine {
       const extremeAgents = result.polarization.groups
         .filter(g => g.label === "positive" || g.label === "negative")
         .flatMap(g => g.agentIds);
-      
+
       if (extremeAgents.length > 0) {
         interventions.push({
           type: "force_reflection",
           targetAgents: extremeAgents,
-          parameters: { reflectionFactor: 0.2 },
+          parameters: { reflectionFactor: INTERVENTION_REFLECTION_FACTOR },
           effect: "",
           applied: false,
         });

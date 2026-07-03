@@ -22,10 +22,19 @@ import { DecisionTraceBuilder } from "./decisionTrace";
 import { GovernanceEngine, AgentBelief, MessageInfo, GovernanceIssue, Intervention } from "../governance";
 import { StrategyRegistry } from "./strategyRegistry";
 import { EventTracker } from "./eventTracker";
-import { ObservationLayer } from "../observation";
+import { ObservationLayer, DefaultOpinionParser } from "../observation";
 import { InferenceLayer } from "../inference";
-import type { RawObservation, ObserverAgent } from "../observation";
+import type { RawObservation, ObserverAgent, OpinionParser } from "../observation";
 import type { StateDelta } from "../inference";
+import {
+  DISCUSSION_DEFAULT_CONVERGENCE_THRESHOLD,
+  DISCUSSION_DECISION_POSITIVE_THRESHOLD,
+  DISCUSSION_DECISION_NEGATIVE_THRESHOLD,
+  BELIEF_MIN,
+  BELIEF_MAX,
+  CONFIDENCE_MIN,
+  CONFIDENCE_MAX,
+} from "../constants";
 
 export interface DiscussionAgent {
   id: string;
@@ -50,11 +59,12 @@ export class DiscussionEngine {
   private roundDataArray: RoundData[] = [];
   private observationLayer: ObservationLayer;
   private inferenceLayer: InferenceLayer;
+  private opinionParser: OpinionParser;
 
   constructor(config?: Partial<DiscussionConfig>) {
     this.config = {
       maxRounds: 3,
-      convergenceThreshold: 0.1,
+      convergenceThreshold: DISCUSSION_DEFAULT_CONVERGENCE_THRESHOLD,
       beliefUpdateStrategy: "rule_based",
       influenceStrategy: "rule_based",
       memoryStrategy: "in_memory",
@@ -71,169 +81,191 @@ export class DiscussionEngine {
     this.strategyRegistry = new StrategyRegistry();
     this.observationLayer = new ObservationLayer();
     this.inferenceLayer = new InferenceLayer();
+    this.opinionParser = new DefaultOpinionParser();
 
     this.strategyRegistry.register(new RuleBasedBeliefUpdate());
     this.strategyRegistry.register(new RuleBasedInfluence());
     this.strategyRegistry.register(new InMemoryStrategy());
   }
 
-  async run(agents: DiscussionAgent[], task: DiscussionTask): Promise<DiscussionResult> {
-    const roundResults: RoundResult[] = [];
-    const agentStates = new Map<string, { belief: number; confidence: number }>();
+  // ==========================================================================
+  // Public API
+  // ==========================================================================
 
+  /**
+   * Run a full multi-round discussion.
+   *
+   * Phases: initialize agents → main loop (observe → parse → graph → trace →
+   * converge? → update beliefs → govern → record) → build result.
+   */
+  async run(agents: DiscussionAgent[], task: DiscussionTask): Promise<DiscussionResult> {
     this.eventTracker.track({
-      type: "round_start",
-      timestamp: new Date().toISOString(),
-      roundNumber: 0,
+      type: "round_start", timestamp: new Date().toISOString(), roundNumber: 0,
       payload: { task: task.id, agentCount: agents.length },
     });
 
+    const agentStates = this.initializeAgentStates(agents);
+
+    const roundResults = await this.runMainLoop(agents, task, agentStates);
+
+    this.eventTracker.track({
+      type: "decision", timestamp: new Date().toISOString(),
+      roundNumber: roundResults.length,
+      payload: { finalDecision: "", converged: false, totalRounds: roundResults.length },
+    });
+
+    return this.buildDiscussionResult(roundResults, agentStates);
+  }
+
+  // ==========================================================================
+  // Private: run() sub-methods
+  // ==========================================================================
+
+  /** Phase 1: snapshot initial agent states and populate graph nodes. */
+  private initializeAgentStates(
+    agents: DiscussionAgent[]
+  ): Map<string, { belief: number; confidence: number }> {
+    const agentStates = new Map<string, { belief: number; confidence: number }>();
     for (const agent of agents) {
       const state = agent.getState();
       agentStates.set(agent.id, { belief: state.belief, confidence: state.confidence });
       this.graphBuilder.addNode(agent.id, agent.name, agent.role, state.belief, state.confidence);
     }
+    return agentStates;
+  }
+
+  /** Phase 2: run the observe→parse→graph→trace→converge→belief→govern loop. */
+  private async runMainLoop(
+    agents: DiscussionAgent[],
+    task: DiscussionTask,
+    agentStates: Map<string, { belief: number; confidence: number }>
+  ): Promise<RoundResult[]> {
+    const roundResults: RoundResult[] = [];
 
     for (let round = 1; round <= this.config.maxRounds; round++) {
       this.eventTracker.track({
-        type: "round_start",
-        timestamp: new Date().toISOString(),
-        roundNumber: round,
-        payload: {},
+        type: "round_start", timestamp: new Date().toISOString(),
+        roundNumber: round, payload: {},
       });
 
+      // -- observe & collect opinions --------------------------------------
       const opinions = await this.runRound(agents, task, round, agentStates);
       roundResults.push({
-        roundNumber: round,
-        opinions: [...opinions],
+        roundNumber: round, opinions: [...opinions],
         timestamp: new Date().toISOString(),
         converged: this.checkConvergence(opinions),
       });
 
       this.graphBuilder.updateFromOpinions(opinions, round);
 
+      // -- trace building --------------------------------------------------
       const graph = this.graphBuilder.getGraph();
-      const causalFactorsMap = new Map<string, CausalFactor[]>();
-      for (const opinion of opinions) {
-        const influenceWeights = graph.edges
-          .filter(e => e.target === opinion.agentId)
-          .map(e => ({
-            sourceAgentId: e.source,
-            weight: e.weight,
-            type: e.type,
-          }));
-
-        const factors: CausalFactor[] = [];
-        for (const w of influenceWeights) {
-          factors.push({
-            type: "agent_influence",
-            sourceId: w.sourceAgentId,
-            description: `受到 Agent ${w.sourceAgentId} 的影响，权重: ${w.weight.toFixed(2)}`,
-            weight: w.weight,
-          });
-        }
-        causalFactorsMap.set(opinion.agentId, factors);
-      }
-
+      const causalFactorsMap = this.computeCausalFactors(opinions, graph);
       this.traceBuilder.addRound(round, opinions, this.memoryManager.getAll(), graph, causalFactorsMap);
 
-      if (this.checkConvergence(opinions)) {
-        break;
-      }
+      if (this.checkConvergence(opinions)) break;
 
+      // -- belief update ---------------------------------------------------
       const prevStates = new Map(agentStates);
-    
       this.updateBeliefs(opinions, agentStates, round);
       this.updateAgentStates(agents, agentStates);
 
       this.eventTracker.track({
-        type: "belief_update",
-        timestamp: new Date().toISOString(),
+        type: "belief_update", timestamp: new Date().toISOString(),
         roundNumber: round,
         payload: { agentStates: Object.fromEntries(agentStates) },
       });
 
+      // -- governance ------------------------------------------------------
       const governanceResult = this.applyGovernance(round, opinions, agentStates, agents);
-      const interventions = governanceResult && governanceResult.hasIntervention 
-        ? governanceResult.interventions 
-        : [];
-      
-      if (governanceResult && governanceResult.hasIntervention) {
+      const interventions = governanceResult?.hasIntervention ? governanceResult.interventions : [];
+
+      if (governanceResult?.hasIntervention) {
         this.eventTracker.track({
-          type: "intervention",
-          timestamp: new Date().toISOString(),
-          roundNumber: round,
-          payload: { interventions },
+          type: "intervention", timestamp: new Date().toISOString(),
+          roundNumber: round, payload: { interventions },
         });
-        this.traceBuilder.addRound(
-          round,
-          opinions,
-          this.memoryManager.getAll(),
-          this.graphBuilder.getGraph(),
-          new Map(),
-          interventions
-        );
+        this.traceBuilder.addRound(round, opinions, this.memoryManager.getAll(),
+          this.graphBuilder.getGraph(), new Map(), interventions);
       }
 
-      const beliefChanges: Record<string, { old: number; new: number; reason: string }> = {};
-      agentStates.forEach((newState, agentId) => {
-        const oldState = prevStates.get(agentId);
-        if (oldState && oldState.belief !== newState.belief) {
-          beliefChanges[agentId] = {
-            old: oldState.belief,
-            new: newState.belief,
-            reason: "influence",
-          };
-        }
-      });
-
-      const influenceEvents = graph.edges
-        .filter(e => e.round === round)
-        .map(e => ({
-          sourceAgentId: e.source,
-          targetAgentId: e.target,
-          type: e.type,
-          weight: e.weight,
-          round: e.round,
-          timestamp: new Date().toISOString(),
-        }));
-
+      // -- record round data ------------------------------------------------
+      const beliefChanges = this.buildBeliefChanges(prevStates, agentStates);
+      const influenceEvents = this.buildInfluenceEvents(graph, round);
       const converged = this.checkConvergence(opinions);
 
-      const roundData: RoundData = {
-        roundNumber: round,
-        timestamp: new Date().toISOString(),
-        opinions: [...opinions],
-        beliefChanges,
-        influenceEvents,
+      this.roundDataArray.push({
+        roundNumber: round, timestamp: new Date().toISOString(),
+        opinions: [...opinions], beliefChanges, influenceEvents,
         governanceIssues: governanceResult?.issues || [],
-        interventions,
-        converged,
-      };
-      this.roundDataArray.push(roundData);
+        interventions, converged,
+      });
 
       this.eventTracker.track({
-        type: "round_end",
-        timestamp: new Date().toISOString(),
-        roundNumber: round,
-        payload: { converged },
+        type: "round_end", timestamp: new Date().toISOString(),
+        roundNumber: round, payload: { converged },
       });
     }
 
+    return roundResults;
+  }
+
+  /** Compute causal factor map for a round's opinions against the current graph. */
+  private computeCausalFactors(
+    opinions: AgentOpinion[],
+    graph: InteractionGraph
+  ): Map<string, CausalFactor[]> {
+    const map = new Map<string, CausalFactor[]>();
+    for (const opinion of opinions) {
+      const factors: CausalFactor[] = graph.edges
+        .filter(e => e.target === opinion.agentId)
+        .map(e => ({
+          type: "agent_influence" as const,
+          sourceId: e.source,
+          description: `受到 Agent ${e.source} 的影响，权重: ${e.weight.toFixed(2)}`,
+          weight: e.weight,
+        }));
+      map.set(opinion.agentId, factors);
+    }
+    return map;
+  }
+
+  /** Compute per-agent belief changes from previous to current states. */
+  private buildBeliefChanges(
+    prevStates: Map<string, { belief: number; confidence: number }>,
+    agentStates: Map<string, { belief: number; confidence: number }>
+  ): Record<string, { old: number; new: number; reason: string }> {
+    const changes: Record<string, { old: number; new: number; reason: string }> = {};
+    agentStates.forEach((newState, agentId) => {
+      const oldState = prevStates.get(agentId);
+      if (oldState && oldState.belief !== newState.belief) {
+        changes[agentId] = {
+          old: oldState.belief, new: newState.belief, reason: "influence",
+        };
+      }
+    });
+    return changes;
+  }
+
+  /** Extract influence events from graph edges for a given round. */
+  private buildInfluenceEvents(graph: InteractionGraph, round: number) {
+    return graph.edges
+      .filter(e => e.round === round)
+      .map(e => ({
+        sourceAgentId: e.source, targetAgentId: e.target,
+        type: e.type, weight: e.weight, round: e.round,
+        timestamp: new Date().toISOString(),
+      }));
+  }
+
+  /** Phase 3: assemble the final DiscussionResult. */
+  private buildDiscussionResult(
+    roundResults: RoundResult[],
+    agentStates: Map<string, { belief: number; confidence: number }>
+  ): DiscussionResult {
     const finalDecision = this.generateFinalDecision(roundResults);
     const finalBeliefs: Record<string, number> = {};
-    agentStates.forEach((state, agentId) => {
-      finalBeliefs[agentId] = state.belief;
-    });
-
-    const converged = roundResults[roundResults.length - 1]?.converged || false;
-    
-    this.eventTracker.track({
-      type: "decision",
-      timestamp: new Date().toISOString(),
-      roundNumber: roundResults.length,
-      payload: { finalDecision, converged, totalRounds: roundResults.length },
-    });
+    agentStates.forEach((state, agentId) => { finalBeliefs[agentId] = state.belief; });
 
     return {
       roundResults,
@@ -241,10 +273,14 @@ export class DiscussionEngine {
       interactionGraph: this.graphBuilder.getGraph(),
       finalDecision,
       finalBeliefs,
-      converged,
+      converged: roundResults[roundResults.length - 1]?.converged || false,
       totalRounds: roundResults.length,
     };
   }
+
+  // ==========================================================================
+  // Public analysis helpers
+  // ==========================================================================
 
   getDiscussionData(task: DiscussionTask, agentInfos: AgentInfo[]): DiscussionData {
     const trace = this.traceBuilder.getCompleteTrace();
@@ -291,6 +327,41 @@ export class DiscussionEngine {
     };
   }
 
+  /**
+   * Build a minimal RuntimeContext for use in inference calls during
+   * internal belief updates.  Previously these were constructed with
+   * `{} as any` casts (ghost objects) that would crash if any code
+   * path tried to read a field beyond `round.current`.
+   */
+  private makeInferenceContext(roundNumber: number) {
+    const emptyCollectiveState = {
+      agentStates: new Map(),
+      interactionGraph: { nodes: [], edges: [] } as InteractionGraph,
+      decisionTrace: {
+        entries: [],
+        enhancedEntries: [],
+        consensusEvents: [],
+        influenceGraph: [],
+        beliefTrajectories: {},
+      },
+      beliefTrajectories: {} as Record<string, { round: number; belief: number; confidence: number }[]>,
+    };
+
+    return {
+      experiment: { id: "", taskId: "", config: {} as any, status: "created" as const, createdAt: "" },
+      session: { id: "", experimentId: "", runtimeContext: undefined as any, status: "initialized" as const, startTime: "" },
+      task: { id: "", description: "", type: "", content: "", status: "submitted" as const, createdAt: "", metadata: {} },
+      round: { current: roundNumber, max: this.config.maxRounds, startedAt: new Date().toISOString() },
+      state: emptyCollectiveState,
+      metrics: { evaluation: null, previousEvaluation: null, delta: {}, history: [] },
+      governance: { issues: [], interventions: [], appliedInterventions: [], status: "clean" as const },
+      agents: { agents: [], states: new Map(), getAgent: () => undefined, getAllStates: () => new Map() },
+      config: { termination: { conditions: [], strategy: "any" as const }, evaluation: {} as any, governance: {} as any },
+      timeline: [] as any[],
+      artifact: {} as any,
+    };
+  }
+
   getEventTracker(): EventTracker {
     return this.eventTracker;
   }
@@ -333,19 +404,7 @@ export class DiscussionEngine {
         influenceGraph: [],
         beliefTrajectories: {},
       },
-    }, {
-      experiment: {} as any,
-      session: {} as any,
-      task: {} as any,
-      round: { current: roundNumber, max: this.config.maxRounds, startedAt: new Date().toISOString() },
-      state: {} as any,
-      metrics: {} as any,
-      governance: {} as any,
-      agents: {} as any,
-      config: {} as any,
-      timeline: [],
-      artifact: {} as any,
-    });
+    }, this.makeInferenceContext(roundNumber));
 
     const stateDeltas: StateDelta[] = deltas.map(delta => {
       const current = agentStates.get(delta.agentId);
@@ -392,18 +451,30 @@ export class DiscussionEngine {
     return observations.map(o => o.parsedOpinion);
   }
 
+  /**
+   * Observe agents by sending prompts and parsing their responses.
+   * Delegates to the shared DefaultOpinionParser to avoid duplicating
+   * the parseOpinion logic that also lives in ObservationLayer.
+   */
   private async observeAgents(
     agents: ObserverAgent[],
     task: DiscussionTask,
     roundNumber: number
   ): Promise<RawObservation[]> {
     const recentMemory = this.memoryManager.getRecent(agents.length * 2);
-    
+
     const observationPromises = agents.map(async (agent) => {
       const state = agent.getState();
       const prompt = this.buildPrompt(agent, typeof task.content === "string" ? task.content : JSON.stringify(task.content), recentMemory, roundNumber);
       const response = await agent.sendMessage(prompt);
-      const parsedOpinion = this.parseOpinion(response, agent.id, state.belief, state.confidence, roundNumber);
+      // Use the shared parser instead of a private duplicate
+      const parsedOpinion = this.opinionParser.parseOpinion(
+        response,
+        agent.id,
+        state.belief,
+        state.confidence,
+        roundNumber
+      );
 
       return {
         agentId: agent.id,
@@ -452,38 +523,6 @@ Respond in JSON format:
 }`;
   }
 
-  private parseOpinion(
-    response: string,
-    agentId: string,
-    currentBelief: number,
-    currentConfidence: number,
-    roundNumber: number
-  ): AgentOpinion {
-    try {
-      const parsed = JSON.parse(response);
-
-      return {
-        agentId,
-        reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : "No reasoning provided",
-        evidence: Array.isArray(parsed.evidence) ? parsed.evidence : [],
-        belief: typeof parsed.belief === "number" ? Math.max(-1, Math.min(1, parsed.belief)) : currentBelief,
-        confidence: typeof parsed.confidence === "number" ? Math.max(0, Math.min(100, parsed.confidence)) : currentConfidence,
-        nextOpinion: typeof parsed.nextOpinion === "string" ? parsed.nextOpinion : "",
-        referencedAgents: Array.isArray(parsed.referencedAgents) ? parsed.referencedAgents : [],
-      };
-    } catch {
-      return {
-        agentId,
-        reasoning: response.substring(0, 500),
-        evidence: [],
-        belief: currentBelief,
-        confidence: currentConfidence,
-        nextOpinion: "",
-        referencedAgents: [],
-      };
-    }
-  }
-
   private checkConvergence(opinions: AgentOpinion[]): boolean {
     if (opinions.length < 2) return true;
 
@@ -521,26 +560,14 @@ Respond in JSON format:
         influenceGraph: [],
         beliefTrajectories: {},
       },
-    }, {
-      experiment: {} as any,
-      session: {} as any,
-      task: {} as any,
-      round: { current: roundNumber, max: this.config.maxRounds, startedAt: new Date().toISOString() },
-      state: {} as any,
-      metrics: {} as any,
-      governance: {} as any,
-      agents: {} as any,
-      config: {} as any,
-      timeline: [],
-      artifact: {} as any,
-    });
+    }, this.makeInferenceContext(roundNumber));
 
     for (const delta of deltas) {
       const current = agentStates.get(delta.agentId);
       if (current) {
         agentStates.set(delta.agentId, {
-          belief: Math.max(-1, Math.min(1, current.belief + delta.beliefChange)),
-          confidence: Math.max(0, Math.min(100, current.confidence + delta.confidenceChange)),
+          belief: Math.max(BELIEF_MIN, Math.min(BELIEF_MAX, current.belief + delta.beliefChange)),
+          confidence: Math.max(CONFIDENCE_MIN, Math.min(CONFIDENCE_MAX, current.confidence + delta.confidenceChange)),
         });
       }
     }
@@ -567,7 +594,7 @@ Respond in JSON format:
       .map(o => `${o.agentId}: ${o.reasoning}`);
 
     const avgBelief = lastRound.opinions.reduce((sum, o) => sum + o.belief, 0) / lastRound.opinions.length;
-    const beliefLabel = avgBelief > 0.3 ? "positive" : avgBelief < -0.3 ? "negative" : "neutral";
+    const beliefLabel = avgBelief > DISCUSSION_DECISION_POSITIVE_THRESHOLD ? "positive" : avgBelief < DISCUSSION_DECISION_NEGATIVE_THRESHOLD ? "negative" : "neutral";
 
     return `Final decision after ${roundResults.length} rounds (overall belief: ${avgBelief.toFixed(2)} - ${beliefLabel}):\n\n${reasonings.join("\n\n")}`;
   }

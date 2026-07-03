@@ -50,10 +50,16 @@ export class ForceReflectionIntervention implements InterventionStrategy {
     });
 
     const affectedCount = targetAgents.length;
+    // Build a lookup map to correctly match original beliefs — the previous
+    // implementation used `i` (the filtered-array index) to index into the
+    // unfiltered `state.agentBeliefs`, producing wrong diffs.
+    const originalBeliefMap = new Map(
+      state.agentBeliefs.map(b => [b.agentId, b.belief])
+    );
     const maxAdjustment = Math.max(
       ...updatedBeliefs
         .filter(b => targetAgents.includes(b.agentId))
-        .map((b, i) => Math.abs(b.belief - state.agentBeliefs[i].belief))
+        .map(b => Math.abs(b.belief - (originalBeliefMap.get(b.agentId) ?? b.belief)))
     );
 
     return {
