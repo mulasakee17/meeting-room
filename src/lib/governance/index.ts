@@ -16,6 +16,7 @@ import {
   GovernanceState,
 } from "./types";
 import { ReduceWeightIntervention, IntroduceDiversityIntervention, ForceReflectionIntervention, ContinueDiscussionIntervention } from "./interventions";
+import { computeAdaptiveThresholds, type CalibrationMetrics } from "./adaptiveThresholds";
 import {
   GOVERNANCE_ECHO_CHAMBER_THRESHOLD,
   GOVERNANCE_AUTHORITY_BIAS_THRESHOLD,
@@ -43,11 +44,25 @@ import {
 export class GovernanceEngine {
   private strategies: Map<InterventionType, InterventionStrategy> = new Map();
 
-  constructor() {
+  constructor(adaptiveConfig?: Partial<GovernanceConfig>) {
     this.registerStrategy(new ReduceWeightIntervention());
     this.registerStrategy(new IntroduceDiversityIntervention());
     this.registerStrategy(new ForceReflectionIntervention());
     this.registerStrategy(new ContinueDiscussionIntervention());
+    if (adaptiveConfig) {
+      this.defaultConfig = { ...this.defaultConfig, ...adaptiveConfig };
+    }
+  }
+
+  /**
+   * 使用自适应阈值创建治理引擎。
+   *
+   * 先跑一轮校准讨论收集基线指标，然后自动计算个性化阈值。
+   * 这替代了硬编码的 0.7/0.4/0.5 固定阈值。
+   */
+  static withAdaptiveThresholds(calibration: CalibrationMetrics): GovernanceEngine {
+    const adaptiveConfig = computeAdaptiveThresholds(calibration);
+    return new GovernanceEngine(adaptiveConfig);
   }
 
   registerStrategy(strategy: InterventionStrategy): void {

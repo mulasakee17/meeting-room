@@ -150,6 +150,8 @@ export interface DiscussionConfig {
   beliefUpdateStrategy: string;
   influenceStrategy: string;
   memoryStrategy: string;
+  /** 启用反事实 Agent Dropout 进行因果推断 (默认 false) */
+  enableCausalTracing?: boolean;
 }
 
 export interface DiscussionResult {

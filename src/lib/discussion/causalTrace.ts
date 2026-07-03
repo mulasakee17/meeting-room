@@ -21,6 +21,16 @@ import type { AgentOpinion, InteractionGraph, InteractionEdge } from "./types";
 // 类型定义
 // ============================================================================
 
+/** 单条反事实观测 — 记录某轮某个 source 是否参与时 target 的信念 */
+export interface CausalObservation {
+  round: number;
+  sourceAgentId: string;
+  targetAgentId: string;
+  sourcePresent: boolean;
+  sourceBelief: number;
+  targetBelief: number;
+}
+
 /** 单个因果效应估计 */
 export interface CausalEffect {
   /** 原因 Agent (treatment) */

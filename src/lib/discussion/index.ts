@@ -28,6 +28,7 @@ import type { RawObservation, ObserverAgent, OpinionParser } from "../observatio
 import type { StateDelta } from "../inference";
 import type { EvaluationConfig } from "../evaluation/types";
 import type { GovernanceConfig } from "../governance/types";
+import { selectCounterfactualDropout, type CausalObservation } from "./causalTrace";
 import {
   DISCUSSION_DEFAULT_CONVERGENCE_THRESHOLD,
   DISCUSSION_DECISION_POSITIVE_THRESHOLD,
@@ -62,6 +63,10 @@ export class DiscussionEngine {
   private observationLayer: ObservationLayer;
   private inferenceLayer: InferenceLayer;
   private opinionParser: OpinionParser;
+  private causalObservations: Array<{
+    round: number; sourceAgentId: string; targetAgentId: string;
+    sourcePresent: boolean; sourceBelief: number; targetBelief: number;
+  }> = [];
 
   constructor(config?: Partial<DiscussionConfig>) {
     this.config = {
@@ -150,8 +155,43 @@ export class DiscussionEngine {
         roundNumber: round, payload: {},
       });
 
+      // -- counterfactual dropout (causal tracing) -------------------------
+      let dropoutAgentId: string | null = null;
+      if (this.config.enableCausalTracing && agents.length >= 3) {
+        const dropout = selectCounterfactualDropout(agents.map(a => a.id), round);
+        if (dropout) dropoutAgentId = dropout.droppedAgentId;
+      }
+
       // -- observe & collect opinions --------------------------------------
-      const opinions = await this.runRound(agents, task, round, agentStates);
+      const participatingAgents = dropoutAgentId
+        ? agents.filter(a => a.id !== dropoutAgentId)
+        : agents;
+      const opinions = await this.runRound(participatingAgents, task, round, agentStates);
+
+      // Record counterfactual observations for causal inference
+      if (dropoutAgentId && this.config.enableCausalTracing) {
+        const droppedState = agentStates.get(dropoutAgentId);
+        if (droppedState) {
+          for (const opinion of opinions) {
+            this.causalObservations.push({
+              round, sourceAgentId: dropoutAgentId, targetAgentId: opinion.agentId,
+              sourcePresent: false, sourceBelief: droppedState.belief, targetBelief: opinion.belief,
+            });
+          }
+          // Also record the "with" state for the dropped agent's last known opinion
+          const droppedOpinion = await this.runRound([agents.find(a => a.id === dropoutAgentId)!], task, round, agentStates);
+          for (const o of droppedOpinion) {
+            for (const otherOpinion of opinions) {
+              this.causalObservations.push({
+                round, sourceAgentId: dropoutAgentId, targetAgentId: otherOpinion.agentId,
+                sourcePresent: true, sourceBelief: o.belief, targetBelief: otherOpinion.belief,
+              });
+            }
+          }
+          // Merge the dropped agent's opinion into the round
+          opinions.push(...droppedOpinion);
+        }
+      }
       roundResults.push({
         roundNumber: round, opinions: [...opinions],
         timestamp: new Date().toISOString(),
@@ -611,6 +651,11 @@ Respond in JSON format:
 
   getDecisionTrace(): DecisionTraceEntry[] {
     return this.traceBuilder.getTrace();
+  }
+
+  /** 获取反事实因果观测数据 — 用于构建因果图 */
+  getCausalObservations() {
+    return this.causalObservations;
   }
 
   summarizeTrace() {

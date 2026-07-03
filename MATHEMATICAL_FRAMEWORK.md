@@ -424,5 +424,112 @@ $$
 
 ---
 
+---
+
+## 10. 自适应阈值 (§A — 新增)
+
+### 10.1 动机
+
+固定阈值 $\theta_{\text{echo}} = 0.70, \theta_{\text{auth}} = 0.40, \dots$ 对所有任务一刀切。但 Agent 群体的基线行为因任务类型、LLM 选择、Agent 配置而异。
+
+### 10.2 校准指标
+
+在正式实验前跑一轮"校准讨论"（简单、有已知答案的问题），测量四个基线指标：
+
+| 指标 | 符号 | 计算 |
+|------|------|------|
+| 收敛速度 | $s \in [0,1]$ | $s = t_{\text{conv}} / T_{\max}$ — 信念标准差降到 0.1 的归一化轮数 |
+| 基础信息冗余度 | $\rho_0 \in [0,1]$ | 消息对间的平均 Jaccard 相似度 |
+| 基础影响力集中度 | $\lambda_0 \in [0,1]$ | 发言最多 Agent 的发言占比 |
+| 基础信念分散度 | $\sigma_0 \in [0,1]$ | 校准讨论中的信念标准差 |
+
+### 10.3 自适应缩放函数
+
+$$
+\theta_{\text{echo}}' = \theta_{\text{echo}} \cdot (0.85 + 0.3 \cdot \rho_0)
+$$
+
+$$
+\theta_{\text{auth}}' = \theta_{\text{auth}} \cdot (0.80 + 0.4 \cdot \lambda_0)
+$$
+
+$$
+\theta_{\text{pol}}' = \theta_{\text{pol}} \cdot (0.80 + 0.5 \cdot \min(\sigma_0, 1))
+$$
+
+$$
+\theta_{\text{pre}}' = \theta_{\text{pre}} \cdot (0.70 + 0.6 \cdot s)
+$$
+
+所有自适应阈值 clamp 到合理区间内（如 $\theta_{\text{echo}}' \in [0.40, 0.90]$）。
+
+### 10.4 使用
+
+```typescript
+const engine = GovernanceEngine.withAdaptiveThresholds(calibration);
+```
+
+---
+
+## 11. 因果推断 Trace (§B — 新增)
+
+### 11.1 动机
+
+传统影响力图记录的 $W(s \to t)$ 是**相关性**：$s$ 和 $t$ 的信念相似不等于 $s$ 导致了 $t$ 的变化。真正的问题是因果性的。
+
+### 11.2 反事实 Dropout
+
+每轮随机选一个 Agent $a_k$ 不参与讨论。比较 "有 $a_k$" 和 "无 $a_k$" 时其他 Agent 的信念差异：
+
+$$
+\text{ITE}(a_i \to a_j)^{(t)} = b_j^{(t)} \big|_{a_i \text{ present}} - b_j^{(t)} \big|_{a_i \text{ absent}}
+$$
+
+### 11.3 平均处理效应 (ATE)
+
+对多轮观测取均值：
+
+$$
+\text{ATE}(a_i \to a_j) = \frac{1}{|T_{ij}|}\sum_{t \in T_{ij}} \text{ITE}(a_i \to a_j)^{(t)}
+$$
+
+其中 $T_{ij}$ 是有 $a_i$ 作为 dropout 的轮次集合。
+
+### 11.4 因果图
+
+与相关性图不同，因果图 $\mathcal{G}_c$ 的边集 $E_c$ 仅包含**有反事实证据**且 $|\text{ATE}| > 0.05$ 的边：
+
+$$
+E_c = \{(i \to j) \mid \text{ATE}(a_i \to a_j) \text{ 可估计} \land |\text{ATE}(a_i \to a_j)| > 0.05\}
+$$
+
+边的显著性分三级：high ($|\text{ATE}| > 0.15$, ≥3 观测) / medium ($|\text{ATE}| > 0.08$, ≥2 观测) / low。
+
+### 11.5 信念变化的因果分解
+
+对于 Agent $j$ 的总信念变化 $\Delta b_j$，可分解为：
+
+$$
+\Delta b_j = \underbrace{\sum_{i \neq j} \text{ATE}(a_i \to a_j)}_{\text{社会影响 (social influence)}} + \underbrace{\Delta b_j^{\text{ind}}}_{\text{独立推理}}
+$$
+
+独立推理比例 = $1 - \frac{\sum_i |\text{ATE}(a_i \to a_j)|}{|\Delta b_j|}$
+
+### 11.6 查询 API
+
+```typescript
+// "谁真正导致了 Agent X 的变化？"
+answerWhoCausedChange("agent_2", causalGraph)
+// → [{ source: "agent_1", avgEffect: 0.23, significance: "high" }]
+
+// "Agent X 的变化多少是独立思考？"
+decomposeBeliefChange("agent_2", 0.5, causalGraph)
+// → { independentReasoning: 0.54, socialInfluence: 0.46 }
+```
+
+---
+
 > **实现对应**：所有公式均在 `src/lib/` 中有 1:1 的代码实现。
 > `src/lib/constants.ts` 包含所有可调参数的集中定义。
+> `src/lib/governance/adaptiveThresholds.ts` 实现 §10。
+> `src/lib/discussion/causalTrace.ts` 实现 §11。
