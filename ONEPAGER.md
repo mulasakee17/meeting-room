@@ -53,9 +53,9 @@ M&A Hidden Profile task × 3 ablation groups × n=15. Primary metric: Kendall's 
 |----------|-----------------|----|--------------|-----------|
 | None | 76.7±10.5 | 0.533 | — | — |
 | Detect‑only | 74.0±14.5 | 0.480 | 0 | −0.21 |
-| **Full governance** | **90.7±15.3** | **0.813** | **26** | **+1.07** |
+| **Full governance** | **81.3±10.6** | **0.627** | **33** | **+0.44** |
 
-**Core result**: Full governance improves decision quality by 14 points (Cohen's d = +1.07, large effect). All interventions detected premature consensus and forced deeper deliberation.
+**Core result**: Information-layer governance produces a real, directionally positive effect (d = +0.44). All 33 interventions injected targeted prompts into agent discussion — genuine causal evidence, modest but not inflated.
 
 ---
 

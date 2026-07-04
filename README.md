@@ -172,15 +172,15 @@ Each adapter translates framework-native messages into the standard `DiscussionM
 
 ## Experimental Validation
 
-**45 controlled experiments** (M&A Hidden Profile task, 3 ablation groups × n=15) with Kendall's τ rank correlation as the primary metric — replacing keyword-matching with a statistically valid measure of decision quality.
+**45 controlled experiments** (M&A Hidden Profile task, 3 ablation groups × n=15) with Kendall's τ rank correlation replacing keyword-matching as the primary metric. **Information-layer interventions** — governance generates targeted prompts injected into agent discussion, rather than silently modifying internal model parameters.
 
-| Ablation | Q (μ±σ) | Kendall's τ | Interventions | Cohen's d |
+| Ablation | Q (μ±σ) | Kendall's τ | Interventions | d vs none |
 |----------|---------|-------------|---------------|-----------|
 | None (baseline) | 76.7±10.5 | 0.533 | — | — |
 | Detect‑only | 74.0±14.5 | 0.480 | 0 | −0.21 |
-| **Full governance** | **90.7±15.3** | **0.813** | 26 | **+1.07** |
+| **Full governance** | **81.3±10.6** | **0.627** | **33** | **+0.44** |
 
-**Key finding**: Full governance improves decision quality by 14 points with a large effect size (Cohen's d = +1.07). All 26 interventions were `continue_discussion` — the runtime detected premature consensus and forced deeper deliberation, improving rankings while reducing average rounds from 4 to 2.
+**Key finding**: Information-layer governance produces a real, directionally positive effect (d = +0.44). All 33 interventions were `continue_discussion` — detecting premature consensus and injecting undiscussed agent-unique knowledge into the next round. Effect is genuine but modest; prompt strength and intervention diversity are areas for further optimization.
 
 [Full experiment data →](experiments/v2/data/) · [Analysis script →](experiments/v2/analyze.ts)
 

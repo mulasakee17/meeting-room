@@ -225,7 +225,7 @@ Unified multi-provider interface:
 `experiments/v2/` — Focused Hidden Profile experiment framework:
 - M&A task, 3 ablation modes (none / detect-only / full) × n=15 = 45 experiments
 - Primary metric: Kendall's τ rank correlation (replaces keyword matching)
-- Full governance: Q +14 points, Cohen's d = +1.07 (large effect)
+- Full governance: Q +5 points, Cohen's d = +0.44 (small-to-medium, genuine causal effect)
 - All 45 raw JSON files preserved in `experiments/v2/data/`
 
 `experiments/lunar_survival/` — Legacy V1 framework (80+ experiments, keyword-matching metric)
