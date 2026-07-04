@@ -2,12 +2,14 @@
   "taskId": "ma",
   "ablation": "random-intervene",
   "runIndex": 1,
-  "accuracy": 97,
-  "rounds": 1,
-  "converged": true,
-  "consensus": 83.66571666447868,
-  "reliability": 48.7,
-  "explainability": 100,
-  "interventions": 0,
-  "issuesDetected": []
+  "accuracy": 100,
+  "rounds": 5,
+  "converged": false,
+  "consensus": 65.71695483459875,
+  "reliability": 15.86,
+  "dispersion": 55.620000000000005,
+  "interventions": 11,
+  "issuesDetected": [
+    "polarization"
+  ]
 }

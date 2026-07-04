@@ -32,33 +32,52 @@ export interface CrossValidationResult {
   beliefs: Record<string, number>;
 }
 
+/**
+ * Reliability metric — measures internal consistency of the multi-agent
+ * discussion using statistically valid methods.
+ *
+ * Key sub-metrics:
+ * - roundConsistencyAlpha: Cronbach's α computed across discussion rounds
+ *   (each round = one measurement occasion; valid when rounds ≥ 3).
+ *   Measures whether agents maintain consistent relative belief rankings
+ *   across rounds. High α → stable discussion; low α → erratic shifts.
+ * - crossValidationScore: how well each agent's output aligns with the
+ *   final group decision (leave-one-out style).
+ * - repeatabilityScore: composite of belief consistency and decision
+ *   content similarity across agents.
+ * - confidenceInterval: statistical CI of the mean belief.
+ */
 export interface ReliabilityMetric {
   score: number;
   crossValidationScore: number;
   consistencyScore: number;
   groundTruthMatch?: boolean;
-  cronbachAlpha: number;
+  /** Cronbach's α across discussion rounds (valid when rounds ≥ 3) */
+  roundConsistencyAlpha: number | null;
   repeatabilityScore: number;
   confidenceInterval: [number, number];
   crossValidationResults?: CrossValidationResult[];
   details: string;
 }
 
-export interface ExplainabilityMetric {
+/**
+ * Statistical dispersion of beliefs, confidences, and round-to-round
+ * variability within a single discussion run.
+ *
+ * NOTE: This is NOT "robustness" in the perturbation-testing sense.
+ * It describes the observed variance structure — no noise injection,
+ * agent dropout, or parameter perturbation is performed.
+ *
+ * Sub-metrics:
+ * - beliefDispersion: cross-agent belief variance within round
+ * - confidenceDispersion: cross-agent confidence variance within round
+ * - roundVariability: average belief difference between consecutive rounds
+ */
+export interface DispersionMetric {
   score: number;
-  reasoningLength: number;
-  attributionClarity: number;
-  stepCoverage: number;
-  details: string;
-}
-
-export interface RobustnessMetric {
-  score: number;
-  perturbationTests: {
-    inputNoise: number;
-    agentDropout: number;
-    parameterVariation: number;
-  };
+  beliefDispersion: number;
+  confidenceDispersion: number;
+  roundVariability: number;
   details: string;
 }
 
@@ -66,13 +85,6 @@ export interface StabilityMetric {
   score: number;
   roundConsistency: number;
   timeSeriesStability: number;
-  details: string;
-}
-
-export interface ManipulationResistanceMetric {
-  score: number;
-  adversarialTest: number;
-  biasDetection: number;
   details: string;
 }
 
@@ -106,15 +118,27 @@ export interface InfluenceAnalysisMetric {
   details: string;
 }
 
+/**
+ * Evaluation result with academically defensible dimensions only.
+ *
+ * Five dimensions (down from seven):
+ * 1. Consensus — Kuramoto order + belief variance + trajectory
+ * 2. Reliability — round-consistency α + cross-validation + repeatability
+ * 3. Dispersion — cross-agent belief/confidence variance + round variability
+ * 4. Stability — round-to-round consistency + time-series smoothness
+ * 5. Influence Analysis — Gini + network centrality + influence paths
+ *
+ * Removed dimensions (and why):
+ * - Explainability: was based on reasoning length heuristic; no academic basis
+ * - Manipulation Resistance: conflated uniformity with robustness; logically flawed
+ */
 export interface EvaluationResult {
   overallScore: number;
   dimensions: {
     consensus: ConsensusMetric;
     reliability: ReliabilityMetric;
-    explainability: ExplainabilityMetric;
-    robustness: RobustnessMetric;
+    dispersion: DispersionMetric;
     stability: StabilityMetric;
-    manipulationResistance: ManipulationResistanceMetric;
     influenceAnalysis: InfluenceAnalysisMetric;
   };
   customMetrics?: Record<string, number>;

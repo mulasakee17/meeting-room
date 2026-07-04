@@ -529,9 +529,8 @@ function mapDimensions(rawDims: Record<string, any> | undefined): DemoResult["di
   const result: DemoResult["dimensions"] = {};
   if (!rawDims) return result;
   const labels: Record<string, string> = {
-    consensus: "共识度", reliability: "可靠性", explainability: "可解释性",
-    robustness: "鲁棒性", stability: "稳定性",
-    manipulationResistance: "抗操纵性", influenceAnalysis: "影响分析",
+    consensus: "共识度", reliability: "可靠性", dispersion: "离散度",
+    stability: "稳定性", influenceAnalysis: "影响分析",
   };
   for (const [key, dim] of Object.entries(rawDims)) {
     result[key] = { score: typeof dim.score === "number" ? dim.score : dim, label: labels[key] || key };

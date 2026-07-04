@@ -20,6 +20,7 @@ import { InfluenceManager, RuleBasedInfluence } from "./influence";
 import { InteractionGraphBuilder } from "./interactionGraph";
 import { DecisionTraceBuilder } from "./decisionTrace";
 import { GovernanceEngine, AgentBelief, MessageInfo, GovernanceIssue, Intervention } from "../governance";
+import type { GovernanceConfig } from "../governance/types";
 import { StrategyRegistry } from "./strategyRegistry";
 import { EventTracker } from "./eventTracker";
 import { ObservationLayer, DefaultOpinionParser } from "../observation";
@@ -27,8 +28,16 @@ import { InferenceLayer } from "../inference";
 import type { RawObservation, ObserverAgent, OpinionParser } from "../observation";
 import type { StateDelta } from "../inference";
 import type { EvaluationConfig } from "../evaluation/types";
-import type { GovernanceConfig } from "../governance/types";
 import { selectCounterfactualDropout, type CausalObservation } from "./causalTrace";
+import {
+  shouldActivateCrossExamination,
+  formCamps,
+  buildChallengePrompt,
+  synthesizeVerdict,
+  computeBeliefShift,
+  type CrossExamAgent,
+  type CrossExaminationResult,
+} from "./crossExamination";
 import {
   DISCUSSION_DEFAULT_CONVERGENCE_THRESHOLD,
   DISCUSSION_DECISION_POSITIVE_THRESHOLD,
@@ -67,6 +76,8 @@ export class DiscussionEngine {
     round: number; sourceAgentId: string; targetAgentId: string;
     sourcePresent: boolean; sourceBelief: number; targetBelief: number;
   }> = [];
+  /** 交叉质证结果 (如果触发) */
+  private crossExaminationResult: CrossExaminationResult | null = null;
 
   constructor(config?: Partial<DiscussionConfig>) {
     this.config = {
@@ -75,6 +86,8 @@ export class DiscussionEngine {
       beliefUpdateStrategy: "rule_based",
       influenceStrategy: "rule_based",
       memoryStrategy: "in_memory",
+      governanceMode: "full",
+      enableCrossExamination: false,
       ...config,
     };
 
@@ -192,6 +205,23 @@ export class DiscussionEngine {
           opinions.push(...droppedOpinion);
         }
       }
+      // -- cross-examination (if enabled and divergence detected) -------------
+      // Only trigger once per discussion to avoid infinite retry loops
+      if (this.config.enableCrossExamination
+          && !this.crossExaminationResult  // not already done
+          && opinions.length >= 4
+          && round <= 2  // only in early rounds when divergence is fresh
+      ) {
+        const crossExamCheck = shouldActivateCrossExamination(opinions);
+        if (crossExamCheck.activate) {
+          this.crossExaminationResult = await this.runCrossExamination(
+            opinions, agents, round
+          );
+          // Apply belief shifts from cross-examination to agent states
+          this.applyCrossExaminationShifts(opinions, agentStates);
+        }
+      }
+
       roundResults.push({
         roundNumber: round, opinions: [...opinions],
         timestamp: new Date().toISOString(),
@@ -668,6 +698,11 @@ Respond in JSON format:
     agentStates: Map<string, { belief: number; confidence: number }>,
     agents: DiscussionAgent[]
   ): { hasIntervention: boolean; interventions: Intervention[]; effectMetrics?: Record<string, number>; issues: GovernanceIssue[] } | null {
+    const mode = this.config.governanceMode || "full";
+
+    // "none" mode: skip everything
+    if (mode === "none") return null;
+
     const agentBeliefs: AgentBelief[] = opinions.map(o => ({
       agentId: o.agentId,
       belief: o.belief,
@@ -693,6 +728,47 @@ Respond in JSON format:
       })),
     };
 
+    // -- "random-intervene": diagnose (for measurement) then apply random interventions
+    if (mode === "random-intervene") {
+      const result = this.governanceEngine.diagnose(agentBeliefs, messages, agentIds, {
+        enableEchoChamberDetection: true,
+        enableAuthorityBiasDetection: true,
+        enablePolarizationDetection: true,
+        enablePrematureConsensusDetection: true,
+        interventionLevel: "medium",
+      });
+
+      // Build issues from diagnosis (for recording)
+      const issues = this.buildIssuesFromResult(result);
+
+      // Generate random interventions regardless of detection
+      const randomInterventions = this.generateRandomInterventions(
+        agentBeliefs, agents, round, this.config.maxRounds
+      );
+
+      if (randomInterventions.length === 0) {
+        return { hasIntervention: false, interventions: [], issues };
+      }
+
+      const state = { agentBeliefs, messages, agentIds, interactionGraph };
+      const results = this.governanceEngine.applyInterventions(randomInterventions, state);
+
+      // Apply intervention effects to graph and agent states
+      this.applyInterventionEffects(results, graph, agentStates, agents);
+
+      const effectMetrics = this.governanceEngine.evaluateEffects(
+        state, state, randomInterventions
+      );
+
+      return {
+        hasIntervention: true,
+        interventions: randomInterventions,
+        effectMetrics,
+        issues,
+      };
+    }
+
+    // -- "detect-only" and "full": normal diagnosis flow
     const { result, interventions } = this.governanceEngine.diagnoseAndIntervene(
       agentBeliefs,
       messages,
@@ -700,43 +776,26 @@ Respond in JSON format:
       interactionGraph
     );
 
+    // "detect-only": skip intervention application, only record issues
+    if (mode === "detect-only") {
+      const issues = this.buildIssuesFromResult(result);
+      return {
+        hasIntervention: false,
+        interventions: [],
+        issues,
+      };
+    }
+
+    // "full": apply interventions
     if (interventions.length === 0) {
       return null;
     }
 
-    const state = {
-      agentBeliefs,
-      messages,
-      agentIds,
-      interactionGraph,
-    };
-
+    const state = { agentBeliefs, messages, agentIds, interactionGraph };
     const beforeState = { ...state };
-
     const results = this.governanceEngine.applyInterventions(interventions, state);
 
-    for (const interventionResult of results) {
-      if (interventionResult.success && interventionResult.stateChanges?.updatedEdges) {
-        for (const updatedEdge of interventionResult.stateChanges.updatedEdges) {
-          const existingEdge = graph.edges.find(
-            e => e.source === updatedEdge.source && e.target === updatedEdge.target
-          );
-          if (existingEdge) {
-            existingEdge.weight = updatedEdge.weight;
-          }
-        }
-      }
-
-      if (interventionResult.success && interventionResult.stateChanges?.updatedBeliefs) {
-        for (const updatedBelief of interventionResult.stateChanges.updatedBeliefs) {
-          agentStates.set(updatedBelief.agentId, {
-            belief: updatedBelief.belief,
-            confidence: updatedBelief.confidence,
-          });
-        }
-        this.updateAgentStates(agents, agentStates);
-      }
-    }
+    this.applyInterventionEffects(results, graph, agentStates, agents);
 
     const afterState = { ...state };
     const effectMetrics = this.governanceEngine.evaluateEffects(
@@ -745,6 +804,18 @@ Respond in JSON format:
       results.map(r => r.intervention)
     );
 
+    const issues = this.buildIssuesFromResult(result);
+
+    return {
+      hasIntervention: results.some(r => r.success),
+      interventions: results.filter(r => r.success).map(r => r.intervention),
+      effectMetrics,
+      issues,
+    };
+  }
+
+  /** Extract GovernanceIssue[] from GovernanceResult */
+  private buildIssuesFromResult(result: ReturnType<GovernanceEngine["diagnose"]>): GovernanceIssue[] {
     const issues: GovernanceIssue[] = [];
     if (result.echoChamber.detected) {
       issues.push({
@@ -770,14 +841,254 @@ Respond in JSON format:
         agents: result.polarization.groups.flatMap(g => g.agentIds),
       });
     }
+    if (result.prematureConsensus.detected) {
+      issues.push({
+        type: "premature_consensus",
+        severity: result.prematureConsensus.severity,
+        description: `Premature consensus detected at round ${result.prematureConsensus.roundNumber}: consensus level ${result.prematureConsensus.consensusLevel.toFixed(2)}`,
+      });
+    }
     issues.push(...result.otherIssues);
+    return issues;
+  }
+
+  /** Generate random interventions for the random-intervene mode */
+  private generateRandomInterventions(
+    agentBeliefs: AgentBelief[],
+    agents: DiscussionAgent[],
+    currentRound: number,
+    maxRounds: number,
+  ): Intervention[] {
+    const interventions: Intervention[] = [];
+    const agentIds = agentBeliefs.map(b => b.agentId);
+    const rng = () => Math.random();
+
+    // Pick 1-3 random intervention types
+    const allTypes: Array<{ type: Intervention["type"]; build: () => Intervention }> = [
+      {
+        type: "reduce_weight",
+        build: () => ({
+          type: "reduce_weight",
+          targetAgentId: agentIds[Math.floor(rng() * agentIds.length)],
+          parameters: { reductionFactor: 0.3 + rng() * 0.4 },
+          effect: "",
+          applied: false,
+        }),
+      },
+      {
+        type: "introduce_diversity",
+        build: () => ({
+          type: "introduce_diversity",
+          targetAgents: [agentIds[Math.floor(rng() * agentIds.length)]],
+          parameters: { perturbationAmount: 0.1 + rng() * 0.4 },
+          effect: "",
+          applied: false,
+        }),
+      },
+      {
+        type: "force_reflection",
+        build: () => ({
+          type: "force_reflection",
+          targetAgents: [agentIds[Math.floor(rng() * agentIds.length)]],
+          parameters: { reflectionFactor: 0.1 + rng() * 0.3 },
+          effect: "",
+          applied: false,
+        }),
+      },
+      {
+        type: "continue_discussion",
+        build: () => ({
+          type: "continue_discussion",
+          parameters: {
+            additionalRounds: 1 + Math.floor(rng() * 3),
+            reason: `Random intervention at round ${currentRound}`,
+          },
+          effect: "",
+          applied: false,
+        }),
+      },
+    ];
+
+    // Shuffle and pick 1-3
+    const shuffled = allTypes.sort(() => rng() - 0.5);
+    const count = 1 + Math.floor(rng() * 3);
+    for (const item of shuffled.slice(0, count)) {
+      interventions.push(item.build());
+    }
+
+    return interventions;
+  }
+
+  /** Apply intervention side effects to graph and agent states */
+  private applyInterventionEffects(
+    results: ReturnType<GovernanceEngine["applyInterventions"]>,
+    graph: InteractionGraph,
+    agentStates: Map<string, { belief: number; confidence: number }>,
+    agents: DiscussionAgent[],
+  ): void {
+    for (const interventionResult of results) {
+      if (interventionResult.success && interventionResult.stateChanges?.updatedEdges) {
+        for (const updatedEdge of interventionResult.stateChanges.updatedEdges) {
+          const existingEdge = graph.edges.find(
+            e => e.source === updatedEdge.source && e.target === updatedEdge.target
+          );
+          if (existingEdge) {
+            existingEdge.weight = updatedEdge.weight;
+          }
+        }
+      }
+
+      if (interventionResult.success && interventionResult.stateChanges?.updatedBeliefs) {
+        for (const updatedBelief of interventionResult.stateChanges.updatedBeliefs) {
+          agentStates.set(updatedBelief.agentId, {
+            belief: updatedBelief.belief,
+            confidence: updatedBelief.confidence,
+          });
+        }
+        this.updateAgentStates(agents, agentStates);
+      }
+    }
+  }
+
+  /** 获取交叉质证结果 (如果触发过) */
+  getCrossExaminationResult(): CrossExaminationResult | null {
+    return this.crossExaminationResult;
+  }
+
+  // ==========================================================================
+  // Cross-Examination — adversary debate between pro/con camps
+  // ==========================================================================
+
+  /**
+   * 执行一轮完整的交叉质证。
+   *
+   * Flow:
+   * 1. Form pro/con camps from current opinions
+   * 2. Build challenge prompts for each side
+   * 3. Each agent responds to the opposing camp's arguments
+   * 4. Parse responses and compute belief shifts
+   * 5. Synthesize verdict
+   */
+  private async runCrossExamination(
+    opinions: AgentOpinion[],
+    agents: DiscussionAgent[],
+    round: number,
+  ): Promise<CrossExaminationResult> {
+    const { activate, divergenceIndex } = shouldActivateCrossExamination(opinions);
+    if (!activate) {
+      return {
+        activated: false,
+        divergenceIndex,
+        proCamp: { camp: "pro", members: [], avgBelief: 0, strongestArguments: [], evidence: [] },
+        conCamp: { camp: "con", members: [], avgBelief: 0, strongestArguments: [], evidence: [] },
+        rounds: [],
+        synthesis: { consensusPoints: [], minorityReport: [], finalDecision: "", synthesizedBelief: 0, dissentPreserved: false },
+      };
+    }
+
+    const { proCamp, conCamp } = formCamps(opinions);
+
+    // Send challenge prompts to agents in each camp
+    const crossExamRounds: import("./crossExamination").CrossExaminationRound[] = [];
+    const agentMap = new Map(agents.map(a => [a.id, a]));
+
+    // Pro camp agents respond to con arguments, and vice versa
+    const { proPrompt, conPrompt } = buildChallengePrompt(proCamp, conCamp, round);
+
+    // Send pro prompt to pro agents, con prompt to con agents
+    const responsePromises: Promise<{ agentId: string; camp: "pro" | "con"; response: string }>[] = [];
+
+    for (const member of proCamp.members) {
+      const agent = agentMap.get(member.agentId);
+      if (agent) {
+        responsePromises.push(
+          agent.sendMessage(proPrompt).then(r => ({ agentId: member.agentId, camp: "pro" as const, response: r }))
+        );
+      }
+    }
+
+    for (const member of conCamp.members) {
+      const agent = agentMap.get(member.agentId);
+      if (agent) {
+        responsePromises.push(
+          agent.sendMessage(conPrompt).then(r => ({ agentId: member.agentId, camp: "con" as const, response: r }))
+        );
+      }
+    }
+
+    const responses = await Promise.all(responsePromises);
+
+    // Parse responses and compute belief shifts
+    for (const resp of responses) {
+      const member = resp.camp === "pro"
+        ? proCamp.members.find(m => m.agentId === resp.agentId)
+        : conCamp.members.find(m => m.agentId === resp.agentId);
+
+      if (!member) continue;
+
+      const opponentAvgBelief = resp.camp === "pro" ? conCamp.avgBelief : proCamp.avgBelief;
+      const beliefShift = computeBeliefShift(member.belief, resp.response, opponentAvgBelief);
+
+      crossExamRounds.push({
+        round,
+        challenge: resp.camp === "pro" ? conCamp.strongestArguments.join("; ") : proCamp.strongestArguments.join("; "),
+        challenger: resp.camp === "pro" ? "con" : "pro",
+        response: this.extractReasoning(resp.response),
+        respondent: resp.camp,
+        beliefShift,
+      });
+    }
+
+    const synthesis = synthesizeVerdict(proCamp, conCamp, crossExamRounds);
 
     return {
-      hasIntervention: results.some(r => r.success),
-      interventions: results.filter(r => r.success).map(r => r.intervention),
-      effectMetrics,
-      issues,
+      activated: true,
+      divergenceIndex,
+      proCamp,
+      conCamp,
+      rounds: crossExamRounds,
+      synthesis,
     };
+  }
+
+  /**
+   * 将交叉质证的信念移位应用到 Agent 状态。
+   */
+  private applyCrossExaminationShifts(
+    opinions: AgentOpinion[],
+    agentStates: Map<string, { belief: number; confidence: number }>,
+  ): void {
+    if (!this.crossExaminationResult?.activated) return;
+
+    for (const round of this.crossExaminationResult.rounds) {
+      const state = agentStates.get(round.respondent === "pro"
+        ? this.crossExaminationResult.proCamp.members.find(m => true)?.agentId || ""
+        : this.crossExaminationResult.conCamp.members.find(m => true)?.agentId || ""
+      );
+
+      // Find the actual agent ID from the camp
+      const camp = round.respondent === "pro" ? this.crossExaminationResult.proCamp : this.crossExaminationResult.conCamp;
+      for (const member of camp.members) {
+        const agentState = agentStates.get(member.agentId);
+        if (agentState) {
+          agentStates.set(member.agentId, {
+            belief: Math.max(BELIEF_MIN, Math.min(BELIEF_MAX, agentState.belief + round.beliefShift)),
+            confidence: agentState.confidence,
+          });
+        }
+      }
+    }
+  }
+
+  /** Parse reasoning from an agent's cross-examination response (JSON or plain text) */
+  private extractReasoning(response: string): string {
+    try {
+      const cleaned = response.trim().replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "");
+      const parsed = JSON.parse(cleaned);
+      return parsed.reasoning || parsed.analysis || response.slice(0, 500);
+    } catch {
+      return response.slice(0, 500);
+    }
   }
 
   reset(): void {
@@ -786,6 +1097,7 @@ Respond in JSON format:
     this.influenceManager = new InfluenceManager(new RuleBasedInfluence());
     this.graphBuilder = new InteractionGraphBuilder();
     this.traceBuilder = new DecisionTraceBuilder();
+    this.crossExaminationResult = null;
   }
 }
 

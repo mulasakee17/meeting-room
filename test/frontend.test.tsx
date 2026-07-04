@@ -30,9 +30,8 @@ const buildSuccessResponse = () =>
           overallScore: 78, grade: "good", summary: "测试摘要",
           dimensions: {
             consensus: { score: 80 }, reliability: { score: 70 },
-            explainability: { score: 75 }, robustness: { score: 72 },
+            dispersion: { score: 72 },
             stability: { score: 78 },
-            manipulationResistance: { score: 68 },
             influenceAnalysis: { score: 82 },
           },
         },

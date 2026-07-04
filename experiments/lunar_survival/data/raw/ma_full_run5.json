@@ -1,14 +1,14 @@
 {
   "taskId": "ma",
-  "ablation": "random-intervene",
+  "ablation": "full",
   "runIndex": 4,
   "accuracy": 99,
   "rounds": 5,
   "converged": false,
-  "consensus": 75.24913550280746,
-  "reliability": 17.34,
-  "dispersion": 66.94000000000001,
-  "interventions": 12,
+  "consensus": 69.84208651664046,
+  "reliability": 16.82,
+  "dispersion": 62.86,
+  "interventions": 4,
   "issuesDetected": [
     "premature_consensus",
     "polarization"

@@ -5,9 +5,12 @@
   "accuracy": 100,
   "rounds": 5,
   "converged": false,
-  "consensus": 81.85609225592097,
-  "reliability": 48.9,
-  "explainability": 100,
-  "interventions": 0,
-  "issuesDetected": []
+  "consensus": 76.48503736761532,
+  "reliability": 17.5,
+  "dispersion": 72.26,
+  "interventions": 9,
+  "issuesDetected": [
+    "premature_consensus",
+    "polarization"
+  ]
 }

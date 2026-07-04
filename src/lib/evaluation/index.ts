@@ -2,10 +2,8 @@ import {
   EvaluationResult,
   ConsensusMetric,
   ReliabilityMetric,
-  ExplainabilityMetric,
-  RobustnessMetric,
+  DispersionMetric,
   StabilityMetric,
-  ManipulationResistanceMetric,
   InfluenceAnalysisMetric,
   AgentDecision,
   AgentInfo,
@@ -18,14 +16,18 @@ import {
 } from "./types";
 
 export class EvaluationEngine {
+  /**
+   * Default dimension weights — redistributed after removing
+   * Explainability (0.15) and Manipulation Resistance (0.12).
+   *
+   * Remaining sum was 0.73; scaled to 1.00.
+   */
   private defaultWeights: Record<string, number> = {
-    consensus: 0.15,
-    reliability: 0.18,
-    explainability: 0.15,
-    robustness: 0.15,
-    stability: 0.12,
-    manipulationResistance: 0.12,
-    influenceAnalysis: 0.13,
+    consensus: 0.20,
+    reliability: 0.25,
+    dispersion: 0.20,
+    stability: 0.17,
+    influenceAnalysis: 0.18,
   };
 
   evaluate(
@@ -39,20 +41,16 @@ export class EvaluationEngine {
     const weights = config?.weights || this.defaultWeights;
 
     const consensus = this.evaluateConsensus(agentDecisions, interactionHistory);
-    const reliability = this.evaluateReliability(agentDecisions, finalDecision, groundTruth);
-    const explainability = this.evaluateExplainability(agentDecisions, interactionHistory);
-    const robustness = this.evaluateRobustness(agentDecisions, interactionHistory);
+    const reliability = this.evaluateReliability(agentDecisions, finalDecision, interactionHistory, groundTruth);
+    const dispersion = this.evaluateDispersion(agentDecisions, interactionHistory);
     const stability = this.evaluateStability(interactionHistory);
-    const manipulationResistance = this.evaluateManipulationResistance(agentDecisions, agents);
     const influenceAnalysis = this.evaluateInfluenceAnalysis(agentDecisions, agents, interactionHistory);
 
     const overallScore = this.computeOverallScore({
       consensus,
       reliability,
-      explainability,
-      robustness,
+      dispersion,
       stability,
-      manipulationResistance,
       influenceAnalysis,
     }, weights);
 
@@ -60,10 +58,8 @@ export class EvaluationEngine {
     const summary = this.generateSummary(overallScore, grade, {
       consensus,
       reliability,
-      explainability,
-      robustness,
+      dispersion,
       stability,
-      manipulationResistance,
       influenceAnalysis,
     });
 
@@ -72,10 +68,8 @@ export class EvaluationEngine {
       dimensions: {
         consensus,
         reliability,
-        explainability,
-        robustness,
+        dispersion,
         stability,
-        manipulationResistance,
         influenceAnalysis,
       },
       summary,
@@ -83,31 +77,39 @@ export class EvaluationEngine {
     };
   }
 
+  // ==========================================================================
+  // CONSENSUS — Kuramoto Order + Belief Variance + Trajectory
+  // ==========================================================================
+
   evaluateConsensus(agentDecisions: AgentDecision[], interactionHistory: InteractionRound[]): ConsensusMetric {
     if (agentDecisions.length === 0) {
-      return { 
-        score: 0, 
-        kuramotoOrder: 0, 
-        beliefStd: 0, 
+      return {
+        score: 0,
+        kuramotoOrder: 0,
+        beliefStd: 0,
         agreementRate: 0,
         trajectory: { rounds: [], convergenceSpeed: 0, finalConsensus: 0, consensusChangeRate: 0, volatility: 0, turningPoints: [] },
-        details: "No agent decisions" 
+        details: "No agent decisions"
       };
     }
 
     const beliefs = agentDecisions.map(d => d.belief || 0);
     const meanBelief = beliefs.reduce((a, b) => a + b, 0) / beliefs.length;
-    const beliefStd = Math.sqrt(beliefs.reduce((sum, b) => sum + Math.pow(b - meanBelief, 2), 0) / beliefs.length);
+
+    // Population std (not sample std) — consistent with Kuramoto interpretation
+    const beliefStd = Math.sqrt(
+      beliefs.reduce((sum, b) => sum + Math.pow(b - meanBelief, 2), 0) / beliefs.length
+    );
 
     const decisions = agentDecisions.map(d => d.content.toLowerCase().trim());
     const uniqueDecisions = new Set(decisions);
-    const agreementRate = uniqueDecisions.size === 1 ? 100 : 
+    const agreementRate = uniqueDecisions.size === 1 ? 100 :
       100 - (uniqueDecisions.size / agentDecisions.length) * 50;
 
     const kuramotoOrder = this.computeKuramotoOrder(beliefs);
-
     const trajectory = this.computeConsensusTrajectory(interactionHistory);
 
+    // Composite score: Kuramoto (30%) + inverse-std (40%) + agreement (30%)
     const score = (kuramotoOrder * 30) + ((1 - beliefStd / 2) * 40) + (agreementRate / 100 * 30);
 
     return {
@@ -124,7 +126,7 @@ export class EvaluationEngine {
 
   private computeConsensusTrajectory(interactionHistory: InteractionRound[]): ConsensusTrajectory {
     const rounds: ConsensusRoundData[] = [];
-    
+
     for (const round of interactionHistory) {
       const roundBeliefs = Object.values(round.beliefs);
       if (roundBeliefs.length === 0) continue;
@@ -156,16 +158,16 @@ export class EvaluationEngine {
       }
     }
 
-    const convergenceSpeed = rounds.length > 0 && convergenceRound 
-      ? 100 / convergenceRound 
+    const convergenceSpeed = rounds.length > 0 && convergenceRound
+      ? 100 / convergenceRound
       : 0;
 
-    const finalConsensus = rounds.length > 0 
-      ? rounds[rounds.length - 1].kuramotoOrder 
+    const finalConsensus = rounds.length > 0
+      ? rounds[rounds.length - 1].kuramotoOrder
       : 0;
 
-    const consensusChangeRate = rounds.length > 1 
-      ? (finalConsensus - rounds[0].kuramotoOrder) / (rounds.length - 1) 
+    const consensusChangeRate = rounds.length > 1
+      ? (finalConsensus - rounds[0].kuramotoOrder) / (rounds.length - 1)
       : 0;
 
     let volatility = 0;
@@ -180,7 +182,7 @@ export class EvaluationEngine {
       const prevKo = rounds[i - 1].kuramotoOrder;
       const currKo = rounds[i].kuramotoOrder;
       const diff = currKo - prevKo;
-      
+
       if (Math.abs(diff) > 0.1) {
         turningPoints.push({
           round: rounds[i].round,
@@ -205,40 +207,55 @@ export class EvaluationEngine {
     };
   }
 
-  evaluateReliability(agentDecisions: AgentDecision[], finalDecision: string, groundTruth?: GroundTruth): ReliabilityMetric {
+  // ==========================================================================
+  // RELIABILITY — Round-consistency α + Cross-validation + Repeatability
+  // ==========================================================================
+
+  evaluateReliability(
+    agentDecisions: AgentDecision[],
+    finalDecision: string,
+    interactionHistory: InteractionRound[],
+    groundTruth?: GroundTruth
+  ): ReliabilityMetric {
     if (agentDecisions.length === 0) {
-      return { 
-        score: 0, 
-        crossValidationScore: 0, 
+      return {
+        score: 0,
+        crossValidationScore: 0,
         consistencyScore: 0,
-        cronbachAlpha: 0,
+        roundConsistencyAlpha: null,
         repeatabilityScore: 0,
         confidenceInterval: [0, 0],
-        details: "No agent decisions" 
+        details: "No agent decisions"
       };
     }
 
     const avgConfidence = agentDecisions.reduce((sum, d) => sum + d.confidence, 0) / agentDecisions.length;
 
+    // Cross-validation: how well does each agent's output align with the final group decision?
     const decisionContents = agentDecisions.map(d => d.content.toLowerCase().trim());
     const finalLower = finalDecision.toLowerCase().trim();
-    const consistencyScore = decisionContents.filter(d => 
-      d.includes(finalLower) || finalLower.includes(d) || 
+    const consistencyScore = decisionContents.filter(d =>
+      d.includes(finalLower) || finalLower.includes(d) ||
       this.semanticSimilarity(d, finalLower) > 0.5
     ).length / agentDecisions.length * 100;
 
     const crossValidationScore = consistencyScore;
 
+    // Ground truth match (if provided)
     let groundTruthMatch: boolean | undefined;
     if (groundTruth) {
       groundTruthMatch = this.semanticSimilarity(finalLower, groundTruth.content.toLowerCase().trim()) > 0.6;
     }
 
-    const cronbachAlpha = this.computeCronbachAlpha(agentDecisions);
+    // Cronbach's α across discussion rounds (valid when rounds ≥ 3)
+    const roundConsistencyAlpha = this.computeRoundConsistencyAlpha(interactionHistory);
+
     const repeatabilityScore = this.computeRepeatabilityScore(agentDecisions);
     const confidenceInterval = this.computeConfidenceInterval(agentDecisions);
 
-    const baseScore = avgConfidence * 0.2 + consistencyScore * 0.3 + cronbachAlpha * 30 + repeatabilityScore * 0.2;
+    // Composite score: avgConfidence (20%) + consistency (30%) + round α (25%) + repeatability (25%)
+    const alphaComponent = roundConsistencyAlpha !== null ? roundConsistencyAlpha * 25 : 0;
+    const baseScore = avgConfidence * 0.2 + consistencyScore * 0.3 + alphaComponent + repeatabilityScore * 0.25;
     const truthBonus = groundTruthMatch ? 15 : 0;
     const score = Math.min(100, baseScore + truthBonus);
 
@@ -247,7 +264,7 @@ export class EvaluationEngine {
       crossValidationScore: Math.round(crossValidationScore),
       consistencyScore: Math.round(consistencyScore),
       groundTruthMatch,
-      cronbachAlpha: Math.round(cronbachAlpha * 100) / 100,
+      roundConsistencyAlpha: roundConsistencyAlpha !== null ? Math.round(roundConsistencyAlpha * 100) / 100 : null,
       repeatabilityScore: Math.round(repeatabilityScore * 100) / 100,
       confidenceInterval: [Math.round(confidenceInterval[0] * 100) / 100, Math.round(confidenceInterval[1] * 100) / 100],
       details: consistencyScore >= 80 ? "High reliability, decisions are consistent" :
@@ -256,31 +273,54 @@ export class EvaluationEngine {
     };
   }
 
-  private computeCronbachAlpha(agentDecisions: AgentDecision[]): number {
-    if (agentDecisions.length < 2) return 0;
+  /**
+   * Cronbach's α computed across discussion rounds.
+   *
+   * Each round is treated as a measurement occasion of the group's collective
+   * judgment. The N agents' beliefs in each round form the observations.
+   * Valid when rounds ≥ 3 (k ≥ 3 items measuring the same construct).
+   *
+   * High α → agents maintain consistent relative belief rankings across rounds.
+   * Low α → agent positions shift erratically between rounds.
+   *
+   * Note: In a converging discussion, α will naturally be lower in early rounds
+   * and higher in later rounds — this is expected behavior, not a flaw.
+   *
+   * Returns null when rounds < 3 (insufficient for valid α).
+   */
+  private computeRoundConsistencyAlpha(interactionHistory: InteractionRound[]): number | null {
+    // Need at least 3 rounds for valid Cronbach's α
+    const validRounds = interactionHistory.filter(
+      r => Object.keys(r.beliefs).length >= 2
+    );
+    if (validRounds.length < 3) return null;
 
-    const k = 2;
-    const confidences = agentDecisions.map(d => d.confidence);
-    const beliefs = agentDecisions.map(d => d.belief || 0);
-    
-    const allValues = [...confidences, ...beliefs];
-    const totalMean = allValues.reduce((a, b) => a + b, 0) / allValues.length;
-    const totalVariance = allValues.reduce((sum, val) => 
-      sum + Math.pow(val - totalMean, 2), 0) / (allValues.length - 1);
-    
-    if (totalVariance === 0) return 0;
+    const k = validRounds.length; // items = rounds
+    const agentIds = Object.keys(validRounds[0].beliefs);
 
-    const confidenceMean = confidences.reduce((a, b) => a + b, 0) / confidences.length;
-    const confidenceVariance = confidences.reduce((sum, val) => 
-      sum + Math.pow(val - confidenceMean, 2), 0) / (confidences.length - 1);
+    // Build per-agent belief vectors across rounds
+    // Only include agents present in all rounds
+    const completeAgentIds = agentIds.filter(id =>
+      validRounds.every(r => id in r.beliefs)
+    );
+    if (completeAgentIds.length < 2) return null;
 
-    const beliefMean = beliefs.reduce((a, b) => a + b, 0) / beliefs.length;
-    const beliefVariance = beliefs.reduce((sum, val) => 
-      sum + Math.pow(val - beliefMean, 2), 0) / (beliefs.length - 1);
+    // Compute variance of each round's beliefs (item variance)
+    const roundVariances = validRounds.map(r => {
+      const beliefs = completeAgentIds.map(id => r.beliefs[id]);
+      return this.computeVariance(beliefs);
+    });
+    const sumItemVariances = roundVariances.reduce((s, v) => s + v, 0);
 
-    const sumItemVariances = confidenceVariance + beliefVariance;
+    // Total variance: pool all beliefs across all rounds
+    const allBeliefs = validRounds.flatMap(r =>
+      completeAgentIds.map(id => r.beliefs[id])
+    );
+    const totalVariance = this.computeVariance(allBeliefs);
+
+    if (totalVariance === 0 || sumItemVariances === 0) return 0;
+
     const alpha = (k / (k - 1)) * (1 - sumItemVariances / totalVariance);
-    
     return Math.max(0, Math.min(1, alpha));
   }
 
@@ -304,7 +344,7 @@ export class EvaluationEngine {
     }
 
     const uniqueDecisions = new Set(decisions).size;
-    const decisionConsistency = decisions.length > 0 ? 
+    const decisionConsistency = decisions.length > 0 ?
       1 - (uniqueDecisions - 1) / decisions.length : 1;
 
     return (beliefConsistency + decisionConsistency) / 2;
@@ -318,82 +358,73 @@ export class EvaluationEngine {
     const std = Math.sqrt(beliefs.reduce((sum, b) => sum + Math.pow(b - mean, 2), 0) / beliefs.length);
     const n = beliefs.length;
 
+    // 95% CI using z = 1.96
     const marginOfError = n > 1 ? (1.96 * std) / Math.sqrt(n) : 0;
 
     return [mean - marginOfError, mean + marginOfError];
   }
 
-  evaluateExplainability(agentDecisions: AgentDecision[], interactionHistory: InteractionRound[]): ExplainabilityMetric {
+  // ==========================================================================
+  // DISPERSION — Cross-agent belief/confidence variance + round variability
+  // (formerly "Robustness" — renamed because no perturbation tests are run)
+  // ==========================================================================
+
+  evaluateDispersion(agentDecisions: AgentDecision[], interactionHistory: InteractionRound[]): DispersionMetric {
     if (agentDecisions.length === 0) {
-      return { score: 0, reasoningLength: 0, attributionClarity: 0, stepCoverage: 0, details: "No agent decisions" };
+      return {
+        score: 0,
+        beliefDispersion: 0,
+        confidenceDispersion: 0,
+        roundVariability: 0,
+        details: "No agent decisions",
+      };
     }
 
-    const avgReasoningLength = agentDecisions.reduce((sum, d) => sum + d.reasoning.length, 0) / agentDecisions.length;
-    const reasoningLength = Math.min(100, Math.max(0, (avgReasoningLength / 200) * 100));
-
-    const agentsWithReasoning = agentDecisions.filter(d => d.reasoning.length > 0).length;
-    const attributionClarity = (agentsWithReasoning / agentDecisions.length) * 100;
-
-    const uniqueAgentsInHistory = new Set(interactionHistory.flatMap(r => r.messages.map(m => m.agentId))).size;
-    const stepCoverage = interactionHistory.length > 0 ? 
-      Math.min(100, (uniqueAgentsInHistory / agentDecisions.length) * 100) : 0;
-
-    const score = reasoningLength * 0.4 + attributionClarity * 0.3 + stepCoverage * 0.3;
-
-    return {
-      score: Math.round(score * 10) / 10,
-      reasoningLength: Math.round(avgReasoningLength),
-      attributionClarity: Math.round(attributionClarity),
-      stepCoverage: Math.round(stepCoverage),
-      details: reasoningLength >= 60 ? "High explainability, detailed reasoning provided" :
-               reasoningLength >= 30 ? "Moderate explainability, some reasoning" :
-               "Low explainability, minimal reasoning",
-    };
-  }
-
-  evaluateRobustness(agentDecisions: AgentDecision[], interactionHistory: InteractionRound[]): RobustnessMetric {
-    if (agentDecisions.length === 0) {
-      return { score: 0, perturbationTests: { inputNoise: 0, agentDropout: 0, parameterVariation: 0 }, details: "No agent decisions" };
-    }
-
+    // Cross-agent belief dispersion within the final round
     const beliefs = agentDecisions.map(d => d.belief || 0);
-    const beliefStd = beliefs.length > 1 ? Math.sqrt(
-      beliefs.reduce((sum, b, _, arr) => sum + Math.pow(b - arr.reduce((a, c) => a + c, 0) / arr.length, 2), 0) / beliefs.length
-    ) : 0;
-    const inputNoise = Math.max(0, 100 - beliefStd * 50);
+    const beliefMean = beliefs.reduce((a, b) => a + b, 0) / beliefs.length;
+    const beliefStd = Math.sqrt(
+      beliefs.reduce((sum, b) => sum + Math.pow(b - beliefMean, 2), 0) / beliefs.length
+    );
+    // Lower std → higher score (tight beliefs = less dispersion = more agreement on position)
+    const beliefDispersion = Math.max(0, 100 - beliefStd * 50);
 
-    const confidenceStd = agentDecisions.length > 1 ? Math.sqrt(
-      agentDecisions.reduce((sum, d, _, arr) => {
-        const avg = arr.reduce((a, c) => a + c.confidence, 0) / arr.length;
-        return sum + Math.pow(d.confidence - avg, 2);
-      }, 0) / agentDecisions.length
-    ) : 0;
-    const agentDropout = Math.max(0, 100 - confidenceStd * 2);
+    // Cross-agent confidence dispersion
+    const confidences = agentDecisions.map(d => d.confidence);
+    const confMean = confidences.reduce((a, b) => a + b, 0) / confidences.length;
+    const confidenceStd = Math.sqrt(
+      confidences.reduce((sum, c) => sum + Math.pow(c - confMean, 2), 0) / confidences.length
+    );
+    const confidenceDispersion = Math.max(0, 100 - confidenceStd * 2);
 
-    const roundBeliefs = interactionHistory.map(r => {
-      const roundBeliefs = Object.values(r.beliefs);
-      return roundBeliefs.length > 0 ? roundBeliefs.reduce((a, b) => a + b, 0) / roundBeliefs.length : 0;
+    // Round-to-round average belief variability
+    const roundAvgs = interactionHistory.map(r => {
+      const bs = Object.values(r.beliefs);
+      return bs.length > 0 ? bs.reduce((a, b) => a + b, 0) / bs.length : 0;
     });
-    const parameterVariation = roundBeliefs.length > 1 ? Math.max(0, 100 - 
-      Math.sqrt(roundBeliefs.reduce((sum, b, _, arr) => {
-        const avg = arr.reduce((a, c) => a + c, 0) / arr.length;
-        return sum + Math.pow(b - avg, 2);
-      }, 0) / roundBeliefs.length) * 100) : 50;
+    let roundVariability = 50; // neutral default for single round
+    if (roundAvgs.length > 1) {
+      const diffs = roundAvgs.slice(1).map((b, i) => Math.abs(b - roundAvgs[i]));
+      const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+      roundVariability = Math.max(0, 100 - avgDiff * 100);
+    }
 
-    const score = inputNoise * 0.33 + agentDropout * 0.33 + parameterVariation * 0.34;
+    const score = beliefDispersion * 0.40 + confidenceDispersion * 0.25 + roundVariability * 0.35;
 
     return {
       score: Math.round(score * 10) / 10,
-      perturbationTests: {
-        inputNoise: Math.round(inputNoise),
-        agentDropout: Math.round(agentDropout),
-        parameterVariation: Math.round(parameterVariation),
-      },
-      details: score >= 70 ? "High robustness, resistant to perturbations" :
-               score >= 40 ? "Moderate robustness, some sensitivity" :
-               "Low robustness, sensitive to changes",
+      beliefDispersion: Math.round(beliefDispersion),
+      confidenceDispersion: Math.round(confidenceDispersion),
+      roundVariability: Math.round(roundVariability),
+      details: score >= 70 ? "Low dispersion — agents are tightly clustered in beliefs and confidence" :
+               score >= 40 ? "Moderate dispersion — some variance across agents" :
+               "High dispersion — agents show substantial variance in beliefs or confidence",
     };
   }
+
+  // ==========================================================================
+  // STABILITY — Round-to-round consistency + time-series smoothness
+  // ==========================================================================
 
   evaluateStability(interactionHistory: InteractionRound[]): StabilityMetric {
     if (interactionHistory.length === 0) {
@@ -401,10 +432,11 @@ export class EvaluationEngine {
     }
 
     const beliefsPerRound = interactionHistory.map(r => Object.values(r.beliefs));
-    const avgBeliefs = beliefsPerRound.map(beliefs => 
+    const avgBeliefs = beliefsPerRound.map(beliefs =>
       beliefs.length > 0 ? beliefs.reduce((a, b) => a + b, 0) / beliefs.length : 0
     );
 
+    // Round consistency: how similar is each round's average belief to round 1?
     let roundConsistency = 100;
     if (avgBeliefs.length > 1) {
       const firstBelief = avgBeliefs[0];
@@ -412,6 +444,7 @@ export class EvaluationEngine {
       roundConsistency = consistency * 100;
     }
 
+    // Time-series stability: average step-to-step change in average belief
     let timeSeriesStability = 50;
     if (avgBeliefs.length > 2) {
       const diffs = avgBeliefs.slice(1).map((b, i) => Math.abs(b - avgBeliefs[i]));
@@ -431,39 +464,15 @@ export class EvaluationEngine {
     };
   }
 
-  evaluateManipulationResistance(agentDecisions: AgentDecision[], agents: AgentInfo[]): ManipulationResistanceMetric {
-    if (agentDecisions.length === 0) {
-      return { score: 0, adversarialTest: 0, biasDetection: 0, details: "No agent decisions" };
-    }
-
-    const confidenceValues = agentDecisions.map(d => d.confidence);
-    const avgConfidence = confidenceValues.reduce((a, b) => a + b, 0) / confidenceValues.length;
-    const confidenceStd = Math.sqrt(confidenceValues.reduce((sum, c) => sum + Math.pow(c - avgConfidence, 2), 0) / confidenceValues.length);
-    
-    const adversarialTest = confidenceStd < 20 ? 80 : confidenceStd < 40 ? 60 : 40;
-
-    const beliefValues = agentDecisions.map(d => d.belief || 0);
-    const beliefMean = beliefValues.reduce((a, b) => a + b, 0) / beliefValues.length;
-    const extremeBeliefCount = beliefValues.filter(b => Math.abs(b - beliefMean) > 0.5).length;
-    const biasDetection = extremeBeliefCount === 0 ? 90 : extremeBeliefCount < agentDecisions.length * 0.3 ? 60 : 30;
-
-    const score = adversarialTest * 0.5 + biasDetection * 0.5;
-
-    return {
-      score: Math.round(score * 10) / 10,
-      adversarialTest,
-      biasDetection,
-      details: score >= 70 ? "High manipulation resistance, no suspicious patterns" :
-               score >= 40 ? "Moderate manipulation resistance, some concerns" :
-               "Low manipulation resistance, potential bias or manipulation",
-    };
-  }
+  // ==========================================================================
+  // INFLUENCE ANALYSIS — Gini + Network Centrality + Influence Paths
+  // ==========================================================================
 
   evaluateInfluenceAnalysis(agentDecisions: AgentDecision[], agents: AgentInfo[], interactionHistory: InteractionRound[]): InfluenceAnalysisMetric {
     if (agentDecisions.length === 0) {
-      return { 
-        score: 0, 
-        attribution: [], 
+      return {
+        score: 0,
+        attribution: [],
         giniCoefficient: 0,
         influencePaths: [],
         degreeCentrality: {},
@@ -472,7 +481,7 @@ export class EvaluationEngine {
         averagePathLength: 0,
         influenceDiffusionRate: 0,
         keyInfluencers: [],
-        details: "No agent decisions" 
+        details: "No agent decisions"
       };
     }
 
@@ -494,7 +503,7 @@ export class EvaluationEngine {
     const giniCoefficient = this.computeGiniCoefficient(influenceValues);
 
     const maxContribution = Math.max(...influenceValues);
-    const dominantAgent = maxContribution > 50 ? 
+    const dominantAgent = maxContribution > 50 ?
       contributions.find(c => c.contribution === maxContribution)?.agentId : undefined;
 
     const influencePaths = this.computeInfluencePaths(agentDecisions, interactionHistory);
@@ -506,8 +515,8 @@ export class EvaluationEngine {
     const actualEdges = new Set(influencePaths.map(p => `${p.sourceAgentId}-${p.targetAgentId}`)).size;
     const influenceDensity = possibleEdges > 0 ? Math.round((actualEdges / possibleEdges) * 1000) / 1000 : 0;
 
-    const averagePathLength = influencePaths.length > 0 
-      ? Math.round((influencePaths.reduce((sum, p) => sum + p.pathLength, 0) / influencePaths.length) * 100) / 100 
+    const averagePathLength = influencePaths.length > 0
+      ? Math.round((influencePaths.reduce((sum, p) => sum + p.pathLength, 0) / influencePaths.length) * 100) / 100
       : 0;
 
     const mentionCounts: Record<string, number> = {};
@@ -526,6 +535,7 @@ export class EvaluationEngine {
     const sortedContributions = [...contributions].sort((a, b) => b.contribution - a.contribution);
     const keyInfluencers = sortedContributions.slice(0, Math.min(3, agentCount)).map(c => c.agentId);
 
+    // Composite score: inverse-Gini (40%) + density (30%) + inverse-path-length (30%)
     const score = (1 - giniCoefficient) * 40 + influenceDensity * 30 + (1 - averagePathLength / 3) * 30;
 
     return {
@@ -598,9 +608,8 @@ export class EvaluationEngine {
       for (const currentMessage of currentRound.messages) {
         for (const nextMessage of nextRound.messages) {
           if (currentMessage.agentId !== nextMessage.agentId) {
-            const currentContent = currentMessage.content.toLowerCase();
             const nextContent = nextMessage.content.toLowerCase();
-            
+
             if (nextContent.includes(currentMessage.agentId.toLowerCase())) {
               const path = [currentMessage.agentId, nextMessage.agentId];
               const sourceConfidence = confidenceMap.get(currentMessage.agentId) || 50;
@@ -678,14 +687,16 @@ export class EvaluationEngine {
     return centrality;
   }
 
+  // ==========================================================================
+  // Shared helpers
+  // ==========================================================================
+
   private computeOverallScore(
     dimensions: {
       consensus: ConsensusMetric;
       reliability: ReliabilityMetric;
-      explainability: ExplainabilityMetric;
-      robustness: RobustnessMetric;
+      dispersion: DispersionMetric;
       stability: StabilityMetric;
-      manipulationResistance: ManipulationResistanceMetric;
       influenceAnalysis: InfluenceAnalysisMetric;
     },
     weights: Record<string, number>
@@ -693,17 +704,15 @@ export class EvaluationEngine {
     let weightedSum = 0;
     let totalWeight = 0;
 
-    weightedSum += dimensions.consensus.score * weights.consensus;
-    weightedSum += dimensions.reliability.score * weights.reliability;
-    weightedSum += dimensions.explainability.score * weights.explainability;
-    weightedSum += dimensions.robustness.score * weights.robustness;
-    weightedSum += dimensions.stability.score * weights.stability;
-    weightedSum += dimensions.manipulationResistance.score * weights.manipulationResistance;
-    weightedSum += dimensions.influenceAnalysis.score * weights.influenceAnalysis;
+    weightedSum += dimensions.consensus.score * (weights.consensus || 0);
+    weightedSum += dimensions.reliability.score * (weights.reliability || 0);
+    weightedSum += dimensions.dispersion.score * (weights.dispersion || 0);
+    weightedSum += dimensions.stability.score * (weights.stability || 0);
+    weightedSum += dimensions.influenceAnalysis.score * (weights.influenceAnalysis || 0);
 
     Object.values(weights).forEach(w => totalWeight += w);
 
-    return Math.round((weightedSum / totalWeight) * 10) / 10;
+    return totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 10) / 10 : 0;
   }
 
   private computeGrade(score: number): "excellent" | "good" | "fair" | "poor" | "critical" {
@@ -720,10 +729,8 @@ export class EvaluationEngine {
     dimensions: {
       consensus: ConsensusMetric;
       reliability: ReliabilityMetric;
-      explainability: ExplainabilityMetric;
-      robustness: RobustnessMetric;
+      dispersion: DispersionMetric;
       stability: StabilityMetric;
-      manipulationResistance: ManipulationResistanceMetric;
       influenceAnalysis: InfluenceAnalysisMetric;
     }
   ): string {
@@ -742,10 +749,8 @@ export class EvaluationEngine {
     const dimensionLabels: Record<string, string> = {
       consensus: "consensus",
       reliability: "reliability",
-      explainability: "explainability",
-      robustness: "robustness",
+      dispersion: "dispersion",
       stability: "stability",
-      manipulationResistance: "manipulation resistance",
       influenceAnalysis: "influence analysis",
     };
 

@@ -152,6 +152,19 @@ export interface DiscussionConfig {
   memoryStrategy: string;
   /** 启用反事实 Agent Dropout 进行因果推断 (默认 false) */
   enableCausalTracing?: boolean;
+  /**
+   * 治理模式:
+   * - "none": 不检测，不干预
+   * - "detect-only": 只检测偏差，不干预
+   * - "random-intervene": 不检测，随机施加干预
+   * - "full": 检测 + 精准干预 (默认)
+   */
+  governanceMode?: "none" | "detect-only" | "random-intervene" | "full";
+  /**
+   * 启用对立阵营交叉质证 (默认 false)。
+   * 当 Agent 信念分歧超过阈值时，自动分组正反方进行辩论。
+   */
+  enableCrossExamination?: boolean;
 }
 
 export interface DiscussionResult {

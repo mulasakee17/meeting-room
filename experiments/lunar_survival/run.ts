@@ -15,13 +15,12 @@ dotenv.config({ path: path.resolve(__dirname, "..", "..", ".env.local") });
 import { CustomAgent } from "../../src/lib/adapters/custom";
 import { DiscussionEngine, type DiscussionAgent } from "../../src/lib/discussion";
 import { EvaluationEngine } from "../../src/lib/evaluation";
-import { GovernanceEngine } from "../../src/lib/governance";
 import type { LLMConfig } from "../../src/lib/llm/providers";
 
 import {
   type TaskConfig, type AblationMode,
   TASK_LUNAR, TASK_MA, TASK_URBAN,
-  ABLATION_MODES, EXPERIMENT_PARAMS, GOVERNANCE_BASE_CONFIG,
+  EXPERIMENT_PARAMS,
 } from "./config";
 
 // ============================================================================
@@ -31,7 +30,7 @@ import {
 interface RunResult {
   taskId: string; ablation: AblationMode; runIndex: number;
   accuracy: number; rounds: number; converged: boolean;
-  consensus: number; reliability: number; explainability: number;
+  consensus: number; reliability: number; dispersion: number;
   interventions: number; issuesDetected: string[];
 }
 
@@ -92,16 +91,30 @@ async function runSingle(
   task: TaskConfig, ablation: AblationMode, runIndex: number, llmConfig: LLMConfig,
 ): Promise<RunResult> {
   const agents = createAgents(task, llmConfig);
-  const engine = new DiscussionEngine({ maxRounds: EXPERIMENT_PARAMS.maxRounds, convergenceThreshold: EXPERIMENT_PARAMS.convergenceThreshold });
+  const engine = new DiscussionEngine({
+    maxRounds: EXPERIMENT_PARAMS.maxRounds,
+    convergenceThreshold: EXPERIMENT_PARAMS.convergenceThreshold,
+    governanceMode: ablation, // "none" | "detect-only" | "random-intervene" | "full"
+  });
   const evalEngine = new EvaluationEngine();
-  const govEngine = new GovernanceEngine();
-  const mode = ABLATION_MODES[ablation];
 
   const taskObj = { id: `${task.id}_${ablation}_${runIndex}`, description: task.title, type: "discussion" as const, createdAt: new Date().toISOString(), content: task.sharedBriefing };
   const result = await engine.run(agents, taskObj);
 
-  let totalConsensus = 0; let totalReliability = 0; let totalExplainability = 0;
-  let totalInterventions = 0; let allIssues: string[] = []; let evalCount = 0;
+  // Extract intervention data from the engine's built-in round records
+  const discussionData = engine.getDiscussionData(taskObj, agents.map(a => ({ id: a.id, name: a.name, role: a.role, type: a.type })));
+  let totalInterventions = 0;
+  const allIssues: string[] = [];
+
+  for (const rd of discussionData.rounds) {
+    totalInterventions += rd.interventions.length;
+    for (const issue of rd.governanceIssues) {
+      allIssues.push(issue.type);
+    }
+  }
+
+  let totalConsensus = 0; let totalReliability = 0; let totalDispersion = 0;
+  let evalCount = 0;
 
   for (const rr of result.roundResults) {
     const decisions = rr.opinions.map(o => ({ agentId: o.agentId, content: o.reasoning, confidence: o.confidence, reasoning: o.reasoning, belief: o.belief }));
@@ -112,45 +125,9 @@ async function runSingle(
       const ev = evalEngine.evaluate(decisions, agentInfo, history, `Round ${rr.roundNumber}`);
       totalConsensus += ev?.dimensions?.consensus?.score || 0;
       totalReliability += ev?.dimensions?.reliability?.score || 0;
-      totalExplainability += ev?.dimensions?.explainability?.score || 0;
+      totalDispersion += ev?.dimensions?.dispersion?.score || 0;
       evalCount++;
     } catch { /* skip */ }
-
-    if (mode.detectEchoChamber || mode.detectAuthorityBias || mode.detectPolarization || mode.detectPrematureConsensus) {
-      try {
-        const beliefs = rr.opinions.map(o => ({ agentId: o.agentId, belief: o.belief, confidence: o.confidence }));
-        const msgs = rr.opinions.map(o => ({ agentId: o.agentId, content: o.reasoning, timestamp: rr.timestamp }));
-        const govConfig = { ...GOVERNANCE_BASE_CONFIG,
-          enableEchoChamberDetection: mode.detectEchoChamber,
-          enableAuthorityBiasDetection: mode.detectAuthorityBias,
-          enablePolarizationDetection: mode.detectPolarization,
-          enablePrematureConsensusDetection: mode.detectPrematureConsensus,
-        };
-        const gov = govEngine.diagnose(beliefs, msgs, agents.map(a => a.id), govConfig);
-
-        if (mode.applyIntervention) {
-          if (mode.randomIntervention) {
-            // Random intervention: flip a coin for each type
-            const types: string[] = [];
-            if (Math.random() > 0.5) types.push("reduce_weight");
-            if (Math.random() > 0.5) types.push("introduce_diversity");
-            if (Math.random() > 0.5) types.push("force_reflection");
-            if (Math.random() > 0.5) types.push("continue_discussion");
-            totalInterventions += types.length > 0 ? 1 : 0;
-          } else {
-            // Targeted intervention based on detection
-            if (gov.echoChamber?.detected || gov.authorityBias?.detected || gov.polarization?.detected || gov.prematureConsensus?.detected) {
-              totalInterventions++;
-            }
-          }
-        }
-
-        if (gov.echoChamber?.detected) allIssues.push("echo_chamber");
-        if (gov.authorityBias?.detected) allIssues.push("authority_bias");
-        if (gov.polarization?.detected) allIssues.push("polarization");
-        if (gov.prematureConsensus?.detected) allIssues.push("premature_consensus");
-      } catch { /* skip */ }
-    }
   }
 
   const allReasoning = result.roundResults.flatMap(r => r.opinions.map(o => o.reasoning)).join("\n");
@@ -161,7 +138,7 @@ async function runSingle(
     accuracy, rounds: result.totalRounds, converged: result.converged,
     consensus: evalCount > 0 ? totalConsensus / evalCount : 0,
     reliability: evalCount > 0 ? totalReliability / evalCount : 0,
-    explainability: evalCount > 0 ? totalExplainability / evalCount : 0,
+    dispersion: evalCount > 0 ? totalDispersion / evalCount : 0,
     interventions: totalInterventions,
     issuesDetected: Array.from(new Set(allIssues)),
   };
@@ -228,7 +205,6 @@ async function main() {
   for (const task of EXPERIMENT_PARAMS.tasks) {
     console.log(`\n📋 Task: ${task.title} (${task.id})`);
     for (const ablation of EXPERIMENT_PARAMS.ablationModes) {
-      const mode = ABLATION_MODES[ablation];
       const label = ablation === "none" ? "No Governance" : ablation === "detect-only" ? "Detect Only" : ablation === "random-intervene" ? "Random Intervene" : "Full Governance";
       console.log(`  🔬 ${label} (${ablation})`);
 

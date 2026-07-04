@@ -2,14 +2,15 @@
   "taskId": "lunar",
   "ablation": "full",
   "runIndex": 4,
-  "accuracy": 93,
-  "rounds": 2,
-  "converged": true,
-  "consensus": 83.32273355420509,
-  "reliability": 49.099999999999994,
-  "explainability": 93.95,
-  "interventions": 2,
+  "accuracy": 98,
+  "rounds": 5,
+  "converged": false,
+  "consensus": 79.99282246586422,
+  "reliability": 18.660000000000004,
+  "dispersion": 73.46,
+  "interventions": 5,
   "issuesDetected": [
-    "premature_consensus"
+    "premature_consensus",
+    "polarization"
   ]
 }

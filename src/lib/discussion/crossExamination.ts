@@ -243,7 +243,7 @@ export function buildChallengePrompt(
       + `2. 用你阵营的证据反驳\n`
       + `3. 如果对方某个论点有道理，诚实承认（这不会削弱你的立场）\n`
       + `4. 承认后，解释为什么你的总体结论仍然成立\n`
-      + `\n格式: {"emotion": 你的确信度, "reasoning": "你的质证回应"}`,
+      + `\n请以 JSON 格式回复：{"emotion": 你的确信度(-100到100), "reasoning": "你的质证回应"}`,
 
     conPrompt:
       `⚖️ 交叉质证 第 ${round} 轮\n\n`
@@ -253,7 +253,7 @@ export function buildChallengePrompt(
       + `2. 用你阵营的证据反驳\n`
       + `3. 如果对方某个论点有道理，诚实承认（这不会削弱你的立场）\n`
       + `4. 承认后，解释为什么你的总体结论仍然成立\n`
-      + `\n格式: {"emotion": 你的确信度, "reasoning": "你的质证回应"}`,
+      + `\n请以 JSON 格式回复：{"emotion": 你的确信度(-100到100), "reasoning": "你的质证回应"}`,
   };
 }
 

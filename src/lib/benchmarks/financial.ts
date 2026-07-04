@@ -210,10 +210,8 @@ export class FinancialBenchmark {
         dimensions: {
           consensus: 0,
           reliability: 0,
-          explainability: 0,
-          robustness: 0,
+          dispersion: 0,
           stability: 0,
-          manipulationResistance: 0,
           influenceAnalysis: 0,
         },
       },

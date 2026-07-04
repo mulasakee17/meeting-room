@@ -149,15 +149,20 @@ export const GOVERNANCE_PREMATURE_SEVERITY_PROGRESS_RATIO = 0.5;
 // 评估引擎 — Evaluation Engine
 // ============================================================================
 
-/** 默认评估维度权重 */
+/**
+ * 默认评估维度权重
+ *
+ * 5 维（原 7 维移除 Explainability 和 Manipulation Resistance）：
+ * - Explainability 移除原因：基于推理长度启发式，无学术依据
+ * - Manipulation Resistance 移除原因：将一致性误判为抗操纵性，逻辑缺陷
+ * - Robustness 重命名为 Dispersion：未执行真正的扰动测试
+ */
 export const EVALUATION_DEFAULT_WEIGHTS = {
-  consensus: 0.15,
-  reliability: 0.18,
-  explainability: 0.15,
-  robustness: 0.15,
-  stability: 0.12,
-  manipulationResistance: 0.12,
-  influenceAnalysis: 0.13,
+  consensus: 0.20,
+  reliability: 0.25,
+  dispersion: 0.20,
+  stability: 0.17,
+  influenceAnalysis: 0.18,
 } as const;
 
 /** 评分等级阈值 */
