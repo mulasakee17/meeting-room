@@ -65,7 +65,7 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 | Feature | Description |
 |---------|-------------|
 | **Framework-Agnostic** | Works with AutoGen, CrewAI, LangGraph, or custom frameworks via adapter pattern |
-| **Embeddable SDK** | `import { GovernanceRuntime } from "@swarmalpha/runtime"` — one class, zero framework deps |
+| **Embeddable SDK** | `import { GovernanceRuntime } from "@/runtime"` — one class, zero framework deps |
 | **Adaptive Governance** | Thresholds auto-calibrate per task; intervention dosage scales with severity |
 | **Cross-Examination** | Adversarial debate engine: splits agents into PRO/CON camps, synthesizes verdict |
 | **Causal Inference** | Counterfactual dropout analysis distinguishes correlation from causation |
