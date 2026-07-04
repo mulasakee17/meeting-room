@@ -6,7 +6,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
-[![Tests](https://img.shields.io/badge/tests-79%20passed-green)](./test/)
+[![Tests](https://img.shields.io/badge/tests-124%20passed-green)](./test/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 ---
@@ -55,8 +55,8 @@ npm run dev
 ├─────────────────────────────────────────────────┤
 │            Pipeline (共享执行管线)                │
 ├────────┬──────────┬───────────┬─────────────────┤
-│ 讨论引擎 │ 评价引擎  │ 治理引擎   │ 观测+推理层      │
-│ (多轮)  │ (7维评分) │ (4偏差检测) │ (LLM感知→数学演化) │
+│ 讨论引擎 │ 评价引擎  │ 治理引擎   │ 观测+推理+质证   │
+│ (多轮+质证)│ (5维评分) │ (4偏差+干预) │ (LLM感知→数学演化) │
 ├────────┴──────────┴───────────┴─────────────────┤
 │   Agent 适配器 ← DeepSeek / OpenAI / Anthropic   │
 └─────────────────────────────────────────────────┘
@@ -88,7 +88,7 @@ src/
 │   └── api/v3/               # API 端点
 ├── lib/
 │   ├── discussion/           # 讨论引擎（多轮 Agent 交互）
-│   ├── evaluation/           # 评价引擎（7 维评分）
+│   ├── evaluation/           # 评价引擎（5 维评分）
 │   ├── governance/           # 治理引擎（4 偏差检测 + 干预）
 │   ├── inference/            # 推理层（信念推断）
 │   ├── observation/          # 观测层（LLM 输出解析）
@@ -112,7 +112,7 @@ experiments/
 ## 运行测试
 
 ```bash
-npx vitest run          # 79 tests, 7 files
+npx vitest run          # 124 tests, 12 files
 npx vitest              # watch mode
 ```
 

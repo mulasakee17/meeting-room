@@ -12,7 +12,7 @@
 - **Input**: 决策输入（文本、数据、问题等）
 - **Agents**: 参与决策的 Agent 群体
 - **Interaction**: Agent 间的互动过程
-- **Evaluation**: 7 维度评价指标
+- **Evaluation**: 5 维度评价指标 (V3 重构后从 7 维精简)
 - **Governance**: 治理干预结果
 - **Output**: 最终决策结果
 
@@ -20,13 +20,11 @@
 
 | 维度 | 说明 | 范围 |
 |------|------|------|
-| Consensus | 共识强度 | 0-100 |
-| Reliability | 可靠性 | 0-100 |
-| Explainability | 可解释性 | 0-100 |
-| Robustness | 鲁棒性 | 0-100 |
-| Stability | 稳定性 | 0-100 |
-| ManipulationResistance | 抗操纵性 | 0-100 |
-| InfluenceAnalysis | 影响力分析 | 0-100 |
+| Consensus | 共识强度 (Kuramoto序参数+信念方差+轨迹) | 0-100 |
+| Reliability | 可靠性 (跨轮次Cronbach α+交叉验证+可重复性) | 0-100 |
+| Dispersion | 离散度 (跨Agent信念/置信度方差+轮次波动) | 0-100 |
+| Stability | 稳定性 (轮次一致性+时序平滑度) | 0-100 |
+| InfluenceAnalysis | 影响力分析 (Gini系数+网络中心性+影响力路径) | 0-100 |
 
 ---
 
@@ -313,19 +311,11 @@ interface EvaluationResult {
       score: number;
       details: string;
     };
-    explainability: {
-      score: number;
-      details: string;
-    };
-    robustness: {
+    dispersion: {
       score: number;
       details: string;
     };
     stability: {
-      score: number;
-      details: string;
-    };
-    manipulationResistance: {
       score: number;
       details: string;
     };
@@ -525,10 +515,8 @@ interface ErrorResponse {
       "dimensions": {
         "consensus": {"score": 85, "details": "80%的Agent达成一致诊断"},
         "reliability": {"score": 88, "details": "诊断符合临床指南"},
-        "explainability": {"score": 78, "details": "提供了清晰的推理路径"},
-        "robustness": {"score": 75, "details": "对输入变化具有一定鲁棒性"},
+        "dispersion": {"score": 75, "details": "Agent信念和置信度较集中"},
         "stability": {"score": 80, "details": "决策过程稳定"},
-        "manipulationResistance": {"score": 85, "details": "未检测到操纵行为"},
         "influenceAnalysis": {"score": 82, "details": "主导Agent影响适度"}
       },
       "summary": "决策质量良好，共识度高，推理清晰"

@@ -357,7 +357,9 @@ $$
 
 ---
 
-## 8. 七维评价体系
+## 8. 五维评价体系
+
+> **V3 重构说明**：原 7 维评价体系中的可解释性（基于推理长度启发式，无统计依据）和抗操纵性（将高一致性误判为高抗操纵性，逻辑缺陷）已移除。鲁棒性重命名为离散度（原未执行真正的扰动测试）。可靠性中的 Cronbach's α 从无效的 k=2 修复为跨讨论轮次计算。
 
 ### 8.1 加权总分
 
@@ -365,37 +367,54 @@ $$
 S_{\text{overall}} = \sum_{d \in \mathcal{D}} w_d \cdot S_d
 $$
 
-其中 $\mathcal{D} = \{\text{consensus}, \text{reliability}, \text{explainability}, \text{robustness}, \text{stability}, \text{manipulation}, \text{influence}\}$，权重向量：
+其中 $\mathcal{D} = \{\text{consensus}, \text{reliability}, \text{dispersion}, \text{stability}, \text{influence}\}$，权重向量：
 
 $$
-\mathbf{w} = (0.15,\; 0.18,\; 0.15,\; 0.15,\; 0.12,\; 0.12,\; 0.13)
+\mathbf{w} = (0.20,\; 0.25,\; 0.20,\; 0.17,\; 0.18)
 $$
 
 ### 8.2 各维度计算
 
-#### 可靠性 ($S_{\text{rel}}$)
+#### 共识度 ($S_{\text{cons}}$) — 权重 0.20
+
+Kuramoto 序参数 + 信念标准差 + 一致率 + 收敛轨迹。公式同 §4。
+
+#### 可靠性 ($S_{\text{rel}}$) — 权重 0.25
 
 $$
-S_{\text{rel}} = \text{Cronbach's }\alpha \cdot 40 + \text{CrossVal} \cdot 30 + \text{Repeatability} \cdot 30
+S_{\text{rel}} = \text{avgConfidence} \cdot 0.2 + \text{CrossVal} \cdot 0.3 + \text{RoundAlpha} \cdot 0.25 + \text{Repeatability} \cdot 0.25
 $$
 
-Cronbach's $\alpha$（标准化）：
+**跨轮次 Cronbach's $\alpha$**（标准化，仅在轮次 $\geq 3$ 时计算）：
+
+将每轮讨论作为一个测量场合，N 个 Agent 的 beliefs 作为该轮的观测值：
 
 $$
-\alpha = \frac{k}{k-1}\left(1 - \frac{\sum_{i=1}^{k}\sigma_i^2}{\sigma_{\text{total}}^2}\right)
+\alpha_{\text{round}} = \frac{k}{k-1}\left(1 - \frac{\sum_{r=1}^{k}\sigma_r^2}{\sigma_{\text{total}}^2}\right)
 $$
 
-其中 $k$ 是 Agent 数量，$\sigma_i^2$ 是 Agent $i$ 在各轮的方差，$\sigma_{\text{total}}^2$ 是总体方差。
+其中 $k$ = 讨论轮次数（$\geq 3$），$\sigma_r^2$ = 第 $r$ 轮 Agent beliefs 的样本方差，$\sigma_{\text{total}}^2$ = 所有轮次 beliefs 的总体方差。
 
-#### 鲁棒性 ($S_{\text{rob}}$)
+高 $\alpha_{\text{round}}$ → Agent 在多轮中维持一致的相对信念排名。低 $\alpha$ → 信念排名在轮次间剧烈波动。
 
-通过三项扰动测试评估：
+#### 离散度 ($S_{\text{disp}}$) — 权重 0.20
+
+衡量单次讨论中的统计分散程度（非扰动测试）：
 
 $$
-S_{\text{rob}} = \frac{\text{InputNoise} + \text{AgentDropout} + \text{ParamVariation}}{3}
+S_{\text{disp}} = \text{BeliefDispersion} \cdot 0.40 + \text{ConfidenceDispersion} \cdot 0.25 + \text{RoundVariability} \cdot 0.35
 $$
 
-#### 影响力分析 ($S_{\text{inf}}$)
+其中：
+- $\text{BeliefDispersion} = \max(0, 100 - \sigma_b \cdot 50)$，$\sigma_b$ = 跨 Agent 信念标准差
+- $\text{ConfidenceDispersion} = \max(0, 100 - \sigma_c \cdot 2)$，$\sigma_c$ = 跨 Agent 置信度标准差
+- $\text{RoundVariability}$ = 轮次间平均信念差的逆变换
+
+#### 稳定性 ($S_{\text{stab}}$) — 权重 0.17
+
+轮次间一致性和时序平滑度：$S_{\text{stab}} = \text{RoundConsistency} \cdot 0.5 + \text{TimeSeriesStability} \cdot 0.5$。
+
+#### 影响力分析 ($S_{\text{inf}}$) — 权重 0.18
 
 基尼系数衡量影响力不平等：
 
@@ -403,7 +422,7 @@ $$
 G = \frac{\sum_{i=1}^{n}\sum_{j=1}^{n}|d_i - d_j|}{2n\sum_{i=1}^{n}d_i}
 $$
 
-其中 $d_i$ 是 Agent $i$ 在图中的度中心性。
+其中 $d_i$ 是 Agent $i$ 在图中的度中心性。复合得分：$(1-G) \cdot 40 + \text{Density} \cdot 30 + (1 - \bar{L}/3) \cdot 30$。
 
 ---
 
@@ -580,8 +599,72 @@ const dosage = computeAdaptiveDosage({
 
 ---
 
+## 13. 交叉质证模型 (§D — 新增)
+
+### 13.1 动机
+
+传统治理通过消除分歧来达成共识。交叉质证反向利用分歧——将 Agent 按 belief 符号分成正反阵营，进行对抗性辩论，综合裁决。
+
+### 13.2 激活条件
+
+交叉质证在同时满足以下条件时激活：
+
+$$
+\sigma(\mathbf{b}) > \theta_{\text{div}} \;\land\; |\{i: b_i > 0\}| \geq n_{\min} \;\land\; |\{i: b_i < 0\}| \geq n_{\min}
+$$
+
+其中 $\theta_{\text{div}} = 0.3$（分歧阈值），$n_{\min} = 2$（最少每方人数）。
+
+### 13.3 阵营形成
+
+按信念符号分组：
+
+$$
+\begin{aligned}
+\mathcal{C}_{\text{pro}} &= \{a_i \mid b_i > 0\} \cup \{a_i \mid b_i = 0 \land |\mathcal{C}_{\text{pro}}| \leq |\mathcal{C}_{\text{con}}|\} \\
+\mathcal{C}_{\text{con}} &= \{a_i \mid b_i < 0\} \cup \{a_i \mid b_i = 0 \land |\mathcal{C}_{\text{con}}| < |\mathcal{C}_{\text{pro}}|\}
+\end{aligned}
+$$
+
+中立项（belief=0）分配到人数少的阵营，保持平衡。
+
+### 13.4 论点提取
+
+每方按置信度加权投票提取 Top-3 论点。论点 $a$ 的得分：
+
+$$
+\text{score}(a) = \sum_{i: a \in \text{args}(i)} c_i
+$$
+
+其中 $\text{args}(i)$ 是 Agent $i$ 推理文本中提取的论点集合，$c_i$ 是其置信度。
+
+### 13.5 信念移位
+
+质证回应中若包含承认词（"承认"、"同意"、"有道理"等），则向对方方向移位：
+
+$$
+\Delta b_i = \begin{cases}
+(\bar{b}_{\text{opp}} - b_i) \cdot 0.2 & \text{如果有承认词} \\
+0 & \text{否则}
+\end{cases}
+$$
+
+### 13.6 综合裁决
+
+加权信念 = 按阵营总置信度加权的双方平均信念：
+
+$$
+b_{\text{synth}} = \frac{\bar{b}_{\text{pro}} \cdot \sum_{i \in \mathcal{C}_{\text{pro}}} c_i + \bar{b}_{\text{con}} \cdot \sum_{i \in \mathcal{C}_{\text{con}}} c_i}{\sum_{i \in \mathcal{C}_{\text{pro}}} c_i + \sum_{i \in \mathcal{C}_{\text{con}}} c_i}
+$$
+
+若 $|\bar{b}_{\text{pro}} - \bar{b}_{\text{con}}| > 0.3$，保留分歧（dissentPreserved=true），生成少数派报告。
+
+---
+
 > **实现对应**：所有公式均在 `src/lib/` 中有 1:1 的代码实现。
 > `src/lib/constants.ts` 包含所有可调参数的集中定义。
+> `src/lib/evaluation/index.ts` 实现 §8（5 维评价）。
 > `src/lib/governance/adaptiveThresholds.ts` 实现 §10。
 > `src/lib/discussion/causalTrace.ts` 实现 §11。
 > `src/lib/governance/adaptiveDosage.ts` 实现 §12。
+> `src/lib/discussion/crossExamination.ts` 实现 §13。
