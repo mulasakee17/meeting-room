@@ -31,15 +31,15 @@
  * @see docs/integration/autogen.md for full integration guide
  */
 
-import type { FrameworkAdapter, AdapterOptions } from "./types";
+import type { GovernanceBridge, BridgeOptions } from "./types";
 import type { DiscussionMessage, FrameworkMessage } from "../types";
 import type { Intervention } from "../../lib/governance/types";
 
-export class AutoGenAdapter implements FrameworkAdapter {
+export class AutoGenAdapter implements GovernanceBridge {
   readonly framework = "autogen";
-  private options: AdapterOptions;
+  private options: BridgeOptions;
 
-  constructor(options: AdapterOptions = {}) {
+  constructor(options: BridgeOptions = {}) {
     this.options = {
       governanceEnabled: true,
       ...options,

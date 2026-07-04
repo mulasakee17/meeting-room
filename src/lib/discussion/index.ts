@@ -196,17 +196,20 @@ export class DiscussionEngine {
             });
           }
           // Also record the "with" state for the dropped agent's last known opinion
-          const droppedOpinion = await this.runRound([agents.find(a => a.id === dropoutAgentId)!], task, round, agentStates);
-          for (const o of droppedOpinion) {
-            for (const otherOpinion of opinions) {
-              this.causalObservations.push({
-                round, sourceAgentId: dropoutAgentId, targetAgentId: otherOpinion.agentId,
-                sourcePresent: true, sourceBelief: o.belief, targetBelief: otherOpinion.belief,
-              });
+          const droppedAgent = agents.find(a => a.id === dropoutAgentId);
+          if (droppedAgent) {
+            const droppedOpinion = await this.runRound([droppedAgent], task, round, agentStates);
+            for (const o of droppedOpinion) {
+              for (const otherOpinion of opinions) {
+                this.causalObservations.push({
+                  round, sourceAgentId: dropoutAgentId, targetAgentId: otherOpinion.agentId,
+                  sourcePresent: true, sourceBelief: o.belief, targetBelief: otherOpinion.belief,
+                });
+              }
             }
+            // Merge the dropped agent's opinion into the round
+            opinions.push(...droppedOpinion);
           }
-          // Merge the dropped agent's opinion into the round
-          opinions.push(...droppedOpinion);
         }
       }
       // -- cross-examination (if enabled and divergence detected) -------------

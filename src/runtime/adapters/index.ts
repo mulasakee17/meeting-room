@@ -1,20 +1,24 @@
 /**
- * SwarmAlpha Governance Runtime — Framework Adapters
+ * SwarmAlpha Governance Runtime — Governance Bridges
  *
- * Each adapter bridges a specific multi-agent framework into the
- * governance runtime. Adapters translate framework-native messages
- * into the standard DiscussionMessage format and apply governance
+ * Each bridge connects a specific multi-agent framework into the
+ * governance runtime, translating framework-native messages into
+ * the standard DiscussionMessage format and applying governance
  * interventions back to the framework.
  *
+ * NOTE: These are distinct from the FrameworkAdapters in src/lib/adapters/,
+ * which handle agent creation and interaction lifecycle (createAgents,
+ * runInteraction) for the research platform's execution pipeline.
+ *
  * Currently supported:
- * - CustomAdapter (built-in agent framework)
+ * - CustomAdapter (built-in agent bridge)
  * - AutoGenAdapter (Microsoft AutoGen bridge)
  *
  * Planned:
- * - CrewAIAdapter, LangGraphAdapter
+ * - CrewAI bridge, LangGraph bridge
  */
 
-import type { FrameworkAdapter } from "./types";
+import type { GovernanceBridge } from "./types";
 import { CustomAdapter } from "./CustomAdapter";
 import { AutoGenAdapter } from "./AutoGenAdapter";
 
@@ -23,18 +27,18 @@ import { AutoGenAdapter } from "./AutoGenAdapter";
 // ============================================================================
 
 export class AdapterRegistry {
-  private adapters: Map<string, FrameworkAdapter> = new Map();
+  private adapters: Map<string, GovernanceBridge> = new Map();
 
   constructor() {
     this.register("custom", new CustomAdapter());
     this.register("autogen", new AutoGenAdapter());
   }
 
-  register(framework: string, adapter: FrameworkAdapter): void {
-    this.adapters.set(framework, adapter);
+  register(framework: string, bridge: GovernanceBridge): void {
+    this.adapters.set(framework, bridge);
   }
 
-  get(framework: string): FrameworkAdapter | undefined {
+  get(framework: string): GovernanceBridge | undefined {
     return this.adapters.get(framework);
   }
 
@@ -47,7 +51,7 @@ export class AdapterRegistry {
   }
 }
 
-/** Global singleton adapter registry. */
+/** Global singleton bridge registry. */
 export const adapterRegistry = new AdapterRegistry();
 
 // ============================================================================
@@ -56,4 +60,4 @@ export const adapterRegistry = new AdapterRegistry();
 
 export { CustomAdapter } from "./CustomAdapter";
 export { AutoGenAdapter } from "./AutoGenAdapter";
-export type { FrameworkAdapter, AdapterOptions } from "./types";
+export type { GovernanceBridge, BridgeOptions } from "./types";

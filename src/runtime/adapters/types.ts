@@ -1,8 +1,13 @@
 /**
- * SwarmAlpha Governance Runtime — Framework Adapter Types
+ * SwarmAlpha Governance Runtime — Governance Bridge Types
  *
- * Defines the interface that any multi-agent framework adapter must implement
- * to bridge external agent messages into the SwarmAlpha governance runtime.
+ * Defines the GovernanceBridge interface that translates external agent messages
+ * into the standard DiscussionMessage format consumed by the GovernanceRuntime,
+ * and applies interventions back to the external framework.
+ *
+ * NOTE: This is distinct from the "Framework Adapters" in src/lib/adapters/,
+ * which handle agent creation and interaction execution (createAgents, runInteraction).
+ * GovernanceBridges handle message translation and intervention application.
  *
  * Framework-agnostic by design. Zero dependencies on any specific framework.
  */
@@ -11,21 +16,24 @@ import type { DiscussionMessage, FrameworkMessage } from "../types";
 import type { Intervention } from "../../lib/governance/types";
 
 // ============================================================================
-// Framework Adapter Interface
+// GovernanceBridge Interface
 // ============================================================================
 
 /**
- * A framework adapter bridges an external multi-agent framework
- * (AutoGen, CrewAI, LangGraph, or any custom system) into the
- * SwarmAlpha governance runtime.
+ * A GovernanceBridge connects an external multi-agent framework
+ * (AutoGen, CrewAI, LangGraph, or any custom system) to the SwarmAlpha
+ * governance runtime.
  *
  * Responsibilities:
  * 1. Transform framework-specific messages into the standard DiscussionMessage format
  * 2. Apply governance interventions back to the framework's agents
  *
- * Each supported framework has its own adapter implementation.
+ * Each supported framework has its own bridge implementation.
+ *
+ * Distinct from src/lib/adapters/ FrameworkAdapter, which handles agent lifecycle
+ * (createAgents, runInteraction) for the research platform's execution pipeline.
  */
-export interface FrameworkAdapter {
+export interface GovernanceBridge {
   /** The framework identifier (e.g., "autogen", "crewai", "langgraph", "custom") */
   readonly framework: string;
 
@@ -74,9 +82,9 @@ export interface FrameworkAdapter {
 // Adapter Configuration
 // ============================================================================
 
-/** Options passed when constructing a framework adapter. */
-export interface AdapterOptions {
-  /** LLM provider configuration (if the adapter manages LLM calls) */
+/** Options passed when constructing a governance bridge. */
+export interface BridgeOptions {
+  /** LLM provider configuration (if the bridge manages LLM calls) */
   llmConfig?: {
     provider: string;
     model: string;
@@ -84,30 +92,30 @@ export interface AdapterOptions {
   };
   /** Custom system prompt for agents */
   systemPrompt?: string;
-  /** Whether governance is enabled for this adapter */
+  /** Whether governance is enabled for this bridge */
   governanceEnabled?: boolean;
   /** Additional framework-specific options */
   custom?: Record<string, unknown>;
 }
 
 // ============================================================================
-// Adapter Registry
+// Bridge Registry
 // ============================================================================
 
 /**
- * Registry of all available framework adapters.
- * New adapters can be registered at runtime.
+ * Registry of all available governance bridges.
+ * New bridges can be registered at runtime.
  */
-export interface AdapterRegistry {
-  /** Register a new framework adapter */
-  register(framework: string, adapter: FrameworkAdapter): void;
+export interface BridgeRegistry {
+  /** Register a new governance bridge */
+  register(framework: string, bridge: GovernanceBridge): void;
 
-  /** Get an adapter by framework name */
-  get(framework: string): FrameworkAdapter | undefined;
+  /** Get a bridge by framework name */
+  get(framework: string): GovernanceBridge | undefined;
 
   /** List all registered framework names */
   list(): string[];
 
-  /** Check if a framework adapter is registered */
+  /** Check if a governance bridge is registered */
   has(framework: string): boolean;
 }

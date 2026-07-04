@@ -9,19 +9,19 @@
  * DiscussionMessages, and can apply governance interventions back.
  */
 
-import type { FrameworkAdapter, AdapterOptions } from "./types";
+import type { GovernanceBridge, BridgeOptions } from "./types";
 import type { DiscussionMessage, FrameworkMessage } from "../types";
 import type { Intervention } from "../../lib/governance/types";
 
 // ============================================================================
-// CustomAdapter
+// CustomBridge — built-in agent governance bridge
 // ============================================================================
 
-export class CustomAdapter implements FrameworkAdapter {
+export class CustomAdapter implements GovernanceBridge {
   readonly framework = "custom";
-  private options: AdapterOptions;
+  private options: BridgeOptions;
 
-  constructor(options: AdapterOptions = {}) {
+  constructor(options: BridgeOptions = {}) {
     this.options = {
       governanceEnabled: true,
       ...options,
@@ -53,7 +53,11 @@ export class CustomAdapter implements FrameworkAdapter {
     // For the Custom framework, interventions are applied by directly
     // modifying agent state. The context should contain agent references.
     const ctx = context as {
-      agents?: Array<{ id: string; setState: (s: { belief: number; confidence: number }) => void }>;
+      agents?: Array<{
+        id: string;
+        getState: () => { belief: number; confidence: number };
+        setState: (s: { belief: number; confidence: number }) => void;
+      }>;
     } | null;
 
     if (!ctx?.agents) {
@@ -67,7 +71,7 @@ export class CustomAdapter implements FrameworkAdapter {
         // dominant agent's confidence, making them less influential.
         const target = ctx.agents.find(a => a.id === intervention.targetAgentId);
         if (target) {
-          const state = (target as any).getState?.() || { belief: 0, confidence: 50 };
+          const state = target.getState() || { belief: 0, confidence: 50 };
           target.setState({
             belief: state.belief,
             confidence: Math.max(10, state.confidence * 0.5),
@@ -84,7 +88,7 @@ export class CustomAdapter implements FrameworkAdapter {
         for (const agentId of targets) {
           const target = ctx.agents.find(a => a.id === agentId);
           if (target) {
-            const state = (target as any).getState?.() || { belief: 0, confidence: 50 };
+            const state = target.getState() || { belief: 0, confidence: 50 };
             const perturbation = (Math.random() - 0.5) * 0.6;
             target.setState({
               belief: Math.max(-1, Math.min(1, state.belief + perturbation)),
@@ -101,14 +105,14 @@ export class CustomAdapter implements FrameworkAdapter {
         const targets = intervention.targetAgents || [];
         if (targets.length === 0 || !ctx.agents) return false;
 
-        const allBeliefs = ctx.agents.map(a => (a as any).getState?.()?.belief || 0);
+        const allBeliefs = ctx.agents.map(a => a.getState().belief || 0);
         const mean = allBeliefs.reduce((s: number, b: number) => s + b, 0) / allBeliefs.length;
 
         let applied = false;
         for (const agentId of targets) {
           const target = ctx.agents.find(a => a.id === agentId);
           if (target) {
-            const state = (target as any).getState?.() || { belief: 0, confidence: 50 };
+            const state = target.getState() || { belief: 0, confidence: 50 };
             const factor = 0.2;
             target.setState({
               belief: state.belief + (mean - state.belief) * factor,

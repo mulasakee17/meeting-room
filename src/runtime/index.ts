@@ -59,6 +59,6 @@ export {
 } from "./adapters";
 
 export type {
-  FrameworkAdapter,
-  AdapterOptions,
+  GovernanceBridge,
+  BridgeOptions,
 } from "./adapters/types";
