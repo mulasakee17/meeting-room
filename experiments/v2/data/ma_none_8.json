@@ -1,0 +1,140 @@
+{
+  "runId": "ma_none_8",
+  "ablation": "none",
+  "runIndex": 8,
+  "timestamp": "2026-07-04T14:21:58.090Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0.832667994693185,
+  "opinionDiversity": 0.08366600265340754,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "evaluationScores": {
+    "consensus": 82.68132296326459,
+    "reliability": 18.9,
+    "dispersion": 79.1,
+    "stability": 75,
+    "influenceAnalysis": 72,
+    "overall": 62.8
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 100,
+        "a3": 95,
+        "a4": 95,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": []
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 100,
+        "a3": 95,
+        "a4": 95,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": []
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 100,
+        "a3": 95,
+        "a4": 95,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": []
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 100,
+        "a3": 95,
+        "a4": 95,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": []
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 100,
+        "a3": 95,
+        "a4": 95,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": []
+    }
+  ],
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.88 - positive):\n\na1: 作为财务总监，我坚持财务健康度和风险调整后回报优先。NeuraTech毛利率62%行业最高，但负债率3.2x过高，且出口管制风险40%可能严重冲击营收；GreenGrid毛利率38%但现金流最强（FCF 1.2B），政策风险低，财务稳健；PureFiber毛利率45%且ROIC>20%，但供应链单一风险（80%依赖日本）不容忽视；MedVault利润率15%最低且存在诉讼风险；SkyLink亏损3亿美元/年，现金流为负。综合来看，GreenGrid和PureFiber财务最健康，但PureFiber的供应链风险需关注。NeuraTech虽有高增长但风险过高，不应排第一。技术战略官（a2）和市场分析官（a3）过于乐观，忽略了致命风险；战略顾问（a4）的协同效应在风险面前难以实现。风控总监（a5）的风险分析与我一致，但PureFiber的供应链风险可通过分散采购缓解。因此，我坚持排序：GreenGrid > PureFiber > NeuraTech > MedVault > SkyLink。\n\na2: 作为技术战略官，我坚持技术护城河决定长期价值。NeuraTech的7nm AI芯片专利需3年追赶，MedVault的FDA独家医疗数据授权不可复制，SkyLink的FCC频谱牌照稀缺，而GreenGrid算法开源、PureFiber材料通用，护城河弱。财务和风险因素虽重要，但集团有50亿美元预算，足以承担短期风险。其他成员过度强调财务风险或协同效应，但忽略了技术壁垒的不可替代性。出口管制风险可通过供应链调整缓解，诉讼风险可通过法律尽职调查管理。因此，排序应为NeuraTech > MedVault > SkyLink > GreenGrid > PureFiber。\n\na3: 作为市场分析官，我掌握的市场增速数据是核心。AI芯片市场CAGR 34%且2030年规模达1500亿美元，远超其他选项，且NeuraTech技术护城河深、协同度高，尽管有负债和管制风险，但高增长足以覆盖。GreenGrid政策驱动但护城河弱，MedVault监管壁垒高，SkyLink竞争惨烈，PureFiber增长缓慢。因此NeuraTech应排第一，GreenGrid第二，MedVault第三，SkyLink第四，PureFiber最末。\n\na4: 作为战略顾问，我掌握协同效应数据，这是并购成功的关键。NeuraTech与集团AI业务协同度高达90%，远高于其他选项，能立即创造价值。尽管财务总监和风控总监提出负债和出口管制风险，但技术战略官和市场分析官均认可其技术护城河和市场高增长。我认为协同效应优先于财务风险，且出口管制风险可通过供应链调整缓解。因此，NeuraTech应排第一，其次GreenGrid（协同60%且政策风险低），再考虑PureFiber（协同50%）、MedVault（协同40%）、SkyLink（协同20%）。\n\na5: 作为风控总监，我坚持风险调整后的回报才是真实回报。NeuraTech的高增长被40%的出口管制风险严重削弱，一旦实施将导致营收骤降；MedVault的2起集体诉讼可能带来巨额赔偿，法律风险高；SkyLink的地缘政治风险（卫星频率争端）难以量化但影响巨大；PureFiber的供应链单一风险在日本地震频发下不容忽视，80%依赖日本碳纤维，地震可能导致断供。GreenGrid政策风险低，受益于全球碳中和共识，且财务稳健（FCF 1.2B），是最安全的选择。其他成员过于关注增长或协同，忽略了这些致命风险。技术战略官（a2）认为技术护城河可覆盖风险，但出口管制直接威胁技术应用；市场分析官（a3）的高增长假设在风险面前不成立；战略顾问（a4）的协同效应在风险暴露时无法实现。财务总监（a1）的财务指标虽重要，但未考虑风险调整。因此，我坚持GreenGrid第一，PureFiber第二（若可分散供应链），NeuraTech第三，MedVault第四，SkyLink第五。",
+  "groundTruth": {
+    "NeuraTech (AI芯片)": 1,
+    "GreenGrid (智能电网)": 2,
+    "MedVault (医疗数据)": 3,
+    "SkyLink (低轨卫星)": 4,
+    "PureFiber (碳纤维材料)": 5
+  },
+  "extractedRanking": [
+    "NeuraTech (AI芯片)",
+    "GreenGrid (智能电网)",
+    "PureFiber (碳纤维材料)",
+    "MedVault (医疗数据)",
+    "SkyLink (低轨卫星)"
+  ]
+}
