@@ -172,13 +172,17 @@ Each adapter translates framework-native messages into the standard `DiscussionM
 
 ## Experimental Validation
 
-**80+ controlled experiments** (2 tasks × 4 ablation modes × 10+ repetitions) with statistical analysis (independent t-test + Cohen's d):
+**45 controlled experiments** (M&A Hidden Profile task, 3 ablation groups × n=15) with Kendall's τ rank correlation as the primary metric — replacing keyword-matching with a statistically valid measure of decision quality.
 
-- **Premature consensus** is the dominant failure mode (83-93% of detections)
-- **Governance is conditional**: intervenes when information is asymmetric, stays silent when LLMs already know the answer
-- **Precision matters**: random intervention degrades quality; targeted detection is prerequisite
+| Ablation | Q (μ±σ) | Kendall's τ | Interventions | Cohen's d |
+|----------|---------|-------------|---------------|-----------|
+| None (baseline) | 76.7±10.5 | 0.533 | — | — |
+| Detect‑only | 74.0±14.5 | 0.480 | 0 | −0.21 |
+| **Full governance** | **90.7±15.3** | **0.813** | 26 | **+1.07** |
 
-[Full experiment report →](experiments/lunar_survival/REPORT.md)
+**Key finding**: Full governance improves decision quality by 14 points with a large effect size (Cohen's d = +1.07). All 26 interventions were `continue_discussion` — the runtime detected premature consensus and forced deeper deliberation, improving rankings while reducing average rounds from 4 to 2.
+
+[Full experiment data →](experiments/v2/data/) · [Analysis script →](experiments/v2/analyze.ts)
 
 ---
 

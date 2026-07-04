@@ -222,11 +222,13 @@ Unified multi-provider interface:
 
 ## 7. Experiment Infrastructure
 
-`experiments/lunar_survival/` — Hidden Profile experiment framework:
-- 2 tasks (Lunar Survival, M&A) + 1 planned (Urban Planning)
-- 4 ablation modes × 10+ repetitions = 80+ experiments
-- Statistical analysis: independent samples t-test + Cohen's d
-- Raw data preservation for reproducibility
+`experiments/v2/` — Focused Hidden Profile experiment framework:
+- M&A task, 3 ablation modes (none / detect-only / full) × n=15 = 45 experiments
+- Primary metric: Kendall's τ rank correlation (replaces keyword matching)
+- Full governance: Q +14 points, Cohen's d = +1.07 (large effect)
+- All 45 raw JSON files preserved in `experiments/v2/data/`
+
+`experiments/lunar_survival/` — Legacy V1 framework (80+ experiments, keyword-matching metric)
 
 ---
 

@@ -45,18 +45,17 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 
 ---
 
-## Experimental Evidence (80+ controlled experiments)
+## Experimental Evidence (45 controlled experiments)
 
-2 tasks × 4 ablation modes × 10+ repetitions × statistical tests (t-test + Cohen's d)
+M&A Hidden Profile task × 3 ablation groups × n=15. Primary metric: Kendall's τ.
 
-| Finding | Evidence |
-|---------|----------|
-| Precision is prerequisite for intervention | Random intervention degrades quality |
-| Premature consensus is the dominant failure | 83-93% of all detections |
-| Governance is conditional, not always-on | Intervenes when info is asymmetric; stays silent when LLMs have prior knowledge |
-| No Hawthorne effect | Detect-only groups show no behavioral change |
+| Ablation | Decision Quality | τ | Interventions | d vs none |
+|----------|-----------------|----|--------------|-----------|
+| None | 76.7±10.5 | 0.533 | — | — |
+| Detect‑only | 74.0±14.5 | 0.480 | 0 | −0.21 |
+| **Full governance** | **90.7±15.3** | **0.813** | **26** | **+1.07** |
 
-**Core insight**: The governance runtime is a **conditional diagnostic system**, not an always-on optimizer.
+**Core result**: Full governance improves decision quality by 14 points (Cohen's d = +1.07, large effect). All interventions detected premature consensus and forced deeper deliberation.
 
 ---
 
