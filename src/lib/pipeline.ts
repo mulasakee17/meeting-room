@@ -105,40 +105,28 @@ function buildAgentConfigs(input: PipelineInput) {
 }
 
 function parseAgentStates(
-  states: InteractionResult["agentStates"],
-  hasLLMConfig: boolean
+  states: InteractionResult["agentStates"]
 ): AgentDecision[] {
   return states.map(state => {
-    if (hasLLMConfig) {
-      // execute route 风格：解析 JSON lastMessage，计算 emotion → belief
-      let parsedReasoning = state.reasoning || "";
-      let parsedEmotion = 0;
-      if (state.lastMessage) {
-        try {
-          const parsed = JSON.parse(state.lastMessage);
-          parsedReasoning = parsed.reasoning || parsedReasoning;
-          parsedEmotion = typeof parsed.emotion === "number" ? parsed.emotion : parsedEmotion;
-        } catch {
-          console.warn(`[pipeline] Agent ${state.agentId} lastMessage parse failed, using raw text`);
-          parsedReasoning = state.lastMessage;
-        }
+    let parsedReasoning = state.reasoning || "";
+    let parsedEmotion = 0;
+    if (state.lastMessage) {
+      try {
+        const parsed = JSON.parse(state.lastMessage);
+        parsedReasoning = parsed.reasoning || parsedReasoning;
+        parsedEmotion = typeof parsed.emotion === "number" ? parsed.emotion : parsedEmotion;
+      } catch {
+        console.warn(`[pipeline] Agent ${state.agentId} lastMessage parse failed, using raw text`);
+        parsedReasoning = state.lastMessage;
       }
-      const belief = Math.max(-1, Math.min(1, (parsedEmotion / 100) + (state.belief || 0) * 0.5));
-      return {
-        agentId: state.agentId,
-        content: parsedReasoning || "No message",
-        confidence: state.confidence || 70 + Math.random() * 30,
-        reasoning: parsedReasoning || "Default reasoning",
-        belief,
-      };
     }
-    // task route 风格：直接使用 state 字段
+    const belief = Math.max(-1, Math.min(1, (parsedEmotion / 100) + (state.belief ?? 0) * 0.5));
     return {
       agentId: state.agentId,
-      content: state.lastMessage || "No message",
-      confidence: state.confidence || 70 + Math.random() * 30,
-      reasoning: state.reasoning || "Default reasoning",
-      belief: state.belief || (Math.random() - 0.5) * 2,
+      content: parsedReasoning || "No message",
+      confidence: state.confidence ?? (70 + Math.random() * 30),
+      reasoning: parsedReasoning || "Default reasoning",
+      belief,
     };
   });
 }
@@ -161,19 +149,18 @@ function buildInteractionHistory(
 }
 
 function buildTrace(taskId: string, startTime: string) {
+  const endTime = new Date().toISOString();
+  const totalMs = new Date(endTime).getTime() - new Date(startTime).getTime();
+  const now = endTime;
   return {
     taskId,
     startTime,
-    endTime: new Date().toISOString(),
+    endTime,
     phases: [
       { phase: "input" as const, timestamp: startTime, durationMs: 0 },
-      { phase: "agent_creation" as const, timestamp: new Date().toISOString(), durationMs: 100 },
-      { phase: "interaction" as const, timestamp: new Date().toISOString(), durationMs: 500 },
-      { phase: "evaluation" as const, timestamp: new Date().toISOString(), durationMs: 200 },
-      { phase: "governance" as const, timestamp: new Date().toISOString(), durationMs: 100 },
-      { phase: "output" as const, timestamp: new Date().toISOString(), durationMs: 50 },
+      { phase: "execution" as const, timestamp: now, durationMs: totalMs },
     ],
-    fullLog: "Pipeline completed successfully",
+    fullLog: `Pipeline executed in ${totalMs}ms`,
   };
 }
 
@@ -228,8 +215,6 @@ export async function runSwarmPipeline(
 ): Promise<PipelineOutput> {
   const startTime = new Date().toISOString();
   const adapter = adapterRegistry.get(input.provider);
-  const hasLLMConfig = true; // execute 风格默认有 LLM 配置
-
   // 1. 创建智能体
   const agentConfigs = buildAgentConfigs(input);
   const agents = await adapter.createAgents(agentConfigs, input.llmConfig);
@@ -238,7 +223,7 @@ export async function runSwarmPipeline(
   const interactionResult = await adapter.runInteraction(agents, input.input);
 
   // 3. 解析智能体状态
-  const agentDecisions = parseAgentStates(interactionResult.agentStates, hasLLMConfig);
+  const agentDecisions = parseAgentStates(interactionResult.agentStates);
   const agentInfo = adapter.getAgentInfo(agents);
 
   // 4. 构建交互历史

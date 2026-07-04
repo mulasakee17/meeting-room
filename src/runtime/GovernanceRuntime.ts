@@ -366,13 +366,12 @@ export class GovernanceRuntime {
     const governance = this.state.lastGovernanceResult || this.createEmptyGovernanceResult();
 
     const roundResults: GovernanceRoundResult[] = this.state.rounds.map(r => {
-      const roundIssues = this.state.issues.filter(
-        i => this.state.rounds.find(r2 =>
-          r2.roundNumber === r.roundNumber && r2.messages.some(m =>
-            i.agents?.includes(m.agentId)
-          )
-        )
-      );
+      const roundIssues = this.state.issues.filter(i => {
+        // Round-level issues (no agents, e.g. premature_consensus): match by roundNumber
+        if (!i.agents || i.agents.length === 0) return true;
+        // Agent-level issues: match if any affected agent is in this round
+        return r.messages.some(m => i.agents!.includes(m.agentId));
+      });
       const roundInterventions = this.state.interventions.filter(
         intv => intv.targetAgentId && r.messages.some(m => m.agentId === intv.targetAgentId)
       );

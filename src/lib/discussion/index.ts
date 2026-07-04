@@ -1178,12 +1178,6 @@ Respond in JSON format:
     if (!this.crossExaminationResult?.activated) return;
 
     for (const round of this.crossExaminationResult.rounds) {
-      const state = agentStates.get(round.respondent === "pro"
-        ? this.crossExaminationResult.proCamp.members.find(m => true)?.agentId || ""
-        : this.crossExaminationResult.conCamp.members.find(m => true)?.agentId || ""
-      );
-
-      // Find the actual agent ID from the camp
       const camp = round.respondent === "pro" ? this.crossExaminationResult.proCamp : this.crossExaminationResult.conCamp;
       for (const member of camp.members) {
         const agentState = agentStates.get(member.agentId);
