@@ -62,6 +62,7 @@ class DefaultOpinionParser implements OpinionParser {
         referencedAgents: Array.isArray(parsed.referencedAgents) ? parsed.referencedAgents : [],
       };
     } catch {
+      console.warn(`[ObservationLayer] Agent ${agentId} response parse failed, using fallback`);
       return {
         agentId,
         reasoning: response.substring(0, 500),

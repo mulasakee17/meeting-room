@@ -119,6 +119,7 @@ function parseAgentStates(
           parsedReasoning = parsed.reasoning || parsedReasoning;
           parsedEmotion = typeof parsed.emotion === "number" ? parsed.emotion : parsedEmotion;
         } catch {
+          console.warn(`[pipeline] Agent ${state.agentId} lastMessage parse failed, using raw text`);
           parsedReasoning = state.lastMessage;
         }
       }
