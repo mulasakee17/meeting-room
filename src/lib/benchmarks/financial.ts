@@ -17,6 +17,8 @@ export interface FinancialBenchmarkResult {
   scenario: string;
   groundTruth?: string;
   agentDecision: string;
+  /** 0-100 准确率, 与 BenchmarkResult.accuracy 对齐 */
+  accuracy: number;
   evaluation: any;
   metrics: {
     accuracy?: number;
@@ -183,6 +185,7 @@ export class FinancialBenchmark {
           scenario: scenario.id,
           groundTruth: scenario.groundTruth,
           agentDecision,
+          accuracy: isCorrect ? 100 : 0,
           evaluation,
           metrics: {
             accuracy: isCorrect ? 1 : 0,
@@ -199,6 +202,7 @@ export class FinancialBenchmark {
       scenario: scenario.id,
       groundTruth: scenario.groundTruth,
       agentDecision: "NOT_EXECUTED",
+      accuracy: 0,
       evaluation: {
         overallScore: 0,
         grade: "poor",
