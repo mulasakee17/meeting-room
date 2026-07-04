@@ -1,146 +1,249 @@
-# 🐜 SwarmAlpha V3
+# 🐜 SwarmAlpha
 
-> LLM Multi-Agent 集体决策评估与治理研究平台
+> **An Embeddable Governance Runtime for Multi-Agent Systems**
 >
-> **让 AI 群体讨论不仅有结论，还有质量保证。**
+> Improving Collective Decision Quality via Quantifiable Adaptive Governance
+>
+> *SwarmAlpha enhances existing multi-agent systems rather than replacing them.*
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
 [![Tests](https://img.shields.io/badge/tests-124%20passed-green)](./test/)
+[![Framework-Agnostic](https://img.shields.io/badge/framework-agnostic-purple)]()
+[![Embeddable](https://img.shields.io/badge/embeddable-SDK-orange)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 ---
 
-## 这是什么？
+## What is SwarmAlpha?
 
-SwarmAlpha 研究 LLM 多智能体如何做集体决策——不是如何完成任务，而是如何**高质量地**达成共识。
+SwarmAlpha is an **embeddable governance runtime** that continuously observes, analyzes, governs, and evaluates collective decision-making processes in multi-agent systems.
 
-当 5 个 AI Agent 讨论一个问题时，它们会像人类一样犯错误：
-- 有人太强势 → 其他人跟风
-- 第一轮就一致 → 关键信息没讨论
-- 观点相似的互相确认 → 越聊越偏
-- 分歧太大 → 无法达成共识
+It does NOT create agents, manage workflows, or handle tool calling. Instead, it plugs into existing multi-agent frameworks (AutoGen, CrewAI, LangGraph, or custom systems) to provide a **real-time governance layer** that:
 
-**SwarmAlpha 的治理引擎实时检测这些问题，并主动干预——就像人类团队中的主持人。**
+- 🔍 **Observes** agent discussions in real time
+- 📊 **Models** belief evolution and influence propagation
+- 🚨 **Detects** systemic decision failures (premature consensus, authority bias, echo chambers, group polarization)
+- 🛡️ **Intervenes** with adaptive, targeted governance actions
+- 📈 **Evaluates** decision quality across 5 statistically-grounded dimensions
+
+> *"Not replacing how agents decide — ensuring what they decide holds up to scrutiny."*
 
 ---
 
-## 快速开始
+## Why Governance Matters
+
+When 5 AI agents discuss a problem, they fall into the same traps as human groups:
+
+| Failure Mode | What Happens | Impact |
+|-------------|-------------|--------|
+| **Premature Consensus** | Agreement in round 1 without exploring critical information | Sub-optimal decisions |
+| **Authority Bias** | One overconfident agent dominates the group | Herd-following errors |
+| **Echo Chamber** | Similar-minded agents mutually confirm biases | Collective blind spots |
+| **Group Polarization** | Divergence hardens into deadlock | Decision paralysis |
+
+**No existing multi-agent framework detects or intervenes on these failures.** SwarmAlpha fills this gap — as a drop-in governance layer.
+
+---
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────┐
+│   Your Multi-Agent Framework                  │
+│   (AutoGen / CrewAI / LangGraph / Custom)     │
+│                                               │
+│   Agent 1    Agent 2    Agent 3    ...        │
+│      │           │          │                  │
+│      └───────────┴──────────┘                  │
+│                  │                             │
+│          Discussion Stream                     │
+│                  │                             │
+├──────────────────┼──────────────────────────┤
+│   SwarmAlpha Governance Runtime               │
+│                                               │
+│   ┌─────────────────────────────────────┐    │
+│   │  Observation → Belief Modeling       │    │
+│   │     ↓                                │    │
+│   │  Bias Detection (4 types)            │    │
+│   │     ↓                                │    │
+│   │  Adaptive Governance (intervention)  │    │
+│   │     ↓                                │    │
+│   │  Decision Evaluation (5 dimensions)  │    │
+│   └─────────────────────────────────────┘    │
+│                                               │
+│   Framework-Agnostic · Embeddable · Adaptive  │
+└──────────────────────────────────────────────┘
+```
+
+**Key principle**: LLMs only do perception (extracting beliefs/emotions from language). Mathematics handles evolution (consensus computation, bias detection, belief dynamics). This makes the governance runtime **fast, cheap, and interpretable** — it can run as a lightweight plugin without additional LLM calls.
+
+---
+
+## Quick Start
+
+### Use as an Embeddable SDK
+
+```typescript
+import { GovernanceRuntime, CustomAdapter } from "@/runtime";
+
+// 1. Create the governance runtime
+const runtime = new GovernanceRuntime({
+  maxRounds: 5,
+  governanceMode: "full",
+});
+
+// 2. Adapt your framework's messages
+const adapter = new CustomAdapter();
+const messages = adapter.adaptMessages(yourFrameworkMessages, roundNumber);
+
+// 3. Process a round — governance observes, detects, intervenes
+const result = runtime.processRound(messages);
+
+if (result.hasIntervention) {
+  // 4. Apply interventions back to your agents
+  await adapter.applyIntervention(result.interventions[0], agentContext);
+}
+
+// 5. Get the final decision quality evaluation
+const sessionResult = runtime.getSessionResult(finalDecision);
+console.log(`Decision quality: ${sessionResult.evaluation.overallScore}/100`);
+```
+
+### Use as a Research Platform
 
 ```bash
-# 1. 安装
 git clone git@github.com:mulasakee17/meeting-room.git
 cd meeting-room
 npm install
-
-# 2. 配置 API Key (可选 — Demo 模式不需要)
-cp .env.local.example .env.local
-# 编辑 .env.local，填入 DEEPSEEK_API_KEY
-
-# 3. 启动
-npm run dev
-# 打开 http://localhost:3000
+cp .env.local.example .env.local  # Add your DEEPSEEK_API_KEY
+npm run dev                         # Open http://localhost:3000
 ```
 
-**Demo 模式**：不需要 API Key，打开页面直接点"运行对比实验"即可看到效果。
+**Demo mode** requires no API key — just click "Run Comparison" to see the governance runtime in action.
 
 ---
 
-## 架构
+## The Governance Runtime
 
-```
-┌─────────────────────────────────────────────────┐
-│               Next.js App Router                  │
-│      POST /api/v3/execute | task | benchmark      │
-├─────────────────────────────────────────────────┤
-│            Pipeline (共享执行管线)                │
-├────────┬──────────┬───────────┬─────────────────┤
-│ 讨论引擎 │ 评价引擎  │ 治理引擎   │ 观测+推理+质证   │
-│ (多轮+质证)│ (5维评分) │ (4偏差+干预) │ (LLM感知→数学演化) │
-├────────┴──────────┴───────────┴─────────────────┤
-│   Agent 适配器 ← DeepSeek / OpenAI / Anthropic   │
-└─────────────────────────────────────────────────┘
-```
+### 4 Governance Modes
 
-**核心理念**: LLM 只做感知（提取信念/情感），数学负责演化（共识计算、偏差检测）。快、便宜、可解释。
+| Mode | Detection | Intervention | Use Case |
+|------|-----------|-------------|----------|
+| `none` | ❌ | ❌ | Baseline comparison |
+| `detect-only` | ✅ | ❌ | Hawthorne effect testing |
+| `random-intervene` | ❌ | ✅ Random | Ablation: "is precision necessary?" |
+| `full` | ✅ | ✅ Targeted | Production use |
 
----
+### Adaptive Governance
 
-## 实验结果
+Thresholds and intervention strength adapt to task context:
 
-80 次对照实验，消融分析 + t 检验 + Cohen's d。
+- **Adaptive Thresholds**: Run a calibration discussion → measure convergence speed, base redundancy, influence concentration → auto-scale detection thresholds per task
+- **Adaptive Dosage**: Intervention strength scales with deviation severity, information coverage, and historical intervention effectiveness
+- **Cross-Examination Engine**: When agents disagree, automatically split into PRO/CON camps, run adversarial debate, synthesize verdict with minority report
 
-详见 [`experiments/lunar_survival/REPORT.md`](experiments/lunar_survival/REPORT.md)
+### 5-Dimension Decision Evaluation
 
-关键发现：
-- **随机干预显著降低准确率** (d=-1.41, p<.005) — 精准检测是前提
-- **过早共识是主要失效模式** (83-93%)
-- **治理在信息不对称时有效，信息充足时静默**
+| Dimension | What It Measures | Weight |
+|-----------|-----------------|--------|
+| **Consensus** | Kuramoto order parameter + belief variance + trajectory | 20% |
+| **Reliability** | Cross-round Cronbach's α + cross-validation + repeatability | 25% |
+| **Dispersion** | Cross-agent belief/confidence variance + round variability | 20% |
+| **Stability** | Round consistency + time-series smoothness | 17% |
+| **Influence Analysis** | Gini coefficient + network centrality + influence paths | 18% |
 
 ---
 
-## 项目结构
+## Framework Compatibility
+
+SwarmAlpha is **framework-agnostic**. It works with any multi-agent system through a standardized adapter interface:
+
+| Framework | Adapter | Status |
+|-----------|---------|--------|
+| **Custom** (built-in) | `CustomAdapter` | ✅ Full integration |
+| **AutoGen** (Microsoft) | `AutoGenAdapter` | 🔧 TypeScript bridge (Python sidecar needed for full integration) |
+| **CrewAI** | Planned | 🗓️ Roadmap |
+| **LangGraph** | Planned | 🗓️ Roadmap |
+
+Each adapter translates framework-native messages into the standard `DiscussionMessage` format and applies governance interventions back to the framework.
+
+---
+
+## Experimental Validation
+
+**100 controlled experiments** (3 tasks × 4 ablation modes × 10+ repetitions) with statistical analysis (independent t-test + Cohen's d):
+
+- **Premature consensus** is the dominant failure mode (83-93% of detections)
+- **Governance is conditional**: intervenes when information is asymmetric, stays silent when LLMs already know the answer
+- **Precision matters**: random intervention degrades quality; targeted detection is prerequisite
+
+[Full experiment report →](experiments/lunar_survival/REPORT.md)
+
+---
+
+## Project Structure
 
 ```
 src/
-├── app/
-│   ├── page.tsx              # 前端（对比模式 + Demo/Live）
-│   └── api/v3/               # API 端点
+├── runtime/                      # 🆕 Embeddable Governance Runtime (SDK)
+│   ├── GovernanceRuntime.ts      # Core governance orchestrator
+│   ├── types.ts                  # Framework-agnostic types
+│   ├── index.ts                  # Public API entry point
+│   └── adapters/                 # Framework bridges
+│       ├── CustomAdapter.ts      # Built-in agent framework
+│       └── AutoGenAdapter.ts     # AutoGen bridge
 ├── lib/
-│   ├── discussion/           # 讨论引擎（多轮 Agent 交互）
-│   ├── evaluation/           # 评价引擎（5 维评分）
-│   ├── governance/           # 治理引擎（4 偏差检测 + 干预）
-│   ├── inference/            # 推理层（信念推断）
-│   ├── observation/          # 观测层（LLM 输出解析）
-│   ├── runtime/              # 运行时（调度、上下文、终止）
-│   ├── adapters/             # Agent 框架适配器
-│   ├── llm/                  # 多 LLM 提供商抽象
-│   ├── security/             # 输入验证 + 速率限制
-│   ├── benchmarks/           # 基准测试
-│   ├── pipeline.ts           # 共享执行管线
-│   ├── constants.ts          # 集中管理参数
-│   └── demo-data.ts          # Demo 模式预计算数据
-experiments/
-└── lunar_survival/           # Hidden Profile 实验
-    ├── REPORT.md             # 完整实验报告
-    ├── run.ts                # 实验运行器
-    └── data/raw/             # 80 个 JSON 数据文件
+│   ├── governance/               # Bias detectors + intervention strategies
+│   ├── evaluation/               # 5-dimension scoring engine
+│   ├── observation/              # LLM output parsing
+│   ├── inference/                # Belief evolution computation
+│   ├── discussion/               # Built-in multi-round discussion engine
+│   ├── llm/                      # Multi-provider LLM abstraction
+│   ├── benchmarks/               # Benchmark framework
+│   └── security/                 # Rate limiting + input validation
+├── app/                          # Next.js web UI + REST API
+│   ├── page.tsx                  # Demo/Live comparison view
+│   └── api/v3/                   # API endpoints
+experiments/                      # Hidden Profile experiment framework
+└── test/                         # 124 automated tests
 ```
 
 ---
 
-## 运行测试
+## Running Tests
 
 ```bash
-npx vitest run          # 124 tests, 12 files
+npx vitest run          # 124 tests across 12 files
 npx vitest              # watch mode
 ```
 
 ---
 
-## 文档
+## Documentation
 
-| 文档 | 内容 |
-|------|------|
-| [ONEPAGER.md](ONEPAGER.md) | 一页项目摘要（导师/评委用） |
-| [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) | 技术架构深度剖析 |
-| [API_CONTRACT.md](API_CONTRACT.md) | V3 API 规范 |
-| [experiments/lunar_survival/REPORT.md](experiments/lunar_survival/REPORT.md) | 消融实验完整报告 |
+| Document | Content |
+|----------|---------|
+| [ONEPAGER.md](ONEPAGER.md) | One-page executive summary |
+| [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) | Deep technical architecture |
+| [API_CONTRACT.md](API_CONTRACT.md) | REST API + SDK API specification |
+| [MATHEMATICAL_FRAMEWORK.md](MATHEMATICAL_FRAMEWORK.md) | Complete formal math definitions |
+| [experiments/lunar_survival/REPORT.md](experiments/lunar_survival/REPORT.md) | Ablation experiment report |
 
 ---
 
-## 技术栈
+## Tech Stack
 
 TypeScript · Next.js 14 · React 18 · Tailwind CSS · Vitest · DeepSeek API
 
 ---
 
-## 作者
+## Author
 
-**贺孟元** — 高一学生，独立完成架构、实现、实验。
+**贺孟元** — High school student, independent architecture, implementation, and experimental design.
 
-AI 辅助开发（Claude Code），架构决策和实验设计完全自主。
+AI-assisted development (Claude Code). Architecture decisions and experiment design are fully autonomous.
 
 ---
 
-> *"不是让 AI 做决定，而是确保 AI 做的决定经得起审视。"*
+> *"Not replacing how agents decide — ensuring what they decide holds up to scrutiny."*

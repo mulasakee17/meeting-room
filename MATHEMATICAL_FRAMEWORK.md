@@ -1,6 +1,9 @@
-# SwarmAlpha 数学模型正规化
+# SwarmAlpha Mathematical Framework
 
-> 本文档提供 SwarmAlpha 治理引擎的完整形式化数学定义。所有符号和公式均与 `src/lib/` 中的代码实现一一对应。
+> Complete formal mathematical definition of the SwarmAlpha governance runtime.
+> All symbols and formulas have 1:1 implementations in `src/lib/` and `src/runtime/`.
+>
+> **Runtime embedding**: The governance runtime defined here can be embedded into any multi-agent framework via the `GovernanceRuntime` class in `src/runtime/GovernanceRuntime.ts`. The mathematical models operate on framework-agnostic `DiscussionMessage` streams, making them independent of any specific agent framework.
 
 ---
 

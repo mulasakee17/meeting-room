@@ -57,9 +57,9 @@ describe("Home 页面 — 新对比模式", () => {
   });
 
   // -- 1. 基础渲染 -----------------------------------------------------------
-  it("应该渲染 SwarmAlpha V3 标题", () => {
+  it("应该渲染 SwarmAlpha 标题", () => {
     render(<Home />);
-    expect(screen.getByText("SwarmAlpha V3")).toBeDefined();
+    expect(screen.getByText("SwarmAlpha")).toBeDefined();
   });
 
   it("应该渲染 Demo/Live 切换按钮", () => {
@@ -68,40 +68,40 @@ describe("Home 页面 — 新对比模式", () => {
     expect(screen.getByText("🔗 Live")).toBeDefined();
   });
 
-  it("Demo 模式应该有运行对比实验按钮", () => {
+  it("Demo 模式应该有运行按钮", () => {
     render(<Home />);
-    expect(screen.getByText("🚀 运行对比实验")).toBeDefined();
+    expect(screen.getByText("🚀 Run Governance Comparison")).toBeDefined();
   });
 
   it("应该显示三个预设场景", () => {
     render(<Home />);
-    expect(screen.getByText("🏥 AI 在医疗领域的应用前景")).toBeDefined();
-    expect(screen.getByText("📈 美联储加息对科技股的影响")).toBeDefined();
-    expect(screen.getByText("🌍 气候科技投资的战略优先级")).toBeDefined();
+    expect(screen.getByText("🏗️ 技术架构评审: 微服务 vs 单体")).toBeDefined();
+    expect(screen.getByText("💼 董事会投资决策: 是否收购 AI 初创公司")).toBeDefined();
+    expect(screen.getByText("🏥 多学科会诊: 复杂病例诊断")).toBeDefined();
   });
 
   it("空状态应该显示功能介绍卡片", () => {
     render(<Home />);
     expect(screen.getByText("多视角分析")).toBeDefined();
     expect(screen.getByText("偏差治理")).toBeDefined();
-    expect(screen.getByText("7 维评估")).toBeDefined();
+    expect(screen.getByText("5 维评估")).toBeDefined();
   });
 
   // -- 2. Demo 模式 — 运行后展示结果 ----------------------------------------
-  it("点击运行对比实验后应该显示单人决策和 Swarm 结果", async () => {
+  it("点击运行对比实验后应该显示治理对比结果", async () => {
     render(<Home />);
-    const button = screen.getByText("🚀 运行对比实验");
+    const button = screen.getByText("🚀 Run Governance Comparison");
     await act(async () => { fireEvent.click(button); });
 
     await waitFor(() => {
-      expect(screen.getByText("🧑 单人决策")).toBeDefined();
-      expect(screen.getByText("🐜 SwarmAlpha 集体决策")).toBeDefined();
+      expect(screen.getByText("🧑 Without Governance")).toBeDefined();
+      expect(screen.getByText("🐜 With SwarmAlpha Governance")).toBeDefined();
     });
   });
 
   it("Demo 结果应该显示评分增量", async () => {
     render(<Home />);
-    await act(async () => { fireEvent.click(screen.getByText("🚀 运行对比实验")); });
+    await act(async () => { fireEvent.click(screen.getByText("🚀 Run Governance Comparison")); });
 
     await waitFor(() => {
       expect(screen.getByText("集体智慧增益")).toBeDefined();
@@ -110,7 +110,7 @@ describe("Home 页面 — 新对比模式", () => {
 
   it("Swarm 卡应该显示治理检测", async () => {
     render(<Home />);
-    await act(async () => { fireEvent.click(screen.getByText("🚀 运行对比实验")); });
+    await act(async () => { fireEvent.click(screen.getByText("🚀 Run Governance Comparison")); });
 
     await waitFor(() => {
       expect(screen.getByText("回音室")).toBeDefined();
@@ -122,7 +122,7 @@ describe("Home 页面 — 新对比模式", () => {
   // -- 3. 场景切换 ----------------------------------------------------------
   it("切换场景应该更新活动按钮样式", async () => {
     render(<Home />);
-    const scenario2 = screen.getByText("📈 美联储加息对科技股的影响");
+    const scenario2 = screen.getByText("💼 董事会投资决策: 是否收购 AI 初创公司");
     await act(async () => { fireEvent.click(scenario2); });
 
     // 第二个按钮应该变成蓝色
@@ -135,14 +135,14 @@ describe("Home 页面 — 新对比模式", () => {
     fireEvent.click(screen.getByText("🔗 Live"));
 
     // Live 模式没有"运行对比实验"按钮
-    expect(() => screen.getByText("🚀 运行对比实验")).toThrow();
+    expect(() => screen.getByText("🚀 Run Governance Comparison")).toThrow();
   });
 
   it("Live 模式应该显示自定义输入框", () => {
     render(<Home />);
     fireEvent.click(screen.getByText("🔗 Live"));
 
-    expect(screen.getByPlaceholderText("分析人工智能在医疗领域的应用前景，判断总体趋势是积极还是消极。")).toBeDefined();
+    expect(screen.getByPlaceholderText("一个电商平台正在规划技术架构升级。评估是否应从现有单体架构迁移到微服务架构，考虑因素包括团队规模 15 人、日活 50 万、峰值 QPS 5000。")).toBeDefined();
   });
 
   it("Live 模式应该显示开始决策按钮", () => {
@@ -154,15 +154,15 @@ describe("Home 页面 — 新对比模式", () => {
   // -- 5. 详情模式切换 ------------------------------------------------------
   it("切换到详情模式应该显示讨论过程", async () => {
     render(<Home />);
-    await act(async () => { fireEvent.click(screen.getByText("🚀 运行对比实验")); });
+    await act(async () => { fireEvent.click(screen.getByText("🚀 Run Governance Comparison")); });
 
     await waitFor(() => { expect(screen.getByText("详情模式")).toBeDefined(); });
 
     await act(async () => { fireEvent.click(screen.getByText("详情模式")); });
 
     await waitFor(() => {
-      expect(screen.getByText("🧑 单人决策过程")).toBeDefined();
-      expect(screen.getByText("🐜 Swarm 讨论过程")).toBeDefined();
+      expect(screen.getByText("🧑 Without Governance — Decision Trace")).toBeDefined();
+      expect(screen.getByText("🐜 With Governance — Discussion & Intervention Trace")).toBeDefined();
     });
   });
 

@@ -10,6 +10,7 @@ import {
 
 import { callLLM, LLMConfig, LLMResponse } from "@/lib/llm/providers";
 import { DiscussionEngine, DiscussionAgent, DiscussionConfig } from "@/lib/discussion";
+import { GovernanceRuntime } from "@/runtime/GovernanceRuntime";
 
 export class CustomAgent implements Agent {
   private llmConfig: LLMConfig;
@@ -157,7 +158,13 @@ export class CustomAdapter implements FrameworkAdapter {
       memoryStrategy: "in_memory",
     };
 
-    const discussionEngine = new DiscussionEngine(discussionConfig);
+    const discussionEngine = new DiscussionEngine(
+      discussionConfig,
+      new GovernanceRuntime({
+        maxRounds: discussionConfig.maxRounds || 3,
+        governanceMode: "full",
+      })
+    );
 
     const discussionAgents = agents.map(a => new DiscussionAgentWrapper(a as CustomAgent));
 

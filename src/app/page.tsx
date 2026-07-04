@@ -121,8 +121,8 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <span className="text-3xl">🐜</span>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">SwarmAlpha V3</h1>
-              <p className="text-xs text-zinc-500">LLM Multi-Agent 集体决策 vs 单人决策 对比实验</p>
+              <h1 className="text-xl font-bold tracking-tight">SwarmAlpha</h1>
+              <p className="text-xs text-zinc-500">Embeddable Governance Runtime — Same Framework, Better Decisions</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -199,7 +199,7 @@ export default function Home() {
             onClick={handleRun}
             className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold text-lg transition-colors w-full"
           >
-            🚀 运行对比实验
+            🚀 Run Governance Comparison
           </button>
         )}
       </div>
@@ -226,10 +226,10 @@ export default function Home() {
       {!singleResult && !swarmResult && mode === "demo" && (
         <div className="max-w-2xl mx-auto px-4 py-24 text-center">
           <div className="text-7xl mb-6">🐜🐜🐜</div>
-          <h2 className="text-2xl font-bold mb-3">SwarmAlpha 集体决策实验</h2>
+          <h2 className="text-2xl font-bold mb-3">Governance Runtime Demo</h2>
           <p className="text-zinc-500 mb-6">
-            选择上方场景，点击"运行对比实验"，观察 5 个 AI Agent 通过讨论、质疑、综合
-            得出的集体决策，与单人决策的差异。
+            Same multi-agent discussion — see how SwarmAlpha's governance runtime
+            detects biases, intervenes, and improves decision quality.
           </p>
           <div className="grid grid-cols-3 gap-4 text-sm text-zinc-500">
             <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
@@ -240,11 +240,11 @@ export default function Home() {
             <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
               <div className="text-2xl mb-2">🛡️</div>
               <div className="font-semibold text-zinc-300 mb-1">偏差治理</div>
-              <div>实时检测回音室、权威偏见、群体极化</div>
+              <div>Real-time echo chamber, authority bias, polarization detection</div>
             </div>
             <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
               <div className="text-2xl mb-2">📊</div>
-              <div className="font-semibold text-zinc-300 mb-1">7 维评估</div>
+              <div className="font-semibold text-zinc-300 mb-1">5 维评估</div>
               <div>共识度、可靠性、可解释性、鲁棒性等全面评分</div>
             </div>
           </div>
@@ -279,20 +279,20 @@ function CompareView({ scenario, singleResult, swarmResult }: {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Single Agent */}
+        {/* Left: Without Governance (baseline) */}
         <ResultCard
-          title="🧑 单人决策"
-          subtitle="1 个 AI Agent 独立分析"
+          title="🧑 Without Governance"
+          subtitle="Same agents, no governance runtime"
           result={singleResult}
           colorClass="border-zinc-700"
           scenario={scenario}
           showGovernance={false}
         />
 
-        {/* Right: Swarm */}
+        {/* Right: With SwarmAlpha Governance Runtime */}
         <ResultCard
-          title="🐜 SwarmAlpha 集体决策"
-          subtitle="5 个 AI Agent 多轮讨论"
+          title="🐜 With SwarmAlpha Governance"
+          subtitle="Runtime detects bias, intervenes, improves quality"
           result={swarmResult}
           colorClass="border-emerald-500/30"
           scenario={scenario}
@@ -315,7 +315,7 @@ function DetailView({ singleResult, swarmResult }: {
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-zinc-900/50 rounded-xl p-5 border border-zinc-800">
-          <h3 className="font-semibold mb-3">🧑 单人决策过程</h3>
+          <h3 className="font-semibold mb-3">🧑 Without Governance — Decision Trace</h3>
           <div className="space-y-2">
             {singleResult.trace.map((t, i) => (
               <div key={i} className="flex items-center gap-2 text-sm text-zinc-400">
@@ -326,7 +326,7 @@ function DetailView({ singleResult, swarmResult }: {
           </div>
         </div>
         <div className="bg-zinc-900/50 rounded-xl p-5 border border-emerald-500/30">
-          <h3 className="font-semibold mb-3">🐜 Swarm 讨论过程</h3>
+          <h3 className="font-semibold mb-3">🐜 With Governance — Discussion & Intervention Trace</h3>
           <div className="space-y-2">
             {swarmResult.trace.map((t, i) => (
               <div key={i} className="flex items-start gap-2 text-sm text-zinc-400">
@@ -340,7 +340,7 @@ function DetailView({ singleResult, swarmResult }: {
 
       {/* Agent lists side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AgentList agents={singleResult.agents || []} title="单人 Agent" />
+        <AgentList agents={singleResult.agents || []} title="Agent (No Governance)" />
         {swarmResult.agents && <AgentList agents={swarmResult.agents} title="Swarm Agents" />}
       </div>
 
@@ -398,7 +398,7 @@ function ResultCard({ title, subtitle, result, colorClass, scenario, showGoverna
 
       {/* 7 Dimensions */}
       <div className="space-y-2 mb-4">
-        <div className="text-xs text-zinc-500 mb-2">七维评估</div>
+        <div className="text-xs text-zinc-500 mb-2">5-Dimension Evaluation</div>
         {Object.entries(result.dimensions).map(([key, dim]) => (
           <DimensionBar key={key} label={dim.label} score={dim.score} />
         ))}

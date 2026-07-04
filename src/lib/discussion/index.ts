@@ -47,6 +47,8 @@ import {
   CONFIDENCE_MIN,
   CONFIDENCE_MAX,
 } from "../constants";
+import type { GovernanceRuntime as GovernanceRuntimeType } from "@/runtime/GovernanceRuntime";
+import type { DiscussionMessage } from "@/runtime/types";
 
 export interface DiscussionAgent {
   id: string;
@@ -65,6 +67,7 @@ export class DiscussionEngine {
   private graphBuilder: InteractionGraphBuilder;
   private traceBuilder: DecisionTraceBuilder;
   private governanceEngine: GovernanceEngine;
+  private externalRuntime?: GovernanceRuntimeType;
   private eventTracker: EventTracker;
   private strategyRegistry: StrategyRegistry<any>;
   private config: DiscussionConfig;
@@ -79,7 +82,7 @@ export class DiscussionEngine {
   /** 交叉质证结果 (如果触发) */
   private crossExaminationResult: CrossExaminationResult | null = null;
 
-  constructor(config?: Partial<DiscussionConfig>) {
+  constructor(config?: Partial<DiscussionConfig>, governanceRuntime?: GovernanceRuntimeType) {
     this.config = {
       maxRounds: 3,
       convergenceThreshold: DISCUSSION_DEFAULT_CONVERGENCE_THRESHOLD,
@@ -97,6 +100,7 @@ export class DiscussionEngine {
     this.graphBuilder = new InteractionGraphBuilder();
     this.traceBuilder = new DecisionTraceBuilder();
     this.governanceEngine = new GovernanceEngine();
+    this.externalRuntime = governanceRuntime;
     this.eventTracker = new EventTracker();
     this.strategyRegistry = new StrategyRegistry();
     this.observationLayer = new ObservationLayer();
@@ -703,6 +707,17 @@ Respond in JSON format:
     // "none" mode: skip everything
     if (mode === "none") return null;
 
+    // If an external GovernanceRuntime is provided (embeddable SDK mode),
+    // delegate detection and intervention generation to it. DiscussionEngine
+    // still handles applying intervention effects to its own internal state.
+    if (this.externalRuntime) {
+      return this.applyGovernanceViaRuntime(round, opinions, agentStates, agents, mode);
+    }
+
+    // -- Native governance path (uses internal GovernanceEngine) --
+    // This path is preserved for backward compatibility and for when no
+    // external runtime is injected (existing tests, experiments).
+
     const agentBeliefs: AgentBelief[] = opinions.map(o => ({
       agentId: o.agentId,
       belief: o.belief,
@@ -812,6 +827,108 @@ Respond in JSON format:
       effectMetrics,
       issues,
     };
+  }
+
+  /**
+   * Governance via the embeddable GovernanceRuntime (SDK mode).
+   * Converts DiscussionEngine's internal state to the framework-agnostic
+   * DiscussionMessage format, delegates to the runtime, then applies
+   * intervention effects back to DiscussionEngine's graph and agent states.
+   */
+  private applyGovernanceViaRuntime(
+    round: number,
+    opinions: AgentOpinion[],
+    agentStates: Map<string, { belief: number; confidence: number }>,
+    agents: DiscussionAgent[],
+    mode: string
+  ): { hasIntervention: boolean; interventions: Intervention[]; effectMetrics?: Record<string, number>; issues: GovernanceIssue[] } | null {
+    if (!this.externalRuntime) return null;
+
+    // Convert opinions → framework-agnostic DiscussionMessages
+    const messages: DiscussionMessage[] = opinions.map(o => ({
+      agentId: o.agentId,
+      agentName: o.agentId,
+      agentRole: "Agent",
+      content: o.reasoning,
+      belief: o.belief,
+      confidence: o.confidence,
+      timestamp: new Date().toISOString(),
+      referencedAgents: o.referencedAgents,
+      reasoning: o.reasoning,
+      roundNumber: round,
+    }));
+
+    // Ensure runtime is in the right mode
+    this.externalRuntime.configure({
+      governanceMode: mode as "none" | "detect-only" | "random-intervene" | "full",
+    });
+
+    // Delegate to the governance runtime
+    const runtimeResult = this.externalRuntime.processRound(messages);
+
+    if (!runtimeResult.hasIntervention) {
+      // Return issues even without interventions (for detect-only mode)
+      const issues = this.buildIssuesFromRuntimeIssues(runtimeResult.issues);
+      return {
+        hasIntervention: false,
+        interventions: [],
+        issues,
+      };
+    }
+
+    // Apply interventions to DiscussionEngine's internal state
+    const graph = this.graphBuilder.getGraph();
+    const agentBeliefs: AgentBelief[] = opinions.map(o => ({
+      agentId: o.agentId,
+      belief: o.belief,
+      confidence: o.confidence,
+    }));
+    const messageInfos: MessageInfo[] = opinions.map(o => ({
+      agentId: o.agentId,
+      content: o.reasoning,
+      timestamp: new Date().toISOString(),
+      referencedAgents: o.referencedAgents,
+    }));
+
+    const state = {
+      agentBeliefs,
+      messages: messageInfos,
+      agentIds: opinions.map(o => o.agentId),
+      interactionGraph: {
+        nodes: graph.nodes.map(n => n.agentId),
+        edges: graph.edges.map(e => ({
+          source: e.source,
+          target: e.target,
+          weight: e.weight,
+          type: e.type,
+        })),
+      },
+    };
+
+    const results = this.governanceEngine.applyInterventions(runtimeResult.interventions, state);
+
+    // Apply intervention effects to graph and agent states
+    this.applyInterventionEffects(results, graph, agentStates, agents);
+
+    const issues = this.buildIssuesFromRuntimeIssues(runtimeResult.issues);
+
+    return {
+      hasIntervention: true,
+      interventions: runtimeResult.interventions,
+      issues,
+    };
+  }
+
+  /** Convert runtime issue format to DiscussionEngine's GovernanceIssue format. */
+  private buildIssuesFromRuntimeIssues(
+    runtimeIssues: Array<{ type: string; severity: "low" | "medium" | "high"; description: string; agents?: string[] }>
+  ): GovernanceIssue[] {
+    return runtimeIssues.map(i => ({
+      type: i.type,
+      severity: i.severity,
+      description: i.description,
+      agents: i.agents,
+    }));
   }
 
   /** Extract GovernanceIssue[] from GovernanceResult */

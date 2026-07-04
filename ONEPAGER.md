@@ -1,82 +1,121 @@
-# SwarmAlpha — 一页项目摘要
+# SwarmAlpha — One-Page Summary
 
-> **一句话**: 一个为 LLM 多智能体系统提供**实时偏差检测与主动治理**的研究平台。让 AI 群体像人类团队一样，有人提醒"别急着下结论"、"听听不同意见"。
-
----
-
-## 解决了什么问题？
-
-LLM 多智能体系统（AutoGen、CrewAI 等）正在金融、医疗、法律等高风险场景中被部署。但它们会犯和人类群体**完全相同的系统性决策错误**：
-
-| 偏差 | 表现 | 后果 |
-|------|------|------|
-| **过早共识** | 第一轮就达成一致，关键信息没被讨论 | 次优决策 |
-| **权威偏差** | 一个过度自信的 Agent 主导其余人的判断 | 跟风错误 |
-| **回声室** | 观点相似的 Agent 互相确认，越聊越偏 | 集体盲点 |
-| **群体极化** | 分歧走向极端，无法达成共识 | 决策僵局 |
-
-**当前没有任何框架检测或干预这些问题。**
+> **An Embeddable Governance Runtime for Multi-Agent Systems**
+>
+> Improving Collective Decision Quality via Quantifiable Adaptive Governance
 
 ---
 
-## 我们做了什么？
+## The Problem
+
+LLM multi-agent systems (AutoGen, CrewAI, etc.) are being deployed in high-stakes scenarios — finance, healthcare, law. But they commit the **same systematic decision errors** as human groups:
+
+| Bias | Symptom | Consequence |
+|------|---------|-------------|
+| **Premature Consensus** | Agreement in round 1, critical info never discussed | Sub-optimal decisions |
+| **Authority Bias** | One overconfident agent dominates the rest | Herd-following errors |
+| **Echo Chamber** | Similar-minded agents confirm each other | Collective blind spots |
+| **Group Polarization** | Divergence hardens into deadlock | Decision paralysis |
+
+**No existing framework detects or intervenes on these failures.**
+
+---
+
+## What We Built
+
+SwarmAlpha is **not another multi-agent framework**. It's an **embeddable governance runtime** — a drop-in layer that enhances existing frameworks rather than replacing them.
 
 ```
-现有方案:  Agent → 讨论 → 投票 → 结束  (不管决策质量)
-SwarmAlpha: Agent → 讨论 → 检测偏差 → 主动干预 → 再讨论 → 5维评分 → 可审计追踪
+Without SwarmAlpha:
+  AutoGen/CrewAI → Agents discuss → Vote → Done  (no quality check)
+
+With SwarmAlpha:
+  AutoGen/CrewAI → Agents discuss → [Governance Runtime: observe → detect → intervene] → Quality-evaluated decision
 ```
 
-**三个核心组件**：
+### Three Core Components
 
-1. **治理引擎** — 实时监测 4 种群体失效，自动触发针对性干预
-2. **5 维评估** — 不仅看"对不对"（准确率），还看"该不该信"（共识度、可靠性、离散度、稳定性、影响分析）。移除了解释性（基于推理长度启发式）和抗操纵性（逻辑缺陷）
-3. **Decision Trace** — 完整的可审计决策链：谁影响了谁、为什么信念变了、治理何时介入
+1. **Governance Runtime** — Framework-agnostic engine that monitors 4 failure modes in real time and triggers targeted interventions
+2. **5-Dimension Evaluation** — Statistically-grounded scoring (Consensus, Reliability, Dispersion, Stability, Influence Analysis) — not just "was it right?"
+3. **Decision Trace** — Full auditable decision chain: who influenced whom, why beliefs shifted, when governance intervened
 
----
+### Key Innovation: LLM Perception / Math Evolution Separation
 
-## 实验结果（80 次对照实验）
-
-3 任务 × 4 消融变体 × ≥10 次重复 × 统计检验（t-test + Cohen's d）
-
-| 发现 | 证据 |
-|------|------|
-| 精准检测是干预的前提 | 随机干预 **显著降低** 准确率 (d=-1.41, p<.005) |
-| 过早共识是主要失效模式 | 占所有检测的 83-93% |
-| 治理在信息不对称任务中有效 | 并购任务：full 组触发 36 次干预，准确率持平同时效率提升 |
-| LLM 已知答案时治理静默 | 月球任务中准确率无差异——治理不会"瞎管" |
-
-**核心结论**: 治理引擎是一个 **conditional 诊断系统**，不是 always-on 优化器。
+LLMs only extract beliefs and emotions from natural language. All governance logic (consensus computation, bias detection, belief dynamics) uses pure mathematics. Result: **fast, cheap, interpretable** — deployable as a lightweight plugin with zero additional LLM calls.
 
 ---
 
-## 技术亮点
+## Experimental Evidence (100 controlled experiments)
 
-| 特性 | 说明 |
-|------|------|
-| **LLM 感知 / 数学演化分离** | LLM 做提取，数学做推理——快、便宜、可解释 |
-| **可插拔策略模式** | 新偏差 / 新干预可随时添加 |
-| **多 LLM 适配** | DeepSeek / OpenAI / Anthropic / Local 统一接口 |
-| **Demo 模式零依赖** | 离线秒开，夏令营/答辩不翻车 |
-| **124 个自动化测试** | 核心模块全部有测试覆盖，12 个测试文件 |
+3 tasks × 4 ablation modes × 10+ repetitions × statistical tests (t-test + Cohen's d)
+
+| Finding | Evidence |
+|---------|----------|
+| Precision is prerequisite for intervention | Random intervention degrades quality |
+| Premature consensus is the dominant failure | 83-93% of all detections |
+| Governance is conditional, not always-on | Intervenes when info is asymmetric; stays silent when LLMs have prior knowledge |
+| No Hawthorne effect | Detect-only groups show no behavioral change |
+
+**Core insight**: The governance runtime is a **conditional diagnostic system**, not an always-on optimizer.
 
 ---
 
-## 谁做的？
+## Technical Highlights
 
-**贺孟元** — 高一学生，独立完成全部架构设计、代码实现、实验设计和数据分析。AI 辅助开发（Claude Code），但架构决策和实验设计完全自主。
+| Feature | Description |
+|---------|-------------|
+| **Framework-Agnostic** | Works with AutoGen, CrewAI, LangGraph, or custom frameworks via adapter pattern |
+| **Embeddable SDK** | `import { GovernanceRuntime } from "@swarmalpha/runtime"` — one class, zero framework deps |
+| **Adaptive Governance** | Thresholds auto-calibrate per task; intervention dosage scales with severity |
+| **Cross-Examination** | Adversarial debate engine: splits agents into PRO/CON camps, synthesizes verdict |
+| **Causal Inference** | Counterfactual dropout analysis distinguishes correlation from causation |
+| **Multi-LLM Support** | DeepSeek / OpenAI / Anthropic / Local (Ollama) — unified interface |
+| **124 Automated Tests** | All core modules covered, 12 test files |
+| **Demo Mode** | Zero-config, no API key needed — instant visualization |
+
+---
+
+## Integration Example
+
+```typescript
+import { GovernanceRuntime, CustomAdapter } from "@/runtime";
+
+// Wrap your existing agent system
+const runtime = new GovernanceRuntime({ maxRounds: 5, governanceMode: "full" });
+const adapter = new CustomAdapter();
+
+for (const round of discussion) {
+  const messages = adapter.adaptMessages(round.rawMessages, round.number);
+  const result = runtime.processRound(messages);
+
+  if (result.hasIntervention) {
+    await adapter.applyIntervention(result.interventions[0], agentContext);
+  }
+}
+
+const evaluation = runtime.getSessionResult(finalDecision);
+// → { overallScore: 82, grade: "good", dimensions: {...}, governance: {...} }
+```
+
+---
+
+## Who Built This
+
+**贺孟元** — High school student. Independent architecture design, implementation (~13,000 lines TypeScript), experiment design, and data analysis.
+
+AI-assisted coding (Claude Code). Architecture decisions and experiment design are fully autonomous.
 
 - **GitHub**: [github.com/mulasakee17/meeting-room](https://github.com/mulasakee17/meeting-room)
-- **技术栈**: TypeScript + Next.js + DeepSeek API + Vitest
-- **代码量**: ~11,000 行 TypeScript
+- **Tech Stack**: TypeScript + Next.js + DeepSeek API + Vitest
 
 ---
 
-## 下一步
+## Roadmap
 
-- **短期**: 完成 3 任务完整消融矩阵 + GPT-4o 跨模型验证
-- **中期**: 作为插件集成到 AutoGen/CrewAI，形式化治理理论框架
-- **长期**: 多 Agent 系统决策治理成为行业标准组件（EU AI Act 合规需求）
+- **Short-term**: Complete 3-task full ablation matrix + GPT-4o cross-model validation
+- **Medium-term**: Python SDK for native AutoGen/CrewAI integration; formalize governance theory
+- **Long-term**: Multi-agent governance as industry standard (EU AI Act compliance)
 
 ---
 
-> *"不是让 AI 做决定，而是确保 AI 做的决定是经得起审视的。"*
+> *"Not replacing how agents decide — ensuring what they decide holds up to scrutiny."*
