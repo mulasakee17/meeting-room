@@ -37,6 +37,12 @@ export interface InterventionResult {
     updatedEdges?: Array<{ source: string; target: string; weight: number; type: string }>;
     newAgents?: AgentBelief[];
   };
+  /** Information-layer prompt to inject into the next discussion round.
+   *  When set, the DiscussionEngine appends this text as visible context
+   *  for the affected agents in the following round. */
+  prompt?: string;
+  /** Which agents should see this prompt. If empty, all agents see it. */
+  promptTargets?: string[];
 }
 
 export interface InterventionStrategy {
@@ -44,7 +50,9 @@ export interface InterventionStrategy {
   type: InterventionType;
   apply(
     intervention: Intervention,
-    state: GovernanceState
+    state: GovernanceState,
+    /** Optional: agentId → unique knowledge strings for prompt generation */
+    agentKnowledge?: Map<string, string[]>
   ): InterventionResult;
 }
 

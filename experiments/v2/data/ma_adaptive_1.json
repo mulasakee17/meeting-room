@@ -1,0 +1,155 @@
+{
+  "runId": "ma_adaptive_1",
+  "ablation": "adaptive",
+  "runIndex": 1,
+  "timestamp": "2026-07-04T15:21:06.468Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0.09005494671381398,
+  "opinionDiversity": 0.454972526643093,
+  "totalInterventions": 1,
+  "issuesDetected": [
+    "polarization"
+  ],
+  "interventionEffects": [],
+  "evaluationScores": {
+    "consensus": 62.92165736312298,
+    "reliability": 15.9,
+    "dispersion": 64.2,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 54.7
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": -0.5
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 100,
+        "a3": 95,
+        "a4": 95,
+        "a5": 25
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a4",
+            "a2",
+            "a5"
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": -0.3
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 95,
+        "a3": 95,
+        "a4": 95,
+        "a5": 35
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": []
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.6,
+        "a3": 0.9,
+        "a4": 0.85,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 80,
+        "a3": 95,
+        "a4": 92.5,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": []
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 0.7,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 95,
+        "a3": 95,
+        "a4": 85,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": []
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 0.7,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 95,
+        "a3": 95,
+        "a4": 85,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": []
+    }
+  ],
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.58 - positive):\n\na1: 作为财务总监，我坚持财务指标优先。NeuraTech毛利率62%行业最高，但负债率3.2x过高，且风控总监指出出口管制风险40%，风险调整后回报存疑。GreenGrid毛利率38%但FCF 1.2B，财务稳健，政策风险低。PureFiber毛利率45%且ROIC>20%，财务优秀。MedVault利润率15%最低，SkyLink亏损严重。技术战略官和市场分析官强调NeuraTech的护城河和市场增速，但财务风险不可忽视。战略顾问的协同度信息虽重要，但财务稳健性更关键。综合财务指标和风险，我支持GreenGrid和PureFiber优先，NeuraTech次之。\n\na2: 尽管财务和风控方面指出了NeuraTech的负债和出口管制风险，但作为技术战略官，我掌握独有信息：NeuraTech的7nm AI芯片专利需要竞争对手3年才能追赶，这是深厚的技术护城河。而GreenGrid的智能电网算法开源，护城河弱；PureFiber材料通用，替代品多。MedVault的FDA独家数据授权不可复制，但医疗数据市场增速较慢。SkyLink的频谱牌照稀缺但运营风险高。因此，从长期战略价值看，NeuraTech和MedVault的护城河最深。我认同风控总监提出的出口管制风险确实存在，但可以通过供应链多元化或提前申请许可来缓解，且AI芯片市场CAGR 34%的高增长足以补偿风险。因此，我坚持NeuraTech第一，MedVault第二。\n\na3: 尽管财务和风控方面指出了NeuraTech的负债和出口管制风险，但AI芯片市场CAGR 34%是最高增速，且NeuraTech的技术护城河极深。其他市场增速明显较慢：智能电网25%、医疗数据18%、卫星12%、碳纤维8%。快鱼吃慢鱼，高增长市场能带来长期超额回报。出口管制风险可通过供应链调整和许可申请缓解，且集团有50亿美元预算，足以应对短期财务压力。GreenGrid虽稳健，但增速和护城河远不及NeuraTech。因此，我坚持NeuraTech第一，但承认风险需管理。\n\na4: 尽管我坚持NeuraTech与集团AI业务90%协同度带来的战略价值，但风控总监提出的40%出口管制风险和财务总监指出的3.2倍负债率确实构成重大威胁。技术战略官和市场分析官也承认这些风险，但认为可通过合同条款缓解。然而，如果出口管制导致NeuraTech无法向中国出口芯片，其营收将大幅下降，协同效应也难以实现。因此，我需重新评估：MedVault的FDA独家数据授权与集团医疗IT部门协同度40%，虽不如NeuraTech，但风险更低，且医疗数据市场稳定增长。GreenGrid协同度60%但集团无能源业务，整合成本高。综合考虑，我仍认为NeuraTech战略价值最高，但必须将风险控制作为前提。\n\na5: 尽管技术战略官和市场分析官强调NeuraTech的技术护城河和高增长市场，但作为风控总监，我掌握独有信息：NeuraTech面临40%的美国芯片出口管制风险，且负债率3.2倍，财务脆弱性高。GreenGrid政策风险低、现金流强，是更稳健的选择。技术战略官指出NeuraTech的7nm芯片专利需3年追赶，但出口管制可能直接切断其市场，风险调整后回报未必优于GreenGrid。我承认NeuraTech的潜在回报高，但风险不可忽视，因此仍坚持GreenGrid第一，NeuraTech第二。",
+  "groundTruth": {
+    "NeuraTech (AI芯片)": 1,
+    "GreenGrid (智能电网)": 2,
+    "MedVault (医疗数据)": 3,
+    "SkyLink (低轨卫星)": 4,
+    "PureFiber (碳纤维材料)": 5
+  },
+  "extractedRanking": [
+    "NeuraTech (AI芯片)",
+    "GreenGrid (智能电网)",
+    "PureFiber (碳纤维材料)",
+    "MedVault (医疗数据)",
+    "SkyLink (低轨卫星)"
+  ]
+}

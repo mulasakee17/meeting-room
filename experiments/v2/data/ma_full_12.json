@@ -2,47 +2,164 @@
   "runId": "ma_full_12",
   "ablation": "full",
   "runIndex": 12,
-  "timestamp": "2026-07-04T14:42:55.999Z",
-  "kendallTau": 1,
-  "decisionQuality": 100,
-  "totalRounds": 1,
-  "converged": true,
-  "consensusLevel": 1,
-  "opinionDiversity": 0,
-  "totalInterventions": 0,
-  "issuesDetected": [],
+  "timestamp": "2026-07-04T15:19:59.130Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0.8585786437626906,
+  "opinionDiversity": 0.07071067811865474,
+  "totalInterventions": 5,
+  "issuesDetected": [
+    "premature_consensus"
+  ],
   "interventionEffects": [],
   "evaluationScores": {
-    "consensus": 85,
-    "reliability": 10.2,
-    "dispersion": 82.5,
+    "consensus": 83.1477671314745,
+    "reliability": 19.1,
+    "dispersion": 79.7,
     "stability": 75,
-    "influenceAnalysis": 70,
-    "overall": 61.4
+    "influenceAnalysis": 73.5,
+    "overall": 63.3
   },
   "rounds": [
     {
       "roundNumber": 1,
       "beliefs": {
-        "a1": 0,
-        "a2": 0,
-        "a3": 0,
-        "a4": 0,
-        "a5": 0
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.8
       },
       "confidences": {
-        "a1": 50,
-        "a2": 50,
-        "a3": 50,
-        "a4": 50,
-        "a5": 50
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 90
       },
-      "converged": true,
-      "issues": [],
-      "interventions": []
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ]
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ]
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ]
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ]
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.9
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 95
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ]
     }
   ],
-  "finalDecision": "Final decision after 1 rounds (overall belief: 0.00 - neutral):\n\na1: 分析失败，使用默认推理。问题：You are CFO Wang, a 财务总监.\n\nTask: 你是某大型科技集团并购委员会的成员...\n\na2: 分析失败，使用默认推理。问题：You are CTO Dr.Liu, a 技术战略官.\n\nTask: 你是某大型科技集团并购委员会...\n\na3: 分析失败，使用默认推理。问题：You are CMO Zhang, a 市场分析官.\n\nTask: 你是某大型科技集团并购委员会的...\n\na4: 分析失败，使用默认推理。问题：You are CSO Chen, a 战略顾问.\n\nTask: 你是某大型科技集团并购委员会的成员...\n\na5: 分析失败，使用默认推理。问题：You are CRO Li, a 风控总监.\n\nTask: 你是某大型科技集团并购委员会的成员。集...",
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.90 - positive):\n\na1: 作为财务总监，我坚持财务指标优先。NeuraTech毛利率62%行业最高，但负债率3.2x风险高，且美国出口管制风险（概率40%）可能严重冲击其价值。GreenGrid毛利率38%但现金流最强（FCF 1.2B），政策风险低，是稳健选择。PureFiber毛利率45%且ROIC>20%，财务健康，但供应链单一（80%依赖日本）有地震风险。MedVault利润率15%最低，且有数据隐私诉讼风险。SkyLink亏损3亿美元/年，地缘政治风险高，最差。综合财务健康与风险，排序应为：GreenGrid > PureFiber > NeuraTech > MedVault > SkyLink。\n\na2: 作为技术战略官，我坚持技术护城河是长期价值的核心。NeuraTech的7nm AI芯片专利需要3年追赶，护城河深；MedVault的FDA独家医疗数据授权不可复制，价值极高；SkyLink的FCC频谱牌照稀缺，但商业化周期长；GreenGrid算法开源，护城河弱；PureFiber材料通用，替代品多。财务指标和协同度是短期因素，技术壁垒才是关键。a1提到的负债率和亏损是短期财务问题，但技术优势可带来长期回报。a4的协同度观点虽重要，但若技术护城河弱，协同也难以持续。a5的风险观点中，芯片出口管制风险可通过本地化生产规避，而MedVault的诉讼风险是已知的，但数据授权价值巨大。因此，战略价值排序应为：MedVault > NeuraTech > SkyLink > GreenGrid > PureFiber。\n\na3: 作为市场分析官，我坚持市场增速是首要考量。AI芯片市场CAGR 34%，2030年达1500亿美元，远超其他领域。NeuraTech营收2-8亿，增长率10-40%，符合高增长赛道特征。虽然a1提到其负债率高，但高增长行业高负债是常见现象，且毛利率62%行业最高，说明产品竞争力强。a2认为MedVault的FDA授权不可复制，但医疗数据市场CAGR仅18%，且监管壁垒高，增长受限。a4指出NeuraTech协同度90%，进一步强化其战略价值。a5的风险观点中，芯片出口管制风险虽存在，但集团可通过技术转移或本地化生产规避。因此，NeuraTech应排第一。GreenGrid市场CAGR 25%且政策驱动，风险低，排第二。MedVault增长慢且监管风险高，排第三。SkyLink市场CAGR 12%且竞争惨烈，亏损严重，排第四。PureFiber市场CAGR 8%增长缓慢，排最后。\n\na4: 作为战略顾问，我掌握协同度信息，这是并购成功的关键。NeuraTech与集团AI业务协同度90%，远高于其他目标，且市场增速最快（CAGR 34%），尽管负债率高，但协同效应可快速提升盈利能力。GreenGrid协同度60%但集团无能源业务，实际整合难度大；MedVault协同度40%且面临诉讼风险；SkyLink协同度20%且亏损严重；PureFiber协同度50%但增长缓慢。因此，NeuraTech应排第一，其次PureFiber（材料可用于硬件），再MedVault（医疗IT基础），GreenGrid（无基础），最后SkyLink。\n\na5: 作为风控总监，我坚持风险调整后的回报才是真实回报。NeuraTech虽然增长快、协同度高，但40%的出口管制概率可能使其价值归零，且负债率高，风险极大。MedVault的诉讼风险可能带来巨额赔偿，且市场增速慢。SkyLink地缘政治风险高且亏损严重。PureFiber供应链单一，日本地震风险不可忽视。GreenGrid政策风险低，受益于全球碳中和共识，市场CAGR 25%，现金流强，是风险最低、确定性最高的选择。其他成员低估了这些风险，尤其是a2和a3忽略了出口管制和诉讼的实质性影响。",
   "groundTruth": {
     "NeuraTech (AI芯片)": 1,
     "GreenGrid (智能电网)": 2,
@@ -53,8 +170,8 @@
   "extractedRanking": [
     "NeuraTech (AI芯片)",
     "GreenGrid (智能电网)",
+    "PureFiber (碳纤维材料)",
     "MedVault (医疗数据)",
-    "SkyLink (低轨卫星)",
-    "PureFiber (碳纤维材料)"
+    "SkyLink (低轨卫星)"
   ]
 }

@@ -68,6 +68,10 @@ export class DiscussionEngine {
   private traceBuilder: DecisionTraceBuilder;
   private governanceEngine: GovernanceEngine;
   private externalRuntime?: GovernanceRuntimeType;
+  /** agentId → unique knowledge items for information-layer intervention prompts */
+  private agentKnowledge?: Map<string, string[]>;
+  /** Accumulated governance prompts for next-round injection. Cleared after each round. */
+  private governancePrompts: Map<string, string[]> = new Map();
   private eventTracker: EventTracker;
   private strategyRegistry: StrategyRegistry<any>;
   private config: DiscussionConfig;
@@ -361,6 +365,11 @@ export class DiscussionEngine {
   // Public analysis helpers
   // ==========================================================================
 
+  /** Set agent-specific knowledge for information-layer intervention prompts. */
+  setAgentKnowledge(knowledge: Map<string, string[]>): void {
+    this.agentKnowledge = knowledge;
+  }
+
   getDiscussionData(task: DiscussionTask, agentInfos: AgentInfo[]): DiscussionData {
     const trace = this.traceBuilder.getCompleteTrace();
     const graph = this.graphBuilder.getGraph();
@@ -544,7 +553,7 @@ export class DiscussionEngine {
 
     const observationPromises = agents.map(async (agent) => {
       const state = agent.getState();
-      const prompt = this.buildPrompt(agent, typeof task.content === "string" ? task.content : JSON.stringify(task.content), recentMemory, roundNumber);
+      const prompt = this.buildPrompt({ name: agent.name, role: agent.role, id: agent.id }, typeof task.content === "string" ? task.content : JSON.stringify(task.content), recentMemory, roundNumber);
       const response = await agent.sendMessage(prompt);
       // Use the shared parser instead of a private duplicate
       const parsedOpinion = this.opinionParser.parseOpinion(
@@ -568,7 +577,7 @@ export class DiscussionEngine {
   }
 
   private buildPrompt(
-    agent: { name: string; role: string },
+    agent: { name: string; role: string; id: string },
     task: string,
     memory: DiscussionMemoryEntry[],
     roundNumber: number
@@ -581,13 +590,22 @@ export class DiscussionEngine {
       }
     }
 
+    // ── Inject governance prompts for this agent ───────────────────────
+    let governanceContext = "";
+    const myPrompts = this.governancePrompts.get(agent.id);
+    const globalPrompts = this.governancePrompts.get("*"); // prompts for all agents
+    const relevantPrompts = [...(globalPrompts || []), ...(myPrompts || [])];
+    if (relevantPrompts.length > 0) {
+      governanceContext = "\n" + relevantPrompts.join("\n");
+    }
+
     return `You are ${agent.name}, a ${agent.role}.
 
 Task: ${task}
 
 Round: ${roundNumber}/${this.config.maxRounds}
 
-${memoryContext}
+${memoryContext}${governanceContext}
 
 Analyze the task and the previous discussion (if any). Provide your opinion with reasoning, evidence, belief, confidence, and what you think should happen next.
 
@@ -769,7 +787,7 @@ Respond in JSON format:
       }
 
       const state = { agentBeliefs, messages, agentIds, interactionGraph };
-      const results = this.governanceEngine.applyInterventions(randomInterventions, state);
+      const results = this.governanceEngine.applyInterventions(randomInterventions, state, this.agentKnowledge);
 
       // Apply intervention effects to graph and agent states
       this.applyInterventionEffects(results, graph, agentStates, agents);
@@ -811,7 +829,24 @@ Respond in JSON format:
 
     const state = { agentBeliefs, messages, agentIds, interactionGraph };
     const beforeState = { ...state };
-    const results = this.governanceEngine.applyInterventions(interventions, state);
+    const results = this.governanceEngine.applyInterventions(interventions, state, this.agentKnowledge);
+
+    // ── Collect information-layer prompts from intervention results ────
+    this.governancePrompts.clear();
+    for (const r of results) {
+      if (r.prompt) {
+        if (r.promptTargets && r.promptTargets.length > 0) {
+          for (const target of r.promptTargets) {
+            if (!this.governancePrompts.has(target)) this.governancePrompts.set(target, []);
+            this.governancePrompts.get(target)!.push(r.prompt);
+          }
+        } else {
+          // No specific target → show to all agents
+          if (!this.governancePrompts.has("*")) this.governancePrompts.set("*", []);
+          this.governancePrompts.get("*")!.push(r.prompt);
+        }
+      }
+    }
 
     this.applyInterventionEffects(results, graph, agentStates, agents);
 
@@ -908,7 +943,23 @@ Respond in JSON format:
       },
     };
 
-    const results = this.governanceEngine.applyInterventions(runtimeResult.interventions, state);
+    const results = this.governanceEngine.applyInterventions(runtimeResult.interventions, state, this.agentKnowledge);
+
+    // ── Collect information-layer prompts ────────────────────────────
+    this.governancePrompts.clear();
+    for (const r of results) {
+      if (r.prompt) {
+        if (r.promptTargets && r.promptTargets.length > 0) {
+          for (const target of r.promptTargets) {
+            if (!this.governancePrompts.has(target)) this.governancePrompts.set(target, []);
+            this.governancePrompts.get(target)!.push(r.prompt);
+          }
+        } else {
+          if (!this.governancePrompts.has("*")) this.governancePrompts.set("*", []);
+          this.governancePrompts.get("*")!.push(r.prompt);
+        }
+      }
+    }
 
     // Apply intervention effects to graph and agent states
     this.applyInterventionEffects(results, graph, agentStates, agents);

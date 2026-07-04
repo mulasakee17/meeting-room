@@ -281,6 +281,18 @@ async function runSingle(
     governanceMode,
   }, govRuntime);
 
+  // ── Set agent knowledge for information-layer interventions ─────────
+  const knowledge = new Map<string, string[]>();
+  for (const info of task.agents) {
+    // Split knownItems by semicolons or newlines into individual knowledge items
+    const items = info.knownItems
+      .split(/[；;]/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    knowledge.set(info.id, items);
+  }
+  engine.setAgentKnowledge(knowledge);
+
   const taskObj = {
     id: runId,
     description: task.title,

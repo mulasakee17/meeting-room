@@ -12,21 +12,16 @@ export class ForceReflectionIntervention implements InterventionStrategy {
 
   apply(
     intervention: Intervention,
-    state: GovernanceState
+    state: GovernanceState,
+    _agentKnowledge?: Map<string, string[]>
   ): InterventionResult {
     if (intervention.type !== "force_reflection") {
-      return {
-        success: false,
-        intervention: { ...intervention, applied: false },
-      };
+      return { success: false, intervention: { ...intervention, applied: false } };
     }
 
     const targetAgents = intervention.targetAgents || [];
     if (targetAgents.length === 0) {
-      return {
-        success: false,
-        intervention: { ...intervention, applied: false },
-      };
+      return { success: false, intervention: { ...intervention, applied: false } };
     }
 
     const reflectionFactor =
@@ -35,27 +30,26 @@ export class ForceReflectionIntervention implements InterventionStrategy {
     const allBeliefs = state.agentBeliefs.map(b => b.belief);
     const meanBelief = allBeliefs.reduce((sum, b) => sum + b, 0) / allBeliefs.length;
 
+    // Math-layer: pull beliefs toward mean
     const updatedBeliefs = state.agentBeliefs.map(belief => {
       if (targetAgents.includes(belief.agentId)) {
         const distanceToMean = meanBelief - belief.belief;
-        const reflectionAdjustment = distanceToMean * reflectionFactor;
-        const newBelief = Math.max(-1, Math.min(1, belief.belief + reflectionAdjustment));
-        return {
-          ...belief,
-          belief: newBelief,
-          confidence: Math.max(10, belief.confidence - 5),
-        };
+        const newBelief = Math.max(-1, Math.min(1, belief.belief + distanceToMean * reflectionFactor));
+        return { ...belief, belief: newBelief, confidence: Math.max(10, belief.confidence - 5) };
       }
       return belief;
     });
 
-    const affectedCount = targetAgents.length;
-    // Build a lookup map to correctly match original beliefs — the previous
-    // implementation used `i` (the filtered-array index) to index into the
-    // unfiltered `state.agentBeliefs`, producing wrong diffs.
-    const originalBeliefMap = new Map(
-      state.agentBeliefs.map(b => [b.agentId, b.belief])
-    );
+    // ── Information-layer prompt ───────────────────────────────────────
+    const prompt = [
+      `\n\n[Governance Runtime] ⚠️ Group polarization detected.`,
+      `Your position is at an extreme. Please step back and seriously consider `,
+      `the opposing viewpoint. What would convince you that the other side is right? `,
+      `Identify one valid argument from the opposing camp before restating your own position.`,
+    ].join("\n");
+    const promptTargets = [...targetAgents];
+
+    const originalBeliefMap = new Map(state.agentBeliefs.map(b => [b.agentId, b.belief]));
     const maxAdjustment = Math.max(
       ...updatedBeliefs
         .filter(b => targetAgents.includes(b.agentId))
@@ -67,11 +61,11 @@ export class ForceReflectionIntervention implements InterventionStrategy {
       intervention: {
         ...intervention,
         applied: true,
-        effect: `Forced ${affectedCount} agents to reflect on opposing viewpoints. Max belief adjustment: ${maxAdjustment.toFixed(2)}`,
+        effect: `Forced ${targetAgents.length} agents to reflect on opposing viewpoints. Max belief shift: ${maxAdjustment.toFixed(2)}`,
       },
-      stateChanges: {
-        updatedBeliefs,
-      },
+      stateChanges: { updatedBeliefs },
+      prompt,
+      promptTargets,
     };
   }
 }

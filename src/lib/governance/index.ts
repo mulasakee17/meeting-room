@@ -437,7 +437,8 @@ export class GovernanceEngine {
 
   applyInterventions(
     interventions: Intervention[],
-    state: GovernanceState
+    state: GovernanceState,
+    agentKnowledge?: Map<string, string[]>
   ): InterventionResult[] {
     const results: InterventionResult[] = [];
 
@@ -445,7 +446,7 @@ export class GovernanceEngine {
       const strategy = this.strategies.get(intervention.type);
       
       if (strategy) {
-        const result = strategy.apply(intervention, state);
+        const result = strategy.apply(intervention, state, agentKnowledge);
         results.push(result);
         
         if (result.success && result.stateChanges) {

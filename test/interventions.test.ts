@@ -131,6 +131,6 @@ describe("ContinueDiscussion", () => {
       makeState(),
     );
     expect(result.success).toBe(true);
-    expect(result.intervention.effect).toContain("additional");
+    expect(result.intervention.effect).toContain("rounds");
   });
 });
