@@ -45,9 +45,9 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 
 ---
 
-## Experimental Evidence (100 controlled experiments)
+## Experimental Evidence (80+ controlled experiments)
 
-3 tasks × 4 ablation modes × 10+ repetitions × statistical tests (t-test + Cohen's d)
+2 tasks × 4 ablation modes × 10+ repetitions × statistical tests (t-test + Cohen's d)
 
 | Finding | Evidence |
 |---------|----------|
@@ -105,7 +105,7 @@ const evaluation = runtime.getSessionResult(finalDecision);
 
 AI-assisted coding (Claude Code). Architecture decisions and experiment design are fully autonomous.
 
-- **GitHub**: [github.com/mulasakee17/meeting-room](https://github.com/mulasakee17/meeting-room)
+- **GitHub**: [github.com/mulasakee17/swarmalpha](https://github.com/mulasakee17/swarmalpha)
 - **Tech Stack**: TypeScript + Next.js + DeepSeek API + Vitest
 
 ---

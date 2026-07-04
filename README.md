@@ -113,8 +113,8 @@ console.log(`Decision quality: ${sessionResult.evaluation.overallScore}/100`);
 ### Use as a Research Platform
 
 ```bash
-git clone git@github.com:mulasakee17/meeting-room.git
-cd meeting-room
+git clone git@github.com:mulasakee17/swarmalpha.git
+cd swarmalpha
 npm install
 cp .env.local.example .env.local  # Add your DEEPSEEK_API_KEY
 npm run dev                         # Open http://localhost:3000
@@ -172,7 +172,7 @@ Each adapter translates framework-native messages into the standard `DiscussionM
 
 ## Experimental Validation
 
-**100 controlled experiments** (3 tasks × 4 ablation modes × 10+ repetitions) with statistical analysis (independent t-test + Cohen's d):
+**80+ controlled experiments** (2 tasks × 4 ablation modes × 10+ repetitions) with statistical analysis (independent t-test + Cohen's d):
 
 - **Premature consensus** is the dominant failure mode (83-93% of detections)
 - **Governance is conditional**: intervenes when information is asymmetric, stays silent when LLMs already know the answer

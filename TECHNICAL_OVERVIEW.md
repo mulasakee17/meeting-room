@@ -223,8 +223,8 @@ Unified multi-provider interface:
 ## 7. Experiment Infrastructure
 
 `experiments/lunar_survival/` — Hidden Profile experiment framework:
-- 3 tasks (Lunar Survival, M&A, Urban Planning)
-- 4 ablation modes × 10+ repetitions = 100 experiments
+- 2 tasks (Lunar Survival, M&A) + 1 planned (Urban Planning)
+- 4 ablation modes × 10+ repetitions = 80+ experiments
 - Statistical analysis: independent samples t-test + Cohen's d
 - Raw data preservation for reproducibility
 
@@ -263,4 +263,4 @@ Unified multi-provider interface:
 
 ---
 
-> **Code**: ~13,000 TypeScript | **Tests**: 124 | **Experiments**: 100 | **Docs**: 5 core documents
+> **Code**: ~13,000 TypeScript | **Tests**: 124 | **Experiments**: 80+ | **Docs**: 5 core documents
