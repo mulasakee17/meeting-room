@@ -114,6 +114,18 @@ AI-assisted coding (Claude Code). Architecture decisions and experiment design a
 
 - **Short-term**: Complete 3-task full ablation matrix + GPT-4o cross-model validation
 - **Medium-term**: Python SDK for native AutoGen/CrewAI integration; formalize governance theory
+
+## Long-Term Vision: Agent Society Governance Infrastructure
+
+> *"Not a framework for building agents. An operating system for governing them."*
+
+As multi-agent systems scale from 5-agent discussions to 500-agent organizational ecosystems, the core challenge shifts from task completion to **emergent outcome trustworthiness**:
+
+- Echo chambers → information cartels
+- Authority bias → power monopolization
+- Premature consensus → institutional groupthink
+
+SwarmAlpha's observe→model→detect→intervene→evaluate loop is agent-count-agnostic and framework-agnostic — the minimal viable kernel of a future governance operating system for AI societies.
 - **Long-term**: Multi-agent governance as industry standard (EU AI Act compliance)
 
 ---

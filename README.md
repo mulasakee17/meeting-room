@@ -182,6 +182,30 @@ Each adapter translates framework-native messages into the standard `DiscussionM
 
 ---
 
+## Vision: Agent Society Governance Infrastructure
+
+SwarmAlpha today governs 5-agent discussions. Tomorrow, it governs 500-agent societies.
+
+As multi-agent systems scale from discussion rooms to organizational ecosystems — pricing agents, supply-chain agents, risk agents, customer-service agents constantly interacting, competing, and cooperating — the bottleneck shifts from *"can agents complete tasks?"* to *"can we trust the emergent outcomes?"*
+
+Systemic failures scale with agent count: echo chambers become information cartels. Authority bias becomes power monopolization. Premature consensus becomes institutional groupthink. **No existing framework addresses governance at this level — because no framework was designed for it.**
+
+SwarmAlpha's architecture is the minimal viable kernel for this future:
+
+| Layer | Today (5 agents) | Tomorrow (500 agents) |
+|-------|-----------------|----------------------|
+| **Observation** | Discussion messages | Inter-agent transactions, information flows |
+| **Belief/Influence** | Discussion-round belief tracking | Continuous social graph dynamics |
+| **Bias Detection** | 4 discussion biases | Social-level failures: monopoly, segregation, collusion |
+| **Intervention** | Per-round targeted action | Continuous institutional governance |
+| **Evaluation** | 5-dimension decision quality | Societal health metrics |
+
+The core loop — observe → model → detect → intervene → evaluate — is framework-agnostic and agent-count-agnostic. The governance runtime doesn't care whether it's monitoring 5 agents or 500.
+
+> *"Not a framework for building agents. An operating system for governing them."*
+
+---
+
 ## Project Structure
 
 ```

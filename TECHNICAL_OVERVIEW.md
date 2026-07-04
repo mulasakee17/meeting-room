@@ -263,4 +263,22 @@ Unified multi-provider interface:
 
 ---
 
+## 10. Long-Term Vision: Agent Society Governance
+
+The governance runtime's architecture is inherently scalable. The core loop — observe → model → detect → intervene → evaluate — is agnostic to agent count and framework. As multi-agent systems evolve from small discussion groups to organizational-scale agent ecosystems, the same governance primitives apply:
+
+| Scale | 5 Agents | 500 Agents |
+|-------|---------|-----------|
+| **Observation** | Discussion messages per round | Continuous inter-agent transaction streams |
+| **Belief Model** | Per-round belief vectors | Dynamic social graph with evolving positions |
+| **Failure Modes** | 4 discussion biases | Social-level failures: monopoly, segregation, systemic collusion |
+| **Intervention** | Per-round targeted action | Continuous institutional governance policies |
+| **Evaluation** | Decision quality (5 dims) | Societal health metrics |
+
+SwarmAlpha's framework-agnostic adapter layer, LLM/mathematics separation, and event-driven architecture make it the **minimal viable kernel** of a future governance operating system for AI agent societies.
+
+> *"Not a framework for building agents. An operating system for governing them."*
+
+---
+
 > **Code**: ~13,000 TypeScript | **Tests**: 124 | **Experiments**: 80+ | **Docs**: 5 core documents
