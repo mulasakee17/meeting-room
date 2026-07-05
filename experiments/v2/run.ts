@@ -302,7 +302,6 @@ async function runSingle(
   };
 
   const result = await engine.run(agents, taskObj);
-  const evalEngine = new EvaluationEngine();
 
   // ── Build round-by-round records ──────────────────────────────────────
   const rounds: RoundRecord[] = [];
@@ -392,15 +391,16 @@ async function runSingle(
     : 0;
   const opinionDiversity = lastBeliefs.length > 0 ? stdDev(lastBeliefs) : 0;
 
-  // ── Evaluation ───────────────────────────────────────────────────────
-  const evaluationScores: Record<string, number> = {};
-  if (result.roundResults.length > 0) {
-    const rr = result.roundResults[result.roundResults.length - 1];
+  // ── Per-round evaluation dimension scores ─────────────────────────────
+  const evalEngine = new EvaluationEngine();
+  const agentInfo = agents.map(a => ({ id: a.id, name: a.name, role: a.role, type: a.type }));
+
+  for (let i = 0; i < result.roundResults.length; i++) {
+    const rr = result.roundResults[i];
     const decisions = rr.opinions.map(o => ({
       agentId: o.agentId, content: o.reasoning,
       confidence: o.confidence, reasoning: o.reasoning, belief: o.belief,
     }));
-    const agentInfo = agents.map(a => ({ id: a.id, name: a.name, role: a.role, type: a.type }));
     const history = [{
       round: rr.roundNumber,
       messages: rr.opinions.map(o => ({ agentId: o.agentId, content: o.reasoning, timestamp: rr.timestamp })),
@@ -409,11 +409,20 @@ async function runSingle(
     }];
     try {
       const ev = evalEngine.evaluate(decisions, agentInfo, history, `Round ${rr.roundNumber}`);
+      // Attach per-dimension scores to this round
+      (rounds[i] as any).evalScores = {};
       for (const [key, dim] of Object.entries(ev.dimensions || {})) {
-        evaluationScores[key] = (dim as any).score ?? 0;
+        (rounds[i] as any).evalScores[key] = (dim as any).score ?? 0;
       }
-      evaluationScores["overall"] = ev.overallScore;
+      (rounds[i] as any).evalScores.overall = ev.overallScore;
     } catch { /* skip */ }
+  }
+
+  // ── Final-round evaluation scores (for backward compat) ──────────────
+  const evaluationScores: Record<string, number> = {};
+  const lastRoundWithEval = rounds.filter(r => (r as any).evalScores).pop();
+  if (lastRoundWithEval) {
+    Object.assign(evaluationScores, (lastRoundWithEval as any).evalScores);
   }
 
   return {

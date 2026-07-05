@@ -8,6 +8,7 @@ interface ExperimentResult {
   totalInterventions: number;
   interventionEffects: Array<{ effective: boolean; interventionType: string }>;
   issuesDetected: string[];
+  evaluationScores: Record<string, number>;
 }
 
 const DATA_DIR = path.resolve(__dirname, "data");
@@ -36,70 +37,81 @@ for (const r of results) {
 
 const baseline = groups.get("none")!.map(r => r.decisionQuality);
 
+// ── 5-Dimension Quantified Governance Impact ─────────────────────────
+const DIMS = ["consensus", "reliability", "dispersion", "stability", "influenceAnalysis"];
+const dimLabels: Record<string, string> = {
+  consensus: "Consensus", reliability: "Reliability", dispersion: "Dispersion",
+  stability: "Stability", influenceAnalysis: "Influence",
+};
+
+console.log("=".repeat(75));
+console.log("  SwarmAlpha V2 — Quantified Adaptive Governance Analysis");
+console.log("=".repeat(75));
+console.log("\n## 5-Dimension Governance Impact (full vs none, n=15/group)");
+console.log("| Dimension       | none μ±σ     | full μ±σ     | Δ       | d       |");
+console.log("|----------------|--------------|--------------|---------|---------|");
+
+for (const dim of DIMS) {
+  const noneScores = (groups.get("none")!).map(r => r.evaluationScores?.[dim] ?? 0);
+  const fullScores = (groups.get("full")!).map(r => r.evaluationScores?.[dim] ?? 0);
+  const noneM = mean(noneScores), fullM = mean(fullScores);
+  const delta = fullM - noneM;
+  const d = cohensD(fullScores, noneScores);
+  const dStr = (d >= 0 ? "+" : "") + d.toFixed(2);
+  console.log(`| ${dimLabels[dim].padEnd(14)} | ${noneM.toFixed(1)}±${stdDev(noneScores).toFixed(1).padStart(4)} | ${fullM.toFixed(1)}±${stdDev(fullScores).toFixed(1).padStart(4)} | ${((delta>=0?'+':'')+delta.toFixed(1)).padStart(6)} | ${dStr.padStart(6)} |`);
+}
+
+// Kendall's τ (external accuracy metric)
+const noneTau = (groups.get("none")!).map(r => r.kendallTau);
+const fullTau = (groups.get("full")!).map(r => r.kendallTau);
+const tauD = cohensD(fullTau, noneTau);
+const tauDelta = mean(fullTau) - mean(noneTau);
+console.log(`| ${"τ (ranking)".padEnd(14)} | ${mean(noneTau).toFixed(3)}±${stdDev(noneTau).toFixed(3).padStart(4)} | ${mean(fullTau).toFixed(3)}±${stdDev(fullTau).toFixed(3).padStart(4)} | ${((tauDelta>=0?'+':'')+tauDelta.toFixed(3)).padStart(6)} | ${(tauD>=0?'+':'')+tauD.toFixed(2).padStart(6)} |`);
+
+// ── Decision quality summary ──────────────────────────────────────────
 console.log("\n## Decision Quality (Kendall's τ → 0-100)");
-console.log("| Ablation       | n  | Q μ±σ       | τ μ±σ        | Interventions | Rounds | d vs none |");
-console.log("|----------------|----|-------------|---------------|---------------|--------|-----------|");
+console.log("| Ablation       | n  | Q μ±σ       | τ μ±σ        | Interventions | d vs none |");
+console.log("|----------------|----|-------------|---------------|---------------|-----------|");
 
 for (const ablation of ["none", "detect-only", "full"] as const) {
   const g = groups.get(ablation)!;
   const qs = g.map(r => r.decisionQuality);
   const ts = g.map(r => r.kendallTau);
   const totalIntv = g.reduce((s, r) => s + r.totalInterventions, 0);
-  const totalEff = g.reduce((s, r) => s + r.interventionEffects.filter(e => e.effective).length, 0);
-  // Cohen's d: positive = improvement over none
-  const d = ablation === "none" ? 0 : cohensD(qs, baseline); // (treatment - none) / sp
-  const totalRounds = Math.round(mean(g.map(r => r.totalRounds)));
-
+  const d = ablation === "none" ? 0 : cohensD(qs, baseline);
   const dStr = ablation === "none" ? "—" : (d >= 0 ? "+" : "") + d.toFixed(2);
   console.log(
-    `| ${ablation.padEnd(14)} | ${g.length}  | ${mean(qs).toFixed(1)}±${stdDev(qs).toFixed(1).padStart(4)} | ${mean(ts).toFixed(3)}±${stdDev(ts).toFixed(3)} | ${String(totalIntv).padStart(3)} intv      | ${String(totalRounds).padStart(2)}r    | ${dStr.padStart(6)}     |`
+    `| ${ablation.padEnd(14)} | ${g.length}  | ${mean(qs).toFixed(1)}±${stdDev(qs).toFixed(1).padStart(4)} | ${mean(ts).toFixed(3)}±${stdDev(ts).toFixed(3)} | ${String(totalIntv).padStart(3)} intv      | ${dStr.padStart(6)}     |`
   );
 }
 
-// ── Intervention effectiveness ──
-console.log("\n## Intervention Effectiveness");
-for (const ablation of ["full"] as const) {
-  const g = groups.get(ablation)!;
-  const effects = g.flatMap(r => r.interventionEffects);
-  const total = effects.length;
-  const effective = effects.filter(e => e.effective).length;
-  const byType = new Map<string, { total: number; effective: number }>();
-  for (const e of effects) {
-    if (!byType.has(e.interventionType)) byType.set(e.interventionType, { total: 0, effective: 0 });
-    const t = byType.get(e.interventionType)!;
-    t.total++;
-    if (e.effective) t.effective++;
-  }
-  console.log(`\n### ${ablation}`);
-  console.log(`  Total interventions: ${total}, Effective: ${effective} (${(effective/total*100).toFixed(0)}%)`);
-  for (const [type, stats] of byType) {
-    console.log(`  ${type}: ${stats.effective}/${stats.total} effective (${(stats.effective/stats.total*100).toFixed(0)}%)`);
-  }
+// ── Statistical summary ──────────────────────────────────────────────
+const full_qs = groups.get("full")!.map(r => r.decisionQuality);
+const fullD = cohensD(full_qs, baseline);
+const fmtD = (d: number) => (d >= 0 ? "+" : "") + d.toFixed(2);
+
+console.log("\n## Statistical Summary");
+console.log(`  Overall quality: full μ=${mean(full_qs).toFixed(1)}±${stdDev(full_qs).toFixed(1)} vs none μ=${mean(baseline).toFixed(1)}±${stdDev(baseline).toFixed(1)} (d=${fmtD(fullD)})`);
+
+if (fullD > 0.5) {
+  console.log(`  → Medium-large effect. Governance meaningfully improves decision quality.`);
+} else if (fullD > 0.2) {
+  console.log(`  → Small-to-medium effect. Directionally positive, needs larger n to confirm.`);
+} else {
+  console.log(`  → Negligible. No detectable improvement.`);
 }
 
-// ── Bayes factor approximation (JZS prior) ──
-console.log("\n## Statistical Summary");
-const full_qs = groups.get("full")!.map(r => r.decisionQuality);
-const detect_qs = groups.get("detect-only")!.map(r => r.decisionQuality);
+// ── Per-dimension interpretation ──────────────────────────────────────
+const dimEffects: Array<{ dim: string; d: number; delta: number }> = [];
+for (const dim of DIMS) {
+  const noneS = (groups.get("none")!).map(r => r.evaluationScores?.[dim] ?? 0);
+  const fullS = (groups.get("full")!).map(r => r.evaluationScores?.[dim] ?? 0);
+  dimEffects.push({ dim, d: cohensD(fullS, noneS), delta: mean(fullS) - mean(noneS) });
+}
+dimEffects.sort((a, b) => b.d - a.d);
 
-const detectD = cohensD(detect_qs, baseline);
-const fullD2 = cohensD(full_qs, baseline);
-const fmtD = (d: number) => (d >= 0 ? "+" : "") + d.toFixed(2);
-console.log(`  none μ=${mean(baseline).toFixed(1)}±${stdDev(baseline).toFixed(1)}`);
-console.log(`  detect-only μ=${mean(detect_qs).toFixed(1)}±${stdDev(detect_qs).toFixed(1)} (d=${fmtD(detectD)})`);
-console.log(`  full μ=${mean(full_qs).toFixed(1)}±${stdDev(full_qs).toFixed(1)} (d=${fmtD(fullD2)})`);
-
-const fullD = cohensD(full_qs, baseline);
-if (fullD > 0.8) {
-  console.log(`\n  → Full governance Cohen's d = +${fullD.toFixed(2)} (LARGE effect)`);
-  console.log(`  → Governance significantly improves decision quality over baseline.`);
-} else if (fullD > 0.5) {
-  console.log(`\n  → Full governance Cohen's d = +${fullD.toFixed(2)} (medium effect)`);
-  console.log(`  → Governance shows meaningful improvement.`);
-} else if (fullD > 0.2) {
-  console.log(`\n  → Full governance Cohen's d = +${fullD.toFixed(2)} (small effect)`);
-  console.log(`  → Directional improvement. Need larger n.`);
-} else {
-  console.log(`\n  → Full governance Cohen's d = +${fullD.toFixed(2)} (negligible)`);
-  console.log(`  → No detectable improvement.`);
+console.log("\n  Dimension ranking by governance effect:");
+for (const e of dimEffects) {
+  const bar = "█".repeat(Math.max(0, Math.round(e.d * 10)));
+  console.log(`  ${dimLabels[e.dim].padEnd(14)} d=${fmtD(e.d).padStart(5)}  ${bar}`);
 }
