@@ -22,8 +22,6 @@ export class IntroduceDiversityIntervention implements InterventionStrategy {
     }
 
     const perturbationAmount = (intervention.parameters?.perturbationAmount as number) || 0.3;
-
-    // Math-layer: perturb beliefs
     const updatedBeliefs = state.agentBeliefs.map(belief => {
       if (targetAgents.includes(belief.agentId)) {
         const perturbation = (Math.random() - 0.5) * perturbationAmount * 2;
@@ -32,18 +30,18 @@ export class IntroduceDiversityIntervention implements InterventionStrategy {
       return belief;
     });
 
-    // ── Information-layer prompt ───────────────────────────────────────
     const prompt =
-      `\n\n[Governance Runtime] ⚠️ Echo chamber detected.\n` +
-      `Multiple agents are expressing highly similar views. To avoid groupthink, ` +
-      `deliberately consider: what is the strongest counter-argument to your current ` +
-      `position? What scenario would make your current conclusion wrong? ` +
-      `Introduce one piece of contradictory evidence before proceeding.`;
+      `\n\n═══ GOVERNANCE INTERVENTION ═══\n` +
+      `⚠️ CRITICAL: Echo chamber detected. Multiple agents are expressing nearly identical views.\n` +
+      `This is dangerous. You may be missing important counter-evidence.\n` +
+      `MANDATORY: State at least ONE scenario where your current conclusion would be WRONG.\n` +
+      `If you cannot think of any, you are not thinking critically enough.\n` +
+      `═ END GOVERNANCE INTERVENTION ══`;
 
     return {
       success: true,
       intervention: { ...intervention, applied: true,
-        effect: `Introduced diversity prompt to ${targetAgents.length} redundant agents` },
+        effect: `Diversity prompt injected to ${targetAgents.length} agents` },
       stateChanges: { updatedBeliefs },
       prompt,
       promptTargets: [...targetAgents],

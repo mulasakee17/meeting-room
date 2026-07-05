@@ -112,21 +112,21 @@ export const INFERENCE_HIGH_CONF_WEIGHT_THRESHOLD = 0.5;
 // ============================================================================
 
 /** 回音室检测阈值 */
-export const GOVERNANCE_ECHO_CHAMBER_THRESHOLD = 0.7;
+export const GOVERNANCE_ECHO_CHAMBER_THRESHOLD = 0.5;
 /** 权威偏差检测阈值 */
-export const GOVERNANCE_AUTHORITY_BIAS_THRESHOLD = 0.4;
+export const GOVERNANCE_AUTHORITY_BIAS_THRESHOLD = 0.25;
 /** 极化检测阈值 */
-export const GOVERNANCE_POLARIZATION_THRESHOLD = 0.5;
+export const GOVERNANCE_POLARIZATION_THRESHOLD = 0.30;
 /** 过早共识检测阈值（轮次进度低于此 + 共识水平高 → 过早） */
-export const GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD = 0.5;
+export const GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD = 0.35;
 /** 过早共识所需的共识水平阈值 */
-export const GOVERNANCE_PREMATURE_CONSENSUS_LEVEL = 0.7;
+export const GOVERNANCE_PREMATURE_CONSENSUS_LEVEL = 0.55;
 /** 过早共识所需的标准差阈值 */
-export const GOVERNANCE_PREMATURE_CONSENSUS_STD_THRESHOLD = 0.15;
+export const GOVERNANCE_PREMATURE_CONSENSUS_STD_THRESHOLD = 0.20;
 /** 严重程度分级阈值 */
-export const GOVERNANCE_SEVERITY_ECHO_CHAMBER: [number, number] = [0.7, 0.85];
-export const GOVERNANCE_SEVERITY_AUTHORITY_BIAS: [number, number] = [0.4, 0.6];
-export const GOVERNANCE_SEVERITY_POLARIZATION: [number, number] = [0.5, 0.7];
+export const GOVERNANCE_SEVERITY_ECHO_CHAMBER: [number, number] = [0.5, 0.75];
+export const GOVERNANCE_SEVERITY_AUTHORITY_BIAS: [number, number] = [0.25, 0.5];
+export const GOVERNANCE_SEVERITY_POLARIZATION: [number, number] = [0.30, 0.55];
 /** 冗余智能体对判定：信念差阈值 */
 export const GOVERNANCE_REDUNDANT_BELIEF_DIFF = 0.1;
 /** 冗余智能体对判定：信心差阈值 */

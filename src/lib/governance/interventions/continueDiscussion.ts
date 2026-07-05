@@ -1,9 +1,6 @@
 import {
-  Intervention,
-  InterventionStrategy,
-  InterventionResult,
-  GovernanceState,
-  InterventionType,
+  Intervention, InterventionStrategy, InterventionResult,
+  GovernanceState, InterventionType,
 } from "../types";
 
 export class ContinueDiscussionIntervention implements InterventionStrategy {
@@ -16,27 +13,20 @@ export class ContinueDiscussionIntervention implements InterventionStrategy {
     agentKnowledge?: Map<string, string[]>
   ): InterventionResult {
     if (intervention.type !== "continue_discussion") {
-      return {
-        success: false,
-        intervention: { ...intervention, applied: false },
-      };
+      return { success: false, intervention: { ...intervention, applied: false } };
     }
 
     const additionalRounds = (intervention.parameters?.additionalRounds as number) || 2;
-    const reason = intervention.parameters?.reason as string || "Premature consensus detected";
 
-    // ── Information-layer prompt generation ──────────────────────────
     let prompt: string | undefined;
 
     if (agentKnowledge && agentKnowledge.size > 0) {
-      // Scan what has been discussed so far
       const allMessages = state.messages.map(m => m.content).join(" ").toLowerCase();
       const undiscussedByAgent = new Map<string, string[]>();
 
       for (const [agentId, knowledgeItems] of agentKnowledge) {
         const undiscussed: string[] = [];
         for (const item of knowledgeItems) {
-          // Check if key parts of this knowledge item appear in the discussion
           const keywords = item.toLowerCase().split(/\s+/).filter(w => w.length > 3);
           const mentioned = keywords.some(kw => allMessages.includes(kw));
           if (!mentioned) {
@@ -50,38 +40,36 @@ export class ContinueDiscussionIntervention implements InterventionStrategy {
 
       if (undiscussedByAgent.size > 0) {
         const parts: string[] = [];
-        parts.push("\n\n[Governance Runtime] ⚠️ Premature consensus detected.");
-        parts.push("The group is converging too quickly. Critical information has NOT been discussed:\n");
+        parts.push("\n\n═══ GOVERNANCE INTERVENTION ═══");
+        parts.push("⚠️ CRITICAL: The group is converging too quickly. Your current ranking is at risk of being wrong because the following crucial information has NOT been discussed:\n");
 
         for (const [agentId, items] of undiscussedByAgent) {
-          const agentName = state.agentBeliefs.find(a => a.agentId === agentId)?.agentId || agentId;
-          parts.push(`${agentName}'s unique perspective:`);
+          parts.push(`${agentId} holds unique data that DIRECTLY CHANGES the priority order:`);
           for (const item of items) {
-            parts.push(`  • ${item}`);
+            parts.push(`  ▶ ${item}`);
           }
         }
 
-        parts.push(`\nPlease debate these undiscussed points before finalizing your ranking.`);
+        parts.push(`\nThis is NOT optional. Your ranking MUST account for these data points.`);
+        parts.push(`If your current ranking ignores any of the above, REVISE IT NOW.`);
+        parts.push(`═ END GOVERNANCE INTERVENTION ══`);
         prompt = parts.join("\n");
       }
     }
 
-    // Fallback: generic prompt when no knowledge map is available
     if (!prompt) {
       prompt =
-        `\n\n[Governance Runtime] ⚠️ Premature consensus detected.\n` +
-        `The group is converging too quickly (round ${state.agentBeliefs[0] ? "early" : "1"}). ` +
-        `Please reconsider your position — are there alternative viewpoints or information ` +
-        `that haven't been raised yet? Challenge each other before finalizing.`;
+        `\n\n═══ GOVERNANCE INTERVENTION ═══\n` +
+        `⚠️ CRITICAL: Premature consensus detected. The group is agreeing too fast.\n` +
+        `STOP. Reconsider. Are there alternative viewpoints that haven't been raised?\n` +
+        `Challenge each other BEFORE finalizing. State one counter-argument now.\n` +
+        `═ END GOVERNANCE INTERVENTION ══`;
     }
 
     return {
       success: true,
-      intervention: {
-        ...intervention,
-        applied: true,
-        effect: `Added ${additionalRounds} rounds + injected undiscussed information prompt`,
-      },
+      intervention: { ...intervention, applied: true,
+        effect: `Added ${additionalRounds} rounds + injected critical undiscussed information` },
       prompt,
       stateChanges: {},
     };

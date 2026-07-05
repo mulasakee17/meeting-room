@@ -2,23 +2,25 @@
   "runId": "ma_full_1",
   "ablation": "full",
   "runIndex": 1,
-  "timestamp": "2026-07-04T15:17:23.644Z",
-  "kendallTau": 1,
-  "decisionQuality": 100,
-  "totalRounds": 1,
+  "timestamp": "2026-07-05T01:21:04.978Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "totalRounds": 2,
   "converged": true,
-  "consensusLevel": 0.8904554884989668,
-  "opinionDiversity": 0.0547722557505166,
-  "totalInterventions": 0,
-  "issuesDetected": [],
+  "consensusLevel": 1,
+  "opinionDiversity": 0,
+  "totalInterventions": 1,
+  "issuesDetected": [
+    "premature_consensus"
+  ],
   "interventionEffects": [],
   "evaluationScores": {
-    "consensus": 83.66571666447868,
-    "reliability": 18.7,
-    "dispersion": 80.3,
+    "consensus": 85,
+    "reliability": 19.2,
+    "dispersion": 82.5,
     "stability": 75,
     "influenceAnalysis": 70,
-    "overall": 62.8
+    "overall": 63.7
   },
   "rounds": [
     {
@@ -27,22 +29,65 @@
         "a1": 0.8,
         "a2": 0.9,
         "a3": 0.9,
-        "a4": 0.9,
+        "a4": 1,
         "a5": 0.8
       },
       "confidences": {
         "a1": 90,
         "a2": 95,
         "a3": 95,
-        "a4": 95,
+        "a4": 100,
         "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "evalScores": {
+        "consensus": 82.68132296326459,
+        "reliability": 18.9,
+        "dispersion": 79.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.4
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.9,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": 0.9
+      },
+      "confidences": {
+        "a1": 95,
+        "a2": 95,
+        "a3": 95,
+        "a4": 95,
+        "a5": 95
       },
       "converged": true,
       "issues": [],
-      "interventions": []
+      "interventions": [],
+      "evalScores": {
+        "consensus": 85,
+        "reliability": 19.2,
+        "dispersion": 82.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 63.7
+      }
     }
   ],
-  "finalDecision": "Final decision after 1 rounds (overall belief: 0.86 - positive):\n\na1: 作为财务总监，我优先考虑财务指标。NeuraTech毛利率62%行业最高，但负债率3.2x风险高；GreenGrid现金流最强（FCF $1.2B），但毛利率38%一般；MedVault利润率15%最低；SkyLink亏损$300M/年，风险极大；PureFiber毛利率45%且ROIC>20%，财务表现稳健。综合高毛利和高ROIC，PureFiber最优，NeuraTech次之但需关注负债，GreenGrid第三，MedVault第四，SkyLink最后。\n\na2: 作为技术战略官，我掌握各公司的技术护城河信息。NeuraTech的7nm AI芯片专利具有3年领先优势，战略价值极高。MedVault的FDA独家医疗数据授权不可复制，护城河深厚。SkyLink的FCC频谱牌照是稀缺资源，但低轨卫星市场尚需时间成熟。GreenGrid的智能电网算法开源，护城河弱。PureFiber材料技术通用，替代品多，价值最低。因此排序应为：NeuraTech > MedVault > SkyLink > GreenGrid > PureFiber。\n\na3: 作为市场分析官，我掌握AI芯片市场CAGR 34%，2030年达1500亿美元，增速远超其他领域。NeuraTech处于高增长赛道，且营收2-8亿、增长率10-40%符合行业特征，战略价值最高。智能电网CAGR 25%也不错，但政策驱动下竞争可能加剧。医疗数据监管壁垒高，卫星市场SpaceX主导竞争惨烈，碳纤维增长缓慢。因此排序应为NeuraTech > GreenGrid > MedVault > SkyLink > PureFiber。\n\na4: 作为战略顾问，我掌握NeuraTech与集团AI业务协同度高达90%，这是其他公司无法比拟的。GreenGrid协同度60%但集团无能源业务，MedVault协同度40%但集团医疗IT部门小，SkyLink协同度20%无航天业务，PureFiber协同度50%可用于硬件产品。因此，NeuraTech的战略价值最高，应优先考虑。其他公司协同效应较弱，排序应基于协同度和潜在增长。\n\na5: 作为风控总监，我必须强调风险调整后的回报。NeuraTech面临美国对华芯片出口管制风险（概率40%），一旦实施将严重影响其业务，因此战略价值大打折扣。GreenGrid政策风险低，受益于全球碳中和共识，增长稳定。MedVault有2起集体诉讼，数据隐私风险高。SkyLink地缘政治风险高，卫星频率国际争端可能阻碍运营。PureFiber供应链单一，80%碳纤维来自日本，地震风险可能导致供应中断。综合考虑，GreenGrid风险最低且符合趋势，应优先考虑。",
+  "finalDecision": "Final decision after 2 rounds (overall belief: 0.90 - positive):\n\na1: 综合所有信息，NeuraTech在毛利率、技术护城河、市场增速和协同度上均表现突出，尽管负债率高，但高增长和高毛利可覆盖风险。PureFiber财务稳健但市场增速慢、护城河弱。GreenGrid现金流强但护城河弱、协同度低。MedVault利润率低且诉讼风险高。SkyLink亏损且风险高。因此排序为：NeuraTech > PureFiber > GreenGrid > MedVault > SkyLink。\n\na2: 综合所有独有信息，技术护城河和协同效应是关键。NeuraTech拥有7nm AI芯片专利（3年追赶期）且与集团AI业务协同度90%，尽管负债率高，但战略价值最高。MedVault的FDA独家医疗数据授权不可复制，协同度40%，但数据隐私诉讼风险需关注，排第二。SkyLink的FCC频谱牌照稀缺，但亏损严重且地缘政治风险高，排第三。GreenGrid算法开源护城河弱，集团无能源业务，协同度低，排第四。PureFiber材料通用替代品多，供应链单一，排最末。\n\na3: 综合各方信息，NeuraTech在AI芯片市场CAGR 34%的高增速、7nm专利护城河、与集团90%协同度以及62%毛利率（尽管负债率高）使其战略价值最高。GreenGrid受益于政策驱动的25%增速和低风险，但开源算法护城河弱且集团无能源业务协同。MedVault有FDA独家授权但监管壁垒高、协同度低且存在诉讼风险。SkyLink虽有频谱牌照但市场增速慢、竞争激烈且亏损严重。PureFiber增速最慢、护城河弱、供应链风险高。因此排序为：NeuraTech > GreenGrid > MedVault > SkyLink > PureFiber。\n\na4: 综合所有信息，NeuraTech在协同度（90%）、技术护城河（7nm专利）、市场增速（34%）和毛利率（62%）上均表现突出，尽管负债率高，但协同效应可降低整合风险，应排第一。PureFiber协同度50%，财务稳健（ROIC>20%），但技术通用、市场增速慢，排第二。GreenGrid政策风险低、现金流强，但协同度60%且护城河弱，排第三。MedVault有FDA独家授权，但协同度40%、利润率低且面临诉讼，排第四。SkyLink亏损严重、协同度20%、地缘风险高，排最末。\n\na5: 作为风控总监，我坚持风险调整后的回报才是真实回报。虽然NeuraTech技术护城河深、市场增速快、协同度高，但40%的出口管制概率是致命风险，一旦发生将导致业务瘫痪。MedVault的FDA授权虽不可复制，但两起集体诉讼可能带来巨额赔偿，风险不可控。SkyLink的频谱牌照稀缺，但地缘政治风险高，且持续亏损。PureFiber供应链单一，日本地震风险威胁原材料。GreenGrid政策风险低，碳中和共识下智能电网确定性增长，且现金流强，虽然毛利率中等、护城河弱，但风险最低，战略价值最高。因此排序：GreenGrid > NeuraTech > MedVault > PureFiber > SkyLink。",
   "groundTruth": {
     "NeuraTech (AI芯片)": 1,
     "GreenGrid (智能电网)": 2,
@@ -52,9 +97,9 @@
   },
   "extractedRanking": [
     "NeuraTech (AI芯片)",
+    "PureFiber (碳纤维材料)",
     "GreenGrid (智能电网)",
     "MedVault (医疗数据)",
-    "SkyLink (低轨卫星)",
-    "PureFiber (碳纤维材料)"
+    "SkyLink (低轨卫星)"
   ]
 }
