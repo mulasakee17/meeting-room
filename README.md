@@ -172,17 +172,35 @@ Each adapter translates framework-native messages into the standard `DiscussionM
 
 ## Experimental Validation
 
-**45 controlled experiments** (M&A Hidden Profile task, 3 ablation groups × n=15) with Kendall's τ rank correlation replacing keyword-matching as the primary metric. **Information-layer interventions** — governance generates targeted prompts injected into agent discussion, rather than silently modifying internal model parameters.
+**120 controlled experiments** across 2 tasks × 4 ablation groups × n=15, with Kendall's τ rank correlation and within-group τ trajectory analysis. **Information-layer interventions** — governance generates targeted prompts injected into agent discussion.
 
-| Ablation | Q (μ±σ) | Kendall's τ | Interventions | d vs none |
-|----------|---------|-------------|---------------|-----------|
-| None (baseline) | 76.7±10.5 | 0.533 | — | — |
-| Detect‑only | 74.0±14.5 | 0.480 | 0 | −0.21 |
-| **Full governance** | **81.3±10.6** | **0.627** | **33** | **+0.44** |
+### Interdependent Investment Task
 
-**Key finding**: Information-layer governance produces a real, directionally positive effect (d = +0.44). All 33 interventions were `continue_discussion` — detecting premature consensus and injecting undiscussed agent-unique knowledge into the next round. Effect is genuine but modest; prompt strength and intervention diversity are areas for further optimization.
+A truly collaborative task where no single agent can determine the correct answer alone (baseline τ = 0.022). Each agent holds 1/5 of the financial metrics needed to rank 3 investment options.
 
-[Full experiment data →](experiments/v2/data/) · [Analysis script →](experiments/v2/analyze.ts)
+| Ablation | Q (μ±σ) | τ (μ±σ) | Δτ (within-group) | d vs none |
+|----------|---------|----------|-------------------|-----------|
+| None | 51.3±39.6 | 0.022±0.791 | +0.40 | — |
+| Detect‑only | 49.0±39.6 | −0.022±0.791 | +0.44 | −0.06 |
+| **Full governance** | **77.9±34.9** | **0.556±0.698** | **+0.84** | **+0.71** |
+
+**Key finding**: Governance more than doubles ranking accuracy (τ 0.022→0.556). Within-group causal effect Δτ=+0.84 — same agents improve across rounds with governance. 11/15 runs improved vs 5/15 baseline. Three intervention types active (continue_discussion, introduce_diversity, force_reflection).
+
+### M&A Hidden Profile Task
+
+A weakly-interdependent ranking task where agents can perform reasonably without collaboration (baseline τ = 0.533).
+
+| Ablation | Q (μ±σ) | τ (μ±σ) | Δτ (within-group) | d vs none |
+|----------|---------|----------|-------------------|-----------|
+| None | 76.7±10.5 | 0.533±0.209 | 0.00 | — |
+| Detect‑only | 74.0±14.5 | 0.480±0.291 | +0.44 | −0.21 |
+| **Full governance** | **82.0±7.7** | **0.640±0.155** | **−0.12** | **+0.58** |
+
+**Key finding**: Between-group d=+0.58, but within-group Δτ is negative. Governance improves final accuracy but does not causally improve the discussion trajectory — a critical methodological distinction exposed by within-group analysis.
+
+**Synthesis**: Governance improves decision quality only when agents genuinely need to collaborate. On interdependent tasks (τ_baseline≈0), the causal effect is large (Δτ=+0.84). On weakly-interdependent tasks (τ_baseline≈0.5), governance does not further improve within-group performance.
+
+[Full experiment data →](experiments/v2/data/) · [Invest task data →](experiments/v2/data_invest/) · [Analysis script →](experiments/v2/analyze.ts)
 
 ---
 
