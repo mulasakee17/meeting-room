@@ -33,7 +33,7 @@ import { TASK_INVEST } from "./task_invest";
 // ============================================================================
 
 /** Ablation modes — "random-intervene" removed (proved useless), added "static" */
-type Ablation = "none" | "detect-only" | "full" | "adaptive";
+type Ablation = "none" | "full";
 
 interface RoundRecord {
   roundNumber: number;
@@ -99,8 +99,8 @@ const PARAMS = {
   temperature: 0.2,
   model: "deepseek-chat",
   provider: "deepseek" as const,
-  runsPerCondition: 15,
-  ablationModes: ["none", "detect-only", "full", "adaptive"] as Ablation[],
+  runsPerCondition: 10,
+  ablationModes: ["none", "full"] as Ablation[],
 };
 
 const LLM_CONFIG: LLMConfig = {
@@ -252,9 +252,7 @@ async function runSingle(
 
   switch (ablation) {
     case "none": governanceMode = "none"; break;
-    case "detect-only": governanceMode = "detect-only"; break;
     case "full": governanceMode = "full"; break;
-    case "adaptive": governanceMode = "full"; useAdaptive = true; break;
   }
 
   // Create optional GovernanceRuntime for adaptive mode
