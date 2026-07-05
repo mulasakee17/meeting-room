@@ -22,20 +22,43 @@ export class ContinueDiscussionIntervention implements InterventionStrategy {
 
     if (agentKnowledge && agentKnowledge.size > 0) {
       const allMessages = state.messages.map(m => m.content).join(" ").toLowerCase();
+
+      // ── Information coverage check: only intervene if coverage is low ──
+      let totalKnowledgeItems = 0;
+      let discussedItems = 0;
       const undiscussedByAgent = new Map<string, string[]>();
 
       for (const [agentId, knowledgeItems] of agentKnowledge) {
         const undiscussed: string[] = [];
         for (const item of knowledgeItems) {
+          totalKnowledgeItems++;
           const keywords = item.toLowerCase().split(/\s+/).filter(w => w.length > 3);
           const mentioned = keywords.some(kw => allMessages.includes(kw));
-          if (!mentioned) {
+          if (mentioned) {
+            discussedItems++;
+          } else {
             undiscussed.push(item);
           }
         }
         if (undiscussed.length > 0) {
           undiscussedByAgent.set(agentId, undiscussed);
         }
+      }
+
+      const coverage = totalKnowledgeItems > 0 ? discussedItems / totalKnowledgeItems : 0;
+
+      // Only intervene when information coverage is low (< 60%).
+      // High coverage means agents genuinely shared their knowledge —
+      // consensus is real, not premature. Stay silent.
+      if (coverage >= 0.60) {
+        return {
+          success: true,
+          intervention: {
+            ...intervention, applied: true,
+            effect: `Consensus genuine (${(coverage*100).toFixed(0)}% info coverage). No intervention needed.`,
+          },
+          stateChanges: {},
+        };
       }
 
       if (undiscussedByAgent.size > 0) {

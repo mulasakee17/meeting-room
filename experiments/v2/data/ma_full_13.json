@@ -2,15 +2,21 @@
   "runId": "ma_full_13",
   "ablation": "full",
   "runIndex": 13,
-  "timestamp": "2026-07-05T01:24:30.475Z",
+  "timestamp": "2026-07-05T02:02:31.908Z",
   "kendallTau": 0.6,
   "decisionQuality": 80,
-  "totalRounds": 1,
+  "tauTrajectory": [
+    0.6,
+    0.6
+  ],
+  "totalRounds": 2,
   "converged": true,
   "consensusLevel": 0.8904554884989668,
   "opinionDiversity": 0.0547722557505166,
-  "totalInterventions": 0,
-  "issuesDetected": [],
+  "totalInterventions": 1,
+  "issuesDetected": [
+    "premature_consensus"
+  ],
   "interventionEffects": [],
   "evaluationScores": {
     "consensus": 83.66571666447868,
@@ -23,6 +29,43 @@
   "rounds": [
     {
       "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 100,
+        "a3": 95,
+        "a4": 95,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 82.68132296326459,
+        "reliability": 18.9,
+        "dispersion": 79.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.4
+      }
+    },
+    {
+      "roundNumber": 2,
       "beliefs": {
         "a1": 0.8,
         "a2": 0.9,
@@ -40,6 +83,8 @@
       "converged": true,
       "issues": [],
       "interventions": [],
+      "tau": 0.6,
+      "decisionQuality": 80,
       "evalScores": {
         "consensus": 83.66571666447868,
         "reliability": 18.7,
@@ -50,7 +95,7 @@
       }
     }
   ],
-  "finalDecision": "Final decision after 1 rounds (overall belief: 0.86 - positive):\n\na1: 作为财务总监，我优先考虑财务指标。NeuraTech毛利率62%行业最高，但负债率3.2倍风险较高；GreenGrid现金流最强（FCF 1.2B），但毛利率38%中等；PureFiber毛利率45%且ROIC>20%，财务表现稳健；MedVault利润率15%最低；SkyLink亏损3亿美元/年，风险最大。综合来看，PureFiber的ROIC和毛利率组合最优，NeuraTech高毛利但高负债，GreenGrid现金流好但增长可能受限。建议排序：PureFiber > NeuraTech > GreenGrid > MedVault > SkyLink。\n\na2: 作为技术战略官，我认为技术护城河是长期价值的核心。NeuraTech的7nm AI芯片专利需要竞争对手3年追赶，具有强大壁垒。MedVault的FDA独家医疗数据授权不可复制，护城河极深。SkyLink的FCC频谱牌照稀缺，但低轨卫星市场尚未成熟。GreenGrid的开源算法护城河弱，PureFiber替代品多，价值较低。营收和增长率是共享信息，但护城河更重要。\n\na3: 作为市场分析官，我掌握AI芯片市场CAGR 34%且2030年达1500亿美元，增速远超其他领域。NeuraTech作为AI芯片公司，即使营收和增长率在共享信息中不突出，但高增长市场意味着巨大潜力。智能电网CAGR 25%也不错，但政策驱动可能波动。医疗数据监管壁垒高，卫星市场SpaceX主导竞争惨烈，碳纤维增长缓慢。因此，NeuraTech战略价值最高，GreenGrid次之，MedVault第三，SkyLink第四，PureFiber最后。\n\na4: 作为战略顾问，我掌握NeuraTech与集团AI业务协同度高达90%，这是其他公司无法比拟的。集团现有AI业务需要芯片支持，收购NeuraTech能立即产生协同效应，提升整体竞争力。其他公司协同度较低，尤其是SkyLink（20%）和GreenGrid（60%但集团无能源业务），MedVault（40%但医疗IT部门小），PureFiber（50%可用于硬件但非核心）。因此，NeuraTech应排第一，其次PureFiber和MedVault，最后GreenGrid和SkyLink。\n\na5: 作为风控总监，我必须强调风险调整后的回报。NeuraTech面临美国对华芯片出口管制风险（概率40%），可能严重阻碍其业务；MedVault有2起集体诉讼，法律风险高；SkyLink地缘政治风险高，卫星频率争端可能影响运营；PureFiber供应链单一，80%碳纤维来自日本，地震风险大。GreenGrid政策风险低，受益于碳中和共识，且智能电网符合集团战略方向。因此，GreenGrid风险最低，战略价值最高。",
+  "finalDecision": "Final decision after 2 rounds (overall belief: 0.86 - positive):\n\na1: 综合所有信息，NeuraTech虽毛利率高且协同度强，但负债率3.2x风险高，且面临芯片出口管制风险；GreenGrid现金流最强、政策风险低，但毛利率中等且护城河弱；PureFiber财务稳健（ROIC>20%），但技术通用且供应链风险高；MedVault有FDA独家授权但利润率低且诉讼风险；SkyLink亏损严重且竞争激烈。平衡财务、风险与战略，PureFiber因高ROIC和稳健财务排第一，NeuraTech次之但需控制负债，GreenGrid第三，MedVault第四，SkyLink最后。\n\na2: 综合所有独有信息，技术护城河和协同效应是关键。MedVault的FDA独家数据授权不可复制，且医疗数据市场虽增速中等但壁垒极高，长期价值最大。NeuraTech的7nm AI芯片专利护城河深，市场增速最快，协同度最高，但高负债和出口管制风险需权衡。SkyLink的FCC频谱牌照稀缺，但卫星市场竞争惨烈且集团无协同。GreenGrid算法开源护城河弱，虽现金流强但战略价值有限。PureFiber材料通用，替代品多，增长缓慢。因此排序：MedVault > NeuraTech > SkyLink > GreenGrid > PureFiber。\n\na3: 综合所有信息，AI芯片市场增速最快（CAGR 34%），NeuraTech拥有7nm专利护城河深，且与集团AI业务协同度90%，尽管负债率高，但高增长和高毛利足以覆盖风险。GreenGrid现金流强、政策风险低，但护城河弱、协同度低。MedVault监管壁垒高且有诉讼风险。SkyLink亏损且竞争激烈。PureFiber增长缓慢且供应链风险大。因此排序为：NeuraTech > GreenGrid > MedVault > SkyLink > PureFiber。\n\na4: 综合所有信息，NeuraTech在协同度（90%）、市场增速（CAGR 34%）、技术护城河（7nm专利）和毛利率（62%）上均表现突出，尽管负债率高和出口管制风险，但战略价值最高。GreenGrid现金流强、政策风险低，但协同度一般且护城河弱，排第二。PureFiber协同度50%且财务稳健，但市场增速慢、供应链风险高，排第三。MedVault有FDA独家授权但协同度低、诉讼风险高，排第四。SkyLink亏损严重、协同度低、地缘风险高，排最后。\n\na5: 作为风控总监，我必须综合所有风险因素。NeuraTech虽有高毛利和AI芯片专利，但出口管制风险40%且负债率高，风险调整后价值下降。GreenGrid政策风险低、现金流强，虽护城河弱但增长确定性高。MedVault有FDA独家授权但诉讼风险高。SkyLink频谱稀缺但地缘政治风险高且亏损。PureFiber财务稳健但供应链单一。综合风险与回报，GreenGrid最优，其次PureFiber，NeuraTech第三，MedVault第四，SkyLink最后。",
   "groundTruth": {
     "NeuraTech (AI芯片)": 1,
     "GreenGrid (智能电网)": 2,

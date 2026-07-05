@@ -26,6 +26,7 @@ import { EvaluationEngine } from "../../src/lib/evaluation";
 import { GovernanceRuntime } from "../../src/runtime/GovernanceRuntime";
 import type { LLMConfig } from "../../src/lib/llm/providers";
 import { TASK_MA, type TaskConfig } from "../lunar_survival/config";
+import { TASK_INVEST } from "./task_invest";
 
 // ============================================================================
 // Types
@@ -102,7 +103,6 @@ const PARAMS = {
   ablationModes: ["none", "detect-only", "full", "adaptive"] as Ablation[],
 };
 
-const DATA_DIR = path.resolve(__dirname, "data");
 const LLM_CONFIG: LLMConfig = {
   provider: PARAMS.provider,
   model: PARAMS.model,
@@ -284,11 +284,11 @@ async function runSingle(
   // ── Set agent knowledge for information-layer interventions ─────────
   const knowledge = new Map<string, string[]>();
   for (const info of task.agents) {
-    // Split knownItems by semicolons or newlines into individual knowledge items
+    // Split knownItems by semicolons, newlines, or bullet points
     const items = info.knownItems
-      .split(/[；;]/)
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
+      .split(/[；;\n]/)
+      .map(s => s.replace(/^[•\-\s]+/, "").trim())
+      .filter(s => s.length > 10);
     knowledge.set(info.id, items);
   }
   engine.setAgentKnowledge(knowledge);
@@ -397,6 +397,14 @@ async function runSingle(
 
   for (let i = 0; i < result.roundResults.length; i++) {
     const rr = result.roundResults[i];
+    // ── Per-round τ: this round's NEW reasoning only ─────────────────
+    const roundReasoning = rr.opinions.map(o => o.reasoning).join("\n");
+    const roundRanking = extractRanking(roundReasoning, itemNames);
+    const roundTau = kendallTau(task.correctAnswer, roundRanking);
+    (rounds[i] as any).tau = roundTau;
+    (rounds[i] as any).decisionQuality = tauToQuality(roundTau);
+
+    // ── Per-round evaluation dimension scores ────────────────────────
     const decisions = rr.opinions.map(o => ({
       agentId: o.agentId, content: o.reasoning,
       confidence: o.confidence, reasoning: o.reasoning, belief: o.belief,
@@ -409,7 +417,6 @@ async function runSingle(
     }];
     try {
       const ev = evalEngine.evaluate(decisions, agentInfo, history, `Round ${rr.roundNumber}`);
-      // Attach per-dimension scores to this round
       (rounds[i] as any).evalScores = {};
       for (const [key, dim] of Object.entries(ev.dimensions || {})) {
         (rounds[i] as any).evalScores[key] = (dim as any).score ?? 0;
@@ -430,6 +437,8 @@ async function runSingle(
     timestamp: new Date().toISOString(),
     kendallTau: tau,
     decisionQuality: tauToQuality(tau),
+    /** Per-round τ trajectory: τ at each round (cumulative reasoning) */
+    tauTrajectory: rounds.map(r => (r as any).tau as number),
     totalRounds: result.totalRounds,
     converged: result.converged,
     consensusLevel: Math.max(0, Math.min(1, consensusLevel)),
@@ -473,9 +482,9 @@ function cohensD(a: number[], b: number[]): number {
 // ============================================================================
 
 async function main() {
+  const task = TASK_INVEST;
+  const DATA_DIR = path.resolve(__dirname, task.id === "ma" ? "data" : "data_invest");
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-  const task = TASK_MA;
   const allResults: ExperimentResult[] = [];
 
   console.log("=".repeat(70));

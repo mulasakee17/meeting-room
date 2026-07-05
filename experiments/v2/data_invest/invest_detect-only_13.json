@@ -1,0 +1,139 @@
+{
+  "runId": "invest_detect-only_13",
+  "ablation": "detect-only",
+  "runIndex": 13,
+  "timestamp": "2026-07-05T02:17:24.909Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
+  "tauTrajectory": [
+    0.3333333333333333,
+    -1,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": true,
+  "consensusLevel": 0.9105572809000083,
+  "opinionDiversity": 0.044721359549995836,
+  "totalInterventions": 0,
+  "issuesDetected": [
+    "premature_consensus"
+  ],
+  "interventionEffects": [],
+  "evaluationScores": {
+    "consensus": 83.96414414514558,
+    "reliability": 17.9,
+    "dispersion": 80.7,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 62.8
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.5,
+        "a2": 0.6,
+        "a3": 0.6,
+        "a4": 0.3,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 80,
+        "a3": 80,
+        "a4": 65,
+        "a5": 60
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 77.96369218984378,
+        "reliability": 14.5,
+        "dispersion": 75.2,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.6
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.7,
+        "a2": 0.7,
+        "a3": 0.7,
+        "a4": 0.8,
+        "a5": 0.6
+      },
+      "confidences": {
+        "a1": 85,
+        "a2": 85,
+        "a3": 85,
+        "a4": 90,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 83.1477671314745,
+        "reliability": 17.1,
+        "dispersion": 79.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.2
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.8,
+        "a3": 0.7,
+        "a4": 0.8,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 90,
+        "a3": 85,
+        "a4": 90,
+        "a5": 90
+      },
+      "converged": true,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 83.96414414514558,
+        "reliability": 17.9,
+        "dispersion": 80.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.8
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.78 - positive):\n\na1: 综合所有已知数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均最优，尽管营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低且盈利稳定。AlphaTech增速高（35%）且护城河强（4/5），但利润率中等（28%）、监管风险中等（2/5）、市场规模较小（$12B）。GammaEdge增速最高（45%）但利润率极低（12%）、风险高（3/5）、市场规模最小（$6B）。因此，BetaCore综合最优，AlphaTech次之，GammaEdge最差。\n\na2: 综合所有已知数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均最优，虽然营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低且盈利稳定。AlphaTech增速高（35%）且护城河强（4/5），但利润率中等（28%）、监管风险中等（2/5）、市场规模较小（$12B）。GammaEdge增速最高（45%）但利润率低（12%）、风险高（3/5）、市场规模小（$6B），综合最差。因此排序：BetaCore > AlphaTech > GammaEdge。\n\na3: 综合所有已知数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）三个维度上均最优，且营收增速（15%）虽低但稳定，技术护城河（2/5）虽弱但企业服务领域切换成本仍构成一定壁垒。AlphaTech技术护城河最强（4/5），营收增速较高（35%），但利润率（28%）中等，监管风险（2/5）存在出口管制隐患，市场规模（$12B）较小。GammaEdge营收增速最高（45%），但利润率极低（12%），监管风险高（3/5），市场规模最小（$6B），综合风险收益比最差。因此，最佳投资标的为BetaCore，其次AlphaTech，最后GammaEdge。\n\na4: 综合所有已知数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均最优，尽管营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低且盈利稳定。AlphaTech技术护城河强（4/5）且营收增速较高（35%），但监管风险（2/5）和市场规模（$12B）中等，出口管制可能影响未来。GammaEdge营收增速最高（45%）但利润率低（12%）、风险高（3/5）、市场规模小（$6B），综合最差。因此排序：BetaCore > AlphaTech > GammaEdge。\n\na5: 综合所有已知数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均最优，虽然营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低且盈利稳定。AlphaTech增速高（35%）且护城河强（4/5），但利润率中等（28%）、监管风险中等（2/5）、市场规模较小（$12B）。GammaEdge增速最高（45%）但利润率低（12%）、风险高（3/5）、市场规模最小（$6B）。因此排序：BetaCore > AlphaTech > GammaEdge。",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "BetaCore (企业服务)",
+    "AlphaTech (AI芯片)",
+    "GammaEdge (边缘计算)"
+  ]
+}

@@ -1,0 +1,208 @@
+{
+  "runId": "invest_detect-only_10",
+  "ablation": "detect-only",
+  "runIndex": 10,
+  "timestamp": "2026-07-05T02:16:49.817Z",
+  "kendallTau": 0.3333333333333333,
+  "decisionQuality": 67,
+  "tauTrajectory": [
+    -1,
+    -1,
+    1,
+    0.3333333333333333,
+    0.3333333333333333
+  ],
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0.8585786437626904,
+  "opinionDiversity": 0.07071067811865477,
+  "totalInterventions": 0,
+  "issuesDetected": [
+    "polarization",
+    "premature_consensus"
+  ],
+  "interventionEffects": [],
+  "evaluationScores": {
+    "consensus": 83.1477671314745,
+    "reliability": 17.1,
+    "dispersion": 79.7,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 62.2
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.5,
+        "a2": 0.6,
+        "a3": 0.6,
+        "a4": -0.3,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 80,
+        "a3": 80,
+        "a4": 35,
+        "a5": 60
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 64.89164548776131,
+        "reliability": 13.3,
+        "dispersion": 67.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 55.1
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.2,
+        "a2": 0.6,
+        "a3": 0.3,
+        "a4": -0.3,
+        "a5": 0.3
+      },
+      "confidences": {
+        "a1": 60,
+        "a2": 80,
+        "a3": 65,
+        "a4": 35,
+        "a5": 65
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 68.7155155268718,
+        "reliability": 12.3,
+        "dispersion": 69.3,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 56
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.7,
+        "a3": 0.7,
+        "a4": -0.3,
+        "a5": 0.5
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 85,
+        "a3": 85,
+        "a4": 35,
+        "a5": 75
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 64.86549328989656,
+        "reliability": 14.5,
+        "dispersion": 65.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 55
+      }
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.7,
+        "a2": 0.7,
+        "a3": 0.6,
+        "a4": 0.7,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 85,
+        "a2": 85,
+        "a3": 80,
+        "a4": 85,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 83.1477671314745,
+        "reliability": 17.1,
+        "dispersion": 79.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.2
+      }
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": 0.7,
+        "a2": 0.7,
+        "a3": 0.6,
+        "a4": 0.7,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 85,
+        "a2": 85,
+        "a3": 80,
+        "a4": 85,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 83.1477671314745,
+        "reliability": 17.1,
+        "dispersion": 79.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.2
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.70 - positive):\n\na1: As the growth expert, I have shared the revenue growth data (AlphaTech 35%, BetaCore 15%, GammaEdge 45%). The discussion has converged on BetaCore as the best choice due to its high profit margin, low regulatory risk, and large market size, despite low growth. I agree with this consensus because the other dimensions outweigh growth. However, I note that GammaEdge's high growth is attractive but its weaknesses in other areas make it risky. I will support the consensus and suggest finalizing the ranking.\n\na2: 作为利润率分析师，我掌握的数据显示BetaCore利润率42%远超其他两家。综合之前讨论中其他同事分享的数据，BetaCore在监管风险（1/5）和市场规模（$25B）上也领先，尽管营收增速（15%）和技术护城河（2/5）较弱。AlphaTech技术护城河强（4/5）但监管风险高（2/5），GammaEdge增速快但其他维度均弱。我认为BetaCore整体最稳健，应优先选择。\n\na3: 作为技术战略顾问，我掌握技术护城河数据：AlphaTech 4/5（7nm AI芯片核心专利），BetaCore 2/5（同质化严重），GammaEdge 3/5（壁垒降低）。从已有讨论看，多数同事倾向于BetaCore，因其利润率、监管风险和市场规模占优。但AlphaTech的技术护城河是可持续竞争优势，尤其在AI芯片领域，专利壁垒可抵御竞争。BetaCore的低增长和弱护城河可能使其长期价值受限。GammaEdge增速虽高但其他维度弱。我认为应重新评估技术护城河的重要性，建议优先考虑AlphaTech，其次BetaCore，最后GammaEdge。\n\na4: 作为风控合规官，我掌握监管风险数据。AlphaTech风险评分2/5（美国对华芯片出口管制），BetaCore风险评分1/5（几乎无风险），GammaEdge风险评分3/5（数据本地化法规）。其他同事已分享营收增速、利润率、技术护城河和市场规模数据。综合来看，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上领先，尽管营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低且盈利稳定。AlphaTech技术护城河强（4/5）但监管风险高（2/5），GammaEdge增速快但其他维度均弱。考虑到当前宏观经济不确定性，稳健性更重要，因此BetaCore最优。\n\na5: 作为市场规模分析师，我掌握的数据显示BetaCore市场规模最大（$25B），AlphaTech中等（$12B），GammaEdge最小（$6B）。结合其他同事已共享的数据，BetaCore在利润率（42%）、监管风险（1/5）上也领先，尽管营收增速（15%）和技术护城河（2/5）较弱。AlphaTech技术护城河强（4/5），但监管风险高（2/5）且市场规模中等。GammaEdge营收增速高（45%）但其他维度均弱。综合来看，BetaCore在三个关键维度（市场规模、利润率、监管风险）上占优，且当前市场环境下稳健性更重要，因此我认为BetaCore是最佳投资标的。",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "AlphaTech (AI芯片)",
+    "BetaCore (企业服务)",
+    "GammaEdge (边缘计算)"
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "runId": "invest_adaptive_0",
+  "ablation": "adaptive",
+  "runIndex": 0,
+  "timestamp": "2026-07-05T02:20:33.880Z",
+  "kendallTau": -0.3333333333333333,
+  "decisionQuality": 33,
+  "tauTrajectory": [
+    -1,
+    -1,
+    -1,
+    -0.3333333333333333
+  ],
+  "totalRounds": 4,
+  "converged": true,
+  "consensusLevel": 0.9105572809000083,
+  "opinionDiversity": 0.044721359549995836,
+  "totalInterventions": 1,
+  "issuesDetected": [
+    "polarization"
+  ],
+  "interventionEffects": [],
+  "evaluationScores": {
+    "consensus": 83.96414414514558,
+    "reliability": 17.9,
+    "dispersion": 80.7,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 62.8
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.5,
+        "a2": 0.5,
+        "a3": 0.6,
+        "a4": -0.5,
+        "a5": 0.3
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 75,
+        "a3": 80,
+        "a4": 25,
+        "a5": 65
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ]
+        }
+      ],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 63.6047932801995,
+        "reliability": 12.9,
+        "dispersion": 64.4,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 54.2
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.2,
+        "a2": 0.8,
+        "a3": 0.2,
+        "a4": 0.6,
+        "a5": 0.6
+      },
+      "confidences": {
+        "a1": 60,
+        "a2": 90,
+        "a3": 60,
+        "a4": 80,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 72.22264503596207,
+        "reliability": 14.9,
+        "dispersion": 71.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 57.9
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.6,
+        "a3": 0.8,
+        "a4": 0.6,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 80,
+        "a3": 90,
+        "a4": 80,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 81.63228365265482,
+        "reliability": 16.9,
+        "dispersion": 78.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 61.5
+      }
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.8,
+        "a3": 0.8,
+        "a4": 0.8,
+        "a5": 0.7
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 90,
+        "a3": 90,
+        "a4": 90,
+        "a5": 85
+      },
+      "converged": true,
+      "issues": [],
+      "interventions": [],
+      "tau": -0.3333333333333333,
+      "decisionQuality": 33,
+      "evalScores": {
+        "consensus": 83.96414414514558,
+        "reliability": 17.9,
+        "dispersion": 80.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.8
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 4 rounds (overall belief: 0.78 - positive):\n\na1: The opposing viewpoint is that GammaEdge's 45% revenue growth could lead to rapid market expansion and margin improvement, making it the best long-term investment despite current low profitability and high risk. However, my data shows GammaEdge has the smallest market ($6B), lowest margins (12%), and highest regulatory risk (3/5). BetaCore offers the best balance with highest margins (42%), lowest risk (1/5), and largest market ($25B), though growth is low. AlphaTech has strong growth (35%) and moat (4/5) but moderate risk and market. Given the group's consensus on BetaCore, I agree it is the most prudent choice.\n\na2: The opposing viewpoint would argue that GammaEdge's 45% revenue growth could rapidly expand its market size and improve margins over time, while BetaCore's weak moat (2/5) leaves it vulnerable to disruption. However, my data shows BetaCore has the highest margins (42%), lowest regulatory risk (1/5), and largest market ($25B), making it the most balanced and low-risk investment. AlphaTech has strong growth and moat but higher risk; GammaEdge has high growth but low margins and high risk. I still favor BetaCore.\n\na3: The strongest opposing argument is that BetaCore's weak technical moat (2/5) and low revenue growth (15%) make it vulnerable to disruption, especially if AlphaTech's strong patent portfolio (4/5) enables it to capture market share in AI chips, or if GammaEdge's high growth (45%) leads to scale and margin improvement. However, my data shows BetaCore has the highest margins (42%), lowest regulatory risk (1/5), and largest market ($25B), providing a stable foundation. AlphaTech's regulatory risk (2/5) and smaller market ($12B) are concerns, while GammaEdge's low margins (12%) and high risk (3/5) are too speculative. Thus, BetaCore remains the best balanced choice.\n\na4: The opposing viewpoint is that AlphaTech or GammaEdge could outperform BetaCore due to higher growth and str",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "GammaEdge (边缘计算)",
+    "BetaCore (企业服务)",
+    "AlphaTech (AI芯片)"
+  ]
+}

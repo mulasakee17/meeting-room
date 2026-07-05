@@ -6,8 +6,8 @@ interface ExperimentResult {
   kendallTau: number; decisionQuality: number;
   totalRounds: number; converged: boolean;
   totalInterventions: number;
-  interventionEffects: Array<{ effective: boolean; interventionType: string }>;
-  issuesDetected: string[];
+  tauTrajectory?: number[];
+  rounds: Array<{ roundNumber: number; tau?: number; evalScores?: Record<string, number>; interventions: Array<{ type: string }> }>;
   evaluationScores: Record<string, number>;
 }
 
@@ -35,47 +35,94 @@ for (const r of results) {
   groups.get(r.ablation)!.push(r);
 }
 
-const baseline = groups.get("none")!.map(r => r.decisionQuality);
-
-// ── 5-Dimension Quantified Governance Impact ─────────────────────────
-const DIMS = ["consensus", "reliability", "dispersion", "stability", "influenceAnalysis"];
-const dimLabels: Record<string, string> = {
-  consensus: "Consensus", reliability: "Reliability", dispersion: "Dispersion",
-  stability: "Stability", influenceAnalysis: "Influence",
-};
-
+// ════════════════════════════════════════════════════════════════════
+// WITHIN-GROUP τ TRAJECTORY — the causal measure
+// ════════════════════════════════════════════════════════════════════
 console.log("=".repeat(75));
-console.log("  SwarmAlpha V2 — Quantified Adaptive Governance Analysis");
+console.log("  WITHIN-GROUP τ Improvement (same agents, round 1 → final)");
 console.log("=".repeat(75));
-console.log("\n## 5-Dimension Governance Impact (full vs none, n=15/group)");
-console.log("| Dimension       | none μ±σ     | full μ±σ     | Δ       | d       |");
-console.log("|----------------|--------------|--------------|---------|---------|");
+console.log();
 
-for (const dim of DIMS) {
-  const noneScores = (groups.get("none")!).map(r => r.evaluationScores?.[dim] ?? 0);
-  const fullScores = (groups.get("full")!).map(r => r.evaluationScores?.[dim] ?? 0);
-  const adaptiveScores = (groups.get("adaptive") || []).map(r => r.evaluationScores?.[dim] ?? 0);
-  const noneM = mean(noneScores), fullM = mean(fullScores);
-  const delta = fullM - noneM;
-  const d = cohensD(fullScores, noneScores);
-  const dStr = (d >= 0 ? "+" : "") + d.toFixed(2);
-  console.log(`| ${dimLabels[dim].padEnd(14)} | ${noneM.toFixed(1)}±${stdDev(noneScores).toFixed(1).padStart(4)} | ${fullM.toFixed(1)}±${stdDev(fullScores).toFixed(1).padStart(4)} | ${((delta>=0?'+':'')+delta.toFixed(1)).padStart(6)} | ${dStr.padStart(6)} |`);
+for (const ablation of ["none", "full", "adaptive"]) {
+  const g = groups.get(ablation);
+  if (!g) continue;
+
+  const deltas: number[] = [];
+  const r1Taus: number[] = [];
+  const rFinalTaus: number[] = [];
+
+  for (const r of g) {
+    if (r.rounds.length >= 2) {
+      const r1 = (r.rounds[0] as any).tau ?? r.rounds[0].tau ?? r.kendallTau;
+      const rFinal = (r.rounds[r.rounds.length - 1] as any).tau ?? r.kendallTau;
+      if (typeof r1 === "number" && typeof rFinal === "number") {
+        deltas.push(rFinal - r1);
+        r1Taus.push(r1);
+        rFinalTaus.push(rFinal);
+      }
+    }
+  }
+
+  const avgDelta = mean(deltas);
+  const sdDelta = stdDev(deltas);
+  console.log(`${ablation}:`);
+  console.log(`  Round 1 τ: ${mean(r1Taus).toFixed(3)}±${stdDev(r1Taus).toFixed(3)}`);
+  console.log(`  Final τ:   ${mean(rFinalTaus).toFixed(3)}±${stdDev(rFinalTaus).toFixed(3)}`);
+  console.log(`  Δτ:        ${avgDelta >= 0 ? "+" : ""}${avgDelta.toFixed(3)}±${sdDelta.toFixed(3)}`);
+  console.log();
 }
 
-// Kendall's τ (external accuracy metric)
-const noneTau = (groups.get("none")!).map(r => r.kendallTau);
-const fullTau = (groups.get("full")!).map(r => r.kendallTau);
-const tauD = cohensD(fullTau, noneTau);
-const tauDelta = mean(fullTau) - mean(noneTau);
-console.log(`| ${"τ (ranking)".padEnd(14)} | ${mean(noneTau).toFixed(3)}±${stdDev(noneTau).toFixed(3).padStart(4)} | ${mean(fullTau).toFixed(3)}±${stdDev(fullTau).toFixed(3).padStart(4)} | ${((tauDelta>=0?'+':'')+tauDelta.toFixed(3)).padStart(6)} | ${(tauD>=0?'+':'')+tauD.toFixed(2).padStart(6)} |`);
+// Compare Δτ between full and none
+const noneG = groups.get("none")!;
+const fullG = groups.get("full")!;
+const noneDeltas: number[] = [];
+const fullDeltas: number[] = [];
 
-// ── Decision quality summary ──────────────────────────────────────────
-console.log("\n## Decision Quality (Kendall's τ → 0-100)");
+for (const r of noneG) {
+  if (r.rounds.length >= 2) {
+    const r1 = (r.rounds[0] as any).tau ?? r.kendallTau;
+    const rFinal = (r.rounds[r.rounds.length - 1] as any).tau ?? r.kendallTau;
+    if (typeof r1 === "number" && typeof rFinal === "number") noneDeltas.push(rFinal - r1);
+  }
+}
+for (const r of fullG) {
+  if (r.rounds.length >= 2) {
+    const r1 = (r.rounds[0] as any).tau ?? r.kendallTau;
+    const rFinal = (r.rounds[r.rounds.length - 1] as any).tau ?? r.kendallTau;
+    if (typeof r1 === "number" && typeof rFinal === "number") fullDeltas.push(rFinal - r1);
+  }
+}
+
+if (noneDeltas.length > 0 && fullDeltas.length > 0) {
+  const deltaD = cohensD(fullDeltas, noneDeltas);
+  console.log(`Within-group Δτ comparison:`);
+  console.log(`  none Δτ: ${mean(noneDeltas).toFixed(3)}±${stdDev(noneDeltas).toFixed(3)}`);
+  console.log(`  full Δτ: ${mean(fullDeltas).toFixed(3)}±${stdDev(fullDeltas).toFixed(3)}`);
+  console.log(`  d = ${deltaD >= 0 ? "+" : ""}${deltaD.toFixed(2)}`);
+  console.log();
+  if (deltaD > 0.5) {
+    console.log(`  → Governance CAUSES larger within-group improvement (d=${deltaD.toFixed(2)})`);
+  } else if (deltaD > 0.2) {
+    console.log(`  → Directional causal effect (d=${deltaD.toFixed(2)}), needs larger n`);
+  } else {
+    console.log(`  → No detectable causal effect (d=${deltaD.toFixed(2)})`);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// BETWEEN-GROUP — final τ comparison
+// ════════════════════════════════════════════════════════════════════
+const baseline = groups.get("none")!.map(r => r.decisionQuality);
+
+console.log("\n" + "=".repeat(75));
+console.log("  BETWEEN-GROUP Decision Quality (Kendall's τ → 0-100)");
+console.log("=".repeat(75));
 console.log("| Ablation       | n  | Q μ±σ       | τ μ±σ        | Interventions | d vs none |");
 console.log("|----------------|----|-------------|---------------|---------------|-----------|");
 
 for (const ablation of ["none", "detect-only", "full", "adaptive"] as const) {
-  const g = groups.get(ablation)!;
+  const g = groups.get(ablation);
+  if (!g) continue;
   const qs = g.map(r => r.decisionQuality);
   const ts = g.map(r => r.kendallTau);
   const totalIntv = g.reduce((s, r) => s + r.totalInterventions, 0);
@@ -86,33 +133,23 @@ for (const ablation of ["none", "detect-only", "full", "adaptive"] as const) {
   );
 }
 
-// ── Statistical summary ──────────────────────────────────────────────
-const full_qs = groups.get("full")!.map(r => r.decisionQuality);
-const fullD = cohensD(full_qs, baseline);
-const fmtD = (d: number) => (d >= 0 ? "+" : "") + d.toFixed(2);
+// ════════════════════════════════════════════════════════════════════
+// 5-DIMENSION IMPACT
+// ════════════════════════════════════════════════════════════════════
+const DIMS = ["consensus", "reliability", "dispersion", "stability", "influenceAnalysis"];
+const dimLabels: Record<string, string> = {
+  consensus: "Consensus", reliability: "Reliability", dispersion: "Dispersion",
+  stability: "Stability", influenceAnalysis: "Influence",
+};
 
-console.log("\n## Statistical Summary");
-console.log(`  Overall quality: full μ=${mean(full_qs).toFixed(1)}±${stdDev(full_qs).toFixed(1)} vs none μ=${mean(baseline).toFixed(1)}±${stdDev(baseline).toFixed(1)} (d=${fmtD(fullD)})`);
+console.log("\n## 5-Dimension Impact (full vs none)");
+console.log("| Dimension       | none μ±σ     | full μ±σ     | d       |");
+console.log("|----------------|--------------|--------------|---------|");
 
-if (fullD > 0.5) {
-  console.log(`  → Medium-large effect. Governance meaningfully improves decision quality.`);
-} else if (fullD > 0.2) {
-  console.log(`  → Small-to-medium effect. Directionally positive, needs larger n to confirm.`);
-} else {
-  console.log(`  → Negligible. No detectable improvement.`);
-}
-
-// ── Per-dimension interpretation ──────────────────────────────────────
-const dimEffects: Array<{ dim: string; d: number; delta: number }> = [];
 for (const dim of DIMS) {
-  const noneS = (groups.get("none")!).map(r => r.evaluationScores?.[dim] ?? 0);
-  const fullS = (groups.get("full")!).map(r => r.evaluationScores?.[dim] ?? 0);
-  dimEffects.push({ dim, d: cohensD(fullS, noneS), delta: mean(fullS) - mean(noneS) });
-}
-dimEffects.sort((a, b) => b.d - a.d);
-
-console.log("\n  Dimension ranking by governance effect:");
-for (const e of dimEffects) {
-  const bar = "█".repeat(Math.max(0, Math.round(e.d * 10)));
-  console.log(`  ${dimLabels[e.dim].padEnd(14)} d=${fmtD(e.d).padStart(5)}  ${bar}`);
+  const noneScores = (groups.get("none")!).map(r => r.evaluationScores?.[dim] ?? 0);
+  const fullScores = (groups.get("full")!).map(r => r.evaluationScores?.[dim] ?? 0);
+  const d = cohensD(fullScores, noneScores);
+  const dStr = (d >= 0 ? "+" : "") + d.toFixed(2);
+  console.log(`| ${dimLabels[dim].padEnd(14)} | ${mean(noneScores).toFixed(1)}±${stdDev(noneScores).toFixed(1).padStart(4)} | ${mean(fullScores).toFixed(1)}±${stdDev(fullScores).toFixed(1).padStart(4)} | ${dStr.padStart(6)} |`);
 }

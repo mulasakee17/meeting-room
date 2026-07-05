@@ -1,0 +1,207 @@
+{
+  "runId": "invest_detect-only_3",
+  "ablation": "detect-only",
+  "runIndex": 3,
+  "timestamp": "2026-07-05T02:15:22.652Z",
+  "kendallTau": 0.3333333333333333,
+  "decisionQuality": 67,
+  "tauTrajectory": [
+    -1,
+    -1,
+    1,
+    0.3333333333333333,
+    0.3333333333333333
+  ],
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0.44143039824924235,
+  "opinionDiversity": 0.2792848008753788,
+  "totalInterventions": 0,
+  "issuesDetected": [
+    "premature_consensus",
+    "echo_chamber"
+  ],
+  "interventionEffects": [],
+  "evaluationScores": {
+    "consensus": 71.38263184115647,
+    "reliability": 15.5,
+    "dispersion": 71.3,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 57.8
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.5,
+        "a2": 0.3,
+        "a3": 0.6,
+        "a4": 0.5,
+        "a5": 0.3
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 65,
+        "a3": 80,
+        "a4": 75,
+        "a5": 65
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 80.50322757418222,
+        "reliability": 14.5,
+        "dispersion": 77.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 60.5
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.1,
+        "a2": 0.6,
+        "a3": 0.2,
+        "a4": 0.6,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 55,
+        "a2": 80,
+        "a3": 60,
+        "a4": 80,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 70.11160794024286,
+        "reliability": 14.7,
+        "dispersion": 70.6,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 57.2
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.7,
+        "a3": 0.8,
+        "a4": 0.6,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 85,
+        "a3": 90,
+        "a4": 80,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "premature_consensus",
+        "echo_chamber",
+        "premature_consensus"
+      ],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 85.4628964055201,
+        "reliability": 17.6,
+        "dispersion": 78.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.6
+      }
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.2,
+        "a2": 0.8,
+        "a3": 0.3,
+        "a4": 0.8,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 60,
+        "a2": 90,
+        "a3": 65,
+        "a4": 90,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 69.51726511573102,
+        "reliability": 15.9,
+        "dispersion": 70.3,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 57.3
+      }
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": 0.2,
+        "a2": 0.8,
+        "a3": 0.3,
+        "a4": 0.8,
+        "a5": 0.6
+      },
+      "confidences": {
+        "a1": 60,
+        "a2": 90,
+        "a3": 65,
+        "a4": 90,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "echo_chamber"
+      ],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 71.38263184115647,
+        "reliability": 15.5,
+        "dispersion": 71.3,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 57.8
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.54 - positive):\n\na1: As the Growth Analyst, I hold the revenue growth data: AlphaTech 35%, BetaCore 15%, GammaEdge 45%. The previous discussion shows a strong consensus favoring BetaCore due to its high profit margin, low regulatory risk, and large market size. However, I must point out that GammaEdge's 45% growth is exceptional and could compensate for its lower profitability if the market expands rapidly. I need to challenge the assumption that BetaCore's stable growth is sufficient. I will share my data and ask colleagues to consider the potential of high-growth companies, especially in emerging markets like edge computing.\n\na2: 作为利润率分析师，我掌握的数据显示BetaCore的利润率（42%）远高于AlphaTech（28%）和GammaEdge（12%）。结合其他同事分享的数据，BetaCore在监管风险（1/5）和市场规模（$25B）上也领先，尽管营收增速（15%）和技术护城河（2/5）较弱。AlphaTech技术护城河强（4/5）且营收增速高（35%），但监管风险高（2/5），市场规模较小（$12B）。GammaEdge营收增速最高（45%），但利润率低（12%），监管风险高（3/5），市场规模最小（$6B）。综合来看，BetaCore在三个关键维度上占优，且风险最低，是最佳选择。\n\na3: As the technology strategy advisor, I hold the technology moat data. I've shared that AlphaTech has the strongest moat (4/5), BetaCore the weakest (2/5), and GammaEdge moderate (3/5). Other colleagues have shared revenue growth (GammaEdge 45%, AlphaTech 35%, BetaCore 15%), profit margin (BetaCore 42%, AlphaTech 28%, GammaEdge 12%), regulatory risk (BetaCore 1/5, AlphaTech 2/5, GammaEdge 3/5), and market size (BetaCore $25B, AlphaTech $12B, GammaEdge $6B). The consensus is leaning heavily toward BetaCore due to its superior profitability, low risk, and large market. However, I believe the technology moat is a critical long-term competitive advantage. AlphaTech's 4/5 moat (core patents, 3-year lead) provides sustainable growth potential, while BetaCore's 2/5 moat (low switching costs) is fragile. The market may be underestimating the risk of BetaCore's weak moat in a competitive enterprise software landscape. I need to challenge the consensus and argue that AlphaTech's combination of strong growth, good ma",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "AlphaTech (AI芯片)",
+    "BetaCore (企业服务)",
+    "GammaEdge (边缘计算)"
+  ]
+}
