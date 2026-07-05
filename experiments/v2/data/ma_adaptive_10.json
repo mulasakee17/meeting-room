@@ -1,0 +1,215 @@
+{
+  "runId": "ma_adaptive_10",
+  "ablation": "adaptive",
+  "runIndex": 10,
+  "timestamp": "2026-07-05T01:26:54.494Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0.8211145618000169,
+  "opinionDiversity": 0.0894427190999916,
+  "totalInterventions": 3,
+  "issuesDetected": [
+    "echo_chamber",
+    "premature_consensus"
+  ],
+  "interventionEffects": [],
+  "evaluationScores": {
+    "consensus": 82.4628964055201,
+    "reliability": 16.7,
+    "dispersion": 78.9,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 61.8
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "premature_consensus",
+        "echo_chamber",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a5",
+            "a4"
+          ]
+        },
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "evalScores": {
+        "consensus": 82.68132296326459,
+        "reliability": 18.9,
+        "dispersion": 79.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.4
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.7,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 85,
+        "a2": 95,
+        "a3": 95,
+        "a4": 95,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "evalScores": {
+        "consensus": 82.4628964055201,
+        "reliability": 18.5,
+        "dispersion": 78.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.2
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": 0.7
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 95,
+        "a5": 85
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "echo_chamber"
+      ],
+      "interventions": [
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ]
+        }
+      ],
+      "evalScores": {
+        "consensus": 82.4628964055201,
+        "reliability": 18.5,
+        "dispersion": 78.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.2
+      }
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.6,
+        "a3": 0.7,
+        "a4": 0.8,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 80,
+        "a3": 85,
+        "a4": 90,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "evalScores": {
+        "consensus": 82.03650200908385,
+        "reliability": 17.1,
+        "dispersion": 78.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 61.7
+      }
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.6,
+        "a3": 0.7,
+        "a4": 0.6,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 80,
+        "a3": 85,
+        "a4": 80,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "evalScores": {
+        "consensus": 82.4628964055201,
+        "reliability": 16.7,
+        "dispersion": 78.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 61.8
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.66 - positive):\n\na1: 作为财务总监，我优先考虑财务指标。NeuraTech毛利率62%行业最高，但负债率3.2x且面临40%出口管制风险，若管制实施则价值归零。GreenGrid毛利率38%但FCF 1.2B最强，风险最低。PureFiber毛利率45%且ROIC>20%，财务稳健但增长慢。MedVault利润率15%最低，SkyLink亏损3亿/年。在出口管制风险下，GreenGrid风险收益比最优。若出口管制风险可控（如通过技术转移），则NeuraTech可排第一。\n\na2: 尽管NeuraTech在技术护城河和市场增长上表现突出，但40%的出口管制风险和高负债率可能使收购价值归零。若美国全面禁止7nm芯片出口，NeuraTech将无法运营，其战略价值瞬间消失。而MedVault的FDA独家医疗数据授权不可复制，且医疗数据市场受政策保护，风险更低。SkyLink的FCC频谱牌照稀缺，但亏损严重且地缘政治风险高。GreenGrid护城河弱，PureFiber替代品多。因此，在考虑风险后，MedVault应排第一，NeuraTech次之。若出口管制风险实际发生，我的结论将错误，此时GreenGrid凭借低风险、强现金流成为更优选择。\n\na3: 尽管多数人认为NeuraTech战略价值最高，但出口管制风险（40%）和高负债率（3.2x）可能使收购价值归零。若美国芯片管制升级导致NeuraTech无法运营，则其价值将远低于GreenGrid。GreenGrid政策风险低、现金流强、市场增长稳健（CAGR 25%），且无重大风险，风险收益比最优。因此，我坚持GreenGrid第一，NeuraTech第二。若出口管制风险可控（如通过技术转移或合资），则NeuraTech可排第一。\n\na4: 尽管多数人认为NeuraTech战略价值最高，但40%的出口管制风险和高负债率可能使收购价值归零。若美国全面禁止7nm芯片出口，NeuraTech将无法运营，其协同效应和增长潜力均无法实现。而GreenGrid政策风险低、现金流强、市场增长稳健，且协同度60%虽不高，但集团可通过收购进入智能电网新领域，分散风险。PureFiber财务稳健但增长慢，MedVault诉讼风险高，SkyLink亏损严重。因此，在风险调整后，GreenGrid应排第一，NeuraTech次之。若出口管制风险可控（如通过技术转移或合资），则NeuraTech可排第一。\n\na5: 作为风控总监，我坚持风险调整后的回报才是真实回报。NeuraTech虽有高战略价值，但40%的出口管制风险可能使收购价值归零，且高负债率加剧风险，不应排第一。GreenGrid政策风险低、现金流强、市场增长稳健，风险收益比最优。PureFiber财务稳健但供应链单一（80%来自日本），地震风险不可忽视，但整体风险可控。MedVault的诉讼风险可能带来巨额赔偿，SkyLink地缘政治风险高且亏损严重，均不优先。因此排序：GreenGrid > PureFiber > NeuraTech > MedVault > SkyLink。",
+  "groundTruth": {
+    "NeuraTech (AI芯片)": 1,
+    "GreenGrid (智能电网)": 2,
+    "MedVault (医疗数据)": 3,
+    "SkyLink (低轨卫星)": 4,
+    "PureFiber (碳纤维材料)": 5
+  },
+  "extractedRanking": [
+    "NeuraTech (AI芯片)",
+    "GreenGrid (智能电网)",
+    "PureFiber (碳纤维材料)",
+    "MedVault (医疗数据)",
+    "SkyLink (低轨卫星)"
+  ]
+}

@@ -1,0 +1,216 @@
+{
+  "runId": "ma_adaptive_9",
+  "ablation": "adaptive",
+  "runIndex": 9,
+  "timestamp": "2026-07-05T01:26:35.307Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0,
+  "opinionDiversity": 0.594138031100518,
+  "totalInterventions": 3,
+  "issuesDetected": [
+    "premature_consensus",
+    "echo_chamber",
+    "polarization"
+  ],
+  "interventionEffects": [],
+  "evaluationScores": {
+    "consensus": 66.68555087480932,
+    "reliability": 14.5,
+    "dispersion": 58.6,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 54
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 100,
+        "a3": 95,
+        "a4": 100,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "evalScores": {
+        "consensus": 78.82075366941018,
+        "reliability": 18.7,
+        "dispersion": 75.8,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 60.9
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.7,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 85,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "echo_chamber"
+      ],
+      "interventions": [
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a2",
+            "a3",
+            "a4",
+            "a5"
+          ]
+        }
+      ],
+      "evalScores": {
+        "consensus": 81.44632828268016,
+        "reliability": 18.7,
+        "dispersion": 77.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 61.9
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.8,
+        "a4": 0.9,
+        "a5": 0.7
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 90,
+        "a4": 95,
+        "a5": 85
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "evalScores": {
+        "consensus": 82.68132296326459,
+        "reliability": 18.3,
+        "dispersion": 79.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.3
+      }
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.6,
+        "a3": 0.8,
+        "a4": 0.9,
+        "a5": 0.3
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 80,
+        "a3": 90,
+        "a4": 95,
+        "a5": 65
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "evalScores": {
+        "consensus": 75.04799393731469,
+        "reliability": 16.5,
+        "dispersion": 73.2,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.1
+      }
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": -0.6,
+        "a2": 0.6,
+        "a3": 0.6,
+        "a4": 0.9,
+        "a5": 0.7
+      },
+      "confidences": {
+        "a1": 20,
+        "a2": 80,
+        "a3": 80,
+        "a4": 95,
+        "a5": 85
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a5",
+            "a4",
+            "a1"
+          ]
+        }
+      ],
+      "evalScores": {
+        "consensus": 66.68555087480932,
+        "reliability": 14.5,
+        "dispersion": 58.6,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 54
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.44 - positive):\n\na1: 作为财务总监，我优先考虑财务指标。NeuraTech毛利率62%行业最高，但负债率3.2x过高，且出口管制风险40%可能致命。GreenGrid现金流最强（FCF 1.2B），政策风险低，增长稳定，但护城河弱。PureFiber毛利率45%且ROIC>20%，财务优秀，但供应链单一。MedVault利润率15%最低，且有诉讼风险。SkyLink亏损严重。综合财务稳健性和风险，GreenGrid最优，NeuraTech风险调整后吸引力下降。\n\na2: Governance intervention warns of echo chamber. I must challenge the consensus favoring NeuraTech. While NeuraTech has deep moat and high synergy, its 3.2x debt and 40% export control risk are severe. If export control materializes, NeuraTech's value collapses. GreenGrid has weak moat but stable cash flows and low risk. However, I need to consider a scenario where my conclusion (GreenGrid > NeuraTech) is wrong: if NeuraTech's export control risk is actually <20% (e.g., due to existing licenses or low enforcement) and debt can be restructured, then NeuraTech's growth and synergy far outweigh GreenGrid's stability. Also, if GreenGrid's open-source algorithm leads to rapid commoditization, its moat is even weaker than assumed. Therefore, I lean towards NeuraTech as top pick, but with caution.\n\na3: Governance intervention warns of echo chamber. I must challenge the consensus favoring NeuraTech. While NeuraTech has deep moat and high synergy, its 3.2x debt and 40% export control risk are severe. If export control materializes, NeuraTech's value collapses. GreenGrid has weak moat but stable cash flows and low risk. However, I need to consider a scenario where my conclusion (GreenGrid > NeuraTech) is wrong: if NeuraTech's export control risk is actually <20% (e.g., due to existing licenses or low enforcement) and debt can be restructured, then NeuraTech's growth and synergy far outweigh GreenGrid's stability. Also, if GreenGrid's open-source algorithm leads to rapid commoditization, its moat is even weaker than assumed. Therefore, I lean towards NeuraTech as top pick, but with caution.\n\na4: 作为CSO，我掌握协同度信息：NeuraTech与集团AI业务协同度90%，远超其他目标。尽管存在负债率高和出口管制风险，但高协同度能最大化并购价值。其他成员可能低估了协同效应的重要性。",
+  "groundTruth": {
+    "NeuraTech (AI芯片)": 1,
+    "GreenGrid (智能电网)": 2,
+    "MedVault (医疗数据)": 3,
+    "SkyLink (低轨卫星)": 4,
+    "PureFiber (碳纤维材料)": 5
+  },
+  "extractedRanking": [
+    "NeuraTech (AI芯片)",
+    "GreenGrid (智能电网)",
+    "PureFiber (碳纤维材料)",
+    "MedVault (医疗数据)",
+    "SkyLink (低轨卫星)"
+  ]
+}

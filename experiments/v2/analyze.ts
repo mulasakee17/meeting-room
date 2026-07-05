@@ -54,6 +54,7 @@ console.log("|----------------|--------------|--------------|---------|---------
 for (const dim of DIMS) {
   const noneScores = (groups.get("none")!).map(r => r.evaluationScores?.[dim] ?? 0);
   const fullScores = (groups.get("full")!).map(r => r.evaluationScores?.[dim] ?? 0);
+  const adaptiveScores = (groups.get("adaptive") || []).map(r => r.evaluationScores?.[dim] ?? 0);
   const noneM = mean(noneScores), fullM = mean(fullScores);
   const delta = fullM - noneM;
   const d = cohensD(fullScores, noneScores);
@@ -73,7 +74,7 @@ console.log("\n## Decision Quality (Kendall's τ → 0-100)");
 console.log("| Ablation       | n  | Q μ±σ       | τ μ±σ        | Interventions | d vs none |");
 console.log("|----------------|----|-------------|---------------|---------------|-----------|");
 
-for (const ablation of ["none", "detect-only", "full"] as const) {
+for (const ablation of ["none", "detect-only", "full", "adaptive"] as const) {
   const g = groups.get(ablation)!;
   const qs = g.map(r => r.decisionQuality);
   const ts = g.map(r => r.kendallTau);

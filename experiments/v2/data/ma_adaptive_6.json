@@ -1,0 +1,233 @@
+{
+  "runId": "ma_adaptive_6",
+  "ablation": "adaptive",
+  "runIndex": 6,
+  "timestamp": "2026-07-05T01:25:53.099Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0,
+  "opinionDiversity": 0.6024948132556828,
+  "totalInterventions": 4,
+  "issuesDetected": [
+    "premature_consensus",
+    "echo_chamber",
+    "polarization"
+  ],
+  "interventionEffects": [],
+  "evaluationScores": {
+    "consensus": 51.78158273239692,
+    "reliability": 14.7,
+    "dispersion": 58.3,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 51
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 100,
+        "a3": 95,
+        "a4": 100,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "evalScores": {
+        "consensus": 82.03650200908385,
+        "reliability": 19.1,
+        "dispersion": 78.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.2
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.9,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 95,
+        "a2": 100,
+        "a3": 95,
+        "a4": 100,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "echo_chamber"
+      ],
+      "interventions": [
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4",
+            "a5"
+          ]
+        }
+      ],
+      "evalScores": {
+        "consensus": 82.68132296326459,
+        "reliability": 19.3,
+        "dispersion": 79.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.5
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.9,
+        "a2": 0.6,
+        "a3": 0.3,
+        "a4": 0.8,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 95,
+        "a2": 80,
+        "a3": 65,
+        "a4": 90,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "evalScores": {
+        "consensus": 74.55861347391134,
+        "reliability": 16.9,
+        "dispersion": 72.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.1
+      }
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": -0.2,
+        "a2": 0.6,
+        "a3": 0.6,
+        "a4": 0.8,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 40,
+        "a2": 80,
+        "a3": 80,
+        "a4": 90,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a2",
+            "a3",
+            "a4",
+            "a1",
+            "a5"
+          ]
+        }
+      ],
+      "evalScores": {
+        "consensus": 54.35252246520913,
+        "reliability": 13.3,
+        "dispersion": 63.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 52.2
+      }
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": -0.2,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 40,
+        "a2": 95,
+        "a3": 95,
+        "a4": 95,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a2",
+            "a3",
+            "a4",
+            "a1",
+            "a5"
+          ]
+        }
+      ],
+      "evalScores": {
+        "consensus": 51.78158273239692,
+        "reliability": 14.7,
+        "dispersion": 58.3,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 51
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.46 - positive):\n\na1: 尽管多数成员强调NeuraTech的高增长和协同效应，但作为财务总监，我优先考虑财务稳健性。NeuraTech毛利率62%行业最高，但负债率3.2x也最高，且芯片出口管制风险（40%概率）可能致命。若管制实施，其营收可能骤降，战略价值归零。GreenGrid毛利率38%但现金流最强（FCF $1.2B），政策风险低，在风险调整后回报更高。PureFiber毛利率45%且ROIC>20%，财务稳健，但技术通用、供应链风险高。MedVault利润率15%最低，且有诉讼风险。SkyLink亏损严重。因此，我的排序为：GreenGrid > NeuraTech > PureFiber > MedVault > SkyLink。\n\na2: 尽管多数成员担忧NeuraTech的出口管制风险，但作为技术战略官，我认为技术护城河是长期价值的核心。NeuraTech的7nm AI芯片专利需要竞争对手3年才能追赶，这提供了显著的先发优势和市场壁垒。AI芯片市场CAGR 34%，NeuraTech营收增长40%，毛利率62%，协同效应90%，这些指标远超其他标的。出口管制风险（40%概率）确实存在，但集团可通过供应链多元化、提前备货或政治游说缓解。GreenGrid的智能电网算法开源，护城河弱，长期价值有限。MedVault的FDA独家授权不可复制，但营收仅2亿，增长率10%，利润率低，诉讼风险高。SkyLink的FCC频谱牌照稀缺，但亏损严重，地缘风险高。PureFiber技术通用，替代品多。因此，风险调整后，NeuraTech仍是最佳选择。\n\na3: 尽管多数成员强调NeuraTech的出口管制风险，但我的独有知识显示AI芯片市场CAGR 34%且2030年达1500亿美元，增速远超其他市场。NeuraTech的7nm专利和90%协同效应是核心优势，出口管制概率40%虽高，但可通过供应链多元化缓解。GreenGrid市场CAGR 25%但护城河弱，PureFiber仅8%增长。在高速增长市场中，快鱼吃慢鱼，NeuraTech的战略价值不可替代。若管制不发生，NeuraTech将主导市场；即使发生，其技术仍可转用于国内或盟友市场。因此，NeuraTech应排第一。\n\na4: 作为战略顾问，我掌握NeuraTech与集团AI业务协同度90%的独有信息，这是其他成员不知道的关键优势。尽管出口管制风险存在，但协同效应是并购成功的核心，高协同能创造远超财务数字的价值。其他成员低估了协同的重要性，过度关注风险。即使管制发生，NeuraTech的技术和团队仍可内部转化，风险可控。GreenGrid协同度仅60%，且集团无能源业务，整合难度大。因此，NeuraTech应排第一，GreenGrid第二，其余按协同度排序：MedVault（40%）、PureFiber（50%）、SkyLink（20%）。\n\na5: 尽管多数成员认为NeuraTech因高增长和协同效应而最优，但作为风控总监，我必须坚持风险调整后的回报才是真实回报。芯片出口管制风险（40%概率）可能使NeuraTech业务瘫痪，而GreenGrid政策风险低、现金流强，是更稳健的选择。即使NeuraTech在无管制情景下价值最高，但40%的致命风险使其期望价值低于GreenGrid。因此，GreenGrid应排第一，NeuraTech第二，其余依次为MedVault、PureFiber、SkyLink。",
+  "groundTruth": {
+    "NeuraTech (AI芯片)": 1,
+    "GreenGrid (智能电网)": 2,
+    "MedVault (医疗数据)": 3,
+    "SkyLink (低轨卫星)": 4,
+    "PureFiber (碳纤维材料)": 5
+  },
+  "extractedRanking": [
+    "NeuraTech (AI芯片)",
+    "GreenGrid (智能电网)",
+    "PureFiber (碳纤维材料)",
+    "MedVault (医疗数据)",
+    "SkyLink (低轨卫星)"
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "runId": "ma_adaptive_11",
+  "ablation": "adaptive",
+  "runIndex": 11,
+  "timestamp": "2026-07-05T01:27:01.727Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "totalRounds": 2,
+  "converged": true,
+  "consensusLevel": 0.9105572809000084,
+  "opinionDiversity": 0.04472135954999579,
+  "totalInterventions": 1,
+  "issuesDetected": [
+    "premature_consensus"
+  ],
+  "interventionEffects": [],
+  "evaluationScores": {
+    "consensus": 83.96414414514558,
+    "reliability": 18.9,
+    "dispersion": 80.7,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 63
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 1,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 100,
+        "a3": 95,
+        "a4": 100,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "evalScores": {
+        "consensus": 82.03650200908385,
+        "reliability": 19.1,
+        "dispersion": 78.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 62.2
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.9,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 0.9,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 95,
+        "a2": 95,
+        "a3": 95,
+        "a4": 95,
+        "a5": 90
+      },
+      "converged": true,
+      "issues": [],
+      "interventions": [],
+      "evalScores": {
+        "consensus": 83.96414414514558,
+        "reliability": 18.9,
+        "dispersion": 80.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 63
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 2 rounds (overall belief: 0.88 - positive):\n\na1: 综合所有信息，NeuraTech虽负债率高，但毛利率62%行业最高、7nm芯片专利护城河深、AI芯片市场CAGR 34%高增长、与集团AI业务协同度90%，战略价值最高。GreenGrid现金流强、政策风险低，但护城河弱、协同度仅60%，排第二。PureFiber毛利率45%、ROIC>20%，但市场增长慢、供应链风险高，排第三。MedVault利润率低、有诉讼风险，但FDA授权护城河强，排第四。SkyLink亏损严重、地缘风险高、协同度低，排最后。\n\na2: 综合所有信息，NeuraTech拥有7nm AI芯片专利（护城河深）、市场CAGR 34%最高、与集团协同度90%，尽管负债率高，但战略价值最大。MedVault的FDA独家数据授权不可复制，市场CAGR 18%但监管壁垒高，协同度40%，诉讼风险需关注，但护城河强于SkyLink。SkyLink的FCC频谱牌照稀缺，但市场CAGR 12%且竞争惨烈，亏损严重，协同度低，地缘政治风险高。GreenGrid算法开源护城河弱，集团无能源业务协同度低，尽管政策风险低，但战略价值有限。PureFiber材料通用替代品多，市场增长缓慢，供应链风险高，协同度中等，价值最低。因此排序：NeuraTech > MedVault > SkyLink > GreenGrid > PureFiber。\n\na3: 综合所有信息，NeuraTech在AI芯片高增长市场（CAGR 34%）中拥有深厚技术护城河（7nm专利，竞争对手需3年追赶），且与集团AI业务协同度高达90%，尽管负债率较高，但高增长和高协同足以覆盖风险。GreenGrid虽政策风险低、现金流强，但护城河弱（算法开源），且集团无能源业务，协同有限。MedVault有FDA独家授权，但监管壁垒高、诉讼风险大。SkyLink亏损且竞争惨烈。PureFiber增长缓慢且供应链风险高。因此，战略价值排序应为：NeuraTech > GreenGrid > MedVault > SkyLink > PureFiber。\n\na4: 综合所有信息，NeuraTech在协同效应（90%）、技术护城河（7nm AI芯片专利）、市场增速（CAGR 34%）和毛利率（62%）上均表现最优，尽管负债率高和出口管制风险存在，但战略价值最高。GreenGrid协同度60%但集团无能源业务，且算法开源护城河弱，虽风险低但价值有限。MedVault协同度40%，FDA授权护城河强，但诉讼风险高。PureFiber协同度50%，但技术通用、增长慢、供应链风险高。SkyLink协同度20%，亏损且地缘风险高，价值最低。因此排序：NeuraTech > MedVault > GreenGrid > PureFiber > SkyLink。\n\na5: 作为风控总监，我必须强调风险调整后的回报。NeuraTech虽然技术护城河深、市场增长快、协同度高，但面临40%概率的出口管制风险，且负债率高，一旦管制实施，价值将大幅缩水。GreenGrid政策风险低，现金流强劲，智能电网市场CAGR 25%且政策驱动，虽然协同度60%但集团可借此进入能源领域，风险收益比最优。MedVault有FDA独家数据授权，但2起集体诉讼可能带来巨额赔偿，风险不可忽视。SkyLink亏损严重且地缘政治风险高，卫星频率争端可能影响运营，战略价值低。PureFiber供应链单一，日本地震风险可能导致断供，且市场增长缓慢。综合考虑，GreenGrid风险最低，战略价值最高，应排第一；NeuraTech虽有高风险，但潜在回报高，可排第二；MedVault排第三；PureFiber排第四；SkyLink排最后。",
+  "groundTruth": {
+    "NeuraTech (AI芯片)": 1,
+    "GreenGrid (智能电网)": 2,
+    "MedVault (医疗数据)": 3,
+    "SkyLink (低轨卫星)": 4,
+    "PureFiber (碳纤维材料)": 5
+  },
+  "extractedRanking": [
+    "NeuraTech (AI芯片)",
+    "GreenGrid (智能电网)",
+    "PureFiber (碳纤维材料)",
+    "MedVault (医疗数据)",
+    "SkyLink (低轨卫星)"
+  ]
+}
