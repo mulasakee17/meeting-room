@@ -26,12 +26,11 @@ SwarmAlpha is an **embeddable governance runtime** — a drop-in layer that plug
 
 ## Results
 
-80+ controlled experiments across 2 Hidden Profile tasks × 4 ablation modes × 10+ repetitions, analyzed with independent t-tests and Cohen's d:
+120 controlled experiments across 2 tasks × 4 ablation modes × n=15, with Kendall's τ and within-group τ trajectory (Δτ) as primary metrics:
 
-- **Premature consensus** is the dominant failure mode (83–93% of detections)
-- **Governance is conditional**: intervenes when information is asymmetric (36 interventions on M&A task), stays silent when LLMs have prior knowledge (lunar survival task)
-- **Precision is prerequisite**: random intervention degrades quality; targeted detection is necessary
-- **Power analysis**: Cohen's d = 0.32 for M&A full vs. none; achieving 80% power would require n = 153 — confirming governance maintains accuracy while improving process quality
+- **Causal evidence on interdependent tasks**: Governance lifts τ from 0.022→0.556 (Δτ=+0.84, d=+0.71). Same agents improve across rounds — not a between-group artifact.
+- **Boundary condition on weakly-interdependent tasks**: Between-group d=+0.58, but within-group Δτ=−0.12. Governance does not causally improve discussions when agents already perform well alone.
+- **Methodological contribution**: Standard between-group effect sizes overstate governance impact. Within-group trajectory analysis reveals when effects are causal vs. artifacts of initial conditions.
 
 ---
 

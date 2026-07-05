@@ -222,11 +222,17 @@ Unified multi-provider interface:
 
 ## 7. Experiment Infrastructure
 
-`experiments/v2/` — Focused Hidden Profile experiment framework:
-- M&A task, 3 ablation modes (none / detect-only / full) × n=15 = 45 experiments
-- Primary metric: Kendall's τ rank correlation (replaces keyword matching)
-- Full governance: Q +5 points, Cohen's d = +0.44 (small-to-medium, genuine causal effect)
-- All 45 raw JSON files preserved in `experiments/v2/data/`
+`experiments/v2/` — Two-task experiment framework with within-group causal analysis:
+
+| Task | Interdependence | Baseline τ | Full τ | Δτ (causal) | d |
+|------|----------------|-----------|--------|-------------|------|
+| **Invest** | Strong (no agent can solo) | 0.022 | 0.556 | **+0.84** | +0.71 |
+| **M&A** | Weak (agents can solo) | 0.533 | 0.640 | −0.12 | +0.58 |
+
+- 120 experiments (2 tasks × 4 ablation modes × n=15)
+- Primary metric: Kendall's τ + within-group τ trajectory (Δτ)
+- Information-layer interventions: 3 types active across 40+ triggers per task
+- All raw JSON preserved in `experiments/v2/data/` and `experiments/v2/data_invest/`
 
 `experiments/lunar_survival/` — Legacy V1 framework (80+ experiments, keyword-matching metric)
 

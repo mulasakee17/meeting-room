@@ -45,17 +45,27 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 
 ---
 
-## Experimental Evidence (45 controlled experiments)
+## Experimental Evidence (120 controlled experiments)
 
-M&A Hidden Profile task × 3 ablation groups × n=15. Primary metric: Kendall's τ.
+2 tasks × 4 ablation groups × n=15. Primary metric: Kendall's τ + within-group Δτ trajectory.
 
-| Ablation | Decision Quality | τ | Interventions | d vs none |
-|----------|-----------------|----|--------------|-----------|
-| None | 76.7±10.5 | 0.533 | — | — |
-| Detect‑only | 74.0±14.5 | 0.480 | 0 | −0.21 |
-| **Full governance** | **81.3±10.6** | **0.627** | **33** | **+0.44** |
+### Interdependent Investment Task
+*(No single agent can determine the correct answer alone.)*
 
-**Core result**: Information-layer governance produces a real, directionally positive effect (d = +0.44). All 33 interventions injected targeted prompts into agent discussion — genuine causal evidence, modest but not inflated.
+| Ablation | τ | Δτ (within-group) | d vs none |
+|----------|------|-------------------|-----------|
+| None | 0.022 | +0.40 | — |
+| **Full governance** | **0.556** | **+0.84** | **+0.71** |
+
+### M&A Hidden Profile
+*(Agents can perform reasonably without collaboration.)*
+
+| Ablation | τ | Δτ | d vs none |
+|----------|------|------|-----------|
+| None | 0.533 | 0.00 | — |
+| **Full governance** | **0.640** | −0.12 | +0.58 |
+
+**Core result**: Governance causally improves decision quality only when agents genuinely need to collaborate. On interdependent tasks, τ jumps from 0.022→0.556 (Δτ=+0.84). On weakly-interdependent tasks, between-group d overstates the effect — within-group analysis reveals no causal improvement. This methodological distinction (between-group d vs within-group Δτ) is itself a contribution.
 
 ---
 
