@@ -67,6 +67,7 @@ interface ExperimentResult {
   // Primary metrics
   kendallTau: number;          // -1 to 1, 1 = perfect rank agreement
   decisionQuality: number;     // transformed to 0-100
+  tauTrajectory?: number[];    // per-round τ values
 
   // Secondary metrics
   totalRounds: number;
@@ -420,7 +421,9 @@ async function runSingle(
         (rounds[i] as any).evalScores[key] = (dim as any).score ?? 0;
       }
       (rounds[i] as any).evalScores.overall = ev.overallScore;
-    } catch { /* skip */ }
+    } catch (err) {
+        console.warn(`[${runId}] per-round evaluation failed for round ${rr.roundNumber}:`, err instanceof Error ? err.message : err);
+      }
   }
 
   // ── Final-round evaluation scores (for backward compat) ──────────────

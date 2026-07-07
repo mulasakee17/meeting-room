@@ -32,8 +32,8 @@ export class ContinueDiscussionIntervention implements InterventionStrategy {
         const undiscussed: string[] = [];
         for (const item of knowledgeItems) {
           totalKnowledgeItems++;
-          const keywords = item.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-          const mentioned = keywords.some(kw => allMessages.includes(kw));
+          const keywords = item.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
+          const mentioned = keywords.some((kw: string) => allMessages.includes(kw));
           if (mentioned) {
             discussedItems++;
           } else {

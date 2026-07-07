@@ -33,7 +33,7 @@ describe("EvaluationEngine", () => {
         timestamp: new Date().toISOString(),
       })),
       beliefs: Object.fromEntries(
-        Array.from({ length: agentsPerRound }, (_, i) => [`agent_${i}`, 0.5 + Math.random() * 0.2])
+        Array.from({ length: agentsPerRound }, (_, i) => [`agent_${i}`, 0.55 + i * 0.04])  // deterministic: 0.55, 0.59, 0.63, ...
       ),
       beliefChanges: {},
       converged: r === rounds - 1,

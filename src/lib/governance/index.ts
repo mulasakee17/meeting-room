@@ -190,7 +190,7 @@ export class GovernanceEngine {
     const contentSimilarity = this.computeContentSimilarity(messages);
     const infoRedundancyScore = (1 - normalizedStd) * GOVERNANCE_ECHO_REDUNDANCY_STD_WEIGHT + contentSimilarity * GOVERNANCE_ECHO_REDUNDANCY_CONTENT_WEIGHT;
 
-    const detected = infoRedundancyScore >= (config.echoChamberThreshold || GOVERNANCE_ECHO_CHAMBER_THRESHOLD);
+    const detected = infoRedundancyScore >= (config.echoChamberThreshold ?? GOVERNANCE_ECHO_CHAMBER_THRESHOLD);
     const severity = this.getSeverity(infoRedundancyScore, GOVERNANCE_SEVERITY_ECHO_CHAMBER);
 
     const redundantPairs = this.findRedundantAgentPairs(agentBeliefs);
@@ -230,7 +230,7 @@ export class GovernanceEngine {
     const influenceRatio = maxMessages / totalMessages;
     const dominantAgent = Object.keys(messageCounts).find(id => messageCounts[id] === maxMessages);
 
-    const detected = influenceRatio >= (config.authorityBiasThreshold || GOVERNANCE_AUTHORITY_BIAS_THRESHOLD);
+    const detected = influenceRatio >= (config.authorityBiasThreshold ?? GOVERNANCE_AUTHORITY_BIAS_THRESHOLD);
     const severity = this.getSeverity(influenceRatio, GOVERNANCE_SEVERITY_AUTHORITY_BIAS);
 
     const intervention = (detected && config.interventionLevel !== "none" && dominantAgent)
@@ -260,7 +260,7 @@ export class GovernanceEngine {
     }
 
     const polarizationIndex = this.computeStd(agentBeliefs.map(b => b.belief));
-    const detected = polarizationIndex >= (config.polarizationThreshold || GOVERNANCE_POLARIZATION_THRESHOLD);
+    const detected = polarizationIndex >= (config.polarizationThreshold ?? GOVERNANCE_POLARIZATION_THRESHOLD);
     const severity = this.getSeverity(polarizationIndex, GOVERNANCE_SEVERITY_POLARIZATION);
     const groups = this.clusterAgentsByBelief(agentBeliefs);
 
@@ -283,7 +283,7 @@ export class GovernanceEngine {
   ): PrematureConsensusDetection {
     const currentRound = config.currentRound || 1;
     const maxRounds = config.maxRounds || 3;
-    const threshold = config.prematureConsensusThreshold || GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD;
+    const threshold = config.prematureConsensusThreshold ?? GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD;
 
     const notDetected = (): PrematureConsensusDetection => ({
       detected: false, severity: "low", roundNumber: currentRound,
@@ -526,7 +526,7 @@ export class GovernanceEngine {
     if (result.prematureConsensus.detected) {
       const currentRound = result.prematureConsensus.roundNumber;
       const maxRounds = result.prematureConsensus.maxRounds;
-      const threshold = mergedConfig.prematureConsensusThreshold || 0.5;
+      const threshold = mergedConfig.prematureConsensusThreshold ?? 0.5;
       const roundProgress = currentRound / maxRounds;
       const additionalRounds = Math.ceil(maxRounds * (threshold - roundProgress));
       

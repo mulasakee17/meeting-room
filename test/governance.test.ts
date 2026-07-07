@@ -8,7 +8,7 @@ describe("GovernanceEngine", () => {
     return Array.from({ length: count }, (_, i) => ({
       agentId: `agent_${i}`,
       belief,
-      confidence: 70 + Math.random() * 30,
+      confidence: 70 + (i * 7) % 25,  // deterministic: 70, 77, 84, 91, 73, ...
       timestamp: new Date().toISOString(),
     }));
   };
