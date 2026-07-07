@@ -165,6 +165,13 @@ export interface DiscussionConfig {
    * 当 Agent 信念分歧超过阈值时，自动分组正反方进行辩论。
    */
   enableCrossExamination?: boolean;
+  /**
+   * Governance engine configuration overrides.
+   * Passed through to the internal GovernanceEngine constructor.
+   * Enables single-intervention ablation: disable all detectors
+   * except the target one.
+   */
+  governanceConfig?: Partial<import("../governance/types").GovernanceConfig>;
 }
 
 export interface DiscussionResult {

@@ -32,8 +32,16 @@ import { TASK_INVEST } from "./task_invest";
 // Types
 // ============================================================================
 
-/** Ablation modes — "random-intervene" removed (proved useless), added "static" */
-type Ablation = "none" | "full";
+/** Ablation modes:
+ *  - "none": no detection, no intervention (baseline)
+ *  - "full": all 4 detectors + interventions
+ *  - "shuffle": full governance but agent knowledge scrambled (regression-to-mean control)
+ *  - "full_diversity":  only introduce_diversity intervention (echo chamber → diversity)
+ *  - "full_weight":     only reduce_weight intervention (authority bias → weight cut)
+ *  - "full_reflection": only force_reflection intervention (polarization → reflect)
+ *  - "full_continue":   only continue_discussion intervention (premature consensus → more rounds)
+ */
+type Ablation = "none" | "full" | "shuffle" | "full_diversity" | "full_weight" | "full_reflection" | "full_continue";
 
 interface RoundRecord {
   roundNumber: number;
@@ -79,6 +87,8 @@ interface ExperimentResult {
   totalInterventions: number;
   issuesDetected: string[];
   interventionEffects: InterventionEffect[];
+  /** Per-intervention-type counts: { reduce_weight: 3, continue_discussion: 5, ... } */
+  interventionBreakdown: Record<string, number>;
 
   // Evaluation
   evaluationScores: Record<string, number>;
@@ -101,7 +111,7 @@ const PARAMS = {
   model: "deepseek-chat",
   provider: "deepseek" as const,
   runsPerCondition: 10,
-  ablationModes: ["none", "full"] as Ablation[],
+  ablationModes: ["none", "full", "shuffle", "full_diversity", "full_weight", "full_reflection", "full_continue"] as Ablation[],
 };
 
 const LLM_CONFIG: LLMConfig = {
@@ -206,6 +216,31 @@ function createAgents(task: TaskConfig): DiscussionAgent[] {
   });
 }
 
+/**
+ * Create a shuffled copy of the task for regression-to-mean control.
+ *
+ * Each agent's unique knowledge is rotated by +2 positions so no agent
+ * keeps their own expertise. The total information in the group is
+ * preserved, but the coherence between expertise role and data is broken.
+ *
+ * If governance improves τ in "shuffle" mode → improvement is from
+ * discussion mechanics alone (regression to the mean, more rounds).
+ * If governance does NOT improve τ in "shuffle" while "full" does →
+ * improvement genuinely requires coherent unique knowledge integration.
+ */
+function shuffleTask(task: TaskConfig): TaskConfig {
+  const n = task.agents.length;
+  if (n < 2) return task;
+  const rotatedAgents = task.agents.map((agent, i) => ({
+    ...agent,
+    knownItems: task.agents[(i + 2) % n].knownItems,
+    // Keep original bias text so agents still have an initial stance,
+    // but it now contradicts their (scrambled) data — creating the
+    // same "confusion" level as baseline while destroying coherence
+  }));
+  return { ...task, agents: rotatedAgents };
+}
+
 // ============================================================================
 // Intervention validation
 // ============================================================================
@@ -244,45 +279,49 @@ async function runSingle(
   ablation: Ablation,
   runIndex: number,
 ): Promise<ExperimentResult> {
-  const agents = createAgents(task);
+  // ── Shuffle control: scramble agent knowledge to break coherence ────
+  const effectiveTask = ablation === "shuffle" ? shuffleTask(task) : task;
+  const agents = createAgents(effectiveTask);
   const runId = `${task.id}_${ablation}_${runIndex}`;
 
-  // Build governance mode for DiscussionEngine
-  let governanceMode: "none" | "detect-only" | "full";
-  let useAdaptive = false;
+  // Build governance mode and config for DiscussionEngine
+  const governanceMode: "none" | "detect-only" | "full" = ablation === "none" ? "none" : "full";
 
-  switch (ablation) {
-    case "none": governanceMode = "none"; break;
-    case "full": governanceMode = "full"; break;
-  }
+  // Single-intervention ablation: only enable the detector that maps to
+  // the target intervention type. This isolates which intervention matters.
+  const singleInterventionMap: Record<string, string> = {
+    full_diversity:  "enableEchoChamberDetection",
+    full_weight:     "enableAuthorityBiasDetection",
+    full_reflection: "enablePolarizationDetection",
+    full_continue:   "enablePrematureConsensusDetection",
+  };
 
-  // Create optional GovernanceRuntime for adaptive mode
-  let govRuntime: GovernanceRuntime | undefined;
-  if (useAdaptive) {
-    govRuntime = new GovernanceRuntime({
-      maxRounds: PARAMS.maxRounds,
-      governanceMode: "full",
-      enableAdaptiveThresholds: true,
-      enableAdaptiveDosage: true,
-      governanceConfig: {
-        enableEchoChamberDetection: true,
-        enableAuthorityBiasDetection: true,
-        enablePolarizationDetection: true,
-        enablePrematureConsensusDetection: true,
-        interventionLevel: "medium",
-      },
-    });
+  const isSingleMode = ablation.startsWith("full_") && ablation !== "full";
+  const govOverride: Record<string, boolean> = {};
+  if (isSingleMode) {
+    // Disable all detectors, then enable only the target one
+    govOverride.enableEchoChamberDetection = false;
+    govOverride.enableAuthorityBiasDetection = false;
+    govOverride.enablePolarizationDetection = false;
+    govOverride.enablePrematureConsensusDetection = false;
+    const targetKey = singleInterventionMap[ablation];
+    if (targetKey) govOverride[targetKey] = true;
   }
 
   const engine = new DiscussionEngine({
     maxRounds: PARAMS.maxRounds,
     convergenceThreshold: PARAMS.convergenceThreshold,
     governanceMode,
-  }, govRuntime);
+    ...(isSingleMode ? {
+      governanceConfig: govOverride,
+    } : {}),
+  });
 
   // ── Set agent knowledge for information-layer interventions ─────────
+  // Use effectiveTask (shuffled when ablation === "shuffle") so the
+  // governance prompts reference the same (scrambled) knowledge the agents see.
   const knowledge = new Map<string, string[]>();
-  for (const info of task.agents) {
+  for (const info of effectiveTask.agents) {
     // Split knownItems by semicolons, newlines, or bullet points
     const items = info.knownItems
       .split(/[；;\n]/)
@@ -306,6 +345,7 @@ async function runSingle(
   const rounds: RoundRecord[] = [];
   const interventionEffects: InterventionEffect[] = [];
   const allIssues: string[] = [];
+  const interventionBreakdown: Record<string, number> = {};
   let totalInterventions = 0;
 
   // Extract pre-intervention beliefs for validation
@@ -345,6 +385,7 @@ async function runSingle(
           targetAgents: intv.targetAgents,
         });
         totalInterventions++;
+        interventionBreakdown[intv.type] = (interventionBreakdown[intv.type] || 0) + 1;
 
         // Record intervention effect for later validation
         if (intv.targetAgentId) {
@@ -447,6 +488,7 @@ async function runSingle(
     totalInterventions,
     issuesDetected: [...new Set(allIssues)],
     interventionEffects,
+    interventionBreakdown,
     evaluationScores,
     rounds,
     finalDecision: finalDecision.substring(0, 2000),

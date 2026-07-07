@@ -7,15 +7,21 @@ interface ExperimentResult {
   totalRounds: number; converged: boolean;
   totalInterventions: number;
   tauTrajectory?: number[];
+  interventionBreakdown?: Record<string, number>;
   rounds: Array<{ roundNumber: number; tau?: number; evalScores?: Record<string, number>; interventions: Array<{ type: string }> }>;
   evaluationScores: Record<string, number>;
 }
 
 const DATA_DIR = path.resolve(__dirname, "data");
-const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith(".json") && f !== "summary.json");
-const results: ExperimentResult[] = files.map(f =>
-  JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), "utf-8"))
-);
+const DATA_INVEST_DIR = path.resolve(__dirname, "data_invest");
+
+function loadData(dir: string): ExperimentResult[] {
+  if (!fs.existsSync(dir)) return [];
+  const files = fs.readdirSync(dir).filter(f => f.endsWith(".json") && f !== "summary.json");
+  return files.map(f =>
+    JSON.parse(fs.readFileSync(path.join(dir, f), "utf-8"))
+  );
+}
 
 function mean(v: number[]) { return v.reduce((a, b) => a + b, 0) / v.length; }
 function stdDev(v: number[]) {
@@ -29,127 +35,198 @@ function cohensD(a: number[], b: number[]) {
   return sp === 0 ? 0 : (ma - mb) / sp;
 }
 
-const groups = new Map<string, ExperimentResult[]>();
-for (const r of results) {
-  if (!groups.has(r.ablation)) groups.set(r.ablation, []);
-  groups.get(r.ablation)!.push(r);
-}
+function analyze(label: string, dir: string) {
+  const results = loadData(dir);
+  if (results.length === 0) {
+    console.log(`\n[${label}] No data in ${dir}/ — skipping.\n`);
+    return;
+  }
 
-// ════════════════════════════════════════════════════════════════════
-// WITHIN-GROUP τ TRAJECTORY — the causal measure
-// ════════════════════════════════════════════════════════════════════
-console.log("=".repeat(75));
-console.log("  WITHIN-GROUP τ Improvement (same agents, round 1 → final)");
-console.log("=".repeat(75));
-console.log();
+  const groups = new Map<string, ExperimentResult[]>();
+  for (const r of results) {
+    if (!groups.has(r.ablation)) groups.set(r.ablation, []);
+    groups.get(r.ablation)!.push(r);
+  }
 
-for (const ablation of ["none", "full", "adaptive"]) {
-  const g = groups.get(ablation);
-  if (!g) continue;
+  const baseline = groups.get("none");
+  if (!baseline) {
+    console.log(`\n[${label}] No \"none\" baseline found — aborting.\n`);
+    return;
+  }
 
-  const deltas: number[] = [];
-  const r1Taus: number[] = [];
-  const rFinalTaus: number[] = [];
+  // ════════════════════════════════════════════════════════════════════
+  // BETWEEN-GROUP — final τ comparison
+  // ════════════════════════════════════════════════════════════════════
+  console.log("\n" + "=".repeat(80));
+  console.log(`  ${label} — BETWEEN-GROUP Decision Quality (Kendall's τ → 0-100)`);
+  console.log("=".repeat(80));
+  console.log("| Ablation          | n  | Q μ±σ        | τ μ±σ         | Intv  | d vs none | Δτ (within) |");
+  console.log("|-------------------|----|--------------|---------------|-------|-----------|-------------|");
 
-  for (const r of g) {
-    if (r.rounds.length >= 2) {
-      const r1 = (r.rounds[0] as any).tau ?? r.rounds[0].tau ?? r.kendallTau;
-      const rFinal = (r.rounds[r.rounds.length - 1] as any).tau ?? r.kendallTau;
-      if (typeof r1 === "number" && typeof rFinal === "number") {
-        deltas.push(rFinal - r1);
-        r1Taus.push(r1);
-        rFinalTaus.push(rFinal);
+  const ablationOrder = ["none", "full", "shuffle", "full_diversity", "full_weight", "full_reflection", "full_continue"];
+
+  for (const ablation of ablationOrder) {
+    const g = groups.get(ablation);
+    if (!g) continue;
+    const qs = g.map(r => r.decisionQuality);
+    const ts = g.map(r => r.kendallTau);
+    const totalIntv = g.reduce((s, r) => s + r.totalInterventions, 0);
+    const d = ablation === "none" ? 0 : cohensD(qs, baseline.map(r => r.decisionQuality));
+    const dStr = ablation === "none" ? "—" : (d >= 0 ? "+" : "") + d.toFixed(2);
+
+    // Within-group Δτ
+    const deltas: number[] = [];
+    for (const r of g) {
+      if (r.tauTrajectory && r.tauTrajectory.length >= 2) {
+        deltas.push(r.tauTrajectory[r.tauTrajectory.length - 1] - r.tauTrajectory[0]);
       }
+    }
+    const deltaStr = deltas.length > 0
+      ? `${(mean(deltas) >= 0 ? "+" : "")}${mean(deltas).toFixed(3)}±${stdDev(deltas).toFixed(3)}`
+      : "—";
+
+    console.log(
+      `| ${ablation.padEnd(17)} | ${String(g.length).padStart(2)} | ${mean(qs).toFixed(1)}±${stdDev(qs).toFixed(1).padStart(4)} | ${mean(ts).toFixed(3)}±${stdDev(ts).toFixed(3)} | ${String(totalIntv).padStart(3)}   | ${dStr.padStart(7)}   | ${deltaStr.padStart(11)} |`
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // SHUFFLE CONTROL — regression-to-mean check
+  // ════════════════════════════════════════════════════════════════════
+  const fullG = groups.get("full");
+  const shuffleG = groups.get("shuffle");
+  if (fullG && shuffleG) {
+    console.log("\n" + "-".repeat(80));
+    console.log("  SHUFFLE CONTROL — Regression-to-Mean Check");
+    console.log("-".repeat(80));
+
+    const fullQs = fullG.map(r => r.decisionQuality);
+    const shuffleQs = shuffleG.map(r => r.decisionQuality);
+    const fullDeltas = fullG
+      .filter(r => r.tauTrajectory && r.tauTrajectory.length >= 2)
+      .map(r => r.tauTrajectory![r.tauTrajectory!.length - 1] - r.tauTrajectory![0]);
+    const shuffleDeltas = shuffleG
+      .filter(r => r.tauTrajectory && r.tauTrajectory.length >= 2)
+      .map(r => r.tauTrajectory![r.tauTrajectory!.length - 1] - r.tauTrajectory![0]);
+
+    const shuffleD = cohensD(shuffleQs, baseline.map(r => r.decisionQuality));
+    const fullVsShuffleD = cohensD(fullQs, shuffleQs);
+
+    console.log(`  baseline (none) τ:     ${mean(baseline.map(r => r.kendallTau)).toFixed(3)}`);
+    console.log(`  shuffle τ:            ${mean(shuffleG.map(r => r.kendallTau)).toFixed(3)} (d vs none = ${shuffleD >= 0 ? "+" : ""}${shuffleD.toFixed(2)})`);
+    console.log(`  full τ:               ${mean(fullG.map(r => r.kendallTau)).toFixed(3)} (d vs none = ${cohensD(fullQs, baseline.map(r => r.decisionQuality)) >= 0 ? "+" : ""}${cohensD(fullQs, baseline.map(r => r.decisionQuality)).toFixed(2)})`);
+    console.log(`  full vs shuffle d:    ${fullVsShuffleD >= 0 ? "+" : ""}${fullVsShuffleD.toFixed(2)}`);
+    console.log(`  shuffle Δτ:           ${mean(shuffleDeltas) >= 0 ? "+" : ""}${mean(shuffleDeltas).toFixed(3)}±${stdDev(shuffleDeltas).toFixed(3)}`);
+    console.log(`  full Δτ:              ${mean(fullDeltas) >= 0 ? "+" : ""}${mean(fullDeltas).toFixed(3)}±${stdDev(fullDeltas).toFixed(3)}`);
+
+    if (Math.abs(mean(shuffleDeltas)) < 0.1 && mean(fullDeltas) > 0.3) {
+      console.log(`\n  ✓ shuffle Δτ ≈ 0 while full Δτ > 0.3 — regression to the mean is RULED OUT.`);
+      console.log(`    Governance improvement is genuinely causal, not an artifact of`);
+      console.log(`    repeated measurement or discussion mechanics alone.`);
+    } else if (fullVsShuffleD > 0.5) {
+      console.log(`\n  → Full substantially outperforms shuffle (d=${fullVsShuffleD.toFixed(2)}).`);
+      console.log(`    Directional evidence against regression-to-mean.`);
+    } else {
+      console.log(`\n  ⚠ Cannot rule out regression to the mean (full vs shuffle d=${fullVsShuffleD.toFixed(2)}).`);
+      console.log(`    Consider increasing n or tightening the control design.`);
     }
   }
 
-  const avgDelta = mean(deltas);
-  const sdDelta = stdDev(deltas);
-  console.log(`${ablation}:`);
-  console.log(`  Round 1 τ: ${mean(r1Taus).toFixed(3)}±${stdDev(r1Taus).toFixed(3)}`);
-  console.log(`  Final τ:   ${mean(rFinalTaus).toFixed(3)}±${stdDev(rFinalTaus).toFixed(3)}`);
-  console.log(`  Δτ:        ${avgDelta >= 0 ? "+" : ""}${avgDelta.toFixed(3)}±${sdDelta.toFixed(3)}`);
-  console.log();
-}
+  // ════════════════════════════════════════════════════════════════════
+  // INTERVENTION TYPE ABLATION — which intervention matters?
+  // ════════════════════════════════════════════════════════════════════
+  const singleModes = ["full_diversity", "full_weight", "full_reflection", "full_continue"];
+  const hasSingleModes = singleModes.some(m => groups.has(m));
 
-// Compare Δτ between full and none
-const noneG = groups.get("none")!;
-const fullG = groups.get("full")!;
-const noneDeltas: number[] = [];
-const fullDeltas: number[] = [];
+  if (hasSingleModes) {
+    console.log("\n" + "-".repeat(80));
+    console.log("  INTERVENTION TYPE ABLATION — Which Intervention Matters?");
+    console.log("-".repeat(80));
 
-for (const r of noneG) {
-  if (r.rounds.length >= 2) {
-    const r1 = (r.rounds[0] as any).tau ?? r.kendallTau;
-    const rFinal = (r.rounds[r.rounds.length - 1] as any).tau ?? r.kendallTau;
-    if (typeof r1 === "number" && typeof rFinal === "number") noneDeltas.push(rFinal - r1);
+    const modeLabels: Record<string, string> = {
+      full_diversity:  "introduce_diversity (echo chamber → diversity injection)",
+      full_weight:     "reduce_weight (authority bias → weight reduction)",
+      full_reflection: "force_reflection (polarization → belief reflection)",
+      full_continue:   "continue_discussion (premature consensus → more rounds)",
+    };
+
+    console.log("| Single-intervention         | τ μ±σ         | d vs none | Δτ          |");
+    console.log("|-----------------------------|---------------|-----------|-------------|");
+
+    for (const mode of singleModes) {
+      const g = groups.get(mode);
+      if (!g) continue;
+      const ts = g.map(r => r.kendallTau);
+      const d = cohensD(g.map(r => r.decisionQuality), baseline.map(r => r.decisionQuality));
+      const dStr = (d >= 0 ? "+" : "") + d.toFixed(2);
+
+      const deltas: number[] = [];
+      for (const r of g) {
+        if (r.tauTrajectory && r.tauTrajectory.length >= 2) {
+          deltas.push(r.tauTrajectory[r.tauTrajectory.length - 1] - r.tauTrajectory[0]);
+        }
+      }
+      const deltaStr = deltas.length > 0
+        ? `${(mean(deltas) >= 0 ? "+" : "")}${mean(deltas).toFixed(3)}`
+        : "—";
+
+      console.log(`| ${modeLabels[mode].padEnd(27)} | ${mean(ts).toFixed(3)}±${stdDev(ts).toFixed(3)} | ${dStr.padStart(7)}   | ${deltaStr.padStart(11)} |`);
+    }
+
+    // Full vs each single mode
+    if (fullG) {
+      console.log(`\n  full (all 4):          τ = ${mean(fullG.map(r => r.kendallTau)).toFixed(3)}±${stdDev(fullG.map(r => r.kendallTau)).toFixed(3)}`);
+
+      // Check if any single mode matches full
+      for (const mode of singleModes) {
+        const g = groups.get(mode);
+        if (!g || g.length === 0) continue;
+        const sd = cohensD(fullG.map(r => r.decisionQuality), g.map(r => r.decisionQuality));
+        if (sd < 0.3) {
+          console.log(`  → ${mode} alone nearly matches full (d=${sd.toFixed(2)}) — this intervention may be the dominant driver.`);
+        }
+      }
+
+      // Check if continue_discussion alone explains the effect
+      const contG = groups.get("full_continue");
+      if (contG) {
+        const contD = cohensD(fullG.map(r => r.decisionQuality), contG.map(r => r.decisionQuality));
+        if (contD < 0.5) {
+          console.log(`  → continue_discussion explains most of full's effect (d_full_vs_cont=${contD.toFixed(2)}).`);
+          console.log(`    This suggests more discussion rounds are the primary mechanism,`);
+          console.log(`    not the sophistication of targeted interventions.`);
+        }
+      }
+
+      // Full intervention breakdown from full-mode runs
+      const breakdown: Record<string, number[]> = {};
+      for (const r of fullG) {
+        if (r.interventionBreakdown) {
+          for (const [k, v] of Object.entries(r.interventionBreakdown)) {
+            if (!breakdown[k]) breakdown[k] = [];
+            breakdown[k].push(v);
+          }
+        }
+      }
+      if (Object.keys(breakdown).length > 0) {
+        console.log(`\n  Full-mode intervention distribution (per run):`);
+        for (const [intvType, counts] of Object.entries(breakdown)) {
+          console.log(`    ${intvType}: ${mean(counts).toFixed(1)}±${stdDev(counts).toFixed(1)}`);
+        }
+      }
+    }
   }
 }
-for (const r of fullG) {
-  if (r.rounds.length >= 2) {
-    const r1 = (r.rounds[0] as any).tau ?? r.kendallTau;
-    const rFinal = (r.rounds[r.rounds.length - 1] as any).tau ?? r.kendallTau;
-    if (typeof r1 === "number" && typeof rFinal === "number") fullDeltas.push(rFinal - r1);
-  }
-}
-
-if (noneDeltas.length > 0 && fullDeltas.length > 0) {
-  const deltaD = cohensD(fullDeltas, noneDeltas);
-  console.log(`Within-group Δτ comparison:`);
-  console.log(`  none Δτ: ${mean(noneDeltas).toFixed(3)}±${stdDev(noneDeltas).toFixed(3)}`);
-  console.log(`  full Δτ: ${mean(fullDeltas).toFixed(3)}±${stdDev(fullDeltas).toFixed(3)}`);
-  console.log(`  d = ${deltaD >= 0 ? "+" : ""}${deltaD.toFixed(2)}`);
-  console.log();
-  if (deltaD > 0.5) {
-    console.log(`  → Governance CAUSES larger within-group improvement (d=${deltaD.toFixed(2)})`);
-  } else if (deltaD > 0.2) {
-    console.log(`  → Directional causal effect (d=${deltaD.toFixed(2)}), needs larger n`);
-  } else {
-    console.log(`  → No detectable causal effect (d=${deltaD.toFixed(2)})`);
-  }
-}
 
 // ════════════════════════════════════════════════════════════════════
-// BETWEEN-GROUP — final τ comparison
+// Run analysis on both task datasets
 // ════════════════════════════════════════════════════════════════════
-const baseline = groups.get("none")!.map(r => r.decisionQuality);
 
-console.log("\n" + "=".repeat(75));
-console.log("  BETWEEN-GROUP Decision Quality (Kendall's τ → 0-100)");
-console.log("=".repeat(75));
-console.log("| Ablation       | n  | Q μ±σ       | τ μ±σ        | Interventions | d vs none |");
-console.log("|----------------|----|-------------|---------------|---------------|-----------|");
+console.log("=".repeat(80));
+console.log("  SwarmAlpha V2 — Experiment Analysis");
+console.log("=".repeat(80));
 
-for (const ablation of ["none", "detect-only", "full", "adaptive"] as const) {
-  const g = groups.get(ablation);
-  if (!g) continue;
-  const qs = g.map(r => r.decisionQuality);
-  const ts = g.map(r => r.kendallTau);
-  const totalIntv = g.reduce((s, r) => s + r.totalInterventions, 0);
-  const d = ablation === "none" ? 0 : cohensD(qs, baseline);
-  const dStr = ablation === "none" ? "—" : (d >= 0 ? "+" : "") + d.toFixed(2);
-  console.log(
-    `| ${ablation.padEnd(14)} | ${g.length}  | ${mean(qs).toFixed(1)}±${stdDev(qs).toFixed(1).padStart(4)} | ${mean(ts).toFixed(3)}±${stdDev(ts).toFixed(3)} | ${String(totalIntv).padStart(3)} intv      | ${dStr.padStart(6)}     |`
-  );
-}
+analyze("M&A Task", DATA_DIR);
+analyze("Invest Task", DATA_INVEST_DIR);
 
-// ════════════════════════════════════════════════════════════════════
-// 5-DIMENSION IMPACT
-// ════════════════════════════════════════════════════════════════════
-const DIMS = ["consensus", "reliability", "dispersion", "stability", "influenceAnalysis"];
-const dimLabels: Record<string, string> = {
-  consensus: "Consensus", reliability: "Reliability", dispersion: "Dispersion",
-  stability: "Stability", influenceAnalysis: "Influence",
-};
-
-console.log("\n## 5-Dimension Impact (full vs none)");
-console.log("| Dimension       | none μ±σ     | full μ±σ     | d       |");
-console.log("|----------------|--------------|--------------|---------|");
-
-for (const dim of DIMS) {
-  const noneScores = (groups.get("none")!).map(r => r.evaluationScores?.[dim] ?? 0);
-  const fullScores = (groups.get("full")!).map(r => r.evaluationScores?.[dim] ?? 0);
-  const d = cohensD(fullScores, noneScores);
-  const dStr = (d >= 0 ? "+" : "") + d.toFixed(2);
-  console.log(`| ${dimLabels[dim].padEnd(14)} | ${mean(noneScores).toFixed(1)}±${stdDev(noneScores).toFixed(1).padStart(4)} | ${mean(fullScores).toFixed(1)}±${stdDev(fullScores).toFixed(1).padStart(4)} | ${dStr.padStart(6)} |`);
-}
+console.log("\nDone.");
