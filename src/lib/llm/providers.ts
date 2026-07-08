@@ -133,8 +133,8 @@ function parseLLMResponse(content: string, provider: string): LLMResponse {
           : JSON.stringify(parsed);
 
     return { emotion, reasoning };
-  } catch {
-    console.warn(`[parseLLMResponse] ${provider} JSON parse failed, falling back to regex extraction`);
+  } catch (err) {
+    console.warn(`[parseLLMResponse] ${provider} JSON parse failed:`, err instanceof Error ? err.message : err);
   }
 
   // 3. Regex extraction from malformed JSON or plain text

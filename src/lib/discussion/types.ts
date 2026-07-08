@@ -96,7 +96,7 @@ export interface InfluenceRecord {
   reasoning: string;
 }
 
-export interface CausalFactor {
+export interface InfluenceFactor {
   type: "agent_influence" | "evidence" | "external" | "self_reflection" | "discussion";
   sourceId?: string;
   description: string;
@@ -124,7 +124,7 @@ export interface ConsensusEvent {
 }
 
 export interface EnhancedDecisionTraceEntry extends DecisionTraceEntry {
-  beliefChangeReasons: CausalFactor[];
+  beliefChangeReasons: InfluenceFactor[];
   confidence: number;
   confidenceChange: number;
   decisionType: "affirmative" | "negative" | "neutral" | "conditional";
@@ -150,8 +150,8 @@ export interface DiscussionConfig {
   beliefUpdateStrategy: string;
   influenceStrategy: string;
   memoryStrategy: string;
-  /** 启用反事实 Agent Dropout 进行因果推断 (默认 false) */
-  enableCausalTracing?: boolean;
+  /** Enable agent dropout for sensitivity analysis (default false) */
+  enableDropoutAnalysis?: boolean;
   /**
    * 治理模式:
    * - "none": 不检测，不干预
@@ -172,6 +172,17 @@ export interface DiscussionConfig {
    * except the target one.
    */
   governanceConfig?: Partial<import("../governance/types").GovernanceConfig>;
+  /**
+   * Agent grouping topology for scalable discussions.
+   *
+   * - FlatTopology (default):  all agents in one group — round-table, n≤10
+   * - GroupedTopology(8):      fixed-size groups, reshuffled each round — n≤100
+   * - CommitteeTopology(8):    groups → representatives → plenary — n≤500
+   *
+   * When unset or agents ≤ topology.maxGroupSize, the default flat
+   * (all-agents) behavior is preserved exactly.
+   */
+  topology?: import("./topology").DiscussionTopology;
 }
 
 export interface DiscussionResult {
@@ -320,3 +331,10 @@ export interface AgentInfo {
   type: string;
   config?: Record<string, unknown>;
 }
+
+// ============================================================================
+// Backward-compatible aliases (deprecated — remove in v3.0)
+// ============================================================================
+
+/** @deprecated Use {@link InfluenceFactor}. Removed in v3.0. */
+export type CausalFactor = InfluenceFactor;

@@ -6,7 +6,7 @@ import {
   InteractionGraph,
   DiscussionMemoryEntry,
   InfluenceRecord,
-  CausalFactor,
+  InfluenceFactor,
   ConsensusEvent,
   DecisionEvent,
 } from "./types";
@@ -24,7 +24,7 @@ export class DecisionTraceBuilder {
     opinions: AgentOpinion[],
     memory: DiscussionMemoryEntry[],
     graph: InteractionGraph,
-    influenceWeights?: Map<string, CausalFactor[]>,
+    influenceWeights?: Map<string, InfluenceFactor[]>,
     interventions?: unknown[]
   ): void {
     const timestamp = new Date().toISOString();
@@ -49,7 +49,7 @@ export class DecisionTraceBuilder {
       const decisionType = this.extractDecisionType(opinion.reasoning, opinion.belief);
       const eventType = this.determineEventType(opinion, beliefChange, influencers);
 
-      const causalFactors = influenceWeights?.get(opinion.agentId) || this.extractCausalFactors(opinion, influencers);
+      const influenceFactors = influenceWeights?.get(opinion.agentId) || this.extractInfluenceFactors(opinion, influencers);
 
       const influencesReceived = this.getInfluenceRecordsReceived(opinion.agentId, graph, roundNumber, opinions);
       const influencesExerted = this.getInfluenceRecordsExerted(opinion.agentId, graph, roundNumber, opinions);
@@ -67,7 +67,7 @@ export class DecisionTraceBuilder {
 
       const enhancedEntry: EnhancedDecisionTraceEntry = {
         ...entry,
-        beliefChangeReasons: causalFactors,
+        beliefChangeReasons: influenceFactors,
         confidence: opinion.confidence,
         confidenceChange,
         decisionType,
@@ -185,11 +185,11 @@ export class DecisionTraceBuilder {
     return "initial_opinion";
   }
 
-  private extractCausalFactors(
+  private extractInfluenceFactors(
     opinion: AgentOpinion,
     influencers: { agentId: string; weight: number }[]
-  ): CausalFactor[] {
-    const factors: CausalFactor[] = [];
+  ): InfluenceFactor[] {
+    const factors: InfluenceFactor[] = [];
 
     for (const influencer of influencers) {
       if (influencer.weight > 0.1) {
@@ -550,7 +550,7 @@ export class DecisionTraceBuilder {
     }));
   }
 
-  answerWhy(agentId: string): CausalFactor[] {
+  answerWhy(agentId: string): InfluenceFactor[] {
     const agentTrace = this.getEnhancedTraceByAgent(agentId);
     if (agentTrace.length === 0) return [];
 
@@ -558,7 +558,7 @@ export class DecisionTraceBuilder {
     return latestEntry.beliefChangeReasons;
   }
 
-  answerBeliefChangedBecauseOf(agentId: string, roundNumber: number): CausalFactor[] {
+  answerBeliefChangedBecauseOf(agentId: string, roundNumber: number): InfluenceFactor[] {
     const agentTrace = this.getEnhancedTraceByAgent(agentId);
     const entry = agentTrace.find(e => e.roundNumber === roundNumber);
     return entry?.beliefChangeReasons || [];

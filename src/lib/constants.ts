@@ -194,19 +194,28 @@ export const RUNTIME_TERMINATION_TIMEOUT_MS = 300_000;
 export const LLM_DEFAULT_TIMEOUT_MS = 30_000;
 
 // ============================================================================
-// 决策追踪 — Decision Trace
+// 决策追踪 — Decision Trace (influence factor classification)
 // ============================================================================
 
 /** 默认置信度 */
 export const TRACE_DEFAULT_CONFIDENCE = 50;
-/** 因果因子：正面贡献阈值 */
-export const TRACE_CAUSAL_POSITIVE_THRESHOLD = 0.2;
-/** 因果因子：强正面贡献阈值 */
-export const TRACE_CAUSAL_STRONG_POSITIVE_THRESHOLD = 0.6;
-/** 因果因子：负面贡献阈值 */
-export const TRACE_CAUSAL_NEGATIVE_THRESHOLD = 0.15;
-/** 因果因子：强负面贡献阈值 */
-export const TRACE_CAUSAL_STRONG_NEGATIVE_THRESHOLD = 0.45;
+/** 影响因子：正面贡献阈值 */
+export const TRACE_INFLUENCE_POSITIVE_THRESHOLD = 0.2;
+/** 影响因子：强正面贡献阈值 */
+export const TRACE_INFLUENCE_STRONG_POSITIVE_THRESHOLD = 0.6;
+/** 影响因子：负面贡献阈值 */
+export const TRACE_INFLUENCE_NEGATIVE_THRESHOLD = 0.15;
+/** 影响因子：强负面贡献阈值 */
+export const TRACE_INFLUENCE_STRONG_NEGATIVE_THRESHOLD = 0.45;
+
+/** @deprecated Use TRACE_INFLUENCE_POSITIVE_THRESHOLD */
+export const TRACE_CAUSAL_POSITIVE_THRESHOLD = TRACE_INFLUENCE_POSITIVE_THRESHOLD;
+/** @deprecated Use TRACE_INFLUENCE_STRONG_POSITIVE_THRESHOLD */
+export const TRACE_CAUSAL_STRONG_POSITIVE_THRESHOLD = TRACE_INFLUENCE_STRONG_POSITIVE_THRESHOLD;
+/** @deprecated Use TRACE_INFLUENCE_NEGATIVE_THRESHOLD */
+export const TRACE_CAUSAL_NEGATIVE_THRESHOLD = TRACE_INFLUENCE_NEGATIVE_THRESHOLD;
+/** @deprecated Use TRACE_INFLUENCE_STRONG_NEGATIVE_THRESHOLD */
+export const TRACE_CAUSAL_STRONG_NEGATIVE_THRESHOLD = TRACE_INFLUENCE_STRONG_NEGATIVE_THRESHOLD;
 
 // ============================================================================
 // 干预 — Interventions

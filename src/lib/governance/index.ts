@@ -491,7 +491,7 @@ export class GovernanceEngine {
       interventions.push({
         type: "reduce_weight",
         targetAgentId: result.authorityBias.dominantAgent,
-        parameters: { reductionFactor: INTERVENTION_REDUCE_WEIGHT_FACTOR },
+        parameters: { reductionFactor: mergedConfig.reduceWeightFactor ?? INTERVENTION_REDUCE_WEIGHT_FACTOR },
         effect: "",
         applied: false,
       });
@@ -501,7 +501,7 @@ export class GovernanceEngine {
       interventions.push({
         type: "introduce_diversity",
         targetAgents: result.echoChamber.redundantAgents,
-        parameters: { perturbationAmount: INTERVENTION_DIVERSITY_PERTURBATION },
+        parameters: { perturbationAmount: mergedConfig.diversityPerturbation ?? INTERVENTION_DIVERSITY_PERTURBATION },
         effect: "",
         applied: false,
       });
@@ -516,7 +516,7 @@ export class GovernanceEngine {
         interventions.push({
           type: "force_reflection",
           targetAgents: extremeAgents,
-          parameters: { reflectionFactor: INTERVENTION_REFLECTION_FACTOR },
+          parameters: { reflectionFactor: mergedConfig.reflectionFactor ?? INTERVENTION_REFLECTION_FACTOR },
           effect: "",
           applied: false,
         });

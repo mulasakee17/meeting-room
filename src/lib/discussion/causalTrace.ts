@@ -1,18 +1,28 @@
 /**
- * 因果推断 Decision Trace
+ * Dropout-Based Sensitivity Analysis
  *
- * 核心问题: 传统影响力图只记录相关性 ("Agent A 的权重 0.8 指向 Agent B"),
- * 但相关性 ≠ 因果性。Agent B 的信念变化可能是因为 A 说服了他, 也可能是因为
- * B 自己推理得出了相同结论。
+ * Core insight: traditional influence graphs only record correlation
+ * ("Agent A has weight 0.8 → Agent B"), but correlation ≠ influence.
+ * Agent B's belief change could be caused by A's persuasion or by B's
+ * own independent reasoning.
  *
- * 本模块用反事实推理 (Counterfactual Reasoning) 区分因果与相关:
+ * This module uses agent dropout to estimate how sensitive the
+ * discussion outcome is to each agent's presence:
  *
- * 1. 每轮随机选一个 Agent 不参与讨论 (counterfactual dropout)
- * 2. 比较 "有 A" vs "无 A" 时其他 Agent 的信念差异
- * 3. 计算 Average Treatment Effect (ATE)
- * 4. 用 do-calculus 的 back-door criterion 识别因果路径
+ * 1. Each round, one randomly selected agent is dropped (counterfactual dropout)
+ * 2. Compare other agents' beliefs "with A" vs "without A"
+ * 3. Estimate the observed belief difference attributable to each agent
+ * 4. Build a sensitivity graph showing which agents the outcome is
+ *    most sensitive to
  *
- * 参考: Pearl, J. (2009). Causality. Cambridge University Press.
+ * IMPORTANT LIMITATIONS (not causal inference):
+ * - SUTVA is violated: dropping an agent doesn't prevent others from
+ *   referencing their prior statements
+ * - No identification strategy: this is observational sensitivity analysis,
+ *   not a formal causal identification with do-calculus
+ * - Thresholds are heuristic, not statistically calibrated
+ *
+ * This is a sensitivity diagnostic tool, not a causal inference method.
  */
 
 import type { AgentOpinion, InteractionGraph, InteractionEdge } from "./types";
@@ -21,8 +31,8 @@ import type { AgentOpinion, InteractionGraph, InteractionEdge } from "./types";
 // 类型定义
 // ============================================================================
 
-/** 单条反事实观测 — 记录某轮某个 source 是否参与时 target 的信念 */
-export interface CausalObservation {
+/** Single dropout observation — records target belief with/without source agent */
+export interface DropoutObservation {
   round: number;
   sourceAgentId: string;
   targetAgentId: string;
@@ -31,41 +41,41 @@ export interface CausalObservation {
   targetBelief: number;
 }
 
-/** 单个因果效应估计 */
-export interface CausalEffect {
-  /** 原因 Agent (treatment) */
+/** Single dropout effect estimate for one (source, target) pair */
+export interface DropoutEffect {
+  /** Source agent (the one being dropped) */
   sourceAgentId: string;
-  /** 结果 Agent (outcome) */
+  /** Target agent (the one being measured) */
   targetAgentId: string;
-  /** 讨论轮次 */
+  /** Discussion round */
   round: number;
-  /** 有 source 时 target 的信念 */
+  /** Target's average belief when source is present */
   beliefWithSource: number;
-  /** 无 source 时 target 的信念 (反事实) */
+  /** Target's average belief when source is absent (dropout condition) */
   beliefWithoutSource: number;
-  /** 个体处理效应 ITE = with - without */
-  individualTreatmentEffect: number;
-  /** 效应类型 */
-  effectType: "persuasion" | "suppression" | "no_effect" | "counterfactual_unavailable";
-  /** 因果置信度 (样本量归一化) */
+  /** Observed belief difference: with - without */
+  observedBeliefDifference: number;
+  /** Effect classification */
+  effectType: "persuasion" | "suppression" | "no_effect" | "dropout_unavailable";
+  /** Confidence level based on observation count */
   confidence: number;
 }
 
-/** 全量因果追踪 */
-export interface CausalTrace {
-  /** 按轮次组织的因果效应 */
-  roundEffects: Map<number, CausalEffect[]>;
-  /** 每个 (source, target) 对的平均处理效应 */
-  averageTreatmentEffects: Map<string, number>;
-  /** 全局因果网络 (仅保留显著因果边) */
-  causalGraph: CausalEdge[];
-  /** 反事实稳健性: 多少比例的因果推断有反事实支撑 */
-  counterfactualCoverage: number;
-  /** 总反事实试验次数 */
-  totalCounterfactualTrials: number;
+/** Full sensitivity trace across all rounds */
+export interface SensitivityTrace {
+  /** Per-round dropout effects */
+  roundEffects: Map<number, DropoutEffect[]>;
+  /** Average effect per (source, target) pair */
+  avgEffectMap: Map<string, number>;
+  /** Sensitivity graph (only statistically notable edges) */
+  sensitivityGraph: SensitivityEdge[];
+  /** Proportion of inferences supported by dropout data */
+  dropoutCoverage: number;
+  /** Total dropout trials conducted */
+  totalDropoutTrials: number;
 }
 
-export interface CausalEdge {
+export interface SensitivityEdge {
   source: string;
   target: string;
   avgEffect: number;
@@ -75,16 +85,17 @@ export interface CausalEdge {
 }
 
 // ============================================================================
-// 反事实 Dropout 机制
+// Agent Dropout Mechanism
 // ============================================================================
 
 /**
- * 在每轮讨论中随机选择一个 Agent 进行反事实 dropout。
+ * Select one agent at random for dropout in a given round.
  *
- * 被选中的 Agent 该轮不参与讨论。其他 Agent 的信念变化与"如果
- * 该 Agent 参与了"的对比构成反事实估计。
+ * The selected agent is excluded from that round's discussion. Comparing
+ * other agents' beliefs "with vs without" this agent provides a
+ * sensitivity estimate: how much does the outcome depend on this agent?
  *
- * 为避免引入偏差, 每个 Agent 被选中的概率均等, 且轮次间独立。
+ * Each agent has equal probability of being selected, independent across rounds.
  */
 export function selectCounterfactualDropout(
   agentIds: string[],
@@ -106,19 +117,19 @@ export function selectCounterfactualDropout(
 }
 
 // ============================================================================
-// ATE 计算
+// Dropout Effect Estimation
 // ============================================================================
 
 /**
- * 计算 Agent A 对 Agent B 的平均处理效应。
+ * Estimate the effect of Agent A's presence on Agent B's belief.
  *
- * ATE(A→B) = E[belief_B | A_present] - E[belief_B | A_absent]
+ * Effect(A→B) = E[belief_B | A_present] - E[belief_B | A_absent]
  *
- * 正值 = A 的参与使 B 的信念更偏向 A (说服)
- * 负值 = A 的参与使 B 的信念更偏离 A (逆反)
- * 零   = 无因果效应
+ * Positive = A's presence pulls B's belief toward A (persuasion-like)
+ * Negative = A's presence pushes B's belief away from A (suppression-like)
+ * Near-zero = no observable effect
  */
-export function estimateCausalEffect(
+export function estimateDropoutEffect(
   sourceAgentId: string,
   targetAgentId: string,
   observations: Array<{
@@ -127,7 +138,7 @@ export function estimateCausalEffect(
     sourceBelief: number;
     targetBelief: number;
   }>,
-): CausalEffect | null {
+): DropoutEffect | null {
   const withObs = observations.filter(o => o.sourcePresent);
   const withoutObs = observations.filter(o => !o.sourcePresent);
 
@@ -142,8 +153,8 @@ export function estimateCausalEffect(
         round: withObs[0].round,
         beliefWithSource: avgTargetBelief,
         beliefWithoutSource: avgTargetBelief, // 无反事实, 用同值
-        individualTreatmentEffect: 0,
-        effectType: "counterfactual_unavailable",
+        observedBeliefDifference: 0,
+        effectType: "dropout_unavailable",
         confidence: 0.3,
       };
     }
@@ -159,7 +170,7 @@ export function estimateCausalEffect(
   const beliefGap = avgSourceBelief - avgWith; // source belief 与 target belief (with) 的差距
 
   // 判定效应类型
-  let effectType: CausalEffect["effectType"];
+  let effectType: DropoutEffect["effectType"];
   if (absEffect < 0.05) {
     effectType = "no_effect";
   } else if ((ite > 0 && beliefGap > 0) || (ite < 0 && beliefGap < 0)) {
@@ -170,7 +181,7 @@ export function estimateCausalEffect(
     effectType = "suppression";
   }
 
-  // 因果置信度 = 样本量归一化 (至少 3 对观测才高置信)
+  // Confidence = observation count normalized (need ≥5 pairs for high confidence)
   const n = Math.min(withObs.length, withoutObs.length);
   const confidence = clamp(n / 5, 0.2, 1.0);
 
@@ -179,46 +190,47 @@ export function estimateCausalEffect(
     round: withObs[0].round,
     beliefWithSource: avgWith,
     beliefWithoutSource: avgWithout,
-    individualTreatmentEffect: Math.round(ite * 1000) / 1000,
+    observedBeliefDifference: Math.round(ite * 1000) / 1000,
     effectType,
     confidence: Math.round(confidence * 100) / 100,
   };
 }
 
 // ============================================================================
-// 因果图构建
+// Sensitivity Graph Construction
 // ============================================================================
 
 /**
- * 从多层观测数据构建因果图。
+ * Build a sensitivity graph from multi-round dropout observations.
  *
- * 与相关性影响力图不同, 因果图只保留有反事实证据支持的边,
- * 并标注每条边的因果方向性和显著性。
+ * Unlike correlation-based influence graphs, the sensitivity graph only
+ * retains edges supported by dropout data, and labels each edge with
+ * its observed effect size and significance.
  */
-export function buildCausalGraph(
-  allEffects: CausalEffect[],
+export function buildSensitivityGraph(
+  allEffects: DropoutEffect[],
   significanceThreshold: number = 0.05,
-): CausalGraph {
-  // 按 (source, target) 对聚合
-  const pairMap = new Map<string, CausalEffect[]>();
+): SensitivityGraph {
+  // Aggregate by (source, target) pairs
+  const pairMap = new Map<string, DropoutEffect[]>();
   for (const effect of allEffects) {
     const key = `${effect.sourceAgentId}→${effect.targetAgentId}`;
     if (!pairMap.has(key)) pairMap.set(key, []);
     pairMap.get(key)!.push(effect);
   }
 
-  const edges: CausalEdge[] = [];
-  const ateMap = new Map<string, number>();
+  const edges: SensitivityEdge[] = [];
+  const avgEffectMap = new Map<string, number>();
 
   Array.from(pairMap.entries()).forEach(([key, effects]) => {
     const [source, target] = key.split("→");
-    const validEffects = effects.filter((e: CausalEffect) => e.effectType !== "counterfactual_unavailable");
+    const validEffects = effects.filter((e: DropoutEffect) => e.effectType !== "dropout_unavailable");
     if (validEffects.length === 0) return;
 
-    const avgEffect = validEffects.reduce((s: number, e: CausalEffect) => s + e.individualTreatmentEffect, 0) / validEffects.length;
+    const avgEffect = validEffects.reduce((s: number, e: DropoutEffect) => s + e.observedBeliefDifference, 0) / validEffects.length;
     const absAvg = Math.abs(avgEffect);
 
-    let significance: CausalEdge["significance"];
+    let significance: SensitivityEdge["significance"];
     if (absAvg > 0.15 && validEffects.length >= 3) significance = "high";
     else if (absAvg > 0.08 && validEffects.length >= 2) significance = "medium";
     else significance = "low";
@@ -232,64 +244,65 @@ export function buildCausalGraph(
       effectType, significance, trials: validEffects.length,
     });
 
-    ateMap.set(key, Math.round(avgEffect * 1000) / 1000);
+    avgEffectMap.set(key, Math.round(avgEffect * 1000) / 1000);
   });
 
-  // 覆盖度: 有多少边有反事实支撑
+  // Coverage: proportion of edges supported by dropout data
   const totalEffects = allEffects.length;
-  const counterfactualEffects = allEffects.filter(
-    e => e.effectType !== "counterfactual_unavailable"
+  const dropoutEffects = allEffects.filter(
+    e => e.effectType !== "dropout_unavailable"
   ).length;
 
   return {
     edges,
-    ateMap,
-    counterfactualCoverage: totalEffects > 0
-      ? Math.round((counterfactualEffects / totalEffects) * 100) / 100
+    avgEffectMap,
+    dropoutCoverage: totalEffects > 0
+      ? Math.round((dropoutEffects / totalEffects) * 100) / 100
       : 0,
-    totalCounterfactualTrials: counterfactualEffects,
+    totalDropoutTrials: dropoutEffects,
   };
 }
 
 // ============================================================================
-// 因果查询 API
+// Sensitivity Query API
 // ============================================================================
 
 /**
- * "谁真正导致了 Agent X 的信念变化？"
+ * "Which agents most influenced Agent X's belief changes?"
  *
- * 返回对 X 有显著因果效应的 Agent 列表 (按效应大小排序),
- * 只包含有反事实证据的边。
+ * Returns agents with significant observed effects on X (sorted by effect size),
+ * only including edges supported by dropout evidence.
  */
-export function answerWhoCausedChange(
+export function answerWhatInfluencedChange(
   targetAgentId: string,
-  causalGraph: CausalGraph,
-): CausalEdge[] {
-  return causalGraph.edges
+  sensitivityGraph: SensitivityGraph,
+): SensitivityEdge[] {
+  return sensitivityGraph.edges
     .filter(e => e.target === targetAgentId && e.significance !== "low")
     .sort((a, b) => Math.abs(b.avgEffect) - Math.abs(a.avgEffect));
 }
 
 /**
- * "Agent X 的信念变化有多少是独立推理 vs 被他人影响？"
+ * "How much of Agent X's belief change comes from independent reasoning
+ *  vs social influence?"
  *
- * 独立推理比例 = 1 - (sum of absolute causal effects on X) / (total belief change of X)
- * 如果接近 1 → X 主要靠自己思考
- * 如果接近 0 → X 主要被他人影响
+ * independentReasoning = 1 - (sum of observed dropout effects on X) / (total belief change of X)
+ * → 1 = mostly independent thought
+ * → 0 = mostly influenced by others
  */
 export function decomposeBeliefChange(
   targetAgentId: string,
   totalBeliefChange: number,
-  causalGraph: CausalGraph,
+  sensitivityGraph: SensitivityGraph,
 ): { independentReasoning: number; socialInfluence: number } {
-  const effectsOnTarget = causalGraph.edges.filter(e => e.target === targetAgentId);
-  const totalCausalEffect = effectsOnTarget.reduce((s, e) => s + Math.abs(e.avgEffect), 0);
+  const effectsOnTarget = sensitivityGraph.edges.filter(e => e.target === targetAgentId);
+  const totalDropoutEffect = effectsOnTarget.reduce((s, e) => s + Math.abs(e.avgEffect), 0);
 
   if (totalBeliefChange === 0) {
     return { independentReasoning: 1, socialInfluence: 0 };
   }
 
-  const socialInfluence = clamp(totalCausalEffect / Math.abs(totalBeliefChange), 0, 1);
+  const socialInfluence = clamp(totalDropoutEffect / Math.abs(totalBeliefChange), 0, 1);
   return {
     independentReasoning: Math.round((1 - socialInfluence) * 100) / 100,
     socialInfluence: Math.round(socialInfluence * 100) / 100,
@@ -297,15 +310,36 @@ export function decomposeBeliefChange(
 }
 
 // ============================================================================
-// 类型聚合
+// Aggregate Types
 // ============================================================================
 
-export interface CausalGraph {
-  edges: CausalEdge[];
-  ateMap: Map<string, number>;
-  counterfactualCoverage: number;
-  totalCounterfactualTrials: number;
+export interface SensitivityGraph {
+  edges: SensitivityEdge[];
+  avgEffectMap: Map<string, number>;
+  dropoutCoverage: number;
+  totalDropoutTrials: number;
 }
+
+// ============================================================================
+// Backward-compatible aliases (deprecated — remove in v3.0)
+// ============================================================================
+
+/** @deprecated Use {@link DropoutObservation}. Removed in v3.0. */
+export type CausalObservation = DropoutObservation;
+/** @deprecated Use {@link DropoutEffect}. Removed in v3.0. */
+export type CausalEffect = DropoutEffect;
+/** @deprecated Use {@link SensitivityTrace}. Removed in v3.0. */
+export type CausalTrace = SensitivityTrace;
+/** @deprecated Use {@link SensitivityEdge}. Removed in v3.0. */
+export type CausalEdge = SensitivityEdge;
+/** @deprecated Use {@link SensitivityGraph}. Removed in v3.0. */
+export type CausalGraph = SensitivityGraph;
+/** @deprecated Use {@link estimateDropoutEffect}. Removed in v3.0. */
+export const estimateCausalEffect = estimateDropoutEffect;
+/** @deprecated Use {@link buildSensitivityGraph}. Removed in v3.0. */
+export const buildCausalGraph = buildSensitivityGraph;
+/** @deprecated Use {@link answerWhatInfluencedChange}. Removed in v3.0. */
+export const answerWhoCausedChange = answerWhatInfluencedChange;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));

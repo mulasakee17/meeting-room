@@ -264,7 +264,7 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
       expect(Array.isArray(result)).toBe(true);
     });
 
-    it("should answer Why with causal factors", async () => {
+    it("should answer Why with influence factors", async () => {
       const agent1 = new MockAgent("agent1", "Agent 1", "Expert", "custom", 0.5, 70);
 
       const engine = new DiscussionEngine({ maxRounds: 2 });

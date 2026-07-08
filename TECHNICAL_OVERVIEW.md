@@ -2,7 +2,7 @@
 
 > **An Embeddable Governance Runtime — Deep Technical Overview**
 >
-> Updated: 2026-07-04 | Version: V3 Governance Runtime
+> Updated: 2026-07-08 | Version: V3.1 Governance Runtime (bootstrap CI + sensitivity infrastructure)
 
 ---
 
@@ -59,7 +59,7 @@ SwarmAlpha is an **embeddable governance runtime** for LLM multi-agent systems. 
 │   │          │ · Threshold calib. │                   │      │
 │   │          │ · Dosage tuning    │                   │      │
 │   │          │ · Cross-examination│                   │      │
-│   │          │ · Causal tracing   │                   │      │
+│   │          │ · Dropout sensitivity│                   │      │
 │   │          └─────────┬─────────┘                    │      │
 │   │                    │                              │      │
 │   │          ┌─────────┴─────────┐                    │      │
@@ -152,10 +152,10 @@ Computes belief evolution using 3 forces:
 
 | Bias | Metric | Default Threshold |
 |------|--------|------------------|
-| Echo Chamber | Info redundancy = (1-σ)×0.5 + Jaccard similarity×0.5 | 0.70 |
-| Authority Bias | Dominant agent's message share | 0.40 |
-| Polarization | Belief standard deviation | 0.50 |
-| Premature Consensus | Round progress < 0.5 ∧ consensus > 0.7 ∧ σ < 0.15 | 0.50 |
+| Echo Chamber | Info redundancy = (1-σ)×0.5 + Jaccard similarity×0.5 | 0.50 |
+| Authority Bias | Dominant agent's message share | 0.25 |
+| Polarization | Belief standard deviation | 0.30 |
+| Premature Consensus | Round progress < 0.35 ∧ consensus > 0.55 ∧ σ < 0.20 | 0.35 |
 
 #### 4 Intervention Strategies
 
@@ -171,7 +171,7 @@ Computes belief evolution using 3 forces:
 - **Adaptive Thresholds**: Auto-calibrate per task via calibration discussion → baseline metrics → threshold scaling
 - **Adaptive Dosage**: Intervention strength = f(severity, information_coverage, history_effectiveness)
 - **Cross-Examination**: Splits agents into PRO/CON camps → adversarial debate → synthetic verdict + minority report
-- **Causal Tracing**: Counterfactual dropout → ATE estimation → causal graph (distinguishes correlation from causation)
+- **Dropout Sensitivity**: Agent dropout → effect estimation → sensitivity graph (measures outcome sensitivity to each agent)
 
 ### 4.4 Evaluation Engine (`src/lib/evaluation/`)
 
@@ -222,15 +222,18 @@ Unified multi-provider interface:
 
 ## 7. Experiment Infrastructure
 
-`experiments/v2/` — Two-task experiment framework with within-group causal analysis:
+`experiments/v2/` — Two-task experiment framework with within-group trajectory analysis:
 
-| Task | Interdependence | Baseline τ | Full τ | Δτ (causal) | d |
-|------|----------------|-----------|--------|-------------|------|
-| **Invest** | Strong (no agent can solo) | 0.022 | 0.556 | **+0.84** | +0.71 |
-| **M&A** | Weak (agents can solo) | 0.533 | 0.640 | −0.12 | +0.58 |
+| Task | Interdependence | Baseline τ | Full τ | Δτ (within-group) | d | 95% CI (ΔQ) |
+|------|----------------|-----------|--------|-------------|------|-------------|
+| **Invest** | Strong (no agent can solo) | 0.022 | 0.556 | **+0.84** | +0.71 | [+0.00, +51.13] p=0.05 |
+| **M&A** | Weak (agents can solo) | 0.533 | 0.640 | −0.12 | +0.58 | [−2.67, +10.67] p=0.27 |
 
-- 120 experiments (2 tasks × 4 ablation modes × n=15)
+- 120 experiments (2 tasks × 7 ablation modes × n=15)
+- **7 ablation modes**: none, full, shuffle (regression-to-mean control), 4 single-intervention (diversity/weight/reflection/continue)
 - Primary metric: Kendall's τ + within-group τ trajectory (Δτ)
+- **Bootstrap inference**: 95% CI + p-values via percentile method (10,000 resamples, deterministic mulberry32 RNG)
+- **Parameter sensitivity**: One-at-a-time sweep over 5 governance parameters (125 configs, n=5 each)
 - Information-layer interventions: 3 types active across 40+ triggers per task
 - All raw JSON preserved in `experiments/v2/data/` and `experiments/v2/data_invest/`
 
@@ -240,20 +243,20 @@ Unified multi-provider interface:
 
 ## 8. Test Coverage
 
-| Module | Tests | Files |
+| Module | Tests | File |
 |--------|-------|-------|
 | Governance Engine | 12 | governance.test.ts |
 | Evaluation Engine | 12 | evaluation.test.ts |
-| Discussion Engine | 12 | discussion.test.ts |
+| Discussion Engine | 13 | discussion.test.ts |
 | Cross-Examination | 8 | cross-examination.test.ts |
-| Adaptive Thresholds + Causal | 11 | adaptive-thresholds.test.ts |
+| Adaptive Thresholds + Dropout Sensitivity | 8 | adaptive-thresholds.test.ts |
 | Adaptive Dosage | 6 | adaptive-dosage.test.ts |
-| Interventions | 9 | interventions.test.ts |
-| LLM Providers | 14 | llm-providers.test.ts |
-| Benchmarks | 14 | benchmarks.test.ts |
-| Runtime (Observation + Inference) | 3 | runtime.test.ts |
-| Security | 13 | security.test.ts |
-| Frontend | 14 | frontend.test.tsx |
+| Interventions | 7 | interventions.test.ts |
+| LLM Providers | 12 | llm-providers.test.ts |
+| Benchmarks | 12 | benchmarks.test.ts |
+| Runtime | 3 | runtime.test.ts |
+| Security | 15 | security.test.ts |
+| Frontend | 15 | frontend.test.tsx |
 | **Total** | **124** | **12 files** |
 
 ---

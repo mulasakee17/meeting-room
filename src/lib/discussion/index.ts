@@ -6,7 +6,7 @@ import {
   DiscussionMemoryEntry,
   InteractionGraph,
   DecisionTraceEntry,
-  CausalFactor,
+  InfluenceFactor,
   DiscussionData,
   RoundData,
   DiscussionEvent,
@@ -28,7 +28,7 @@ import { InferenceLayer } from "../inference";
 import type { RawObservation, ObserverAgent, OpinionParser } from "../observation";
 import type { StateDelta } from "../inference";
 import type { EvaluationConfig } from "../evaluation/types";
-import { selectCounterfactualDropout, type CausalObservation } from "./causalTrace";
+import { selectCounterfactualDropout, type DropoutObservation } from "./causalTrace";
 import {
   shouldActivateCrossExamination,
   formCamps,
@@ -79,7 +79,7 @@ export class DiscussionEngine {
   private observationLayer: ObservationLayer;
   private inferenceLayer: InferenceLayer;
   private opinionParser: OpinionParser;
-  private causalObservations: Array<{
+  private dropoutObservations: Array<{
     round: number; sourceAgentId: string; targetAgentId: string;
     sourcePresent: boolean; sourceBelief: number; targetBelief: number;
   }> = [];
@@ -176,9 +176,9 @@ export class DiscussionEngine {
         roundNumber: round, payload: {},
       });
 
-      // -- counterfactual dropout (causal tracing) -------------------------
+      // -- agent dropout (sensitivity analysis) ---------------------------
       let dropoutAgentId: string | null = null;
-      if (this.config.enableCausalTracing && agents.length >= 3) {
+      if (this.config.enableDropoutAnalysis && agents.length >= 3) {
         const dropout = selectCounterfactualDropout(agents.map(a => a.id), round);
         if (dropout) dropoutAgentId = dropout.droppedAgentId;
       }
@@ -187,14 +187,34 @@ export class DiscussionEngine {
       const participatingAgents = dropoutAgentId
         ? agents.filter(a => a.id !== dropoutAgentId)
         : agents;
-      const opinions = await this.runRound(participatingAgents, task, round, agentStates);
 
-      // Record counterfactual observations for causal inference
-      if (dropoutAgentId && this.config.enableCausalTracing) {
+      // -- topology: optionally split into sub-groups for scalability --------
+      const topology = this.config.topology;
+      const useTopology = topology && participatingAgents.length > topology.maxGroupSize;
+
+      let opinions: AgentOpinion[];
+      if (useTopology) {
+        // Partition agents into sub-groups, run each independently
+        const beliefMap = new Map<string, number>();
+        agentStates.forEach((s, id) => beliefMap.set(id, s.belief));
+        const groups = topology!.partition(participatingAgents, round, beliefMap);
+        const groupResults: AgentOpinion[][] = [];
+        for (const group of groups) {
+          if (group.length === 0) continue;
+          const groupOpinions = await this.runRound(group, task, round, agentStates);
+          groupResults.push(groupOpinions);
+        }
+        opinions = groupResults.flat();
+      } else {
+        opinions = await this.runRound(participatingAgents, task, round, agentStates);
+      }
+
+      // Record dropout observations for sensitivity analysis
+      if (dropoutAgentId && this.config.enableDropoutAnalysis) {
         const droppedState = agentStates.get(dropoutAgentId);
         if (droppedState) {
           for (const opinion of opinions) {
-            this.causalObservations.push({
+            this.dropoutObservations.push({
               round, sourceAgentId: dropoutAgentId, targetAgentId: opinion.agentId,
               sourcePresent: false, sourceBelief: droppedState.belief, targetBelief: opinion.belief,
             });
@@ -205,7 +225,7 @@ export class DiscussionEngine {
             const droppedOpinion = await this.runRound([droppedAgent], task, round, agentStates);
             for (const o of droppedOpinion) {
               for (const otherOpinion of opinions) {
-                this.causalObservations.push({
+                this.dropoutObservations.push({
                   round, sourceAgentId: dropoutAgentId, targetAgentId: otherOpinion.agentId,
                   sourcePresent: true, sourceBelief: o.belief, targetBelief: otherOpinion.belief,
                 });
@@ -243,8 +263,8 @@ export class DiscussionEngine {
 
       // -- trace building --------------------------------------------------
       const graph = this.graphBuilder.getGraph();
-      const causalFactorsMap = this.computeCausalFactors(opinions, graph);
-      this.traceBuilder.addRound(round, opinions, this.memoryManager.getAll(), graph, causalFactorsMap);
+      const influenceFactorsMap = this.computeInfluenceFactors(opinions, graph);
+      this.traceBuilder.addRound(round, opinions, this.memoryManager.getAll(), graph, influenceFactorsMap);
 
       if (this.checkConvergence(opinions)) break;
 
@@ -293,14 +313,14 @@ export class DiscussionEngine {
     return roundResults;
   }
 
-  /** Compute causal factor map for a round's opinions against the current graph. */
-  private computeCausalFactors(
+  /** Compute influence factor map for a round's opinions against the current graph. */
+  private computeInfluenceFactors(
     opinions: AgentOpinion[],
     graph: InteractionGraph
-  ): Map<string, CausalFactor[]> {
-    const map = new Map<string, CausalFactor[]>();
+  ): Map<string, InfluenceFactor[]> {
+    const map = new Map<string, InfluenceFactor[]>();
     for (const opinion of opinions) {
-      const factors: CausalFactor[] = graph.edges
+      const factors: InfluenceFactor[] = graph.edges
         .filter(e => e.target === opinion.agentId)
         .map(e => ({
           type: "agent_influence" as const,
@@ -708,9 +728,9 @@ Respond in JSON format:
     return this.traceBuilder.getTrace();
   }
 
-  /** 获取反事实因果观测数据 — 用于构建因果图 */
-  getCausalObservations() {
-    return this.causalObservations;
+  /** Get dropout observations — used to build the sensitivity graph */
+  getDropoutObservations() {
+    return this.dropoutObservations;
   }
 
   summarizeTrace() {
@@ -1251,7 +1271,8 @@ Respond in JSON format:
       const cleaned = response.trim().replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "");
       const parsed = JSON.parse(cleaned);
       return parsed.reasoning || parsed.analysis || response.slice(0, 500);
-    } catch {
+    } catch (err) {
+      console.warn("[DiscussionEngine] response parse failed, using truncated raw text:", err instanceof Error ? err.message : err);
       return response.slice(0, 500);
     }
   }
@@ -1275,3 +1296,4 @@ export * from "./decisionTrace";
 export * from "./causalTrace";
 export * from "./influenceUtils";
 export * from "./crossExamination";
+export * from "./topology";

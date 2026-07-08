@@ -115,8 +115,8 @@ function parseAgentStates(
         const parsed = JSON.parse(state.lastMessage);
         parsedReasoning = parsed.reasoning || parsedReasoning;
         parsedEmotion = typeof parsed.emotion === "number" ? parsed.emotion : parsedEmotion;
-      } catch {
-        console.warn(`[pipeline] Agent ${state.agentId} lastMessage parse failed, using raw text`);
+      } catch (err) {
+        console.warn(`[pipeline] Agent ${state.agentId} lastMessage parse failed:`, err instanceof Error ? err.message : err);
         parsedReasoning = state.lastMessage;
       }
     }

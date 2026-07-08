@@ -14,21 +14,10 @@ import {
   ConsensusRoundData,
   InfluencePath,
 } from "./types";
+import { EVALUATION_DEFAULT_WEIGHTS } from "../constants";
 
 export class EvaluationEngine {
-  /**
-   * Default dimension weights — redistributed after removing
-   * Explainability (0.15) and Manipulation Resistance (0.12).
-   *
-   * Remaining sum was 0.73; scaled to 1.00.
-   */
-  private defaultWeights: Record<string, number> = {
-    consensus: 0.20,
-    reliability: 0.25,
-    dispersion: 0.20,
-    stability: 0.17,
-    influenceAnalysis: 0.18,
-  };
+  private defaultWeights = EVALUATION_DEFAULT_WEIGHTS;
 
   evaluate(
     agentDecisions: AgentDecision[],

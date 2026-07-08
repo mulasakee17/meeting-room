@@ -139,6 +139,12 @@ export interface GovernanceConfig {
   prematureConsensusThreshold?: number;
   maxRounds?: number;
   currentRound?: number;
+  /** Override INTERVENTION_REDUCE_WEIGHT_FACTOR (default 0.5) */
+  reduceWeightFactor?: number;
+  /** Override INTERVENTION_DIVERSITY_PERTURBATION (default 0.3) */
+  diversityPerturbation?: number;
+  /** Override INTERVENTION_REFLECTION_FACTOR (default 0.2) */
+  reflectionFactor?: number;
 }
 
 export interface AgentBelief {

@@ -18,19 +18,19 @@ SwarmAlpha is an **embeddable governance runtime** — a drop-in layer that plug
 
 **Core architecture**: LLMs only perform perception (extracting beliefs and emotions from natural language). All governance logic — consensus computation, bias detection, belief dynamics — uses pure mathematics (Kuramoto synchronization, Bayesian inference, information entropy, Gini coefficient). This means the runtime operates as a **lightweight plugin** with zero additional LLM calls.
 
-**Four governance modes**: none (baseline), detect-only, random-intervene (ablation), full (targeted detection + adaptive intervention).
+**Seven ablation modes**: none (baseline), full, shuffle (regression-to-mean control), and four single-intervention modes isolating individual governance mechanisms. Bootstrap 95% CI + p-values on all key comparisons.
 
-**Five-dimension evaluation**: Consensus, Reliability, Dispersion, Stability, and Influence Analysis — all with statistical grounding (Cronbach's α, Cohen's d, bootstrap confidence intervals).
+**Five-dimension evaluation**: Consensus, Reliability, Dispersion, Stability, and Influence Analysis — all with statistical grounding (Cronbach's α, Cohen's d, bootstrap confidence intervals, parameter sensitivity analysis).
 
 ---
 
 ## Results
 
-120 controlled experiments across 2 tasks × 4 ablation modes × n=15, with Kendall's τ and within-group τ trajectory (Δτ) as primary metrics:
+120 controlled experiments across 2 tasks × 7 ablation modes × n=15, with Kendall's τ and within-group τ trajectory (Δτ) as primary metrics. Statistical inference via bootstrap 95% CI (10k resamples).
 
-- **Causal evidence on interdependent tasks**: Governance lifts τ from 0.022→0.556 (Δτ=+0.84, d=+0.71). Same agents improve across rounds — not a between-group artifact.
-- **Boundary condition on weakly-interdependent tasks**: Between-group d=+0.58, but within-group Δτ=−0.12. Governance does not causally improve discussions when agents already perform well alone.
-- **Methodological contribution**: Standard between-group effect sizes overstate governance impact. Within-group trajectory analysis reveals when effects are causal vs. artifacts of initial conditions.
+- **Within-group evidence on interdependent tasks**: Governance lifts τ from 0.022→0.556 (Δτ=+0.84, 95% CI [+0.27, +1.38]). Same agents improve across rounds — not a between-group artifact.
+- **Boundary condition on weakly-interdependent tasks**: Between-group d=+0.58, but within-group Δτ=−0.12, 95% CI [−0.25, −0.02]. Full vs None ΔQ=+4.0, p=0.267 (not significant). Governance does not improve discussions when agents already perform well alone.
+- **Methodological contribution**: Standard between-group effect sizes overstate governance impact. Within-group trajectory analysis reveals when effects are genuine vs. artifacts of initial conditions. Bootstrap inference enables honest uncertainty quantification.
 
 ---
 

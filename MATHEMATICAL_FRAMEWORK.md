@@ -493,59 +493,61 @@ const engine = GovernanceEngine.withAdaptiveThresholds(calibration);
 
 ---
 
-## 11. 因果推断 Trace (§B — 新增)
+## 11. Dropout 敏感性分析 (§B)
 
 ### 11.1 动机
 
-传统影响力图记录的 $W(s \to t)$ 是**相关性**：$s$ 和 $t$ 的信念相似不等于 $s$ 导致了 $t$ 的变化。真正的问题是因果性的。
+传统影响力图记录的 $W(s \to t)$ 是**相关性**：$s$ 和 $t$ 的信念相似不等于 $s$ 影响了 $t$ 的变化。Dropout 分析测量结果对每个 Agent 的存在有多敏感。
 
-### 11.2 反事实 Dropout
+**重要限制**：这不是因果推断。SUTVA 被违反（dropout 一个 Agent 不阻止其他人引用其先前的发言），且没有识别策略。这只是一个敏感性诊断工具。
+
+### 11.2 Agent Dropout
 
 每轮随机选一个 Agent $a_k$ 不参与讨论。比较 "有 $a_k$" 和 "无 $a_k$" 时其他 Agent 的信念差异：
 
 $$
-\text{ITE}(a_i \to a_j)^{(t)} = b_j^{(t)} \big|_{a_i \text{ present}} - b_j^{(t)} \big|_{a_i \text{ absent}}
+\text{Diff}(a_i \to a_j)^{(t)} = b_j^{(t)} \big|_{a_i \text{ present}} - b_j^{(t)} \big|_{a_i \text{ absent}}
 $$
 
-### 11.3 平均处理效应 (ATE)
+### 11.3 平均效应
 
 对多轮观测取均值：
 
 $$
-\text{ATE}(a_i \to a_j) = \frac{1}{|T_{ij}|}\sum_{t \in T_{ij}} \text{ITE}(a_i \to a_j)^{(t)}
+\text{AvgEffect}(a_i \to a_j) = \frac{1}{|T_{ij}|}\sum_{t \in T_{ij}} \text{Diff}(a_i \to a_j)^{(t)}
 $$
 
 其中 $T_{ij}$ 是有 $a_i$ 作为 dropout 的轮次集合。
 
-### 11.4 因果图
+### 11.4 敏感性图
 
-与相关性图不同，因果图 $\mathcal{G}_c$ 的边集 $E_c$ 仅包含**有反事实证据**且 $|\text{ATE}| > 0.05$ 的边：
+与相关性图不同，敏感性图 $\mathcal{G}_s$ 的边集 $E_s$ 仅包含**有 dropout 数据支撑**且 $|\text{AvgEffect}| > 0.05$ 的边：
 
 $$
-E_c = \{(i \to j) \mid \text{ATE}(a_i \to a_j) \text{ 可估计} \land |\text{ATE}(a_i \to a_j)| > 0.05\}
+E_s = \{(i \to j) \mid \text{AvgEffect}(a_i \to a_j) \text{ 可估计} \land |\text{AvgEffect}(a_i \to a_j)| > 0.05\}
 $$
 
-边的显著性分三级：high ($|\text{ATE}| > 0.15$, ≥3 观测) / medium ($|\text{ATE}| > 0.08$, ≥2 观测) / low。
+边的显著性分三级：high ($|\text{AvgEffect}| > 0.15$, ≥3 观测) / medium ($|\text{AvgEffect}| > 0.08$, ≥2 观测) / low。
 
-### 11.5 信念变化的因果分解
+### 11.5 信念变化的分解
 
 对于 Agent $j$ 的总信念变化 $\Delta b_j$，可分解为：
 
 $$
-\Delta b_j = \underbrace{\sum_{i \neq j} \text{ATE}(a_i \to a_j)}_{\text{社会影响 (social influence)}} + \underbrace{\Delta b_j^{\text{ind}}}_{\text{独立推理}}
+\Delta b_j = \underbrace{\sum_{i \neq j} \text{AvgEffect}(a_i \to a_j)}_{\text{社会影响 (social influence)}} + \underbrace{\Delta b_j^{\text{ind}}}_{\text{独立推理}}
 $$
 
-独立推理比例 = $1 - \frac{\sum_i |\text{ATE}(a_i \to a_j)|}{|\Delta b_j|}$
+独立推理比例 = $1 - \frac{\sum_i |\text{AvgEffect}(a_i \to a_j)|}{|\Delta b_j|}$
 
 ### 11.6 查询 API
 
 ```typescript
-// "谁真正导致了 Agent X 的变化？"
-answerWhoCausedChange("agent_2", causalGraph)
+// "哪些 Agent 对 X 的影响最大？"
+answerWhatInfluencedChange("agent_2", sensitivityGraph)
 // → [{ source: "agent_1", avgEffect: 0.23, significance: "high" }]
 
 // "Agent X 的变化多少是独立思考？"
-decomposeBeliefChange("agent_2", 0.5, causalGraph)
+decomposeBeliefChange("agent_2", 0.5, sensitivityGraph)
 // → { independentReasoning: 0.54, socialInfluence: 0.46 }
 ```
 
@@ -668,6 +670,9 @@ $$
 > `src/lib/constants.ts` 包含所有可调参数的集中定义。
 > `src/lib/evaluation/index.ts` 实现 §8（5 维评价）。
 > `src/lib/governance/adaptiveThresholds.ts` 实现 §10。
-> `src/lib/discussion/causalTrace.ts` 实现 §11。
+> `src/lib/discussion/causalTrace.ts` 实现 §11（Dropout 敏感性分析）。
+> `experiments/v2/analyze.ts` 实现 Bootstrap 统计推断（§7 实验验证）。
+> `experiments/v2/sensitivity.ts` 实现参数敏感性扫描（§12 附录）。
+> `src/lib/discussion/causalTrace.ts` 实现 §11（Dropout 敏感性分析）。
 > `src/lib/governance/adaptiveDosage.ts` 实现 §12。
 > `src/lib/discussion/crossExamination.ts` 实现 §13。

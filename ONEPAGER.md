@@ -47,7 +47,7 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 
 ## Experimental Evidence (120 controlled experiments)
 
-2 tasks × 4 ablation groups × n=15. Primary metric: Kendall's τ + within-group Δτ trajectory.
+2 tasks × 7 ablation modes (none, full, shuffle control, 4 single-intervention) × n=15. Primary metric: Kendall's τ + within-group Δτ trajectory. Statistical inference via bootstrap 95% CI (10k resamples, deterministic seed).
 
 ### Interdependent Investment Task
 *(No single agent can determine the correct answer alone.)*
@@ -65,7 +65,7 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 | None | 0.533 | 0.00 | — |
 | **Full governance** | **0.640** | −0.12 | +0.58 |
 
-**Core result**: Governance causally improves decision quality only when agents genuinely need to collaborate. On interdependent tasks, τ jumps from 0.022→0.556 (Δτ=+0.84). On weakly-interdependent tasks, between-group d overstates the effect — within-group analysis reveals no causal improvement. This methodological distinction (between-group d vs within-group Δτ) is itself a contribution.
+**Core result**: Governance improves decision quality only when agents genuinely need to collaborate. On interdependent tasks, τ jumps from 0.022→0.556 (Δτ=+0.84, 95% CI [+0.27, +1.38]). On weakly-interdependent tasks, Full vs None ΔQ=+4.0, 95% CI [−2.67, +10.67], p=0.267 — not significant. Between-group d overstates the effect; within-group trajectory analysis reveals the truth. This methodological distinction is itself a contribution.
 
 ---
 
@@ -77,7 +77,10 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 | **Embeddable SDK** | `import { GovernanceRuntime } from "@/runtime"` — one class, zero framework deps |
 | **Adaptive Governance** | Thresholds auto-calibrate per task; intervention dosage scales with severity |
 | **Cross-Examination** | Adversarial debate engine: splits agents into PRO/CON camps, synthesizes verdict |
-| **Causal Inference** | Counterfactual dropout analysis distinguishes correlation from causation |
+| **7 Ablation Modes** | Full + shuffle control + 4 single-intervention modes isolate which mechanism matters |
+| **Bootstrap Inference** | 95% CI + p-values (10k resamples, deterministic seed) on all key comparisons |
+| **Parameter Sensitivity** | One-at-a-time sweep over 5 governance parameters verifies robustness |
+| **Dropout Sensitivity** | Agent dropout analysis measures outcome sensitivity to each agent's presence |
 | **Multi-LLM Support** | DeepSeek / OpenAI / Anthropic / Local (Ollama) — unified interface |
 | **124 Automated Tests** | All core modules covered, 12 test files |
 | **Demo Mode** | Zero-config, no API key needed — instant visualization |
@@ -121,8 +124,9 @@ AI-assisted coding (Claude Code). Architecture decisions and experiment design a
 
 ## Roadmap
 
-- **Short-term**: Complete 3-task full ablation matrix + GPT-4o cross-model validation
+- **Short-term**: Run parameter sensitivity sweep + GPT-4o cross-model validation (n=5)
 - **Medium-term**: Python SDK for native AutoGen/CrewAI integration; formalize governance theory
+- **Statistical**: Bootstrap BCa correction; power analysis for sample size planning
 
 ## Long-Term Vision: Agent Society Governance Infrastructure
 

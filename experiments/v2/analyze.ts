@@ -35,6 +35,77 @@ function cohensD(a: number[], b: number[]) {
   return sp === 0 ? 0 : (ma - mb) / sp;
 }
 
+// ============================================================================
+// Bootstrap inference (percentile method, 10000 resamples)
+// ============================================================================
+
+/** Deterministic PRNG (mulberry32) for reproducible bootstrap results. */
+function mulberry32(seed: number): () => number {
+  return () => {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+const RNG_SEED = 42;
+const N_BOOT = 10000;
+const ALPHA = 0.05;
+
+/**
+ * Percentile bootstrap 95% CI for a mean.
+ * Returns { mean, ci95: [lo, hi] }.
+ */
+function bootstrapCI(samples: number[], nBoot = N_BOOT, alpha = ALPHA) {
+  const n = samples.length;
+  if (n === 0) return { mean: 0, ci95: [0, 0] as [number, number] };
+  const rng = mulberry32(RNG_SEED);
+  const means: number[] = [];
+  for (let i = 0; i < nBoot; i++) {
+    let sum = 0;
+    for (let j = 0; j < n; j++) sum += samples[Math.floor(rng() * n)];
+    means.push(sum / n);
+  }
+  means.sort((a, b) => a - b);
+  const lo = means[Math.floor(nBoot * alpha / 2)];
+  const hi = means[Math.floor(nBoot * (1 - alpha / 2))];
+  const m = mean(samples);
+  return { mean: m, ci95: [lo, hi] as [number, number] };
+}
+
+/**
+ * Bootstrap CI for the difference in means between two groups.
+ * Returns { meanDiff, ci95: [lo, hi], pValue (two-sided) }.
+ */
+function bootstrapMeanDiff(a: number[], b: number[], nBoot = N_BOOT, alpha = ALPHA) {
+  if (a.length === 0 || b.length === 0) return { meanDiff: 0, ci95: [0, 0] as [number, number], pValue: 1 };
+  const rng = mulberry32(RNG_SEED + 0x5EED);  // independent seed stream
+  const diffs: number[] = [];
+  const obsDiff = mean(a) - mean(b);
+  for (let i = 0; i < nBoot; i++) {
+    let sumA = 0, sumB = 0;
+    for (let j = 0; j < a.length; j++) sumA += a[Math.floor(rng() * a.length)];
+    for (let j = 0; j < b.length; j++) sumB += b[Math.floor(rng() * b.length)];
+    diffs.push(sumA / a.length - sumB / b.length);
+  }
+  diffs.sort((x, y) => x - y);
+  const lo = diffs[Math.floor(nBoot * alpha / 2)];
+  const hi = diffs[Math.floor(nBoot * (1 - alpha / 2))];
+  // Two-sided bootstrap p-value: proportion of bootstrap diffs ≤ 0 (if obs > 0) or ≥ 0 (if obs < 0), doubled
+  const propBelow = diffs.filter(d => d <= 0).length / nBoot;
+  const propAbove = diffs.filter(d => d >= 0).length / nBoot;
+  const pValue = obsDiff > 0 ? 2 * propBelow : 2 * propAbove;
+  return { meanDiff: obsDiff, ci95: [lo, hi] as [number, number], pValue: Math.min(pValue, 1) };
+}
+
+/** Format a CI as [+X.XX, +X.XX] */
+function fmtCI(ci: [number, number]): string {
+  const s0 = (ci[0] >= 0 ? "+" : "") + ci[0].toFixed(2);
+  const s1 = (ci[1] >= 0 ? "+" : "") + ci[1].toFixed(2);
+  return `[${s0}, ${s1}]`;
+}
+
 function analyze(label: string, dir: string) {
   const results = loadData(dir);
   if (results.length === 0) {
@@ -121,7 +192,7 @@ function analyze(label: string, dir: string) {
 
     if (Math.abs(mean(shuffleDeltas)) < 0.1 && mean(fullDeltas) > 0.3) {
       console.log(`\n  ✓ shuffle Δτ ≈ 0 while full Δτ > 0.3 — regression to the mean is RULED OUT.`);
-      console.log(`    Governance improvement is genuinely causal, not an artifact of`);
+      console.log(`    Governance improvement is genuine, not an artifact of`);
       console.log(`    repeated measurement or discussion mechanics alone.`);
     } else if (fullVsShuffleD > 0.5) {
       console.log(`\n  → Full substantially outperforms shuffle (d=${fullVsShuffleD.toFixed(2)}).`);
@@ -214,6 +285,85 @@ function analyze(label: string, dir: string) {
           console.log(`    ${intvType}: ${mean(counts).toFixed(1)}±${stdDev(counts).toFixed(1)}`);
         }
       }
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // STATISTICAL INFERENCE — bootstrap 95% CI (10000 resamples)
+  // ════════════════════════════════════════════════════════════════════
+  console.log("\n" + "-".repeat(80));
+  console.log("  BOOTSTRAP INFERENCE (percentile, 10000 resamples, α=0.05)");
+  console.log("-".repeat(80));
+
+  const baselineQs = baseline.map(r => r.decisionQuality);
+  const baselineTs = baseline.map(r => r.kendallTau);
+  const baselineCI = bootstrapCI(baselineQs);
+  console.log(`\n  Baseline (none):  Q = ${baselineCI.mean.toFixed(1)}, 95% CI ${fmtCI(baselineCI.ci95)}`);
+
+  // Full vs none — the primary claim
+  if (fullG) {
+    const fullQs = fullG.map(r => r.decisionQuality);
+    const fullTs = fullG.map(r => r.kendallTau);
+    const fullCI = bootstrapCI(fullQs);
+    const diffFullVsNone = bootstrapMeanDiff(fullQs, baselineQs);
+    const dFullVsNone = cohensD(fullQs, baselineQs);
+
+    console.log(`  Full governance:  Q = ${fullCI.mean.toFixed(1)}, 95% CI ${fmtCI(fullCI.ci95)}`);
+    console.log(`  Full vs None:     ΔQ = ${diffFullVsNone.meanDiff >= 0 ? "+" : ""}${diffFullVsNone.meanDiff.toFixed(1)}`);
+    console.log(`                    95% CI ${fmtCI(diffFullVsNone.ci95)}`);
+    console.log(`                    Cohen's d = ${dFullVsNone >= 0 ? "+" : ""}${dFullVsNone.toFixed(2)}`);
+    console.log(`                    p = ${diffFullVsNone.pValue.toFixed(3)} (bootstrap, two-sided)`);
+
+    if (diffFullVsNone.ci95[0] > 0) {
+      console.log(`  ✓ Full > None is statistically significant (95% CI excludes 0).`);
+    } else if (diffFullVsNone.ci95[1] < 0) {
+      console.log(`  ✗ Full < None is statistically significant (95% CI excludes 0).`);
+    } else {
+      console.log(`  ⚠ Full vs None is NOT statistically significant (95% CI includes 0).`);
+      console.log(`    With n=${baselineQs.length} per group, the observed effect may be noise.`);
+      console.log(`    Consider increasing n or reducing between-run variance.`);
+    }
+  }
+
+  // Shuffle control — bootstrap test
+  if (shuffleG && fullG) {
+    const shuffleQs = shuffleG.map(r => r.decisionQuality);
+    const diffShuffleVsNone = bootstrapMeanDiff(shuffleQs, baselineQs);
+    console.log(`\n  Shuffle vs None:  ΔQ = ${diffShuffleVsNone.meanDiff >= 0 ? "+" : ""}${diffShuffleVsNone.meanDiff.toFixed(1)}`);
+    console.log(`                    95% CI ${fmtCI(diffShuffleVsNone.ci95)}`);
+    console.log(`                    p = ${diffShuffleVsNone.pValue.toFixed(3)}`);
+
+    const diffFullVsShuffle = bootstrapMeanDiff(fullG.map(r => r.decisionQuality), shuffleQs);
+    console.log(`  Full vs Shuffle:  ΔQ = ${diffFullVsShuffle.meanDiff >= 0 ? "+" : ""}${diffFullVsShuffle.meanDiff.toFixed(1)}`);
+    console.log(`                    95% CI ${fmtCI(diffFullVsShuffle.ci95)}`);
+    console.log(`                    p = ${diffFullVsShuffle.pValue.toFixed(3)}`);
+  }
+
+  // Within-group Δτ bootstrap
+  const fullDeltas = fullG
+    ?.filter(r => r.tauTrajectory && r.tauTrajectory.length >= 2)
+    .map(r => r.tauTrajectory![r.tauTrajectory!.length - 1] - r.tauTrajectory![0]) ?? [];
+  if (fullDeltas.length > 0) {
+    const deltaCI = bootstrapCI(fullDeltas);
+    console.log(`\n  Full within-group Δτ: ${deltaCI.mean >= 0 ? "+" : ""}${deltaCI.mean.toFixed(3)}, 95% CI ${fmtCI(deltaCI.ci95)}`);
+    if (deltaCI.ci95[0] > 0) {
+      console.log(`  ✓ Within-group Δτ is significantly positive (95% CI excludes 0).`);
+    } else if (deltaCI.ci95[1] < 0) {
+      console.log(`  ✗ Within-group Δτ is significantly negative.`);
+    } else {
+      console.log(`  ⚠ Within-group Δτ is NOT significantly different from 0.`);
+    }
+  }
+
+  // Single-intervention bootstrap comparison
+  if (hasSingleModes) {
+    console.log(`\n  Single-intervention bootstrap (vs baseline):`);
+    for (const mode of singleModes) {
+      const g = groups.get(mode);
+      if (!g || g.length === 0) continue;
+      const diff = bootstrapMeanDiff(g.map(r => r.decisionQuality), baselineQs);
+      const sig = diff.ci95[0] > 0 ? "✓ sig" : diff.ci95[1] < 0 ? "✗ sig(neg)" : "— n.s.";
+      console.log(`    ${mode.padEnd(16)} ΔQ = ${diff.meanDiff >= 0 ? "+" : ""}${diff.meanDiff.toFixed(1)} ${fmtCI(diff.ci95).padStart(14)} p=${diff.pValue.toFixed(3)} ${sig}`);
     }
   }
 }

@@ -150,7 +150,9 @@ export interface RuntimeConfig {
   enableAdaptiveThresholds?: boolean;
   /** Whether to enable adaptive dosage */
   enableAdaptiveDosage?: boolean;
-  /** Whether to enable causal tracing */
+  /** Whether to enable agent dropout sensitivity analysis */
+  enableDropoutAnalysis?: boolean;
+  /** @deprecated Use enableDropoutAnalysis */
   enableCausalTracing?: boolean;
   /** Whether to enable cross-examination */
   enableCrossExamination?: boolean;

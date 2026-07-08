@@ -1,5 +1,5 @@
 /**
- * 自适应阈值 + 因果推断 单元测试
+ * Adaptive Thresholds + Dropout Sensitivity Analysis — Unit Tests
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -8,9 +8,9 @@ import {
 } from "@/lib/governance/adaptiveThresholds";
 import {
   selectCounterfactualDropout,
-  estimateCausalEffect,
-  buildCausalGraph,
-  answerWhoCausedChange,
+  estimateDropoutEffect,
+  buildSensitivityGraph,
+  answerWhatInfluencedChange,
   decomposeBeliefChange,
 } from "@/lib/discussion/causalTrace";
 
@@ -65,20 +65,20 @@ describe("Adaptive Thresholds", () => {
   });
 });
 
-describe("Causal Trace", () => {
-  it("应该选择反事实 dropout Agent", () => {
+describe("Dropout Sensitivity Analysis", () => {
+  it("should select a dropout agent", () => {
     const result = selectCounterfactualDropout(["a1", "a2", "a3", "a4", "a5"], 1, 42);
     expect(result).not.toBeNull();
     expect(result!.remainingAgentIds.length).toBe(4);
     expect(result!.remainingAgentIds).not.toContain(result!.droppedAgentId);
   });
 
-  it("少于 3 个 Agent 时不应 dropout", () => {
+  it("should not dropout with fewer than 3 agents", () => {
     expect(selectCounterfactualDropout(["a1", "a2"], 1)).toBeNull();
   });
 
-  it("应该估计因果效应", () => {
-    const effect = estimateCausalEffect("a1", "a2", [
+  it("should estimate dropout effect", () => {
+    const effect = estimateDropoutEffect("a1", "a2", [
       { round: 1, sourcePresent: true, sourceBelief: 0.8, targetBelief: 0.6 },
       { round: 2, sourcePresent: true, sourceBelief: 0.7, targetBelief: 0.55 },
       { round: 3, sourcePresent: false, sourceBelief: 0.6, targetBelief: 0.3 },
@@ -86,37 +86,37 @@ describe("Causal Trace", () => {
     ]);
     expect(effect).not.toBeNull();
     expect(effect!.effectType).toBe("persuasion"); // with a1 → higher belief
-    expect(effect!.individualTreatmentEffect).toBeGreaterThan(0);
+    expect(effect!.observedBeliefDifference).toBeGreaterThan(0);
   });
 
-  it("应该构建因果图", () => {
+  it("should build sensitivity graph", () => {
     const effects = [
       {
         sourceAgentId: "a1", targetAgentId: "a2", round: 1,
         beliefWithSource: 0.6, beliefWithoutSource: 0.3,
-        individualTreatmentEffect: 0.3, effectType: "persuasion" as const,
+        observedBeliefDifference: 0.3, effectType: "persuasion" as const,
         confidence: 0.8,
       },
     ];
-    const graph = buildCausalGraph(effects);
+    const graph = buildSensitivityGraph(effects);
     expect(graph.edges.length).toBe(1);
     expect(graph.edges[0].effectType).toBe("persuasion");
   });
 
-  it("answerWhoCausedChange 应该返回有因果效应的 Agent", () => {
-    const graph = buildCausalGraph([
-      { sourceAgentId: "a1", targetAgentId: "a2", round: 1, beliefWithSource: 0.6, beliefWithoutSource: 0.3, individualTreatmentEffect: 0.3, effectType: "persuasion" as const, confidence: 0.9 },
-      { sourceAgentId: "a1", targetAgentId: "a2", round: 2, beliefWithSource: 0.5, beliefWithoutSource: 0.25, individualTreatmentEffect: 0.25, effectType: "persuasion" as const, confidence: 0.85 },
-      { sourceAgentId: "a1", targetAgentId: "a2", round: 3, beliefWithSource: 0.55, beliefWithoutSource: 0.28, individualTreatmentEffect: 0.27, effectType: "persuasion" as const, confidence: 0.88 },
+  it("answerWhatInfluencedChange should return agents with significant effect", () => {
+    const graph = buildSensitivityGraph([
+      { sourceAgentId: "a1", targetAgentId: "a2", round: 1, beliefWithSource: 0.6, beliefWithoutSource: 0.3, observedBeliefDifference: 0.3, effectType: "persuasion" as const, confidence: 0.9 },
+      { sourceAgentId: "a1", targetAgentId: "a2", round: 2, beliefWithSource: 0.5, beliefWithoutSource: 0.25, observedBeliefDifference: 0.25, effectType: "persuasion" as const, confidence: 0.85 },
+      { sourceAgentId: "a1", targetAgentId: "a2", round: 3, beliefWithSource: 0.55, beliefWithoutSource: 0.28, observedBeliefDifference: 0.27, effectType: "persuasion" as const, confidence: 0.88 },
     ]);
-    const causes = answerWhoCausedChange("a2", graph);
+    const causes = answerWhatInfluencedChange("a2", graph);
     expect(causes.length).toBe(1);
     expect(causes[0].source).toBe("a1");
   });
 
-  it("decomposeBeliefChange 应该分解信念变化来源", () => {
-    const graph = buildCausalGraph([
-      { sourceAgentId: "a1", targetAgentId: "a2", round: 1, beliefWithSource: 0.6, beliefWithoutSource: 0.3, individualTreatmentEffect: 0.3, effectType: "persuasion" as const, confidence: 0.9 },
+  it("decomposeBeliefChange should decompose belief change sources", () => {
+    const graph = buildSensitivityGraph([
+      { sourceAgentId: "a1", targetAgentId: "a2", round: 1, beliefWithSource: 0.6, beliefWithoutSource: 0.3, observedBeliefDifference: 0.3, effectType: "persuasion" as const, confidence: 0.9 },
     ]);
     const { independentReasoning, socialInfluence } = decomposeBeliefChange("a2", 0.5, graph);
     expect(independentReasoning + socialInfluence).toBeCloseTo(1);
