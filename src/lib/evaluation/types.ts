@@ -154,13 +154,11 @@ export interface AgentDecision {
   belief?: number;
 }
 
-export interface AgentInfo {
-  id: string;
-  name: string;
-  role: string;
-  type: string;
-  config?: Record<string, unknown>;
-}
+/**
+ * AgentInfo 复用 discussion/types.ts 中的定义，避免接口重复维护。
+ * 若未来评估层需要扩展字段，在此声明独立接口即可。
+ */
+export type { AgentInfo } from "../discussion/types";
 
 export interface InteractionRound {
   round: number;

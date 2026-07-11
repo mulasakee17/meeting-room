@@ -636,13 +636,34 @@ Respond in JSON format:
   "belief": -1 to 1 (negative = against, positive = for),
   "confidence": 0 to 100,
   "nextOpinion": "What you want to discuss next",
-  "referencedAgents": ["agent_1", "agent_2"] (agents you reference or respond to)
-}`;
+  "referencedAgents": ["agent_1", "agent_2"],
+  "itemBeliefs": [
+    {"item": "Company A", "rank": 1, "belief": 0.8, "confidence": 95},
+    {"item": "Company B", "rank": 2, "belief": 0.2, "confidence": 70}
+  ]
+}
+itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
   }
 
   private checkConvergence(opinions: AgentOpinion[]): boolean {
     if (opinions.length < 2) return true;
 
+    // V2: per-item convergence — all items must be converged
+    if (opinions[0]?.itemBeliefs && opinions[0].itemBeliefs.length > 0) {
+      const items = opinions[0].itemBeliefs.map(ib => ib.item);
+      for (const item of items) {
+        const itemBeliefs = opinions
+          .map(o => o.itemBeliefs?.find(ib => ib.item === item)?.belief)
+          .filter((b): b is number => typeof b === "number");
+        if (itemBeliefs.length < 2) continue;
+        const mean = itemBeliefs.reduce((s, b) => s + b, 0) / itemBeliefs.length;
+        const std = Math.sqrt(itemBeliefs.reduce((s, b) => s + Math.pow(b - mean, 2), 0) / itemBeliefs.length);
+        if (std > this.config.convergenceThreshold) return false;
+      }
+      return true;
+    }
+
+    // V1 fallback: overall belief convergence
     const beliefs = opinions.map(o => o.belief);
     const meanBelief = beliefs.reduce((sum, b) => sum + b, 0) / beliefs.length;
     const beliefStd = Math.sqrt(beliefs.reduce((sum, b) => sum + Math.pow(b - meanBelief, 2), 0) / beliefs.length);

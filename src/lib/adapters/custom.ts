@@ -66,18 +66,10 @@ No other fields. No other text. Just the JSON.`;
       
       this.lastReasoning = response.reasoning;
       this.lastEmotion = response.emotion;
-      
-      const result = JSON.stringify({
-        reasoning: response.reasoning,
-        evidence: [],
-        belief: Math.max(-1, Math.min(1, response.emotion / 100)),
-        confidence: Math.min(100, Math.max(0, 50 + response.emotion / 2)),
-        nextOpinion: "",
-        referencedAgents: [],
-      });
-      
-      this.lastMessageContent = result;
-      return result;
+
+      // V2: pass through raw LLM output so downstream parsers get itemBeliefs etc.
+      this.lastMessageContent = response.rawContent;
+      return response.rawContent;
     } catch (error) {
       console.error(`Agent ${this.id} LLM call failed:`, error);
       this.lastReasoning = `分析失败，使用默认推理。问题：${message.substring(0, 50)}...`;

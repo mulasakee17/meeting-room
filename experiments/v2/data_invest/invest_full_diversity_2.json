@@ -1,0 +1,211 @@
+{
+  "runId": "invest_full_diversity_2",
+  "ablation": "full_diversity",
+  "runIndex": 2,
+  "timestamp": "2026-07-11T07:53:57.753Z",
+  "kendallTau": 0.3333333333333333,
+  "decisionQuality": 67,
+  "tauTrajectory": [
+    0.3333333333333333,
+    -1,
+    1,
+    0.3333333333333333,
+    0.3333333333333333
+  ],
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0.3129774385072933,
+  "opinionDiversity": 0.34351128074635334,
+  "totalInterventions": 1,
+  "issuesDetected": [
+    "echo_chamber"
+  ],
+  "interventionEffects": [],
+  "interventionBreakdown": {
+    "introduce_diversity": 1
+  },
+  "evaluationScores": {
+    "consensus": 66.54818462600453,
+    "reliability": 11.5,
+    "dispersion": 68.7,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 55.3
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.5,
+        "a2": 0.6,
+        "a3": 0.6,
+        "a4": 0.3,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 80,
+        "a3": 80,
+        "a4": 65,
+        "a5": 60
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 77.96369218984378,
+        "reliability": 14.5,
+        "dispersion": 75.2,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.6
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.7,
+        "a2": 0.7,
+        "a3": 0.4,
+        "a4": 0.8,
+        "a5": 0.7
+      },
+      "confidences": {
+        "a1": 85,
+        "a2": 85,
+        "a3": 70,
+        "a4": 90,
+        "a5": 85
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 79.68486072094356,
+        "reliability": 16.7,
+        "dispersion": 76.4,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 60.7
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.8,
+        "a3": 0.6,
+        "a4": 0.8,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 90,
+        "a3": 80,
+        "a4": 90,
+        "a5": 90
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "echo_chamber"
+      ],
+      "interventions": [
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a4",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 88.46883028915998,
+        "reliability": 17.8,
+        "dispersion": 78.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 63.3
+      }
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.2,
+        "a2": 0.2,
+        "a3": 0.6,
+        "a4": 0.3,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 60,
+        "a2": 60,
+        "a3": 80,
+        "a4": 65,
+        "a5": 60
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 78.5567519733919,
+        "reliability": 13.1,
+        "dispersion": 75.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.4
+      }
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": -0.2,
+        "a2": 0.2,
+        "a3": 0.6,
+        "a4": 0.3,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 40,
+        "a2": 60,
+        "a3": 80,
+        "a4": 65,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 66.54818462600453,
+        "reliability": 11.5,
+        "dispersion": 68.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 55.3
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.14 - neutral):\n\na1: 多数同事认为BetaCore最优，但我的独有数据是营收增速：GammaEdge 45%，AlphaTech 35%，BetaCore 15%。若仅看增速，GammaEdge最优。但其他维度显示GammaEdge利润率低、风险高、市场小，而BetaCore利润率高、风险低、市场大。然而，若营收增速可持续且市场爆发，GammaEdge可能成为高增长赢家。我的结论可能错误的情景：如果GammaEdge的营收增速能持续并带动利润率提升，且监管风险可控，则其长期回报可能超过BetaCore。因此，需要进一步讨论营收增速的可持续性及未来利润率趋势。\n\na2: 多数同事认为BetaCore最优，但存在回声室效应。我的独有数据是利润率：BetaCore 42%，AlphaTech 28%，GammaEdge 12%。仅从利润率看，BetaCore领先。但若营收增速持续低迷（15%），且技术护城河弱（2/5），未来可能被竞争对手侵蚀市场份额，导致利润率下降。例如，若企业服务市场竞争加剧，BetaCore的订阅模式可能面临价格战，利润率压缩至30%以下，而AlphaTech凭借技术护城河（4/5）和较高增速（35%）可能实现利润率的提升。因此，我的结论可能错误的情况是：BetaCore的营收增速无法维持，且技术护城河不足导致竞争加剧，最终盈利能力下降。\n\na3: 多数同事基于BetaCore的高利润率、低监管风险和最大市场规模认为其最优，但存在回声室效应。我的独有数据是技术护城河：AlphaTech 4/5（核心专利，竞品需3年追赶），BetaCore 2/5（同质化严重），GammaEdge 3/5（壁垒降低）。技术护城河是长期竞争优势的关键，AlphaTech在此维度显著领先。虽然BetaCore财务数据稳健，但其弱护城河和低营收增速（15%）可能使其在竞争中失去优势。AlphaTech营收增速35%、利润率28%、监管风险2/5、市场规模$12B，各维度均衡且技术优势突出。GammaEdge增速虽高但其他维度差。因此，我认为AlphaTech是最佳投资标的。\n\na4: 多数同事认为BetaCore最优，但存在回声室效应。我的独有数据是监管风险：AlphaTech 2/5（出口管制），BetaCore 1/5（低风险），GammaEdge 3/5（数据本地化）。若我过度依赖低风险偏好，可能忽略其他维度。例如，若营收增速和护城河权重更高，AlphaTech可能更优；若市场规模和利润率权重更高，BetaCore仍优。但若未来监管环境变化（如出口管制放松），AlphaTech风险降低，其技术优势可能带来更高回报。因此，我的结论可能错误的情景是：监管风险权重被高估，而技术护城河和营收增速的长期价值被低估。\n\na5: 多数同事认为BetaCore最优，但我的独有数据是市场规模：BetaCore $25B最大，AlphaTech $12B，GammaEdge $6B。然而，BetaCore营收增速仅15%且技术护城河弱（2/5），在成熟市场中可能增长乏力。AlphaTech营收增速35%、护城河强（4/5），若AI芯片市场爆发，其增长潜力可能超越BetaCore。GammaEdge增速45%但其他维度差。当前共识可能忽略了技术护城河和增速的长期价值。我的结论可能错误的情景：如果AI芯片市场增速远低于预期，或BetaCore通过并购实现增长，则BetaCore仍为最优。",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "BetaCore (企业服务)",
+    "GammaEdge (边缘计算)",
+    "AlphaTech (AI芯片)"
+  ]
+}

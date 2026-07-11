@@ -1,0 +1,132 @@
+{
+  "runId": "invest_full_weight_1",
+  "ablation": "full_weight",
+  "runIndex": 1,
+  "timestamp": "2026-07-11T07:55:41.469Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
+  "tauTrajectory": [
+    -1,
+    -1,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": true,
+  "consensusLevel": 0.9105572809000084,
+  "opinionDiversity": 0.04472135954999579,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "evaluationScores": {
+    "consensus": 86.96414414514558,
+    "reliability": 17,
+    "dispersion": 80.7,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 63.1
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.5,
+        "a3": 0.6,
+        "a4": 0.3,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 75,
+        "a3": 80,
+        "a4": 65,
+        "a5": 60
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 77.96369218984378,
+        "reliability": 14.5,
+        "dispersion": 75.2,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.6
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.2,
+        "a3": 0.2,
+        "a4": 0.7,
+        "a5": 0.3
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 60,
+        "a3": 60,
+        "a4": 85,
+        "a5": 65
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 70.70730449381739,
+        "reliability": 14.5,
+        "dispersion": 70.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 57.3
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.7,
+        "a2": 0.7,
+        "a3": 0.7,
+        "a4": 0.7,
+        "a5": 0.6
+      },
+      "confidences": {
+        "a1": 85,
+        "a2": 85,
+        "a3": 85,
+        "a4": 85,
+        "a5": 80
+      },
+      "converged": true,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 86.96414414514558,
+        "reliability": 17,
+        "dispersion": 80.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 63.1
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.68 - positive):\n\na1: 综合所有已披露数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均表现最优，尽管营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低。AlphaTech技术护城河强（4/5）且营收增速高（35%），但监管风险（2/5）和利润率（28%）中等。GammaEdge营收增速最高（45%），但利润率最低（12%）、监管风险最高（3/5）、市场规模最小（$6B）。作为风控合规官，我倾向于选择BetaCore，因其低风险和高利润率。但需要确认市场规模数据是否准确，以及技术护城河是否被低估。建议进一步讨论技术护城河与市场规模的权衡。\n\na2: 综合所有已披露数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均表现最优，尽管营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低。AlphaTech技术护城河强（4/5）且营收增速高（35%），但监管风险（2/5）和利润率（28%）中等。GammaEdge营收增速最高（45%），但利润率最低（12%）、监管风险最高（3/5）、市场规模最小（$6B）。作为利润率分析师，我倾向于选择BetaCore，因其高利润率和低风险。但需要确认技术护城河是否被低估，以及营收增速的可持续性。建议进一步讨论技术护城河与市场规模的权衡。\n\na3: 综合所有已披露数据，AlphaTech在技术护城河（4/5）和营收增速（35%）上表现突出，利润率（28%）中等，监管风险（2/5）可控，市场规模（$12B）较大。BetaCore利润率（42%）和监管风险（1/5）最优，市场规模（$25B）最大，但营收增速（15%）和技术护城河（2/5）较弱，长期竞争力存疑。GammaEdge营收增速（45%）最高，但利润率（12%）最低，监管风险（3/5）最高，市场规模（$6B）最小，综合竞争力最弱。作为技术战略顾问，我认为技术护城河是长期竞争优势的关键，AlphaTech的专利壁垒能支撑其持续增长，且监管风险可通过合规策略缓解。因此，我倾向于选择AlphaTech作为最佳标的。\n\na4: 综合所有已披露数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均表现最优，尽管营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低。AlphaTech技术护城河强（4/5）且营收增速高（35%），但监管风险（2/5）和利润率（28%）中等。GammaEdge营收增速最高（45%），但利润率最低（12%）、监管风险最高（3/5）、市场规模最小（$6B）。作为风控合规官，我倾向于选择BetaCore，因其低风险和高利润率。但需要确认市场规模数据是否准确，以及技术护城河是否被低估。建议进一步讨论技术护城河与市场规模的权衡。\n\na5: 综合所有已披露数据，BetaCore在市场规模（$25B）、利润率（42%）和监管风险（1/5）上均领先，但营收增速（15%）和技术护城河（2/5）较弱。AlphaTech在技术护城河（4/5）和营收增速（35%）上表现突出，但市场规模（$12B）和利润率（28%）中等，监管风险（2/5）可控。GammaEdge营收增速最高（45%），但其他维度均不占优。考虑到市场规模是长期增长的基础，且BetaCore的利润率和高监管安全性提供了稳健性，我认为BetaCore是最佳选择。但技术护城河较弱可能影响长期竞争力，需要进一步讨论其护城河是否被低估或是否有其他壁垒。",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "BetaCore (企业服务)",
+    "AlphaTech (AI芯片)",
+    "GammaEdge (边缘计算)"
+  ]
+}

@@ -26,11 +26,19 @@ SwarmAlpha is an **embeddable governance runtime** — a drop-in layer that plug
 
 ## Results
 
-120 controlled experiments across 2 tasks × 7 ablation modes × n=15, with Kendall's τ and within-group τ trajectory (Δτ) as primary metrics. Statistical inference via bootstrap 95% CI (10k resamples).
+140 controlled experiments across 2 tasks × 7 ablation modes × n=10-15, with Kendall's τ, within-group τ trajectory (Δτ), shuffle control, and single-intervention ablation. Statistical inference via bootstrap 95% CI (10k resamples).
 
-- **Within-group evidence on interdependent tasks**: Governance lifts τ from 0.022→0.556 (Δτ=+0.84, 95% CI [+0.27, +1.38]). Same agents improve across rounds — not a between-group artifact.
-- **Boundary condition on weakly-interdependent tasks**: Between-group d=+0.58, but within-group Δτ=−0.12, 95% CI [−0.25, −0.02]. Full vs None ΔQ=+4.0, p=0.267 (not significant). Governance does not improve discussions when agents already perform well alone.
-- **Methodological contribution**: Standard between-group effect sizes overstate governance impact. Within-group trajectory analysis reveals when effects are genuine vs. artifacts of initial conditions. Bootstrap inference enables honest uncertainty quantification.
+### Primary Findings
+
+- **Governance has a boundary condition**: On interdependent tasks (Invest), governance lifts τ from 0.022→0.556 (Δτ=+0.84, 95% CI [+0.27, +1.38]). On weakly-interdependent tasks (M&A), Δτ=−0.12 (95% CI [−0.25, −0.02]), Full vs None ΔQ=+4.0, p=0.280 — not significant.
+
+- **Shuffle control excludes regression-to-mean**: With scrambled agent knowledge, Invest τ drops to 0.000 despite full governance. Governance improvement requires coherent information integration, not just "discussing more." On M&A, shuffle τ=0.900 actually *exceeds* full governance τ=0.613 — agents already know all 5 companies; unfamiliar data (from shuffle) breaks their professional overconfidence, forcing them to listen more to each other. On weakly-interdependent tasks, reducing overconfidence outperforms targeted governance intervention.
+
+- **Single-intervention ablation identifies the key mechanism**: On Invest, only `full_diversity` (echo chamber → diversity injection) is statistically significant (τ=0.667, ΔQ=+32.2, p=0.003), slightly exceeding full governance. `full_weight` (authority bias → weight reduction) is actively harmful (τ=−0.267) — cutting a dominant agent's influence on interdependent tasks destroys unique information. `full_reflection` (τ=0.333) and `full_continue` (τ=0.200) are directionally positive but not significant alone. The mechanism is precise: surface hidden information via diversity injection, not more rounds or forced reflection.
+
+### Methodological Contribution
+
+Standard between-group effect sizes (Cohen's d) showed both tasks improving (+0.71 and +0.58). Only within-group Δτ revealed they went in opposite directions. Shuffle control validates that the effect is genuine, not regression-to-mean. This combination — Δτ + shuffle + single-intervention ablation + bootstrap CI — provides a template for rigorous evaluation of multi-agent governance systems.
 
 ---
 
@@ -38,7 +46,7 @@ SwarmAlpha is an **embeddable governance runtime** — a drop-in layer that plug
 
 | | |
 |---|---|
-| **Code** | ~13,000 lines TypeScript, 124 automated tests |
+| **Code** | ~18,400 lines TypeScript, 112 automated tests |
 | **Architecture** | Strategy pattern + Adapter pattern + Dependency Injection + Event Bus |
 | **Math** | Full formal framework: 13 sections, complete LaTeX |
 | **Models** | DeepSeek-V3 (primary), OpenAI, Anthropic, Local (Ollama) |

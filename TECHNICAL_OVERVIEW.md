@@ -173,6 +173,32 @@ Computes belief evolution using 3 forces:
 - **Cross-Examination**: Splits agents into PRO/CON camps → adversarial debate → synthetic verdict + minority report
 - **Dropout Sensitivity**: Agent dropout → effect estimation → sensitivity graph (measures outcome sensitivity to each agent)
 
+#### Custom Detector Registration
+
+The governance engine supports extensible bias detection via `registerDetector()`:
+
+```typescript
+engine.registerDetector({
+  type: "groupthink",
+  detect(agentBeliefs, messages, config): DetectorResult {
+    return { detected: true, severity: "medium", description: "..." };
+  },
+});
+```
+
+Custom detectors run after the 4 built-in detectors in `diagnose()`, and results are merged into `GovernanceResult.otherIssues`. This allows domain-specific bias detection without modifying the core engine.
+
+#### Shared Utilities (`src/lib/utils/`)
+
+Cross-cutting utilities extracted to eliminate code duplication:
+
+| Module | Purpose |
+|--------|---------|
+| `Registry<K,V>` | Generic registry base class (used by AdapterRegistry, StrategyRegistry) |
+| `jsonUtils.ts` | Unified JSON parsing: `stripCodeFences`, `safeJsonParse`, `extractNumber/String/Array` |
+| `statsUtils.ts` | Statistical helpers: `mean`, `std`, `sampleStd`, `variance`, `normalize`, `round` |
+| `interventionPrompt.ts` | Unified intervention prompt header/footer formatting |
+
 ### 4.4 Evaluation Engine (`src/lib/evaluation/`)
 
 5-dimension scoring with statistical grounding:
@@ -222,20 +248,27 @@ Unified multi-provider interface:
 
 ## 7. Experiment Infrastructure
 
-`experiments/v2/` — Two-task experiment framework with within-group trajectory analysis:
+`experiments/v2/` — Two-task experiment framework with full ablation matrix:
 
-| Task | Interdependence | Baseline τ | Full τ | Δτ (within-group) | d | 95% CI (ΔQ) |
-|------|----------------|-----------|--------|-------------|------|-------------|
-| **Invest** | Strong (no agent can solo) | 0.022 | 0.556 | **+0.84** | +0.71 | [+0.00, +51.13] p=0.05 |
-| **M&A** | Weak (agents can solo) | 0.533 | 0.640 | −0.12 | +0.58 | [−2.67, +10.67] p=0.27 |
+| Task | Interdependence | Baseline τ | Full τ | Shuffle τ | Δτ (Full) | Key Finding |
+|------|----------------|-----------|--------|-----------|-------------|-------------|
+| **Invest** | Strong | 0.022 | 0.556 | 0.000 | **+0.84** ✓ | Governance works; shuffle rules out regression-to-mean |
+| **M&A** | Weak | 0.533 | 0.613 | **0.900** | −0.12 ✗ | Shuffle > Full: breaking overconfidence forces listening |
 
-- 120 experiments (2 tasks × 7 ablation modes × n=15)
-- **7 ablation modes**: none, full, shuffle (regression-to-mean control), 4 single-intervention (diversity/weight/reflection/continue)
-- Primary metric: Kendall's τ + within-group τ trajectory (Δτ)
+- **140 experiments** (2 tasks × 7 ablation modes × n=10-15)
+- **7 ablation modes**: none, full, shuffle (regression-to-mean control), 4 single-intervention (full_diversity/weight/reflection/continue)
+- **Primary metric**: Kendall's τ + within-group τ trajectory (Δτ)
+- **Controls**: Shuffle control (scrambled knowledge) + single-intervention ablation (which mechanism matters?)
 - **Bootstrap inference**: 95% CI + p-values via percentile method (10,000 resamples, deterministic mulberry32 RNG)
-- **Parameter sensitivity**: One-at-a-time sweep over 5 governance parameters (125 configs, n=5 each)
-- Information-layer interventions: 3 types active across 40+ triggers per task
+- **Parameter sensitivity**: One-at-a-time sweep over 5 governance parameters (125 configs, n=5 each, infrastructure ready)
 - All raw JSON preserved in `experiments/v2/data/` and `experiments/v2/data_invest/`
+
+### Key experimental findings
+
+1. **Governance boundary condition**: Δτ is significantly positive only on interdependent tasks
+2. **Shuffle control (Invest)**: τ drops to 0.000 with scrambled knowledge → excludes regression-to-mean
+3. **Shuffle control (M&A)**: τ=0.900 > full τ=0.613 → breaking professional overconfidence by giving agents unfamiliar data forces them to listen more, outperforming targeted governance on this weakly-interdependent task
+4. **Single-intervention ablation**: Only `full_diversity` is significant (p=0.003); `full_weight` is harmful (τ=−0.267); `full_reflection` and `full_continue` are not significant alone → introduce_diversity is the key mechanism
 
 `experiments/lunar_survival/` — Legacy V1 framework (80+ experiments, keyword-matching metric)
 
@@ -247,17 +280,16 @@ Unified multi-provider interface:
 |--------|-------|-------|
 | Governance Engine | 12 | governance.test.ts |
 | Evaluation Engine | 12 | evaluation.test.ts |
-| Discussion Engine | 13 | discussion.test.ts |
+| Discussion Engine | 12 | discussion.test.ts |
 | Cross-Examination | 8 | cross-examination.test.ts |
-| Adaptive Thresholds + Dropout Sensitivity | 8 | adaptive-thresholds.test.ts |
+| Adaptive Thresholds | 9 | adaptive-thresholds.test.ts |
 | Adaptive Dosage | 6 | adaptive-dosage.test.ts |
-| Interventions | 7 | interventions.test.ts |
-| LLM Providers | 12 | llm-providers.test.ts |
-| Benchmarks | 12 | benchmarks.test.ts |
+| Interventions | 9 | interventions.test.ts |
+| Benchmarks | 14 | benchmarks.test.ts |
 | Runtime | 3 | runtime.test.ts |
-| Security | 15 | security.test.ts |
-| Frontend | 15 | frontend.test.tsx |
-| **Total** | **124** | **12 files** |
+| Security | 13 | security.test.ts |
+| Frontend | 14 | frontend.test.tsx |
+| **Total** | **112** | **11 files** |
 
 ---
 

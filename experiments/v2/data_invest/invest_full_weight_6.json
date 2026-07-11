@@ -1,0 +1,194 @@
+{
+  "runId": "invest_full_weight_6",
+  "ablation": "full_weight",
+  "runIndex": 6,
+  "timestamp": "2026-07-11T07:56:52.124Z",
+  "kendallTau": -1,
+  "decisionQuality": 0,
+  "tauTrajectory": [
+    -1,
+    -1,
+    0.3333333333333333,
+    -1,
+    -1
+  ],
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0.6101282262076415,
+  "opinionDiversity": 0.19493588689617924,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "evaluationScores": {
+    "consensus": 77.36197905583512,
+    "reliability": 15.5,
+    "dispersion": 74.7,
+    "stability": 75,
+    "influenceAnalysis": 61.5,
+    "overall": 58.1
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.5,
+        "a2": 0.3,
+        "a3": 0.6,
+        "a4": 0.6,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 65,
+        "a3": 80,
+        "a4": 80,
+        "a5": 60
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 77.96369218984378,
+        "reliability": 14.5,
+        "dispersion": 75.2,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.6
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.2,
+        "a3": 0.6,
+        "a4": 0.6,
+        "a5": 0.3
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 60,
+        "a3": 80,
+        "a4": 80,
+        "a5": 65
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 77.16800420198284,
+        "reliability": 14.7,
+        "dispersion": 74.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.4
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.7,
+        "a2": 0.2,
+        "a3": 0.6,
+        "a4": 0.6,
+        "a5": 0.6
+      },
+      "confidences": {
+        "a1": 85,
+        "a2": 60,
+        "a3": 80,
+        "a4": 80,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 77.36197905583512,
+        "reliability": 15.5,
+        "dispersion": 74.7,
+        "stability": 75,
+        "influenceAnalysis": 61.5,
+        "overall": 58.1
+      }
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.2,
+        "a3": 0.6,
+        "a4": 0.6,
+        "a5": 0.6
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 60,
+        "a3": 80,
+        "a4": 80,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 78.27634594085795,
+        "reliability": 15.3,
+        "dispersion": 75.3,
+        "stability": 75,
+        "influenceAnalysis": 61.5,
+        "overall": 58.4
+      }
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.2,
+        "a3": 0.7,
+        "a4": 0.6,
+        "a5": 0.6
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 60,
+        "a3": 85,
+        "a4": 80,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 77.36197905583512,
+        "reliability": 15.5,
+        "dispersion": 74.7,
+        "stability": 75,
+        "influenceAnalysis": 61.5,
+        "overall": 58.1
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.54 - positive):\n\na1: 作为营收增速专家，我掌握的数据显示GammaEdge增速最高（45%），AlphaTech 35%，BetaCore 15%。综合其他同事分享的数据：利润率BetaCore 42%最高，AlphaTech 28%，GammaEdge 12%；技术护城河AlphaTech 4/5最强，BetaCore 2/5最弱；监管风险BetaCore 1/5最低，AlphaTech 2/5，GammaEdge 3/5；市场规模BetaCore $25B最大，AlphaTech $12B，GammaEdge $6B。我认为AlphaTech在营收增速和技术护城河上表现突出，利润率中等，监管风险可控，市场规模适中，整体平衡性最好。BetaCore虽然利润率高、风险低、市场大，但增速低且护城河弱，长期增长潜力不足。GammaEdge增速虽高但其他维度均不理想，风险收益比差。因此我倾向于AlphaTech。\n\na2: 作为利润率分析师，我掌握的数据显示BetaCore利润率42%最高，AlphaTech 28%，GammaEdge 12%。结合所有已共享数据：营收增速GammaEdge 45%最高，AlphaTech 35%，BetaCore 15%；技术护城河AlphaTech 4/5最强，BetaCore 2/5最弱；监管风险BetaCore 1/5最低，AlphaTech 2/5，GammaEdge 3/5；市场规模BetaCore $25B最大，AlphaTech $12B，GammaEdge $6B。综合来看，BetaCore在利润率、监管风险和市场规模上占优，但营收增速和技术护城河较弱。AlphaTech在营收增速和技术护城河上表现突出，但利润率中等且监管风险存在。GammaEdge增长最快但利润率低、风险高、市场小。我认为需要进一步讨论各维度的权重，特别是营收增速与技术护城河对长期价值的影响。我倾向于BetaCore，因其高利润、低风险和大市场，但低增长和弱护城河是隐患。建议同事分享市场规模数据（已由a5提供）并讨论权重。\n\na3: As the technology moat expert, I have shared that AlphaTech has the strongest moat (4/5), BetaCore the weakest (2/5), and GammaEdge moderate (3/5). The discussion reveals a split: some favor AlphaTech for its balanced growth and moat, while others favor BetaCore for its high margin, low risk, and large market. However, I believe moat is critical for long-term competitive advantage. AlphaTech's 4/5 moat (7nm AI chip patents) provides sustainable differentiation, while BetaCore's 2/5 moat (low switching costs) is easily eroded. BetaCore's high margin and large market are attractive, but its low growth (15%) and weak moat suggest limited future value. GammaEdge's high growth (45%) is offset by low margin (12%), high risk (3/5), and small market ($6B). AlphaTech offers the best risk-adjusted profile: strong growth (35%), solid margin (28%), strong moat (4/5), moderate risk (2/5), and a $12B market. I recommend AlphaTech as the best investment.\n\na4: 作为风控合规官，我掌握监管风险数据：AlphaTech 2/5（美国对华芯片出口管制），BetaCore 1/5（几乎无风险），GammaEdge 3/5（数据本地化法规）。综合所有维度",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "GammaEdge (边缘计算)",
+    "AlphaTech (AI芯片)",
+    "BetaCore (企业服务)"
+  ]
+}

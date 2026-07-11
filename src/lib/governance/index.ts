@@ -14,6 +14,7 @@ import {
   InterventionStrategy,
   InterventionResult,
   GovernanceState,
+  BiasDetector,
 } from "./types";
 import { ReduceWeightIntervention, IntroduceDiversityIntervention, ForceReflectionIntervention, ContinueDiscussionIntervention } from "./interventions";
 import { computeAdaptiveThresholds, type CalibrationMetrics } from "./adaptiveThresholds";
@@ -43,6 +44,8 @@ import {
 
 export class GovernanceEngine {
   private strategies: Map<InterventionType, InterventionStrategy> = new Map();
+  /** 可扩展的自定义检测器——内置 4 个检测器之外追加的 */
+  private customDetectors: Map<string, BiasDetector> = new Map();
 
   constructor(adaptiveConfig?: Partial<GovernanceConfig>) {
     this.registerStrategy(new ReduceWeightIntervention());
@@ -52,6 +55,19 @@ export class GovernanceEngine {
     if (adaptiveConfig) {
       this.defaultConfig = { ...this.defaultConfig, ...adaptiveConfig };
     }
+  }
+
+  /**
+   * 注册自定义偏差检测器。
+   * 检测结果在 diagnose() 中自动加入 GovernanceResult.otherIssues。
+   */
+  registerDetector(detector: BiasDetector): void {
+    this.customDetectors.set(detector.type, detector);
+  }
+
+  /** 注销自定义检测器 */
+  unregisterDetector(type: string): void {
+    this.customDetectors.delete(type);
   }
 
   /**
@@ -138,6 +154,19 @@ export class GovernanceEngine {
         severity: prematureConsensus.severity,
         description: `Premature consensus detected at round ${prematureConsensus.roundNumber}: consensus level ${prematureConsensus.consensusLevel.toFixed(2)}`,
       });
+    }
+
+    // 运行自定义检测器
+    for (const detector of Array.from(this.customDetectors.values())) {
+      const result = detector.detect(agentBeliefs, messages, mergedConfig);
+      if (result.detected) {
+        issues.push({
+          type: detector.type,
+          severity: result.severity,
+          description: result.description,
+          agents: result.agents,
+        });
+      }
     }
 
     const summary = this.generateSummary(echoChamber, authorityBias, polarization, prematureConsensus, interventionCount);
@@ -605,4 +634,3 @@ export * from "./types";
 export * from "./interventions";
 export * from "./adaptiveThresholds";
 export * from "./adaptiveDosage";
-export * from "./interventions";

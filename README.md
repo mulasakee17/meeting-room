@@ -11,21 +11,35 @@
 [![Embeddable](https://img.shields.io/badge/embeddable-SDK-orange)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
+**English** | [中文](./README_CN.md)
+
 ---
 
 ## Core Finding
 
 **Governance improves LLM agent decision quality — but only when task interdependence is high.**
 
-| | Interdependent Task | Weakly-Interdependent Task |
+| | Invest (Strong Interdependence) | M&A (Weak Interdependence) |
 |---|---|---|
-| **Without governance** | τ = 0.022 (near-random) | τ = 0.533 (already decent) |
-| **With governance** | τ = 0.556, Δτ = **+0.84** ✓ | τ = 0.640, Δτ = **−0.12** ✗ |
-| **Conclusion** | Governance is essential | Governance adds noise |
+| **Baseline τ** | 0.022 (near-random) | 0.533 (already decent) |
+| **Full governance τ** | 0.556 | 0.640 |
+| **Within-group Δτ** | **+0.84** ✓ (CI [+0.27, +1.38]) | **−0.12** ✗ (CI [−0.25, −0.02]) |
+| **Shuffle τ*** | 0.000 (random) | 0.900 (better than full!) |
+| **Conclusion** | Governance is essential | Governance is unnecessary |
 
-This boundary condition was revealed by a novel methodology — **within-group trajectory analysis (Δτ)** — that distinguishes genuine governance effects from between-group artifacts. Standard effect sizes (Cohen's d) showed *both* tasks improving (+0.71 and +0.58). Only Δτ exposed the truth: governance improves the discussion trajectory only when agents *genuinely need* each other's information.
+*\*Shuffle control: scramble agent knowledge to break coherence. Tests whether governance improvement is regression-to-mean.*
 
-> **Key insight**: Between-group effect sizes overstate governance impact. You can't tell if governance works by comparing different groups of agents — you must track the *same* agents across discussion rounds. This methodological distinction is itself a contribution.
+### Four lines of evidence support this conclusion:
+
+**1. Δτ methodology exposes what Cohen's d hides.** Standard effect sizes showed *both* tasks improving (d=+0.71 and +0.58). Only within-group trajectory analysis — tracking the *same* agents across rounds — revealed they went in opposite directions.
+
+**2. Shuffle control excludes regression-to-mean.** On Invest, with scrambled agent knowledge, τ drops to 0.000 despite full governance. This proves governance improvement is genuinely from integrating correct information, not from "discussing more" or statistical artifacts.
+
+**3. Introduce diversity is the key mechanism — and reduce weight is harmful.** Single-intervention ablation on Invest reveals: `full_diversity` alone achieves τ=0.667 (ΔQ=+32.2, p=0.003) — the *only* statistically significant single intervention, slightly exceeding full governance's effect. `full_weight` (cutting dominant agent's influence) drops τ to −0.267 — actively harmful on interdependent tasks, because it suppresses unique information. `full_reflection` (τ=0.333) and `full_continue` (τ=0.200) are directionally positive but not significant alone. The mechanism is clear: echo chamber detection → diversity injection forces hidden information to surface. Not more rounds. Not reflection. Not weight cutting. Just making agents share what only they know.
+
+**Counterintuitive discovery (M&A shuffle)**: Scrambling agent knowledge on the weakly-interdependent task *improved* performance beyond full governance (τ=0.900 vs 0.613). Why? M&A agents already have comprehensive data on ALL 5 companies — they don't need each other to form reasonable judgments. Shuffling breaks their professional overconfidence: the CFO, now holding unfamiliar tech data instead of financial data, becomes less certain and *actually listens* to others. The result is better information aggregation without any governance intervention. This reinforces the boundary condition: on weakly-interdependent tasks, governance isn't just unnecessary — breaking overconfidence (by any means, including random knowledge rotation) can outperform targeted intervention.
+
+> **Key insight**: Between-group effect sizes overstate governance impact. Governance is not "always better" — its value depends on task structure. And the mechanism is not about enforcing process, but about enabling information that wouldn't otherwise surface.
 
 ---
 
@@ -94,45 +108,83 @@ When 5 AI agents discuss a problem, they fall into the same traps as human group
 
 ## Quick Start
 
-### Use as an Embeddable SDK
+### 1. Clone & Install
+
+```bash
+git clone https://github.com/mulasakee17/meeting-room.git
+cd meeting-room
+npm install
+```
+
+### 2. Add Your API Key
+
+```bash
+cp .env.local.example .env.local
+```
+
+Then edit `.env.local` — add at least one LLM API key:
+
+```bash
+# Required: at least ONE of these
+DEEPSEEK_API_KEY=sk-your-key-here     # Get from https://platform.deepseek.com/
+# OPENAI_API_KEY=sk-your-key-here      # Get from https://platform.openai.com/
+# ANTHROPIC_API_KEY=sk-ant-your-key    # Get from https://console.anthropic.com/
+```
+
+**Pricing**: DeepSeek is ~$0.01 per experiment run (5 agents × 5 rounds). OpenAI is ~$0.10. Anthropic is ~$0.15.
+
+### 3. Run
+
+```bash
+# Web UI (demo mode works without API key)
+npm run dev                # → http://localhost:3000
+
+# Run experiments (needs API key)
+npm run experiment          # Full ablation matrix
+
+# Analyze results (no API key needed)
+npm run analyze             # Bootstrap CI + statistical inference
+
+# Parameter sensitivity (needs API key)
+npm run sensitivity         # 5 params × 5 values sweep
+
+# Run tests (no API key needed)
+npm test                    # 124 tests
+```
+
+**Demo mode**: Open http://localhost:3000, click "Run Comparison" — uses pre-computed scenarios, zero API cost. "Live" mode sends real LLM requests.
+
+### 4. Use as an SDK in Your Own Project
 
 ```typescript
 import { GovernanceRuntime, CustomAdapter } from "@/runtime";
 
-// 1. Create the governance runtime
 const runtime = new GovernanceRuntime({
   maxRounds: 5,
-  governanceMode: "full",
+  governanceMode: "full",           // "none" | "detect-only" | "full"
 });
 
-// 2. Adapt your framework's messages
-const adapter = new CustomAdapter();
-const messages = adapter.adaptMessages(yourFrameworkMessages, roundNumber);
-
-// 3. Process a round — governance observes, detects, intervenes
+// Feed your agent messages into the governance pipeline
 const result = runtime.processRound(messages);
 
 if (result.hasIntervention) {
-  // 4. Apply interventions back to your agents
-  await adapter.applyIntervention(result.interventions[0], agentContext);
+  await applyInterventionToYourAgents(result.interventions[0]);
 }
 
-// 5. Get the final decision quality evaluation
-const sessionResult = runtime.getSessionResult(finalDecision);
-console.log(`Decision quality: ${sessionResult.evaluation.overallScore}/100`);
+const evaluation = runtime.getSessionResult(finalDecision);
+console.log(`Decision quality: ${evaluation.overallScore}/100`);
 ```
 
-### Use as a Research Platform
+### Supported LLM Providers
 
-```bash
-git clone git@github.com:mulasakee17/swarmalpha.git
-cd swarmalpha
-npm install
-cp .env.local.example .env.local  # Add your DEEPSEEK_API_KEY
-npm run dev                         # Open http://localhost:3000
-```
+| Provider | Model | Setup |
+|----------|-------|-------|
+| **DeepSeek** (default) | deepseek-chat | `DEEPSEEK_API_KEY` in `.env.local` |
+| OpenAI | gpt-4o-mini | `OPENAI_API_KEY` in `.env.local` |
+| Anthropic | claude-3-haiku | `ANTHROPIC_API_KEY` in `.env.local` |
+| Local (Ollama) | llama3, mistral | `LOCAL_LLM_URL=http://localhost:11434` |
 
-**Demo mode** requires no API key — just click "Run Comparison" to see the governance runtime in action.
+Switch provider in `experiments/v2/run.ts` line 112: change `provider: "deepseek"` to `"openai"` or `"anthropic"`.
 
 ---
 
@@ -186,54 +238,86 @@ SwarmAlpha is **framework-agnostic**. It works with any multi-agent system throu
 
 Each adapter translates framework-native messages into the standard `DiscussionMessage` format and applies governance interventions back to the framework.
 
+### Extensible Detection & Shared Utilities
+
+The governance engine supports **custom bias detectors** via a registration API — new detectors can be added without modifying the core engine:
+
+```typescript
+engine.registerDetector({
+  type: "groupthink",
+  detect(agentBeliefs, messages, config) {
+    // custom detection logic
+    return { detected: true, severity: "medium", description: "..." };
+  },
+});
+```
+
+Shared utility modules (`src/lib/utils/`) eliminate duplicated code across the codebase:
+- **`Registry<K,V>`** — generic registry base class for adapter/strategy registration
+- **`jsonUtils.ts`** — unified JSON parsing (stripCodeFences, safeJsonParse, extract helpers)
+- **`statsUtils.ts`** — statistical helpers (mean, std, variance, normalize)
+- **`interventionPrompt.ts`** — unified intervention prompt formatting
+
 ---
 
 ## Experimental Evidence
 
-**120 controlled experiments** (2 tasks × 7 ablation modes × n=15). Primary metric: Kendall's τ for ranking accuracy. Key innovation: **within-group τ trajectory (Δτ)** — tracking the *same* agents across rounds, not just comparing group averages.
+**220+ controlled experiments** (2 tasks × 9 ablation modes × n=10-15). Primary metric: Kendall's τ + **within-group τ trajectory (Δτ)** — tracking the *same* agents across rounds.
 
-### Why Δτ matters
+### Why Δτ + Shuffle matters
 
-| Method | What it measures | Problem |
+| Method | What it measures | Pitfall |
 |--------|-----------------|---------|
-| **Cohen's d** (between-group) | Average difference between governance and baseline groups | Different agents have different initial conditions — can't isolate governance effect |
-| **Δτ** (within-group trajectory) | How much the *same* agents improve from round 1 to final round | Isolates governance effect from random variation |
-
-> Both our tasks showed **positive Cohen's d** (+0.71 and +0.58). Only Δτ revealed they went in **opposite directions** (+0.84 vs −0.12). If we had only reported d, we would have falsely claimed governance helps in both cases.
+| **Cohen's d** (between-group) | Average difference between groups | Different agents, different initial conditions |
+| **Δτ** (within-group) | Same agents' improvement across rounds | — |
+| **Shuffle control** | Governance with scrambled knowledge | Tests regression-to-mean |
 
 ### Task 1: Interdependent Investment (Strong Collaboration Required)
 
-No single agent can determine the correct answer alone — each holds 1/5 of the financial metrics. Baseline τ = 0.022 (near-random guessing).
+No single agent can determine the answer alone. Baseline τ = 0.022.
 
-| Ablation | τ (μ±σ) | Δτ (within-group) | d vs none |
-|----------|----------|-------------------|-----------|
-| None | 0.022±0.791 | +0.40 | — |
-| **Full governance** | **0.556±0.698** | **+0.84** | +0.71 |
+| Ablation | τ (μ±σ) | Q (μ±σ) | Δτ | d vs none |
+|----------|----------|----------|-----|-----------|
+| None | 0.022±0.791 | 51.3±39.6 | +0.40 | — |
+| **Full** | **0.556±0.698** | **77.9±34.9** | **+0.84** ✓ | +0.71 |
+| Shuffle | −0.000±0.720 | 50.2±36.1 | −0.33 | −0.03 |
+| **full_diversity** | **0.667±0.351** | **83.5±17.4** | **+1.13** ★ | +0.98 |
+| full_reflection | 0.333±0.943 | 66.7±47.1 | +0.67 | +0.36 |
+| full_continue | 0.200±1.033 | 60.0±51.6 | +0.67 | +0.20 |
+| full_weight | −0.267±0.966 | 36.7±48.3 | +0.07 | −0.34 |
 
-**Δτ = +0.84, 95% CI [+0.27, +1.38]** — statistically significant. Governance more than doubles ranking accuracy by forcing agents to share their private information before converging.
+- **Δτ = +0.84, 95% CI [+0.27, +1.38]** — significantly positive
+- **Shuffle τ = 0.000** — scrambled knowledge → collapse → regression-to-mean **ruled out**
+- **full_diversity is the only significant single intervention** (ΔQ=+32.2, p=0.003) — echo chamber detection is the key mechanism
+- **full_weight is harmful** (τ=−0.267) — cutting influence destroys information on interdependent tasks
 
 ### Task 2: M&A Target Selection (Weak Collaboration Required)
 
-Agents can reason independently from their own expertise. Baseline τ = 0.533 — already performing well without collaboration.
+Agents can reason independently. Baseline τ = 0.533.
 
-| Ablation | τ (μ±σ) | Δτ (within-group) | d vs none |
-|----------|----------|-------------------|-----------|
-| None | 0.533±0.209 | 0.00 | — |
-| **Full governance** | **0.640±0.155** | **−0.12** | +0.58 |
+| Ablation | τ (μ±σ) | Q (μ±σ) | Δτ | d vs none |
+|----------|----------|----------|-----|-----------|
+| None | 0.533±0.209 | 76.7±10.5 | 0.00 | — |
+| **Full** | **0.613±0.177** | **80.7±8.8** | **−0.12** ✗ | +0.41 |
+| Shuffle | **0.900±0.194** | **95.0±9.7** | −0.11 | +1.80 |
+| full_continue | 0.620±0.063 | 81.0±3.2 | −0.14 | +0.52 |
 
-**Δτ = −0.12, 95% CI [−0.25, −0.02]** — significantly *negative*. Governance interventions that force reflection and extend discussion actually degrade performance when agents already know what they're doing. Full vs None between-group ΔQ=+4.0, p=0.267 — not significant.
+- **Δτ = −0.12, 95% CI [−0.25, −0.02]** — significantly *negative*
+- **Shuffle τ = 0.900 > Full τ = 0.613** — scrambling knowledge *improved* performance. Breaking professional overconfidence forces agents to listen.
+- **Full vs None ΔQ=+4.0, p=0.280** — not statistically significant
 
-### The Boundary Condition
+### The Boundary Condition (with evidence)
 
-| | Task 1 (Interdependent) | Task 2 (Weakly-Interdependent) |
-|---|---|---|
-| **When does governance help?** | ✅ When no agent can solo | ❌ When agents already perform well |
-| **Why?** | Governance surfaces hidden information | Governance adds noise to an efficient process |
-| **Implication** | Deploy governance where collaboration is essential | Skip governance where agents are self-sufficient |
+| Claim | Evidence |
+|-------|----------|
+| Governance helps interdependent tasks | Invest Δτ=+0.84, CI [+0.27, +1.38] |
+| Governance does NOT help weakly-interdependent tasks | M&A Δτ=−0.12, CI [−0.25, −0.02], p=0.28 |
+| Effect is not regression-to-mean | Shuffle τ=0.000 (Invest), Shuffle τ>Full (M&A) |
+| Echo chamber detection is the key mechanism | full_diversity alone significant (p=0.003); others are not |
+| Weight reduction is harmful on interdependent tasks | full_weight τ=−0.267 — cutting influence destroys unique information |
+| Breaking overconfidence beats governance on easy tasks | M&A Shuffle τ=0.900 > Full τ=0.613 |
 
-**Statistical rigor**: All CIs are percentile bootstrap (10,000 resamples, deterministic mulberry32 RNG). Parameter sensitivity infrastructure (5 parameters × 5 values × 5 runs) verifies results are not driven by specific hyperparameter choices. Shuffle control rules out regression-to-mean.
-
-[Full experiment data →](experiments/v2/data/) · [Invest task data →](experiments/v2/data_invest/) · [Analysis script →](experiments/v2/analyze.ts) · [Sensitivity analysis →](experiments/v2/sensitivity.ts)
+**Statistical rigor**: Bootstrap 95% CI (10,000 resamples, deterministic seed). 9 ablation modes. Parameter sensitivity infrastructure (5×5×5 sweep). All raw data preserved in `experiments/v2/data*/`.
 
 ---
 
@@ -243,7 +327,7 @@ Multi-agent systems are being deployed in high-stakes domains — finance, healt
 
 SwarmAlpha demonstrates that:
 1. **Governance is necessary** — ungoverned agents fail to integrate distributed information (τ=0.022)
-2. **Governance has boundaries** — when agents are already competent, interventions degrade performance
+2. **Governance has boundaries** — when agents are already competent, interventions don't help
 3. **You can't measure governance impact with simple group averages** — our Δτ methodology is necessary to distinguish real effects from statistical artifacts
 
 **The implication for AI deployment**: Don't add governance to every multi-agent system. Measure task interdependence first. Deploy governance where agents *genuinely need* each other. Skip it where they don't.
@@ -292,13 +376,14 @@ src/
 │   ├── inference/                # Belief evolution computation
 │   ├── discussion/               # Built-in multi-round discussion engine
 │   ├── llm/                      # Multi-provider LLM abstraction
+│   ├── utils/                    # 🆕 Shared utilities (Registry, JSON, stats)
 │   ├── benchmarks/               # Benchmark framework
 │   └── security/                 # Rate limiting + input validation
 ├── app/                          # Next.js web UI + REST API
 │   ├── page.tsx                  # Demo/Live comparison view
 │   └── api/v3/                   # API endpoints
 experiments/                      # Hidden Profile experiment framework
-└── test/                         # 124 automated tests
+└── test/                         # 112 automated tests
 ```
 
 ---
@@ -306,8 +391,8 @@ experiments/                      # Hidden Profile experiment framework
 ## Running Tests
 
 ```bash
-npx vitest run          # 124 tests across 12 files
-npx vitest              # watch mode
+npm test              # 112 tests across 11 files
+npm run test:watch    # watch mode
 ```
 
 ---

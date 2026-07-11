@@ -1,0 +1,132 @@
+{
+  "runId": "invest_full_reflection_4",
+  "ablation": "full_reflection",
+  "runIndex": 4,
+  "timestamp": "2026-07-11T07:58:54.746Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
+  "tauTrajectory": [
+    -1,
+    -1,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": true,
+  "consensusLevel": 0.9105572809000084,
+  "opinionDiversity": 0.04472135954999579,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "evaluationScores": {
+    "consensus": 92.96414414514558,
+    "reliability": 17,
+    "dispersion": 80.7,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 64.3
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.5,
+        "a2": 0.6,
+        "a3": 0.6,
+        "a4": 0.5,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 80,
+        "a3": 80,
+        "a4": 75,
+        "a5": 60
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 79.02436205184526,
+        "reliability": 14.9,
+        "dispersion": 75.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 60.1
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.2,
+        "a2": 0.7,
+        "a3": 0.6,
+        "a4": 0.5,
+        "a5": 0.6
+      },
+      "confidences": {
+        "a1": 60,
+        "a2": 85,
+        "a3": 80,
+        "a4": 75,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 77.46220649173122,
+        "reliability": 15.3,
+        "dispersion": 74.8,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.6
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.7,
+        "a2": 0.7,
+        "a3": 0.6,
+        "a4": 0.7,
+        "a5": 0.7
+      },
+      "confidences": {
+        "a1": 85,
+        "a2": 85,
+        "a3": 80,
+        "a4": 85,
+        "a5": 85
+      },
+      "converged": true,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 92.96414414514558,
+        "reliability": 17,
+        "dispersion": 80.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 64.3
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.68 - positive):\n\na1: 综合所有已披露数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均表现最优，但营收增速（15%）和技术护城河（2/5）较弱。AlphaTech营收增速（35%）和技术护城河（4/5）强，但利润率（28%）中等，监管风险（2/5）较高，市场规模（$12B）中等。GammaEdge营收增速（45%）最高，但利润率（12%）最低，技术护城河（3/5）中等，监管风险（3/5）最高，市场规模（$6B）最小。BetaCore在三个关键维度上领先，且其低风险和高利润率使其更具确定性，尽管增速较低，但订阅模式可持续性强。因此，我倾向于BetaCore为最佳标的。\n\na2: 综合所有已披露数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均表现最优，但营收增速（15%）和技术护城河（2/5）较弱。AlphaTech营收增速（35%）和技术护城河（4/5）强，但利润率（28%）中等，监管风险（2/5）较高，市场规模（$12B）中等。GammaEdge营收增速（45%）最高，但利润率（12%）最低，技术护城河（3/5）中等，监管风险（3/5）最高，市场规模（$6B）最小。BetaCore在三个关键维度上领先，且其低风险和高利润率使其更具确定性，尽管增速较低，但订阅模式可持续性强。因此，我倾向于BetaCore为最佳标的。\n\na3: 综合所有已披露数据，AlphaTech在技术护城河（4/5）和营收增速（35%）上表现突出，利润率（28%）中等，监管风险（2/5）可控，市场规模（$12B）有增长潜力。BetaCore利润率最高（42%）、监管风险最低（1/5）、市场规模最大（$25B），但营收增速低（15%）且技术护城河弱（2/5）。GammaEdge营收增速最高（45%）但利润率低（12%）、监管风险高（3/5）、市场规模小（$6B）。我认为AlphaTech的技术护城河是可持续竞争优势，AI芯片市场增长快，监管风险可通过策略管理。BetaCore虽稳健但增长乏力，GammaEdge风险过高。因此我倾向于AlphaTech。\n\na4: 综合所有已披露数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均表现最优，但营收增速（15%）和技术护城河（2/5）较弱。AlphaTech营收增速（35%）和技术护城河（4/5）强，但利润率（28%）中等，监管风险（2/5）较高，市场规模（$12B）中等。GammaEdge营收增速（45%）最高，但利润率（12%）最低，技术护城河（3/5）中等，监管风险（3/5）最高，市场规模（$6B）最小。BetaCore在三个关键维度上领先，且其低风险和高利润率使其更具确定性，尽管增速较低，但订阅模式可持续性强。因此，我倾向于BetaCore为最佳标的。\n\na5: 综合所有已披露数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均表现最优，但营收增速（15%）和技术护城河（2/5）较弱。AlphaTech营收增速（35%）和技术护城河（4/5）强，但利润率（28%）中等，监管风险（2/5）较高，市场规模（$12B）中等。GammaEdge营收增速（45%）最高，但利润率（12%）最低，技术护城河（3/5）中等，监管风险（3/5）最高，市场规模（$6B）最小。BetaCore在三个关键维度上领先，且其低风险和高利润率使其更具确定性，尽管增速较低，但订阅模式可持续性强。因此，我倾向于BetaCore为最佳标的。",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "BetaCore (企业服务)",
+    "AlphaTech (AI芯片)",
+    "GammaEdge (边缘计算)"
+  ]
+}

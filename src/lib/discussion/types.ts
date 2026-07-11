@@ -1,3 +1,10 @@
+export interface ItemBelief {
+  item: string;
+  rank: number;
+  belief: number;
+  confidence: number;
+}
+
 export interface AgentOpinion {
   agentId: string;
   reasoning: string;
@@ -6,6 +13,8 @@ export interface AgentOpinion {
   confidence: number;
   nextOpinion: string;
   referencedAgents: string[];
+  /** Per-item preferences (V2). Optional for backward compatibility. */
+  itemBeliefs?: ItemBelief[];
 }
 
 export interface RoundResult {
@@ -24,6 +33,8 @@ export interface DiscussionMemoryEntry {
   confidence: number;
   referencedAgents: string[];
   timestamp: string;
+  /** Per-item preferences (V2). Optional for backward compatibility. */
+  itemBeliefs?: ItemBelief[];
 }
 
 export interface InfluenceWeight {

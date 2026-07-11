@@ -159,3 +159,48 @@ export interface MessageInfo {
   timestamp: string;
   referencedAgents?: string[];
 }
+
+// ============================================================================
+// BiasDetector — 可扩展的偏差检测器接口
+// ============================================================================
+
+/**
+ * 自定义检测器的实现接口。
+ *
+ * GovernanceEngine 内置 4 个检测器（echoChamber/authorityBias/polarization/
+ * prematureConsensus），它们的输出填充 GovernanceResult 的强类型字段。
+ * 通过 registerDetector() 注册的额外检测器，输出填充 otherIssues 数组。
+ *
+ * 示例：
+ * ```typescript
+ * const engine = new GovernanceEngine();
+ * engine.registerDetector({
+ *   type: "groupthink",
+ *   detect(beliefs, messages, config) {
+ *     // 检测逻辑
+ *     return { detected: true, severity: "medium", description: "...", agents: ["a1"] };
+ *   },
+ * });
+ * ```
+ */
+export interface BiasDetector {
+  /** 检测器唯一标识 */
+  type: string;
+  /**
+   * 执行检测。
+   * @returns 检测结果。detected=true 时会被加入 GovernanceResult.otherIssues。
+   */
+  detect(
+    agentBeliefs: AgentBelief[],
+    messages: MessageInfo[],
+    config: GovernanceConfig
+  ): DetectorResult;
+}
+
+/** 自定义检测器的输出 */
+export interface DetectorResult {
+  detected: boolean;
+  severity: SeverityLevel;
+  description: string;
+  agents?: string[];
+}

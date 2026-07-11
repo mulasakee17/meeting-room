@@ -1,3 +1,5 @@
+import { LLM_DEFAULT_TIMEOUT_MS } from "../constants";
+
 export type LLMProvider = "openai" | "anthropic" | "deepseek" | "local";
 
 // 错误类型分类
@@ -25,8 +27,8 @@ export class LLMError extends Error {
   }
 }
 
-// 超时配置
-const DEFAULT_TIMEOUT = 30000; // 30秒
+// 超时配置（与 constants.ts 保持同步，避免多处硬编码）
+const DEFAULT_TIMEOUT = LLM_DEFAULT_TIMEOUT_MS;
 
 export interface LLMConfig {
   provider: LLMProvider;
@@ -40,6 +42,8 @@ export interface LLMConfig {
 export interface LLMResponse {
   emotion: number;
   reasoning: string;
+  /** Full LLM output text — preserved for downstream parsers (V2 itemBeliefs). */
+  rawContent: string;
 }
 
 // 带超时的 fetch
@@ -132,7 +136,7 @@ function parseLLMResponse(content: string, provider: string): LLMResponse {
           ? parsed.content
           : JSON.stringify(parsed);
 
-    return { emotion, reasoning };
+    return { emotion, reasoning, rawContent: content };
   } catch (err) {
     console.warn(`[parseLLMResponse] ${provider} JSON parse failed:`, err instanceof Error ? err.message : err);
   }
@@ -145,12 +149,13 @@ function parseLLMResponse(content: string, provider: string): LLMResponse {
     return {
       emotion: parseFloat(emotionMatch[1]),
       reasoning: reasoningMatch[1],
+      rawContent: content,
     };
   }
 
   // 4. Last resort — treat entire response as reasoning with neutral emotion
   if (cleaned.length > 10) {
-    return { emotion: 0, reasoning: cleaned.slice(0, 2000) };
+    return { emotion: 0, reasoning: cleaned.slice(0, 2000), rawContent: content };
   }
 
   throw new LLMError(

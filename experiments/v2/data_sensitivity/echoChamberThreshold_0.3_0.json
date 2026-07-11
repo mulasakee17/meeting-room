@@ -1,0 +1,29 @@
+{
+  "parameter": "echoChamberThreshold",
+  "value": 0.3,
+  "runIndex": 0,
+  "kendallTau": 0.3333333333333333,
+  "decisionQuality": 67,
+  "totalRounds": 5,
+  "converged": false,
+  "totalInterventions": 9,
+  "interventionBreakdown": {
+    "introduce_diversity": 5,
+    "continue_discussion": 4
+  },
+  "tauTrajectory": [
+    0.3333333333333333,
+    -0.3333333333333333,
+    -0.3333333333333333,
+    -0.3333333333333333,
+    0.3333333333333333
+  ],
+  "evaluationScores": {
+    "overall": 56.6,
+    "consensus": 73.4583986646606,
+    "reliability": 8.5,
+    "dispersion": 72,
+    "stability": 75,
+    "influenceAnalysis": 70
+  }
+}

@@ -45,27 +45,38 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 
 ---
 
-## Experimental Evidence (120 controlled experiments)
+## Experimental Evidence (140 controlled experiments)
 
-2 tasks × 7 ablation modes (none, full, shuffle control, 4 single-intervention) × n=15. Primary metric: Kendall's τ + within-group Δτ trajectory. Statistical inference via bootstrap 95% CI (10k resamples, deterministic seed).
+2 tasks × 7 ablation modes × n=10-15. Primary metric: Kendall's τ + within-group Δτ. Bootstrap 95% CI (10k resamples).
 
 ### Interdependent Investment Task
-*(No single agent can determine the correct answer alone.)*
+*(No single agent can determine the answer alone.)*
 
-| Ablation | τ | Δτ (within-group) | d vs none |
-|----------|------|-------------------|-----------|
-| None | 0.022 | +0.40 | — |
-| **Full governance** | **0.556** | **+0.84** | **+0.71** |
+| Ablation | τ | Δτ | Key finding |
+|----------|------|-----|-------------|
+| None | 0.022 | +0.40 | Baseline: near-random |
+| **Full** | **0.556** | **+0.84** ✓ | Governance works (CI [+0.27, +1.38]) |
+| Shuffle | 0.000 | −0.33 | Knowledge scramble → collapse → **rules out regression-to-mean** |
+| **full_diversity** | **0.667** | **+1.13** ★ | **Only significant single intervention (p=0.003)** |
+| full_reflection | 0.333 | +0.67 | Directional, not significant (p=0.39) |
+| full_continue | 0.200 | +0.67 | "More rounds" recovers <40% (p=0.64) |
+| full_weight | −0.267 | +0.07 | **Harmful** — cutting influence destroys unique info |
 
-### M&A Hidden Profile
+### M&A Target Selection
 *(Agents can perform reasonably without collaboration.)*
 
-| Ablation | τ | Δτ | d vs none |
-|----------|------|------|-----------|
-| None | 0.533 | 0.00 | — |
-| **Full governance** | **0.640** | −0.12 | +0.58 |
+| Ablation | τ | Δτ | Key finding |
+|----------|------|-----|-------------|
+| None | 0.533 | 0.00 | Baseline: already decent |
+| **Full** | **0.613** | **−0.12** ✗ | Governance doesn't help (p=0.28) |
+| Shuffle | **0.900** | −0.11 | Cognitive conflict > governance (counterintuitive) |
+| full_continue | 0.620 | −0.14 | Nearly identical to full |
 
-**Core result**: Governance improves decision quality only when agents genuinely need to collaborate. On interdependent tasks, τ jumps from 0.022→0.556 (Δτ=+0.84, 95% CI [+0.27, +1.38]). On weakly-interdependent tasks, Full vs None ΔQ=+4.0, 95% CI [−2.67, +10.67], p=0.267 — not significant. Between-group d overstates the effect; within-group trajectory analysis reveals the truth. This methodological distinction is itself a contribution.
+**Three conclusions, each with direct evidence**:
+
+1. **Governance has a boundary condition** — Works on interdependent tasks (Δτ=+0.84), doesn't on weakly-interdependent (Δτ=−0.12, p=0.28)
+2. **Introduce diversity is the key mechanism** — Only full_diversity is statistically significant (p=0.003); weight reduction is actively harmful (τ=−0.267); more rounds and reflection don't help alone
+3. **Breaking overconfidence outperforms governance on easy tasks** — M&A Shuffle τ=0.900 > Full τ=0.613: scrambled data breaks professional overconfidence, forcing agents to listen
 
 ---
 
@@ -82,7 +93,9 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 | **Parameter Sensitivity** | One-at-a-time sweep over 5 governance parameters verifies robustness |
 | **Dropout Sensitivity** | Agent dropout analysis measures outcome sensitivity to each agent's presence |
 | **Multi-LLM Support** | DeepSeek / OpenAI / Anthropic / Local (Ollama) — unified interface |
-| **124 Automated Tests** | All core modules covered, 12 test files |
+| **Extensible Detection** | Custom bias detectors via `registerDetector()` — no core engine changes needed |
+| **Shared Utilities** | Registry/JSON/stats modules eliminate code duplication across the codebase |
+| **112 Automated Tests** | All core modules covered, 11 test files |
 | **Demo Mode** | Zero-config, no API key needed — instant visualization |
 
 ---

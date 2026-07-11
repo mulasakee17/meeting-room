@@ -13,25 +13,38 @@
  * Currently supported:
  * - CustomAdapter (built-in agent bridge)
  * - AutoGenAdapter (Microsoft AutoGen bridge)
+ * - StateInferenceBridge (universal bridge for any framework)
+ *
+ * StateInferenceBridge is the recommended adapter for external frameworks
+ * (AutoGen, CrewAI, LangGraph, etc.). It uses a three-tier extraction
+ * strategy (explicit field > [GOV] tag > default) and translates all
+ * interventions into prompt injections, requiring zero modification
+ * to the host framework's agents.
  *
  * Planned:
  * - CrewAI bridge, LangGraph bridge
  */
 
-import type { GovernanceBridge } from "./types";
+import type { GovernanceBridge, BridgeRegistry } from "./types";
 import { CustomAdapter } from "./CustomAdapter";
 import { AutoGenAdapter } from "./AutoGenAdapter";
+import { StateInferenceBridge } from "./StateInferenceBridge";
 
 // ============================================================================
 // Registry
 // ============================================================================
 
-export class AdapterRegistry {
+/**
+ * AdapterRegistry 实现 BridgeRegistry 接口，保证注册表契约一致性。
+ * 新的桥接实现可在此注册或通过 register() 动态追加。
+ */
+export class AdapterRegistry implements BridgeRegistry {
   private adapters: Map<string, GovernanceBridge> = new Map();
 
   constructor() {
     this.register("custom", new CustomAdapter());
     this.register("autogen", new AutoGenAdapter());
+    this.register("state-inference", new StateInferenceBridge());
   }
 
   register(framework: string, bridge: GovernanceBridge): void {
@@ -60,4 +73,13 @@ export const adapterRegistry = new AdapterRegistry();
 
 export { CustomAdapter } from "./CustomAdapter";
 export { AutoGenAdapter } from "./AutoGenAdapter";
+export { StateInferenceBridge } from "./StateInferenceBridge";
+export {
+  buildGovernanceExtension,
+  extractGovTag,
+  stripGovTag,
+  interventionToPrompt,
+  getInterventionTargets,
+  type ExtractedState,
+} from "./PromptInjector";
 export type { GovernanceBridge, BridgeOptions } from "./types";

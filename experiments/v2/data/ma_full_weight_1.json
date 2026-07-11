@@ -1,0 +1,198 @@
+{
+  "runId": "ma_full_weight_1",
+  "ablation": "full_weight",
+  "runIndex": 1,
+  "timestamp": "2026-07-08T09:13:40.522Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "tauTrajectory": [
+    0.6,
+    0.6,
+    0.6,
+    0.6,
+    0.6
+  ],
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0.006018108816865819,
+  "opinionDiversity": 0.4969909455915671,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "evaluationScores": {
+    "consensus": 63.9127053665319,
+    "reliability": 16.9,
+    "dispersion": 62.5,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 54.9
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 63.9127053665319,
+        "reliability": 16.9,
+        "dispersion": 62.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 54.9
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 63.9127053665319,
+        "reliability": 16.9,
+        "dispersion": 62.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 54.9
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 63.9127053665319,
+        "reliability": 16.9,
+        "dispersion": 62.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 54.9
+      }
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 63.9127053665319,
+        "reliability": 16.9,
+        "dispersion": 62.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 54.9
+      }
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.9,
+        "a3": 0.9,
+        "a4": 1,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 95,
+        "a3": 95,
+        "a4": 100,
+        "a5": 40
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 63.9127053665319,
+        "reliability": 16.9,
+        "dispersion": 62.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 54.9
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.68 - positive):\n\na1: 作为财务总监，我坚持财务指标优先。NeuraTech毛利率62%行业最高，但负债率3.2x风险高，且风控总监指出出口管制风险40%，这进一步削弱其吸引力。GreenGrid现金流最强（FCF $1.2B），毛利率38%中等，但政策风险低，增长确定性高。PureFiber毛利率45%且ROIC>20%，财务稳健，但供应链单一风险。MedVault利润率15%最低，且有诉讼风险。SkyLink亏损严重，地缘政治风险高。综合高毛利和高ROIC，PureFiber最佳，但需关注供应链；GreenGrid次之，现金流稳健；NeuraTech第三，高毛利但风险高；MedVault第四；SkyLink最差。技术战略官和市场分析官的观点虽重要，但财务健康是收购成功的基础。\n\na2: 作为技术战略官，我坚持技术护城河是长期价值的核心。NeuraTech的7nm AI芯片专利可形成3年竞争壁垒，MedVault的FDA独家数据授权不可复制，SkyLink的FCC频谱牌照是稀缺资源，而GreenGrid的开源算法和PureFiber的通用材料技术护城河弱。财务指标和市场增速虽重要，但护城河决定未来竞争力。风控总监的风险担忧需考虑，但不应过度降低高护城河标的优先级。出口管制风险可通过供应链多元化缓解，MedVault的诉讼风险需尽职调查，但独家数据授权价值巨大。因此排序：NeuraTech > MedVault > SkyLink > PureFiber > GreenGrid。\n\na3: 市场增速是战略价值的首要驱动力。AI芯片市场CAGR 34%远超其他，NeuraTech处于高增长赛道，即使有负债和出口管制风险，其长期潜力最大。智能电网CAGR 25%次之，政策驱动确定性强。医疗数据CAGR 18%但监管壁垒高，卫星市场CAGR 12%且竞争惨烈，碳纤维CAGR仅8%增长缓慢。技术护城河和协同度重要，但高增长市场本身能创造护城河，且协同效应可最大化。风控总监的风险担忧需考虑，但不应过度降低高增长标的优先级。\n\na4: 作为战略顾问，我掌握协同度数据，这是并购成功的关键。NeuraTech与集团AI业务协同度90%，远超其他目标，且市场增长最快，技术护城河强，尽管有负债和出口管制风险，但协同效应可最大化价值。GreenGrid协同度60%但集团无能源业务，风险低但战略价值有限。PureFiber协同度50%可用于硬件，财务稳健。MedVault协同度40%且医疗IT部门小，诉讼风险高。SkyLink协同度20%且亏损，地缘政治风险高。因此排序应为NeuraTech > PureFiber > GreenGrid > MedVault > SkyLink。\n\na5: 作为风控总监，我坚持风险调整后的回报原则。其他成员过于关注财务指标、技术护城河或市场增长，但忽略了关键风险。NeuraTech的芯片出口管制风险（40%概率）可能使其业务中断；MedVault的集体诉讼可能导致巨额赔偿；SkyLink的地缘政治风险（频率争端）会阻碍运营；PureFiber的供应链单一（日本地震风险）是致命弱点。只有GreenGrid政策风险低，受益于全球碳中和共识，且智能电网增长确定性高。因此，GreenGrid应排第一，其余按风险从低到高：PureFiber（需供应链多元化）、NeuraTech（高风险高回报但不确定）、MedVault（诉讼风险）、SkyLink（地缘政治风险最高）。",
+  "groundTruth": {
+    "NeuraTech (AI芯片)": 1,
+    "GreenGrid (智能电网)": 2,
+    "MedVault (医疗数据)": 3,
+    "SkyLink (低轨卫星)": 4,
+    "PureFiber (碳纤维材料)": 5
+  },
+  "extractedRanking": [
+    "NeuraTech (AI芯片)",
+    "GreenGrid (智能电网)",
+    "PureFiber (碳纤维材料)",
+    "MedVault (医疗数据)",
+    "SkyLink (低轨卫星)"
+  ]
+}

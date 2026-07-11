@@ -1,0 +1,132 @@
+{
+  "runId": "invest_full_diversity_3",
+  "ablation": "full_diversity",
+  "runIndex": 3,
+  "timestamp": "2026-07-11T07:54:09.520Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
+  "tauTrajectory": [
+    -1,
+    -1,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": true,
+  "consensusLevel": 1,
+  "opinionDiversity": 0,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "evaluationScores": {
+    "consensus": 91,
+    "reliability": 18.2,
+    "dispersion": 82.5,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 64.6
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.5,
+        "a2": 0.5,
+        "a3": 0.6,
+        "a4": 0.5,
+        "a5": 0.3
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 75,
+        "a3": 80,
+        "a4": 75,
+        "a5": 65
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 81.64978457908506,
+        "reliability": 14.9,
+        "dispersion": 78.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 61
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.5,
+        "a3": 0.6,
+        "a4": 0.8,
+        "a5": 0.6
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 75,
+        "a3": 80,
+        "a4": 90,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": -1,
+      "decisionQuality": 0,
+      "evalScores": {
+        "consensus": 81.64978457908506,
+        "reliability": 16.3,
+        "dispersion": 78.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 61.4
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.8,
+        "a3": 0.8,
+        "a4": 0.8,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 90,
+        "a3": 90,
+        "a4": 90,
+        "a5": 90
+      },
+      "converged": true,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 91,
+        "reliability": 18.2,
+        "dispersion": 82.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 64.6
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.80 - positive):\n\na1: 综合所有数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均最优，虽然营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低且盈利能力强。AlphaTech营收增速高（35%）、技术护城河强（4/5），但监管风险（2/5）和利润率（28%）中等，市场规模（$12B）小于BetaCore。GammaEdge营收增速最高（45%），但利润率最低（12%）、监管风险最高（3/5）、市场规模最小（$6B），综合风险最大。因此，BetaCore是最佳投资标的。\n\na2: 综合所有数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均最优，虽然营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低且盈利能力强。AlphaTech营收增速高（35%）、技术护城河强（4/5），但监管风险（2/5）和利润率（28%）中等，市场规模（$12B）小于BetaCore。GammaEdge营收增速最高（45%），但利润率最低（12%）、监管风险最高（3/5）、市场规模最小（$6B），综合风险最大。因此，BetaCore是最佳投资标的。\n\na3: 综合所有数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均最优，虽然营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低且盈利能力强。AlphaTech营收增速高（35%）、技术护城河强（4/5），但监管风险（2/5）和利润率（28%）中等，市场规模（$12B）小于BetaCore。GammaEdge营收增速最高（45%），但利润率最低（12%）、监管风险最高（3/5）、市场规模最小（$6B），综合风险最大。考虑到投资稳健性，BetaCore是最佳选择。\n\na4: 综合所有已共享数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均最优，虽然营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低且盈利能力强。AlphaTech营收增速高（35%）、技术护城河强（4/5），但监管风险（2/5）和利润率（28%）中等，市场规模（$12B）小于BetaCore。GammaEdge营收增速最高（45%），但利润率最低（12%）、监管风险最高（3/5）、市场规模最小（$6B），综合风险最大。作为风控合规官，我倾向于BetaCore，但需确认营收增速和技术护城河的权重是否足以改变结论。建议团队讨论各维度权重，以便加权评分。\n\na5: 综合所有数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均最优，虽然营收增速（15%）和技术护城河（2/5）较弱，但整体风险最低且盈利能力强。AlphaTech营收增速高（35%）、技术护城河强（4/5），但监管风险（2/5）和利润率（28%）中等，市场规模（$12B）小于BetaCore。GammaEdge营收增速最高（45%），但利润率最低（12%）、监管风险最高（3/5）、市场规模最小（$6B），综合风险最大。因此，BetaCore是最佳投资标的。",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "BetaCore (企业服务)",
+    "AlphaTech (AI芯片)",
+    "GammaEdge (边缘计算)"
+  ]
+}

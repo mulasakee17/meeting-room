@@ -36,8 +36,13 @@ Respond in JSON format:
   "belief": -1 to 1 (negative = against, positive = for),
   "confidence": 0 to 100,
   "nextOpinion": "What you want to discuss next",
-  "referencedAgents": ["agent_1", "agent_2"] (agents you reference or respond to)
-}`;
+  "referencedAgents": ["agent_1", "agent_2"],
+  "itemBeliefs": [
+    {"item": "Company A", "rank": 1, "belief": 0.8, "confidence": 95},
+    {"item": "Company B", "rank": 2, "belief": 0.2, "confidence": 70}
+  ]
+}
+itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
   }
 }
 
@@ -60,6 +65,18 @@ class DefaultOpinionParser implements OpinionParser {
         confidence: typeof parsed.confidence === "number" ? Math.max(0, Math.min(100, parsed.confidence)) : currentConfidence,
         nextOpinion: typeof parsed.nextOpinion === "string" ? parsed.nextOpinion : "",
         referencedAgents: Array.isArray(parsed.referencedAgents) ? parsed.referencedAgents : [],
+        itemBeliefs: Array.isArray(parsed.itemBeliefs)
+          ? parsed.itemBeliefs.filter(
+              (ib: any) => typeof ib.item === "string"
+                && typeof ib.rank === "number"
+                && typeof ib.belief === "number"
+            ).map((ib: any) => ({
+              item: ib.item,
+              rank: ib.rank,
+              belief: Math.max(-1, Math.min(1, ib.belief)),
+              confidence: typeof ib.confidence === "number" ? Math.max(0, Math.min(100, ib.confidence)) : 50,
+            }))
+          : undefined,
       };
     } catch (err) {
       console.warn(`[ObservationLayer] Agent ${agentId} response parse failed:`, err instanceof Error ? err.message : err);

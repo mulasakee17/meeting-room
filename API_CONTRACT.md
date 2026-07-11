@@ -41,6 +41,14 @@ const runtime = new GovernanceRuntime({
 | `reset` | `() => void` | Reset for a new session |
 | `configure` | `(config: Partial<RuntimeConfig>) => void` | Update config at runtime |
 
+#### Governance Engine Extension Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `registerDetector` | `(detector: BiasDetector) => void` | Register a custom bias detector |
+| `unregisterDetector` | `(type: string) => void` | Unregister a custom detector by type |
+| `registerStrategy` | `(strategy: InterventionStrategy) => void` | Register a custom intervention strategy |
+
 #### Event Hooks
 
 | Hook | Handler Signature | Fires When |
@@ -228,6 +236,24 @@ interface GovernanceResult {
   interventionCount: number;
 }
 ```
+
+### BiasDetector (Extensibility)
+
+```typescript
+interface BiasDetector {
+  type: string;
+  detect(agentBeliefs: AgentBelief[], messages: MessageInfo[], config: GovernanceConfig): DetectorResult;
+}
+
+interface DetectorResult {
+  detected: boolean;
+  severity: "low" | "medium" | "high";
+  description: string;
+  agents?: string[];
+}
+```
+
+Custom detectors registered via `registerDetector()` run after the 4 built-in detectors in each `diagnose()` call. Results are merged into `GovernanceResult.otherIssues`.
 
 ---
 

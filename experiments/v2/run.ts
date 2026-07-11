@@ -128,9 +128,27 @@ const LLM_CONFIG: LLMConfig = {
  * Extract ranking from decision text by finding the first mention position
  * of each company name. Earlier mention = higher rank.
  */
-function extractRanking(decision: string, itemNames: string[]): string[] {
+function extractRanking(
+  decision: string,
+  itemNames: string[],
+  itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>
+): string[] {
+  // V2: aggregate multiple agents' itemBeliefs into collective ranking
+  if (itemBeliefs && itemBeliefs.length > 0) {
+    const itemRanks = new Map<string, number[]>();
+    for (const ib of itemBeliefs) {
+      if (!itemRanks.has(ib.item)) itemRanks.set(ib.item, []);
+      itemRanks.get(ib.item)!.push(ib.rank);
+    }
+    const avgRanks = itemNames.map(name => {
+      const ranks = itemRanks.get(name);
+      return { name, avgRank: ranks && ranks.length > 0 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : Infinity };
+    });
+    avgRanks.sort((a, b) => a.avgRank - b.avgRank);
+    return avgRanks.map(r => r.name);
+  }
+  // V1 fallback: first-mention-position heuristic
   const positions = itemNames.map(name => {
-    // Match the short company name (before the parenthesis)
     const shortName = name.split("(")[0]?.trim() || name;
     const idx = decision.indexOf(shortName);
     return { name, pos: idx >= 0 ? idx : Infinity };
@@ -211,7 +229,21 @@ function createAgents(task: TaskConfig): DiscussionAgent[] {
       + `1. 主动分享你的独有知识\n`
       + `2. 对他人的判断提出质疑\n`
       + `3. 如果他人与你独有知识矛盾，必须指出\n`
-      + `4. 最终以JSON格式给出你的排序，格式：{"emotion": -100到100, "reasoning": "你的分析"}`;
+      + `4. 最终以JSON格式给出你的判断，格式：\n`
+      + `{\n`
+      + `  "reasoning": "你的分析",\n`
+      + `  "evidence": ["证据1", "证据2"],\n`
+      + `  "belief": -1到1 (整体倾向),\n`
+      + `  "confidence": 0到100,\n`
+      + `  "nextOpinion": "下一步讨论方向",\n`
+      + `  "referencedAgents": ["a2"],\n`
+      + `  "itemBeliefs": [\n`
+      + `    {"item": "BetaCore (企业服务)", "rank": 1, "belief": 0.8, "confidence": 90},\n`
+      + `    {"item": "AlphaTech (AI芯片)", "rank": 2, "belief": 0.3, "confidence": 70},\n`
+      + `    {"item": "GammaEdge (边缘计算)", "rank": 3, "belief": -0.4, "confidence": 60}\n`
+      + `  ]\n`
+      + `}\n`
+      + `itemBeliefs中：rank为你认为的排名(1=最优)，belief为对该选项的独立偏好(-1=强烈反对,0=中立,1=强烈支持)，confidence为置信度(0-100)`;
     return new CustomAgent(info.id, info.name, info.role, "default", LLM_CONFIG, systemPrompt) as unknown as DiscussionAgent;
   });
 }
@@ -420,7 +452,10 @@ async function runSingle(
     .join("\n");
   const finalDecision = result.finalDecision || allReasoning;
   const itemNames = Object.keys(task.correctAnswer);
-  const extractedRanking = extractRanking(finalDecision, itemNames);
+  const allItemBeliefs = result.roundResults
+    .flatMap(r => r.opinions)
+    .flatMap(o => o.itemBeliefs || []);
+  const extractedRanking = extractRanking(finalDecision, itemNames, allItemBeliefs);
   const tau = kendallTau(task.correctAnswer, extractedRanking);
 
   // ── Compute secondary metrics ────────────────────────────────────────
@@ -439,7 +474,8 @@ async function runSingle(
     const rr = result.roundResults[i];
     // ── Per-round τ: this round's NEW reasoning only ─────────────────
     const roundReasoning = rr.opinions.map(o => o.reasoning).join("\n");
-    const roundRanking = extractRanking(roundReasoning, itemNames);
+    const roundItemBeliefs = rr.opinions.flatMap(o => o.itemBeliefs || []);
+    const roundRanking = extractRanking(roundReasoning, itemNames, roundItemBeliefs);
     const roundTau = kendallTau(task.correctAnswer, roundRanking);
     (rounds[i] as any).tau = roundTau;
     (rounds[i] as any).decisionQuality = tauToQuality(roundTau);
