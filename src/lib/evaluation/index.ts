@@ -777,7 +777,12 @@ export class EvaluationEngine {
 
   private computeKuramotoOrder(beliefs: number[]): number {
     if (beliefs.length === 0) return 0;
-    const angles = beliefs.map(b => b * Math.PI);
+    // θ = b × (π/2): belief ∈ [-1,1] → angle ∈ [-π/2, π/2]
+    // b=-1 (强反对) → θ=-π/2 (单位圆下方)
+    // b=+1 (强支持) → θ=+π/2 (单位圆上方)
+    // 两者正对，R≈0 (低共识) — 正确反映极化
+    // 旧映射 θ=b×π 使 b=±0.99 在单位圆上几乎重合 (都在(-1,0)附近)，R≈1，误判极化为共识
+    const angles = beliefs.map(b => b * Math.PI / 2);
     let sumReal = 0;
     let sumImag = 0;
     for (const angle of angles) {

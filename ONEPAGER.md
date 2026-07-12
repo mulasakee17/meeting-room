@@ -43,9 +43,22 @@ With SwarmAlpha:
 
 LLMs only extract beliefs and emotions from natural language. All governance logic (consensus computation, bias detection, belief dynamics) uses pure mathematics. Result: **fast, cheap, interpretable** — deployable as a lightweight plugin with zero additional LLM calls.
 
+### Cognitive Defect Diagnosis of the Multi-Agent Discussion Paradigm
+
+A deeper architectural review diagnosed **4 root cognitive defects** in the prevailing multi-agent discussion paradigm — and all 4 have been fixed:
+
+| Defect | Symptom | Fix |
+|--------|---------|-----|
+| **D1: Missing state awareness** | `buildPrompt` did not inject `belief`/`confidence` into agent prompts — agents spoke without knowing their own or others' current state | Belief & confidence now injected into every prompt |
+| **D2: No conversation history** | Only a global summary was passed; agents had no personalized memory of prior exchanges | Per-agent personalized memory added |
+| **D3: Synchronous scripted turns** | `Promise.all` made agents speak simultaneously, reading from pre-written scripts rather than responding to each other | Replaced with sequential speaking order (agents hear prior turns) |
+| **D4: Fabricated influence network** | Influence edges were inferred from numerical differences rather than explicit citations | Influence graph now built only from explicit references |
+
+**Critical implication**: These 4 defects mean the governance loop was *broken* during all prior experiments — agents could not actually perceive, remember, respond to, or influence one another. **All prior experimental conclusions were drawn under a broken-loop condition and are therefore suspect.** Fixing these defects is a prerequisite for any reliable experiment; re-running the experiments is required before trustworthy conclusions can be drawn.
+
 ---
 
-## Experimental Evidence (165 controlled experiments)
+## Experimental Evidence (165 controlled experiments; 105 new runs pending lab rerun after loop-fix)
 
 2 tasks (M&A: 5 rounds, n=15 for none/full, n=10 for others; Invest: 5-round n=15 for none/full & n=5 for others, 3-round n=15 with none & full only — a 2×2 factorial design on round count × governance). Primary metric: Kendall's τ + within-group Δτ (baseline-corrected). t-distribution 95% CI + permutation test p-values.
 
@@ -98,14 +111,15 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 | **Embeddable SDK** | `import { GovernanceRuntime } from "@/runtime"` — one class, zero framework deps |
 | **Adaptive Governance** | Thresholds calibrate from round-1 data; intervention dosage scales with severity (config-gated, default off) |
 | **Cross-Examination** | Adversarial debate engine: splits agents into PRO/CON camps, synthesizes verdict |
-| **7 Ablation Modes** | Full + shuffle control + 4 single-intervention modes isolate which mechanism matters |
+| **7 Ablation Modes** | Full + shuffle control + 4 single-intervention modes isolate which mechanism matters. **[Updated]** Expanded from 2 implemented modes to 7; full 105-run experiment pending lab execution |
+| **7 Hard Fixes** | H4 Kuramoto mapping corrected; H6 `convergenceSpeed` annotation fixed; H2 `ablationModes` expanded (2→7); H19 seeded PRNG for reproducibility; H17 cache pollution eliminated; H18 `interventionPrompt` unified across modes |
 | **Statistical Inference** | t-distribution 95% CI + permutation test p-values on all key comparisons; Δτ baseline-corrected |
 | **Parameter Sensitivity** | One-at-a-time sweep over 5 governance parameters verifies robustness |
 | **Dropout Sensitivity** | Agent dropout analysis measures outcome sensitivity to each agent's presence |
 | **Multi-LLM Support** | DeepSeek / OpenAI / Anthropic / Local (Ollama) — unified interface |
 | **Extensible Detection** | Custom bias detectors via `registerDetector()` — no core engine changes needed |
 | **Shared Utilities** | Registry/JSON/stats modules eliminate code duplication across the codebase |
-| **149 Automated Tests** | All core modules covered, 11 test files |
+| **149 Automated Tests** | All core modules covered, 11 test files (count unchanged after hard fixes; 105 new experiments pending lab rerun) |
 | **Demo Mode** | Zero-config, no API key needed — instant visualization |
 
 ---

@@ -49,6 +49,40 @@
 
 ---
 
+## Cognitive Gap Diagnosis & Repair
+
+> **Critical caveat (commit 08b20fb)**: A diagnostic pass identified four root cognitive gaps in the multi-agent discussion paradigm. **All prior experimental conclusions on this page (Invest 3-round d=+0.65, Invest 5-round d=+0.00, `full_reflection` p=0.048, etc.) were obtained while the discussion loop was broken** — i.e., state modifications, personal memory, and same-round visibility were not actually wired into the agent prompt stream. These numbers are preserved as-is for provenance, but must be cited with this caveat. Re-running the 2×2 factorial design under the repaired loop is pending lab execution.
+
+The diagnostic identified four root cognitive gaps in the multi-agent discussion paradigm and repaired each:
+
+| # | Cognitive Gap | Symptom | Repair |
+|---|---------------|---------|--------|
+| **1** | **State awareness missing** | `buildPrompt` did not inject the agent's current `belief`/`confidence`, so state-modification interventions (`reduce_weight`, `belief_perturbation`, `force_reflection`) were invisible to the LLM — the model could not "feel" the intervention. | `buildPrompt` now injects current belief/confidence state, making interventions observable to the agent. |
+| **2** | **No conversation history** | All agents saw the same global summary; no agent knew what *it itself* had said in prior rounds. | Personalized memory: each agent's prompt now includes (a) its own prior statements and (b) messages that @-mentioned it. |
+| **3** | **Synchronous turn-taking (parallel "script reading")** | `Promise.all` let all agents speak in parallel within a round, so agents could not see same-round peers. | Sequential `for` loop: each agent now sees the accumulated context of agents who already spoke in the current round. |
+| **4** | **Fabricated influence network** | Agreement/disagreement/persuasion edges were *inferred* from numeric belief differences — producing a phantom influence graph. | Edges are now built **only** from explicit `referencedAgents` mentions in agent messages. |
+
+**Implication**: The repaired loop closes the four gaps that previously broke the intervention feedback cycle. Once re-run under the repaired loop, the boundary-condition conclusions may shift — the prior "null/harmful" findings could partly reflect that interventions never reached the agents' perception in the first place.
+
+---
+
+## Hard-Fault Fixes (H-series)
+
+A series of hard faults (H-series) were identified and repaired alongside the cognitive-gap pass. These are documented here for provenance; some of the 165-experiment numbers on this page were generated *before* these fixes landed.
+
+| ID | Fault | Repair |
+|----|-------|--------|
+| **H4** | Kuramoto phase mapping used `θ = π·b`, which maps extreme polarization (b=±0.99) to nearly the same phase (R≈1) — falsely indicating consensus. | Corrected to `θ = (π/2)·b`. Now b=±0.99 yields R≈0 (true polarization), b=0 yields R=1 (true consensus). |
+| **H6** | `convergenceSpeed` code comment was wrong (formula direction was correct). | Comment corrected; formula unchanged. |
+| **H2** | `ablationModes` only had `["none","full"]` (2 modes × 15 = 30 runs). | Expanded to 7 complete modes: `none / full / shuffle / full_diversity / full_weight / full_reflection / full_continue`. Full design now 7 × 15 = 105 runs (pending lab execution). |
+| **H19** | `introduceDiversity` used `Math.random()`, making interventions non-reproducible across runs. | Replaced with `mulberry32` seeded PRNG — interventions are now deterministic given the seed. |
+| **H17** | Cache pollution: stale placeholder files from failed runs were left in the cache and picked up by subsequent runs. | Polluted placeholder files deleted; affected experiments re-run from clean state. |
+| **H18** | `interventionPrompt` was inconsistently inlined across strategy files and `PromptInjector`. | Unified `interventionPrompt` helper wired into all 8 call sites (4 strategy files + 4 sites in `PromptInjector`). |
+
+> **Kuramoto formula update (H4)**: Wherever the Kuramoto phase mapping appears in docs/code, the formula is now `θ = (π/2) · b` (previously `θ = π · b`). This is a substantive fix, not a cosmetic one — it changes consensus detection for polarized states.
+
+---
+
 ## What is SwarmAlpha?
 
 SwarmAlpha is the **governance runtime** used to generate the evidence above — an embeddable layer that observes, detects, and intervenes on collective decision failures in multi-agent systems.
@@ -271,6 +305,8 @@ Shared utility modules (`src/lib/utils/`) eliminate duplicated code across the c
 ## Experimental Evidence
 
 **165 controlled experiments** (M&A: 80, Invest 5-round: 55, Invest 3-round: 30; 2 tasks × up to 9 ablation modes × n=5-15, 2×2 factorial design on Invest with n=15 per cell). Primary metric: Kendall's τ + **within-group τ trajectory (Δτ)** — tracking the *same* agents across rounds.
+
+> **Ablation design update (H2)**: `ablationModes` has been expanded from `["none","full"]` to 7 complete modes (`none / full / shuffle / full_diversity / full_weight / full_reflection / full_continue`). The complete 7-mode experiment matrix (105 runs, 7 × 15) is pending lab execution; the 165-experiment numbers below were generated before this expansion and are preserved as-is for provenance.
 
 ### Why Δτ + Shuffle matters
 

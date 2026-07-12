@@ -8,7 +8,7 @@
  *   in multi-agent systems?
  *
  * Design:
- *   1 task (M&A) × 4 ablation modes × 15 runs = 60 experiments
+ *   1 task (M&A) × 7 ablation modes × 15 runs = 105 experiments
  *   Accuracy metric: Kendall's τ (rank correlation), not keyword matching
  *   Intervention validation: measure actual belief change after intervention
  *
@@ -117,7 +117,7 @@ const PARAMS = {
   model: "deepseek-chat",
   provider: "deepseek" as const,
   runsPerCondition: 15,
-  ablationModes: ["none", "full"] as Ablation[],
+  ablationModes: ["none", "full", "shuffle", "full_diversity", "full_weight", "full_reflection", "full_continue"] as Ablation[],
 };
 
 const LLM_CONFIG: LLMConfig = {
@@ -361,6 +361,7 @@ async function runSingle(
     maxRounds: PARAMS.maxRounds,
     convergenceThreshold: PARAMS.convergenceThreshold,
     governanceMode,
+    seed: 42 + runIndex, // 与 LLM seed 一致，保证干预随机性可复现
     ...(isSingleMode ? {
       governanceConfig: govOverride,
     } : {}),
@@ -601,9 +602,15 @@ async function main() {
       const filename = path.join(DATA_DIR, `${task.id}_${ablation}_${i}.json`);
       if (fs.existsSync(filename)) {
         const existing = JSON.parse(fs.readFileSync(filename, "utf-8")) as ExperimentResult;
-        allResults.push(existing);
-        console.log(`  [${i + 1}/${PARAMS.runsPerCondition}] (cached) τ=${existing.kendallTau.toFixed(3)} | Q=${existing.decisionQuality}`);
-        continue;
+        // 缓存污染修复：错误占位文件不视为有效缓存，删除后重跑
+        if (existing.error) {
+          console.log(`  [${i + 1}/${PARAMS.runsPerCondition}] (cached error, retrying) ${existing.error}`);
+          fs.unlinkSync(filename);
+        } else {
+          allResults.push(existing);
+          console.log(`  [${i + 1}/${PARAMS.runsPerCondition}] (cached) τ=${existing.kendallTau.toFixed(3)} | Q=${existing.decisionQuality}`);
+          continue;
+        }
       }
       // 错误隔离：单次实验失败不应中止整批
       // 最多重试 3 次，指数退避（1s, 2s, 4s）

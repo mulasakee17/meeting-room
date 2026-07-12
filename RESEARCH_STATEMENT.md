@@ -36,9 +36,17 @@ SwarmAlpha is an **embeddable governance runtime** — a drop-in layer that plug
 
 - **Shuffle control is the strongest positive finding**: On M&A, shuffle (scrambled agent knowledge) produces τ=0.900±0.194, d=+1.80, p=0.0009 — the only statistically significant *positive* result across all 165 experiments. Agents already know all 5 companies; unfamiliar data breaks their professional overconfidence, forcing them to listen to each other. On weakly-interdependent tasks, breaking overconfidence outperforms targeted governance intervention. Single-intervention ablations on M&A (full_diversity p=0.174, full_weight p=0.171, full_reflection p=0.183, full_continue p=0.267) none reach significance — no single governance mechanism drives the effect.
 
+> **⚠️ Critical caveat — all prior conclusions drawn under a broken governance loop**: The 4 cognitive defects diagnosed above (D1 missing state awareness, D2 no conversation history, D3 synchronous scripted turns, D4 fabricated influence network) were present during *all* 165 prior experiments. This means the headline results — 3-round Invest d=+0.65, 5-round Invest d=+0.00, full_reflection p=0.048 — were all obtained while the governance loop was effectively severed: agents could not perceive, remember, respond to, or influence one another. **These conclusions must be treated as provisional.** Re-running the experiments after the loop-fix is a prerequisite for any reliable conclusion. This is *not* an experimental failure — it is the discovery of a deeper architectural defect, which is itself the research value: identifying *why* governance appeared ineffective is more important than any single p-value.
+
 ### Methodological Contribution
 
 The 2×2 factorial design (3-round vs 5-round × none vs full, n=15 per cell) is the key methodological contribution — it isolates the round-count moderation effect that between-group comparisons alone missed. Standard Cohen's d showed 3-round Invest with a medium effect (d=+0.65, p=0.152) while 5-round Invest showed zero effect (d=+0.00, p=1.0), confirming that governance's marginal value diminishes with sufficient discussion rounds. The shuffle control — designed to rule out regression-to-mean — instead became the strongest positive finding (M&A p=0.0009). Critically, the only statistically significant governance effect was HARMFUL: full_reflection on 5-round Invest (p=0.048). This combination — 2×2 factorial design + Δτ + shuffle + single-intervention ablation + permutation test — provides a template for rigorous evaluation even when the primary hypothesis is not supported. The honest null-to-harmful result on governance is itself a contribution: it clarifies the boundary conditions under which governance adds value.
+
+### Methodological Contribution: Cognitive Defect Diagnosis of the Multi-Agent Collaboration Paradigm
+
+Beyond the experimental design, a second and arguably deeper methodological contribution is the **diagnosis of 4 root cognitive defects** in the prevailing multi-agent discussion paradigm. This contribution is methodological in nature because it answers the question that prior work could not: *why does governance appear ineffective?* The answer is not that governance is useless, but that the discussion loop itself was broken — agents could not perceive their own state (D1: `buildPrompt` did not inject belief/confidence), could not remember prior exchanges (D2: only a global summary, no personalized memory), could not respond to each other (D3: `Promise.all` synchronous scripted turns), and could not truly influence one another (D4: influence edges inferred from numerical differences rather than explicit citations).
+
+Fixing all 4 defects is what **closes the governance loop** — observe → detect → intervene can only function when agents actually perceive, remember, and respond. The diagnosis report (`PROJECT_DEEP_ANALYSIS.md`) provides a complete hard-defect inventory and repair roadmap (7 hard fixes: H4 Kuramoto mapping, H6 `convergenceSpeed` annotation, H2 `ablationModes` expansion 2→7, H19 seeded PRNG, H17 cache pollution, H18 `interventionPrompt` unification). Being able to see through *why governance was ineffective* — and to articulate it as a falsifiable architectural diagnosis rather than a hand-wavy excuse — is itself a research contribution.
 
 ---
 
@@ -63,6 +71,14 @@ The 2×2 factorial design (3-round vs 5-round × none vs full, n=15 per cell) is
 - **Evaluation weights**: The 5-dimension weights (0.20/0.25/0.20/0.17/0.18) are heuristic, not data-driven. Equal-weight robustness check is planned.
 - **Single-model validation**: All experiments use DeepSeek-V3 only. Cross-model generalization is untested.
 - **Sensitivity vs. causality**: The dropout analysis module (`sensitivityTrace.ts`) is explicitly a sensitivity diagnostic, not a causal identification method. SUTVA violations are documented in code comments.
+
+---
+
+## Future Work
+
+- **Full 7-mode ablation experiment (105 runs)**: `ablationModes` has been expanded from 2 implemented modes to 7 (none, full, shuffle, full_diversity, full_weight, full_reflection, full_continue). The complete 105-run factorial experiment (7 modes × 2 tasks × multiple round-counts × n≥5) is pending lab execution — this is the single highest-priority next step, as it is the first experiment run with the governance loop *actually closed*.
+- **Cross-model validation**: All 165 prior experiments used DeepSeek-V3 only. Re-running the core 2×2 factorial design on GPT-4o / Claude / local models (n=5 minimum) to test generalization. The loop-fix makes this especially important — the 4 cognitive defects may have masked model-dependent governance effects.
+- **Remaining 4 of 8 intervention types**: Of the 8 designed intervention types, 4 remain unimplemented — `break_connections`, `introduce_dissent`, `pair_opposites`, and `none` (pure observation). Implementing and ablating these completes the intervention design space and enables testing whether *structural* interventions (breaking connections, pairing opposites) outperform *content* interventions (reflection, reweighting).
 
 ---
 

@@ -103,7 +103,7 @@ export class DiscussionEngine {
     this.influenceManager = new InfluenceManager(new RuleBasedInfluence());
     this.graphBuilder = new InteractionGraphBuilder();
     this.traceBuilder = new DecisionTraceBuilder();
-    this.governanceEngine = new GovernanceEngine(this.config.governanceConfig);
+    this.governanceEngine = new GovernanceEngine(this.config.governanceConfig, this.config.seed);
     this.externalRuntime = governanceRuntime;
     this.eventTracker = new EventTracker();
     this.strategyRegistry = new StrategyRegistry();

@@ -43,16 +43,21 @@ export interface CalibrationMetrics {
 /**
  * 收敛速度 → 过早共识阈值调整
  *
- * 如果 Agent 自然收敛很快 (speed > 0.7), 说明这个群体本身容易达成一致,
- * 应该降低过早共识的触发门槛 (更容易触发), 因为"快"可能是假快。
+ * convergenceSpeed = convergenceRounds / maxRounds
+ * 值大 = 慢收敛 (花了很多轮才收敛)
+ * 值小 = 快收敛 (少轮次就收敛)
  *
- * 反之如果 Agent 自然收敛慢, 说明这个群体本身分歧大, 应该提高门槛,
- * 避免频繁误报。
+ * 快收敛群体容易"假快"——应该降低阈值 (scale<1, 更容易触发过早共识检测)
+ * 慢收敛群体本身分歧大——应该提高阈值 (scale>1, 避免误报)
+ *
+ * 旧注释错误写 "speed>0.7=收敛很快"，与实际语义 (大=慢) 相反。
+ * 公式 0.7 + speed*0.6 方向正确 (快收敛→scale小→阈值低)，
+ * 但注释误导了维护者。修复：仅纠正注释，公式不变。
  */
 function scalePrematureConsensus(calib: CalibrationMetrics): number {
   const speed = calib.convergenceSpeed;
-  // speed ∈ [0,1]: 0=慢收敛(好), 1=快收敛(可能是假快)
-  // 输出 ∈ [0.7, 1.3]: 乘到基础阈值上
+  // speed ∈ [0,1]: 0=快收敛, 1=慢收敛
+  // 输出 ∈ [0.7, 1.3]: 快收敛→0.7(降低阈值), 慢收敛→1.3(提高阈值)
   return 0.7 + speed * 0.6;
 }
 
@@ -147,6 +152,8 @@ export function computeCalibrationMetrics(params: {
   } = params;
 
   // 收敛速度: 归一化到 [0,1]
+  // convergenceRounds = 花了多少轮才收敛，值大=慢收敛
+  // convergenceSpeed = ratio → 值大=慢收敛 (多轮次才收敛)
   const convergenceSpeed = agentCount > 1
     ? clamp(convergenceRounds / maxRounds, 0, 1)
     : 0.5;

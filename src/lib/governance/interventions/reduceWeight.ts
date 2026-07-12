@@ -2,6 +2,7 @@ import {
   Intervention, InterventionStrategy, InterventionResult,
   GovernanceState, InterventionType,
 } from "../types";
+import { formatInterventionPrompt } from "../interventionPrompt";
 
 export class ReduceWeightIntervention implements InterventionStrategy {
   name: string = "reduce_weight";
@@ -35,13 +36,12 @@ export class ReduceWeightIntervention implements InterventionStrategy {
       .filter(e => e.source === targetAgentId).reduce((sum, e) => sum + e.weight, 0);
     const weightReductionPercent = ((originalWeightSum - newWeightSum) / originalWeightSum) * 100;
 
-    const prompt =
-      `\n\n═══ GOVERNANCE INTERVENTION ═══\n` +
+    const prompt = formatInterventionPrompt(
       `⚠️ CRITICAL: ${targetAgentId} is dominating the discussion.\n` +
       `DO NOT defer to ${targetAgentId}. Their opinion carries no more weight than yours.\n` +
       `MANDATORY: Form your OWN independent judgment. What would you conclude if ${targetAgentId} were absent?\n` +
-      `State your independent position NOW. Do NOT simply agree with ${targetAgentId}.\n` +
-      `═ END GOVERNANCE INTERVENTION ══`;
+      `State your independent position NOW. Do NOT simply agree with ${targetAgentId}.`
+    );
     const promptTargets = state.agentBeliefs.filter(a => a.agentId !== targetAgentId).map(a => a.agentId);
 
     return {

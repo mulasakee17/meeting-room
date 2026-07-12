@@ -221,6 +221,15 @@ The built-in multi-round agent discussion orchestrator. Serves as both:
 
 Can optionally delegate governance to an external `GovernanceRuntime` (SDK mode) or use its internal `GovernanceEngine` directly (standalone mode).
 
+#### 4.6 认知缺陷修复（Commit 08b20fb）
+
+讨论引擎主循环的 **4 个认知缺陷已修复**（commit `08b20fb`），使 Agent 真正具备"知道彼此在讨论什么"的能力：
+
+1. **buildPrompt 注入 belief/confidence 状态** — 之前 Agent 发言时不知道自己上一轮的 belief 与 confidence；现在系统提示词会显式携带 agent 当前 `belief` / `confidence` 状态，使发言与自身立场保持一致。
+2. **observeAgents 由 `Promise.all` 改为顺序 `for` 循环** — 之前并发生成发言导致同一轮内 Agent 互相不可见；改为顺序执行后，**后发言者可见本轮前序发言者的观点**，形成真实的顺序讨论而非"各自表态"。
+3. **个性化 memory** — 每个 agent 的记忆现在只包含：(a) 自己历轮的发言，(b) 别人 `@` 它（`referencedAgents` 包含它）的发言，而非全体流水。避免上下文污染、突出对自身的引用。
+4. **interactionGraph 仅用显式 referencedAgents 建边** — 不再用 belief 数值差推断"谁影响了谁"，仅在 agent 文本中明确引用（如 `@agentX`）时才建边，使影响力图反映真实的话语引用结构。
+
 ---
 
 ## 5. LLM Provider Abstraction
@@ -260,6 +269,9 @@ Unified multi-provider interface:
 
 - **165 experiments** (M&A 80 + Invest 5-round 55 + Invest 3-round 30)
 - **7 ablation modes**: none, full, shuffle (regression-to-mean control), 4 single-intervention (full_diversity/weight/reflection/continue)
+  - *历史*：`ablationModes` 从最初的 2 种（none / full）扩展为 7 种，新增 shuffle 控制组与 4 种单干预消融，以分离各干预机制的独立贡献
+  - *待执行*：完整 7 模式实验（共 **105 runs** = 7 模式 × 15 重复）待实验室执行，目前已有部分模式数据
+  - *可复现性*：`introduceDiversity` 干预现在使用 **mulberry32 seeded PRNG**（以 run seed 为输入），保证扰动量 ε 可精确复现，消除随机性对消融对比的污染
 - **Primary metric**: Kendall's τ + within-group τ trajectory (Δτ)
 - **Controls**: Shuffle control (scrambled knowledge) + single-intervention ablation (which mechanism matters?)
 - **Statistical inference**: t-distribution 95% CI (small-sample correct) + permutation test p-values (Fisher-Yates shuffle, 10,000 permutations)
@@ -329,6 +341,19 @@ The governance runtime's architecture is inherently scalable. The core loop — 
 SwarmAlpha's framework-agnostic adapter layer, LLM/mathematics separation, and event-driven architecture make it the **minimal viable kernel** of a future governance operating system for AI agent societies.
 
 > *"Not a framework for building agents. An operating system for governing them."*
+
+---
+
+## 11. Known Issues & Fixes（硬伤修复追踪）
+
+以下历史硬伤已修复，保留记录以供审计与回归测试参考：
+
+| ID | 问题 | 状态 | 说明 |
+|----|------|------|------|
+| **H4** | Kuramoto 相位映射错误 | ✅ 已修复 | 旧映射 `θ = π·b` 使 `b=±0.99` 在单位圆上几乎重合（均落在 `(-1,0)` 附近），`R≈1`，误判极化为共识。已修正为 `θ = (π/2)·b`。详见 `MATHEMATICAL_FRAMEWORK.md` §4.1 |
+| **H6** | convergenceSpeed 注释错误 | ✅ 已纠正 | `convergenceSpeed = convergenceRounds / maxRounds`，值大表示**慢收敛**（非快收敛）。`scalePrematureConsensus = 0.7 + speed × 0.6` 公式方向正确，仅注释曾写反。详见 `MATHEMATICAL_FRAMEWORK.md` §10 |
+| **H17** | 缓存污染 | ✅ 已修复 | 跨实验/跨会话的状态泄漏已消除，运行间状态干净隔离 |
+| **H18** | interventionPrompt 不统一 | ✅ 已修复 | 所有干预策略的 prompt 头/尾格式已统一接入 `src/lib/utils/interventionPrompt.ts`，消除各策略自定义格式的不一致 |
 
 ---
 

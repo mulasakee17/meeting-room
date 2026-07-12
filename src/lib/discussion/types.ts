@@ -184,6 +184,11 @@ export interface DiscussionConfig {
    */
   governanceConfig?: Partial<import("../governance/types").GovernanceConfig>;
   /**
+   * 可复现性 seed — 传入 GovernanceEngine 用于 introduce_diversity 等随机干预。
+   * 不传时回退到 Math.random() (不可复现)。
+   */
+  seed?: number;
+  /**
    * Agent grouping topology for scalable discussions.
    *
    * - FlatTopology (default):  all agents in one group — round-table, n≤10

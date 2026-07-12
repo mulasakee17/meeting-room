@@ -43,23 +43,48 @@ import {
   INTERVENTION_REFLECTION_FACTOR,
 } from "../constants";
 
+/** Mulberry32 seeded PRNG — deterministic, used for reproducible interventions */
+function mulberry32(seed: number): () => number {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export class GovernanceEngine {
   private strategies: Map<InterventionType, InterventionStrategy> = new Map();
   /** 可扩展的自定义检测器——内置 4 个检测器之外追加的 */
   private customDetectors: Map<string, BiasDetector> = new Map();
+  /** 可复现性 seed — 用于 introduce_diversity 等随机干预 */
+  private seed?: number;
+  /** 持久 PRNG — 避免每次 apply() 从同一 seed 重建，导致不同轮次扰动值相同 */
+  private rng: (() => number) | null = null;
   /** 自适应阈值校准指标——首次调用后缓存 */
   private calibration: CalibrationMetrics | null = null;
   /** 每种干预类型的历史效果记录——用于自适应剂量 */
   private interventionHistory: Map<InterventionType, number[]> = new Map();
 
-  constructor(adaptiveConfig?: Partial<GovernanceConfig>) {
+  constructor(adaptiveConfig?: Partial<GovernanceConfig>, seed?: number) {
     this.registerStrategy(new ReduceWeightIntervention());
     this.registerStrategy(new IntroduceDiversityIntervention());
     this.registerStrategy(new ForceReflectionIntervention());
     this.registerStrategy(new ContinueDiscussionIntervention());
+    this.seed = seed;
+    if (seed !== undefined) {
+      this.rng = mulberry32(seed);
+    }
     if (adaptiveConfig) {
       this.defaultConfig = { ...this.defaultConfig, ...adaptiveConfig };
     }
+  }
+
+  /** 设置 seed（用于运行时动态注入） */
+  setSeed(seed: number): void {
+    this.seed = seed;
+    this.rng = mulberry32(seed);
   }
 
   /**
@@ -683,7 +708,8 @@ export class GovernanceEngine {
       interventions.push({
         type: "introduce_diversity",
         targetAgents: result.echoChamber.redundantAgents,
-        parameters: { perturbationAmount },
+        // 用持久 rng 生成子 seed，避免每次 apply() 从同一 seed 重建导致扰动值重复
+        parameters: { perturbationAmount, seed: this.rng ? Math.floor(this.rng() * 0x7fffffff) : undefined },
         effect: "",
         applied: false,
       });

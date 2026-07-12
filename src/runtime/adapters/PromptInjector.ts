@@ -11,6 +11,7 @@
  */
 
 import type { Intervention } from "../../lib/governance/types";
+import { formatInterventionPrompt } from "../../lib/governance/interventionPrompt";
 
 // ============================================================================
 // 格式约束 prompt
@@ -129,13 +130,12 @@ export function interventionToPrompt(
     case "introduce_diversity": {
       const targets = intervention.targetAgents || [];
       return {
-        prompt:
-          `\n\n═══ GOVERNANCE INTERVENTION ═══\n` +
+        prompt: formatInterventionPrompt(
           `⚠️ CRITICAL: Echo chamber detected. Multiple agents are expressing nearly identical views.\n` +
           `This is dangerous. You may be missing important counter-evidence.\n` +
           `MANDATORY: State at least ONE scenario where your current conclusion would be WRONG.\n` +
-          `If you cannot think of any, you are not thinking critically enough.\n` +
-          `═ END GOVERNANCE INTERVENTION ══`,
+          `If you cannot think of any, you are not thinking critically enough.`
+        ),
         promptTargets: targets,
       };
     }
@@ -143,13 +143,12 @@ export function interventionToPrompt(
     case "force_reflection": {
       const targets = intervention.targetAgents || [];
       return {
-        prompt:
-          `\n\n═══ GOVERNANCE INTERVENTION ═══\n` +
+        prompt: formatInterventionPrompt(
           `⚠️ CRITICAL: Your position is at an extreme compared to the group.\n` +
           `MANDATORY: Before responding, write down the STRONGEST argument for the OPPOSING viewpoint.\n` +
           `What scenario would make the opposing position correct?\n` +
-          `Only after doing this, restate your own position.\n` +
-          `═ END GOVERNANCE INTERVENTION ══`,
+          `Only after doing this, restate your own position.`
+        ),
         promptTargets: targets,
       };
     }
@@ -157,13 +156,12 @@ export function interventionToPrompt(
     case "continue_discussion": {
       const effect = intervention.effect || "";
       return {
-        prompt:
-          `\n\n═══ GOVERNANCE INTERVENTION ═══\n` +
+        prompt: formatInterventionPrompt(
           `⚠️ CRITICAL: Premature consensus detected. The group is agreeing too fast.\n` +
           `STOP. Reconsider. Are there alternative viewpoints that haven't been raised?\n` +
-          `Challenge each other BEFORE finalizing. State one counter-argument now.\n` +
-          (effect ? `\nContext: ${effect}\n` : "") +
-          `═ END GOVERNANCE INTERVENTION ══`,
+          `Challenge each other BEFORE finalizing. State one counter-argument now.` +
+          (effect ? `\nContext: ${effect}` : "")
+        ),
         promptTargets: [], // 全体 agent
       };
     }
@@ -172,13 +170,12 @@ export function interventionToPrompt(
       const targetId = intervention.targetAgentId;
       if (!targetId) return null;
       return {
-        prompt:
-          `\n\n═══ GOVERNANCE INTERVENTION ═══\n` +
+        prompt: formatInterventionPrompt(
           `⚠️ CRITICAL: Agent ${targetId} is dominating the discussion.\n` +
           `DO NOT defer to ${targetId}. Their opinion carries no more weight than yours.\n` +
           `MANDATORY: Form your OWN independent judgment. What would you conclude if ${targetId} were absent?\n` +
-          `State your independent position NOW. Do NOT simply agree with ${targetId}.\n` +
-          `═ END GOVERNANCE INTERVENTION ══`,
+          `State your independent position NOW. Do NOT simply agree with ${targetId}.`
+        ),
         promptTargets: [], // 除 targetAgentId 外的所有 agent
       };
     }

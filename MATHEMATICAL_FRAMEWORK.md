@@ -176,6 +176,14 @@ $$
 \phi_i = b_i \cdot \pi \quad \Rightarrow \quad \phi_i \in [-\pi, \pi]
 $$
 
+> **⚠️ 已修正（H4，commit 08b20fb）**：上述旧映射 `θ = π·b` 存在严重缺陷，已修正为：
+>
+> $$\phi_i = b_i \cdot \frac{\pi}{2} \quad \Rightarrow \quad \phi_i \in \left[-\frac{\pi}{2}, \frac{\pi}{2}\right]$$
+>
+> **旧映射的问题**：当 $b = +0.99$ 时 $\theta \approx +0.99\pi$（单位圆上接近 $(-1, 0)$ 左侧），当 $b = -0.99$ 时 $\theta \approx -0.99\pi$（同样接近 $(-1, 0)$ 左侧）。两个极端对立的信念在单位圆上**几乎重合**，导致 $R \approx 1$，把强极化误判为强共识。
+>
+> **新映射的合理性**：$b = -1 \Rightarrow \theta = -\pi/2$（单位圆下方），$b = +1 \Rightarrow \theta = +\pi/2$（单位圆上方），两者**正对**（相位差 $\pi$），向量和为 0，$R \approx 0$（低共识），正确反映极化状态。而 $b$ 全部一致时所有相位重合，$R \approx 1$（高共识）。
+
 Kuramoto 序参数 $R \in [0,1]$ 衡量相位的同步程度：
 
 $$
@@ -482,6 +490,14 @@ $$
 $$
 \theta_{\text{pre}}' = \theta_{\text{pre}} \cdot (0.70 + 0.6 \cdot s)
 $$
+
+> **⚠️ 注释纠正（H6）**：上式中 $s$ 即 `convergenceSpeed`，其定义为：
+>
+> $$\text{convergenceSpeed} = \frac{\text{convergenceRounds}}{\text{maxRounds}}$$
+>
+> **值大 = 慢收敛**（需要更多轮才收敛），而非快收敛。早期代码注释曾将其误写为"值大=快收敛"，导致读者误以为慢收敛时 `scalePrematureConsensus` 应降低。
+>
+> 公式 `scalePrematureConsensus = 0.7 + speed × 0.6` **方向是正确的**：收敛越慢（$s$ 越大），过早共识阈值 $\theta_{\text{pre}}'$ 越高（越难触发 `continue_discussion`），因为慢收敛本身已说明讨论尚未充分，无需再追加轮数。仅注释曾写反，公式无需改动。
 
 所有自适应阈值 clamp 到合理区间内（如 $\theta_{\text{echo}}' \in [0.40, 0.90]$）。
 

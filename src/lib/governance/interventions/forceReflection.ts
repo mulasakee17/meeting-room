@@ -2,6 +2,7 @@ import {
   Intervention, InterventionStrategy, InterventionResult,
   GovernanceState, InterventionType,
 } from "../types";
+import { formatInterventionPrompt } from "../interventionPrompt";
 
 export class ForceReflectionIntervention implements InterventionStrategy {
   name: string = "force_reflection";
@@ -33,13 +34,12 @@ export class ForceReflectionIntervention implements InterventionStrategy {
       return belief;
     });
 
-    const prompt =
-      `\n\n═══ GOVERNANCE INTERVENTION ═══\n` +
+    const prompt = formatInterventionPrompt(
       `⚠️ CRITICAL: Your position is at an extreme compared to the group.\n` +
       `MANDATORY: Before responding, write down the STRONGEST argument for the OPPOSING viewpoint.\n` +
       `What scenario would make the opposing position correct?\n` +
-      `Only after doing this, restate your own position.\n` +
-      `═ END GOVERNANCE INTERVENTION ══`;
+      `Only after doing this, restate your own position.`
+    );
 
     const originalBeliefMap = new Map(state.agentBeliefs.map(b => [b.agentId, b.belief]));
     const maxAdjustment = Math.max(

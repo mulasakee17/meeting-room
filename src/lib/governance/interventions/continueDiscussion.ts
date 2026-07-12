@@ -2,6 +2,7 @@ import {
   Intervention, InterventionStrategy, InterventionResult,
   GovernanceState, InterventionType,
 } from "../types";
+import { formatInterventionPrompt } from "../interventionPrompt";
 
 export class ContinueDiscussionIntervention implements InterventionStrategy {
   name: string = "continue_discussion";
@@ -63,7 +64,6 @@ export class ContinueDiscussionIntervention implements InterventionStrategy {
 
       if (undiscussedByAgent.size > 0) {
         const parts: string[] = [];
-        parts.push("\n\n═══ GOVERNANCE INTERVENTION ═══");
         parts.push("⚠️ CRITICAL: The group is converging too quickly. Your current ranking is at risk of being wrong because the following crucial information has NOT been discussed:\n");
 
         for (const [agentId, items] of undiscussedByAgent) {
@@ -75,18 +75,16 @@ export class ContinueDiscussionIntervention implements InterventionStrategy {
 
         parts.push(`\nThis is NOT optional. Your ranking MUST account for these data points.`);
         parts.push(`If your current ranking ignores any of the above, REVISE IT NOW.`);
-        parts.push(`═ END GOVERNANCE INTERVENTION ══`);
-        prompt = parts.join("\n");
+        prompt = formatInterventionPrompt(parts.join("\n"));
       }
     }
 
     if (!prompt) {
-      prompt =
-        `\n\n═══ GOVERNANCE INTERVENTION ═══\n` +
+      prompt = formatInterventionPrompt(
         `⚠️ CRITICAL: Premature consensus detected. The group is agreeing too fast.\n` +
         `STOP. Reconsider. Are there alternative viewpoints that haven't been raised?\n` +
-        `Challenge each other BEFORE finalizing. State one counter-argument now.\n` +
-        `═ END GOVERNANCE INTERVENTION ══`;
+        `Challenge each other BEFORE finalizing. State one counter-argument now.`
+      );
     }
 
     return {
