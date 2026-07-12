@@ -569,11 +569,25 @@ export class DiscussionEngine {
     task: DiscussionTask,
     roundNumber: number
   ): Promise<RawObservation[]> {
-    const recentMemory = this.memoryManager.getRecent(agents.length * 2);
+    const allMemory = this.memoryManager.getAll();
+    const observations: RawObservation[] = [];
+    // 本轮已发言的观点，按发言顺序累积，后发言的 agent 能看到
+    const currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number }> = [];
 
-    const observationPromises = agents.map(async (agent) => {
+    for (const agent of agents) {
       const state = agent.getState();
-      const prompt = this.buildPrompt({ name: agent.name, role: agent.role, id: agent.id }, typeof task.content === "string" ? task.content : JSON.stringify(task.content), recentMemory, roundNumber);
+      // 个性化 memory：agent 自己说过的 + 别人 @ 它的
+      const ownEntries = allMemory.filter(e => e.agentId === agent.id);
+      const mentionsMe = allMemory.filter(e =>
+        e.agentId !== agent.id && e.referencedAgents?.includes(agent.id)
+      );
+      const personalMemory = [...ownEntries, ...mentionsMe]
+        .sort((a, b) => a.roundNumber - b.roundNumber);
+      const prompt = this.buildPrompt(
+        { name: agent.name, role: agent.role, id: agent.id },
+        typeof task.content === "string" ? task.content : JSON.stringify(task.content),
+        personalMemory, roundNumber, state, currentRoundOpinions
+      );
       const response = await agent.sendMessage(prompt);
       // Use the shared parser instead of a private duplicate
       const parsedOpinion = this.opinionParser.parseOpinion(
@@ -584,29 +598,50 @@ export class DiscussionEngine {
         roundNumber
       );
 
-      return {
+      const observation: RawObservation = {
         agentId: agent.id,
         roundNumber,
         timestamp: new Date().toISOString(),
         rawResponse: response,
         parsedOpinion,
       };
-    });
+      observations.push(observation);
+      // 累积到本轮已发言列表，供后续 agent 参考
+      currentRoundOpinions.push({
+        agentId: agent.id,
+        reasoning: parsedOpinion.reasoning,
+        belief: parsedOpinion.belief,
+        confidence: parsedOpinion.confidence,
+      });
+    }
 
-    return Promise.all(observationPromises);
+    return observations;
   }
 
   private buildPrompt(
     agent: { name: string; role: string; id: string },
     task: string,
     memory: DiscussionMemoryEntry[],
-    roundNumber: number
+    roundNumber: number,
+    state: { belief: number; confidence: number },
+    currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number }> = []
   ): string {
     let memoryContext = "";
     if (memory.length > 0) {
-      memoryContext = "\n\nPrevious discussion:\n";
-      for (const entry of memory) {
-        memoryContext += `- Agent ${entry.agentId}: ${entry.reasoning} (belief: ${entry.belief.toFixed(2)})\n`;
+      const ownEntries = memory.filter(e => e.agentId === agent.id);
+      const repliedToMe = memory.filter(e => e.agentId !== agent.id);
+      memoryContext = "\n\n你的讨论历史:\n";
+      if (ownEntries.length > 0) {
+        memoryContext += "你之前的发言:\n";
+        for (const entry of ownEntries) {
+          memoryContext += `- 第${entry.roundNumber}轮: ${entry.reasoning} (信念: ${entry.belief.toFixed(2)})\n`;
+        }
+      }
+      if (repliedToMe.length > 0) {
+        memoryContext += "对你的回应:\n";
+        for (const entry of repliedToMe) {
+          memoryContext += `- 第${entry.roundNumber}轮 ${entry.agentId}: ${entry.reasoning} (信念: ${entry.belief.toFixed(2)})\n`;
+        }
       }
     }
 
@@ -619,13 +654,29 @@ export class DiscussionEngine {
       governanceContext = "\n" + relevantPrompts.join("\n");
     }
 
+    // ── 本轮已发言的观点（顺序发言机制）───────────────────────────────
+    let currentRoundContext = "";
+    if (currentRoundOpinions.length > 0) {
+      currentRoundContext = "\n\n本轮其他 agent 已发表的观点:\n";
+      for (const op of currentRoundOpinions) {
+        currentRoundContext += `- ${op.agentId}: ${op.reasoning} (信念: ${op.belief.toFixed(2)}, 置信度: ${op.confidence.toFixed(0)}%)\n`;
+      }
+      currentRoundContext += "你可以参考或反驳上述观点。\n";
+    }
+
     return `You are ${agent.name}, a ${agent.role}.
 
 Task: ${task}
 
 Round: ${roundNumber}/${this.config.maxRounds}
 
-${memoryContext}${governanceContext}
+你当前的判断状态：
+- 信念强度：${state.belief.toFixed(2)}（范围 -1 到 1，-1=强烈反对，1=强烈支持）
+- 置信度：${state.confidence.toFixed(0)}%（范围 0-100，越高越确信）
+
+这是你基于此前讨论形成的当前立场。请在保持这一立场的基础上，结合本轮新信息更新你的判断。
+
+${memoryContext}${currentRoundContext}${governanceContext}
 
 Analyze the task and the previous discussion (if any). Provide your opinion with reasoning, evidence, belief, confidence, and what you think should happen next.
 

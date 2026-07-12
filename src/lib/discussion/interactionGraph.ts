@@ -59,24 +59,10 @@ export class InteractionGraphBuilder {
         node.confidence = opinion.confidence;
       }
 
+      // 只用显式引用建边，不再用 belief/confidence 数值差推断 agreement/disagreement/persuasion
+      // 原因：数值差推断的是虚假影响力网络——A 和 B belief 接近不代表他们"同意"彼此
       for (const referencedAgent of opinion.referencedAgents) {
         this.addEdge(referencedAgent, opinion.agentId, "reference", 0.5, round);
-      }
-
-      for (const otherOpinion of opinions) {
-        if (otherOpinion.agentId === opinion.agentId) continue;
-
-        const beliefDiff = Math.abs(opinion.belief - otherOpinion.belief);
-
-        if (beliefDiff < 0.3) {
-          this.addEdge(otherOpinion.agentId, opinion.agentId, "agreement", 1 - beliefDiff, round);
-        } else if (beliefDiff > 0.5) {
-          this.addEdge(otherOpinion.agentId, opinion.agentId, "disagreement", beliefDiff - 0.5, round);
-        }
-
-        if (otherOpinion.confidence > opinion.confidence + 20) {
-          this.addEdge(otherOpinion.agentId, opinion.agentId, "persuasion", otherOpinion.confidence / 100, round);
-        }
       }
     }
   }

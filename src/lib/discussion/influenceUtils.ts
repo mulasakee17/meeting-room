@@ -27,16 +27,22 @@ import {
 
 /**
  * 根据意见相似度和差异确定影响力类型
+ *
+ * 优先使用显式引用（reference），没有引用时才回退到数值推断。
+ * 原因：数值差推断的是虚假影响力——belief 接近 ≠ 同意，confidence 高 ≠ 说服。
+ * 显式引用是 agent 主动表达的认知关联，可信度高于数值巧合。
  */
 export function determineInfluenceType(
   source: AgentOpinion,
   target: AgentOpinion
 ): InfluenceType {
-  if (Math.abs(source.belief - target.belief) > INFLUENCE_DISAGREEMENT_BELIEF_THRESHOLD) {
-    return "disagreement";
-  }
+  // 优先：显式引用是真实认知关联
   if (target.referencedAgents.includes(source.agentId)) {
     return "reference";
+  }
+  // 回退：无显式引用时用数值推断（保留 belief 更新连续性，避免破坏过大）
+  if (Math.abs(source.belief - target.belief) > INFLUENCE_DISAGREEMENT_BELIEF_THRESHOLD) {
+    return "disagreement";
   }
   if (source.confidence > target.confidence + INFLUENCE_PERSUASION_CONFIDENCE_GAP) {
     return "persuasion";

@@ -12,13 +12,15 @@ class MockAgent {
   ) {}
 
   sendMessage(message: string): Promise<string> {
+    // agent2 引用 agent1，产生 reference 边
+    const refs = this.id === "agent2" ? ["agent1"] : [];
     return Promise.resolve(JSON.stringify({
       reasoning: `Analysis for ${this.id}`,
       evidence: ["evidence1"],
       belief: this.belief,
       confidence: this.confidence,
       nextOpinion: "",
-      referencedAgents: [],
+      referencedAgents: refs,
     }));
   }
 
