@@ -137,6 +137,8 @@ Content-Type: application/json
     content: string | Record<string, unknown>;
   };
   agentConfig: {
+    // "custom" = full support; "autogen" = TypeScript bridge (Python sidecar needed);
+    // "crewai" / "langgraph" = planned, currently throws Unsupported framework error
     provider: "autogen" | "crewai" | "langgraph" | "custom";
     agentCount?: number;
   };

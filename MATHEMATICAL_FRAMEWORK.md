@@ -671,7 +671,7 @@ $$
 > `src/lib/evaluation/index.ts` 实现 §8（5 维评价）。
 > `src/lib/governance/adaptiveThresholds.ts` 实现 §10。
 > `src/lib/discussion/causalTrace.ts` 实现 §11（Dropout 敏感性分析）。
-> `experiments/v2/analyze.ts` 实现 Bootstrap 统计推断（§7 实验验证）。
+> `experiments/v2/analyze.ts` 实现统计推断（t 分布 CI + 置换检验，§7 实验验证）。
 > `experiments/v2/sensitivity.ts` 实现参数敏感性扫描（§12 附录）。
 > `src/lib/discussion/causalTrace.ts` 实现 §11（Dropout 敏感性分析）。
 > `src/lib/governance/adaptiveDosage.ts` 实现 §12。

@@ -343,12 +343,21 @@ export class EvaluationEngine {
     if (agentDecisions.length === 0) return [0, 0];
 
     const beliefs = agentDecisions.map(d => d.belief || 0);
-    const mean = beliefs.reduce((a, b) => a + b, 0) / beliefs.length;
-    const std = Math.sqrt(beliefs.reduce((sum, b) => sum + Math.pow(b - mean, 2), 0) / beliefs.length);
     const n = beliefs.length;
+    const mean = beliefs.reduce((a, b) => a + b, 0) / n;
+    // 统一使用样本标准差（÷(n-1)），与 Cronbach's α 一致
+    const std = n > 1 ? Math.sqrt(beliefs.reduce((sum, b) => sum + Math.pow(b - mean, 2), 0) / (n - 1)) : 0;
 
-    // 95% CI using z = 1.96
-    const marginOfError = n > 1 ? (1.96 * std) / Math.sqrt(n) : 0;
+    // 95% CI 使用 t 分布（小样本校正）
+    // t 临界值表（双侧 α=0.05）
+    const T_TABLE: Record<number, number> = {
+      1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
+      6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
+      15: 2.131, 20: 2.086, 30: 2.042, 60: 2.000, 120: 1.980,
+    };
+    const df = n - 1;
+    const tcrit = T_TABLE[df] ?? (df > 120 ? 1.96 : 2.042);
+    const marginOfError = n > 1 ? (tcrit * std) / Math.sqrt(n) : 0;
 
     return [mean - marginOfError, mean + marginOfError];
   }
@@ -512,7 +521,7 @@ export class EvaluationEngine {
     interactionHistory.forEach(r => {
       r.messages.forEach(m => {
         for (const otherAgent of agentDecisions.map(d => d.agentId)) {
-          if (otherAgent !== m.agentId && m.content.toLowerCase().includes(otherAgent.toLowerCase())) {
+          if (this.agentReferencesAgent(m, otherAgent)) {
             mentionCounts[otherAgent] = (mentionCounts[otherAgent] || 0) + 1;
           }
         }
@@ -552,9 +561,8 @@ export class EvaluationEngine {
 
     for (const round of interactionHistory) {
       for (const message of round.messages) {
-        const content = message.content.toLowerCase();
         for (const otherAgent of agentIds) {
-          if (otherAgent !== message.agentId && content.includes(otherAgent.toLowerCase())) {
+          if (this.agentReferencesAgent(message, otherAgent)) {
             const path = [otherAgent, message.agentId];
             const pathLength = path.length - 1;
             const type: "direct" | "indirect" | "chain" = pathLength === 1 ? "direct" : pathLength === 2 ? "indirect" : "chain";
@@ -597,9 +605,7 @@ export class EvaluationEngine {
       for (const currentMessage of currentRound.messages) {
         for (const nextMessage of nextRound.messages) {
           if (currentMessage.agentId !== nextMessage.agentId) {
-            const nextContent = nextMessage.content.toLowerCase();
-
-            if (nextContent.includes(currentMessage.agentId.toLowerCase())) {
+            if (this.agentReferencesAgent(nextMessage, currentMessage.agentId)) {
               const path = [currentMessage.agentId, nextMessage.agentId];
               const sourceConfidence = confidenceMap.get(currentMessage.agentId) || 50;
               const targetConfidence = confidenceMap.get(nextMessage.agentId) || 50;
@@ -630,8 +636,8 @@ export class EvaluationEngine {
     agentIds.forEach(id => {
       let degree = 0;
       interactionHistory.forEach(r => {
-        const mentions = r.messages.filter(m => m.content.toLowerCase().includes(id.toLowerCase())).length;
-        const mentionsByOthers = r.messages.filter(m => m.agentId !== id && m.content.toLowerCase().includes(id.toLowerCase())).length;
+        const mentions = r.messages.filter(m => this.agentReferencesAgent(m, id)).length;
+        const mentionsByOthers = r.messages.filter(m => m.agentId !== id && this.agentReferencesAgent(m, id)).length;
         degree += mentions + mentionsByOthers;
       });
       centrality[id] = degree;
@@ -656,9 +662,7 @@ export class EvaluationEngine {
         for (let i = 0; i < messages.length; i++) {
           for (let j = i + 1; j < messages.length; j++) {
             if (agentIds.includes(messages[i].agentId) && agentIds.includes(messages[j].agentId)) {
-              const contentI = messages[i].content.toLowerCase();
-              const contentJ = messages[j].content.toLowerCase();
-              if (contentI.includes(id.toLowerCase()) || contentJ.includes(id.toLowerCase())) {
+              if (this.agentReferencesAgent(messages[i], id) || this.agentReferencesAgent(messages[j], id)) {
                 score++;
               }
             }
@@ -679,6 +683,28 @@ export class EvaluationEngine {
   // ==========================================================================
   // Shared helpers
   // ==========================================================================
+
+  /**
+   * 判断 message 是否引用了 targetAgentId。
+   *
+   * 优先使用消息的 referencedAgents 字段（显式语义引用，由解析层填充），
+   * 仅当该字段缺失或为空时，才回退到 content 子串匹配。
+   *
+   * 这样避免将"批评性提及"误判为"影响力引用"——例如 agent A 在内容中
+   * 出现 agent B 的 ID 仅因为 A 在反驳 B，而非受 B 影响。
+   */
+  private agentReferencesAgent(
+    message: { agentId: string; content: string; referencedAgents?: string[] },
+    targetAgentId: string
+  ): boolean {
+    if (targetAgentId === message.agentId) return false;
+    // 优先使用显式引用字段
+    if (message.referencedAgents && message.referencedAgents.length > 0) {
+      return message.referencedAgents.includes(targetAgentId);
+    }
+    // 回退：无引用字段时用子串匹配（保持向后兼容）
+    return message.content.toLowerCase().includes(targetAgentId.toLowerCase());
+  }
 
   private computeOverallScore(
     dimensions: {

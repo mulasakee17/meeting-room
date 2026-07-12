@@ -27,7 +27,11 @@ export class AdapterRegistry {
   get(framework: AgentFrameworkType): FrameworkAdapter {
     const adapter = this.adapters.get(framework);
     if (!adapter) {
-      return this.adapters.get("custom")!;
+      const supported = Array.from(this.adapters.keys()).join(", ");
+      throw new Error(
+        `Unsupported framework: "${framework}". Supported frameworks: ${supported}. ` +
+        `If you intended to use a custom agent implementation, explicitly pass "custom".`
+      );
     }
     return adapter;
   }

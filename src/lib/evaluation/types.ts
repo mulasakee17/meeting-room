@@ -166,6 +166,8 @@ export interface InteractionRound {
     agentId: string;
     content: string;
     timestamp: string;
+    /** 被该消息显式引用的其他 agent ID（优先用于影响力路径检测） */
+    referencedAgents?: string[];
   }[];
   beliefs: Record<string, number>;
   beliefChanges: Record<string, number>;

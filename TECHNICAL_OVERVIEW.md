@@ -2,19 +2,19 @@
 
 > **An Embeddable Governance Runtime — Deep Technical Overview**
 >
-> Updated: 2026-07-08 | Version: V3.1 Governance Runtime (bootstrap CI + sensitivity infrastructure)
+> Updated: 2026-07-12 | Version: V3.2 Governance Runtime (t-distribution CI + permutation test + adaptive modules)
 
 ---
 
 ## 1. Project Positioning
 
-SwarmAlpha is an **embeddable governance runtime** for LLM multi-agent systems. It does NOT create agents, manage workflows, or handle tool calling. Instead, it plugs into existing frameworks (AutoGen, CrewAI, LangGraph, or custom systems) as a **governance layer** that:
+SwarmAlpha is an **embeddable governance runtime** for LLM multi-agent systems. It does NOT create agents, manage workflows, or handle tool calling. Instead, it plugs into existing frameworks (custom systems fully supported; AutoGen via TypeScript bridge; CrewAI/LangGraph planned) as a **governance layer** that:
 
 - Observes agent discussions in real time
 - Models belief evolution and influence propagation
 - Detects 4 types of collective decision failures
 - Intervenes with adaptive, targeted governance actions
-- Evaluates decision quality across 5 statistically-grounded dimensions
+- Evaluates decision quality across 5 dimensions (consensus, reliability, dispersion, stability, influence analysis)
 
 **Core insight**: LLM multi-agent systems suffer the same decision failures as human groups — but no existing framework detects or intervenes. SwarmAlpha fills this gap.
 
@@ -27,7 +27,7 @@ SwarmAlpha is an **embeddable governance runtime** for LLM multi-agent systems. 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                 Your Multi-Agent Framework                │
-│         (AutoGen / CrewAI / LangGraph / Custom)           │
+│         (Custom / AutoGen / CrewAI* / LangGraph*)         │
 │                                                          │
 │  Agent A    Agent B    Agent C    Agent D    Agent E      │
 │     │          │          │          │          │          │
@@ -41,7 +41,7 @@ SwarmAlpha is an **embeddable governance runtime** for LLM multi-agent systems. 
 │   ┌────────────────────┼──────────────────────────┐      │
 │   │  Observation Layer │  Inference Layer           │      │
 │   │  (LLM output →     │  (Belief evolution via      │      │
-│   │   structured data) │   Bayesian inference)       │      │
+│   │   structured data) │   rule-based update)        │      │
 │   │         │          │         │                    │      │
 │   │         └──────────┴─────────┘                    │      │
 │   │                    │                              │      │
@@ -76,6 +76,8 @@ SwarmAlpha is an **embeddable governance runtime** for LLM multi-agent systems. 
 │   Framework-Agnostic · Embeddable · Research-Ready        │
 └──────────────────────────────────────────────────────────┘
 ```
+
+> *\* CrewAI/LangGraph adapters are planned (roadmap). Currently only Custom (full) and AutoGen (TypeScript bridge) are implemented.*
 
 ### Two Modes, One Runtime
 
@@ -252,23 +254,25 @@ Unified multi-provider interface:
 
 | Task | Interdependence | Baseline τ | Full τ | Shuffle τ | Δτ (Full) | Key Finding |
 |------|----------------|-----------|--------|-----------|-------------|-------------|
-| **Invest** | Strong | 0.022 | 0.556 | 0.000 | **+0.84** ✓ | Governance works; shuffle rules out regression-to-mean |
-| **M&A** | Weak | 0.533 | 0.613 | **0.900** | −0.12 ✗ | Shuffle > Full: breaking overconfidence forces listening |
+| **Invest (3-round, n=15)** | Strong | 0.422 | 0.644 | — | +0.133 (p=0.152, d=+0.65) | Medium effect, NOT sig — 2×2 design shows round moderation |
+| **Invest (5-round, n=15)** | Strong | 0.778 | 0.778 | 1.000 | +0.00 (p=1.0, d=+0.00) | Zero effect at ceiling — 2×2 design confirms round moderation |
+| **M&A (n=15/10)** | Weak | 0.533 | 0.613 | **0.900** | −0.12 (p=0.36) | Shuffle > Full: breaking overconfidence forces listening |
 
-- **140 experiments** (2 tasks × 7 ablation modes × n=10-15)
+- **165 experiments** (M&A 80 + Invest 5-round 55 + Invest 3-round 30)
 - **7 ablation modes**: none, full, shuffle (regression-to-mean control), 4 single-intervention (full_diversity/weight/reflection/continue)
 - **Primary metric**: Kendall's τ + within-group τ trajectory (Δτ)
 - **Controls**: Shuffle control (scrambled knowledge) + single-intervention ablation (which mechanism matters?)
-- **Bootstrap inference**: 95% CI + p-values via percentile method (10,000 resamples, deterministic mulberry32 RNG)
+- **Statistical inference**: t-distribution 95% CI (small-sample correct) + permutation test p-values (Fisher-Yates shuffle, 10,000 permutations)
 - **Parameter sensitivity**: One-at-a-time sweep over 5 governance parameters (125 configs, n=5 each, infrastructure ready)
-- All raw JSON preserved in `experiments/v2/data/` and `experiments/v2/data_invest/`
+- All raw JSON preserved in `experiments/v2/data/` (M&A), `experiments/v2/data_invest/` (Invest 5-round), and `experiments/v2/data_invest_3round/` (Invest 3-round)
 
 ### Key experimental findings
 
-1. **Governance boundary condition**: Δτ is significantly positive only on interdependent tasks
-2. **Shuffle control (Invest)**: τ drops to 0.000 with scrambled knowledge → excludes regression-to-mean
-3. **Shuffle control (M&A)**: τ=0.900 > full τ=0.613 → breaking professional overconfidence by giving agents unfamiliar data forces them to listen more, outperforming targeted governance on this weakly-interdependent task
-4. **Single-intervention ablation**: Only `full_diversity` is significant (p=0.003); `full_weight` is harmful (τ=−0.267); `full_reflection` and `full_continue` are not significant alone → introduce_diversity is the key mechanism
+1. **2×2 factorial design confirms round moderation**: The 2×2 design (3-round vs 5-round × none vs full, n=15 per cell) shows 3-round Invest with a medium effect (d=+0.65, p=0.152, Net Δτ=+0.133, CI [−0.09, +0.35]) and 5-round Invest with zero effect (d=+0.00, p=1.0) — governance has directional benefit in limited rounds but zero effect with sufficient rounds
+2. **full_reflection significantly harmful (p=0.048)**: On 5-round Invest, full_reflection (n=5) produces τ=0.333, ΔQ=−22.2, p=0.048 — the first and only statistically significant governance effect, and it is HARMFUL. full_weight (τ=0.467, ΔQ=−15.6, p=0.173) shows a harmful trend
+3. **No positive governance effect reaches significance**: Across all full-vs-none comparisons (M&A p=0.36; Invest 3-round p=0.152; Invest 5-round p=1.0), no governance configuration produces a statistically significant improvement at p<0.05
+4. **Shuffle control (M&A) is the strongest positive finding**: τ=0.900 vs baseline 0.533, d=+1.80, **p=0.0009** (significant) — scrambling agent knowledge forces listening, outperforming targeted governance on this weakly-interdependent task
+5. **Single-intervention ablation (M&A)**: None significant — full_diversity (p=0.174), full_weight (p=0.171, τ=0.700), full_reflection (p=0.183), full_continue (p=0.267) — no single mechanism dominates
 
 `experiments/lunar_survival/` — Legacy V1 framework (80+ experiments, keyword-matching metric)
 
@@ -289,7 +293,11 @@ Unified multi-provider interface:
 | Runtime | 3 | runtime.test.ts |
 | Security | 13 | security.test.ts |
 | Frontend | 14 | frontend.test.tsx |
-| **Total** | **112** | **11 files** |
+| LLM Providers | 12 | llm-providers.test.ts |
+| Stats Utils | 11 | stats-utils.test.ts |
+| Adapters | 10 | adapters.test.ts |
+| Pipeline | 4 | pipeline.test.ts |
+| **Total** | **149** | **15 files** |
 
 ---
 
@@ -302,7 +310,7 @@ Unified multi-provider interface:
 | Frontend | React 18.3 + Tailwind CSS 3.4 |
 | Testing | Vitest 4.1 + Testing Library |
 | LLM | DeepSeek-V3 (primary), OpenAI, Anthropic, Local |
-| Mathematics | Kuramoto synchronization, Bayesian inference, information entropy, Gini coefficient, Cronbach's α |
+| Mathematics | Kuramoto synchronization, Gini coefficient, bimodality coefficient, Cronbach's α, Kendall's τ |
 
 ---
 
@@ -324,4 +332,4 @@ SwarmAlpha's framework-agnostic adapter layer, LLM/mathematics separation, and e
 
 ---
 
-> **Code**: ~13,000 TypeScript | **Tests**: 124 | **Experiments**: 80+ | **Docs**: 5 core documents
+> **Code**: ~13,000 TypeScript | **Tests**: 149 | **Experiments**: 165 | **Docs**: 5 core documents

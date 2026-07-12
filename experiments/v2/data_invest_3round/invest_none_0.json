@@ -1,0 +1,132 @@
+{
+  "runId": "invest_none_0",
+  "ablation": "none",
+  "runIndex": 0,
+  "timestamp": "2026-07-12T01:37:04.074Z",
+  "kendallTau": 0.3333333333333333,
+  "decisionQuality": 67,
+  "tauTrajectory": [
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.8,
+  "opinionDiversity": 0.1,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "evaluationScores": {
+    "consensus": 82.03650200908386,
+    "reliability": 15.3,
+    "dispersion": 79.7,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 61.5
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.2,
+        "a3": 0.3,
+        "a4": 0.1,
+        "a5": -0.3
+      },
+      "confidences": {
+        "a1": 70,
+        "a2": 60,
+        "a3": 70,
+        "a4": 70,
+        "a5": 70
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 68.41752246062035,
+        "reliability": 13.7,
+        "dispersion": 74.6,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 57.4
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.4,
+        "a2": 0.2,
+        "a3": 0.3,
+        "a4": 0.1,
+        "a5": -0.3
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 70,
+        "a3": 70,
+        "a4": 70,
+        "a5": 70
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 72.57050127292506,
+        "reliability": 14.3,
+        "dispersion": 76.7,
+        "stability": 75,
+        "influenceAnalysis": 64.5,
+        "overall": 57.8
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.4,
+        "a2": 0.4,
+        "a3": 0.3,
+        "a4": 0.2,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 75,
+        "a3": 75,
+        "a4": 75,
+        "a5": 75
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 82.03650200908386,
+        "reliability": 15.3,
+        "dispersion": 79.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 61.5
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.30 - neutral):\n\na1: 综合所有信息，AlphaTech营收增速35%且连续3年30%+，技术壁垒高（护城河4/5），但面临NVIDIA主导市场份额和专利到期风险；GammaEdge增速45%但减速，利润率低（12%），监管风险高（4/5），TAM下调；BetaCore增长平缓但财务稳健，护城河2/5但客户切换成本高，监管风险极低。CEO强调AI和边缘计算，但AlphaTech和GammaEdge均有明显风险，而BetaCore的稳健性可能被低估。考虑到基金策略要求高增长和高技术壁垒，AlphaTech在赛道和壁垒上更优，GammaEdge增长最快但风险大，BetaCore最安全但增长不足。因此排名：AlphaTech第一，GammaEdge第二，BetaCore第三。\n\na2: 综合所有讨论信息，AlphaTech在AI芯片赛道技术壁垒高、营收增速稳健（35%），但面临NVIDIA主导的市场份额压力和专利到期风险。GammaEdge增速最高但利润率低（12%）、监管风险高（GDPR调查），且TAM下调。BetaCore虽增长平缓，但财务稳健、监管风险极低、客户锁定效应强，且企业SaaS利润率通常较高。CEO强调AI和边缘计算，但AlphaTech和GammaEdge均有明显风险，而BetaCore的稳健性可能被低估。我掌握AlphaTech利润率28%和GammaEdge利润率12%，但缺少BetaCore利润率数据，这是关键缺口。从风险调整后收益看，BetaCore可能更优，但增长不足。考虑到基金策略要求高增长和高技术壁垒，AlphaTech在赛道和壁垒上更优，GammaEdge增长最快但风险大，BetaCore最安全但增长不足。因此排名：AlphaTech第一，GammaEdge第二，BetaCore第三。\n\na3: 综合所有讨论，CEO强调AI和边缘计算是核心赛道，但AlphaTech和GammaEdge均存在显著风险：AlphaTech专利即将到期且NVIDIA主导市场，GammaEdge增速下降、利润率低、监管风险高且TAM下调。BetaCore虽增长平缓，但客户锁定壁垒持久、财务稳健、监管风险极低，且企业SaaS市场可能较大。考虑到基金策略要求高增长和高技术壁垒，但实际标的均有缺陷，BetaCore的稳健性和低风险使其成为相对最优选择。因此排名：BetaCore第一，AlphaTech第二，GammaEdge第三。\n\na4: As risk officer, I prioritize regulatory risk. BetaCore has zero regulatory risk (1/5) and strong customer lock-in, but growth is slow. GammaEdge faces active GDPR investigation (4/5) with potential 4% revenue fine, and its TAM is shrinking. AlphaTech's risk is unknown, but US-China chip tensions are escalating, posing geopolitical risk. Given CEO's focus on AI/edge computing, AlphaTech fits best despite unknown risk, but GammaEdge's regulatory and market risks are too high. BetaCore is safe but not aligned with high-growth strategy. I rank AlphaTech first, BetaCore second, GammaEdge third.\n\na5: 综合所有讨论，AlphaTech在AI芯片赛道技术壁垒高、营收增速稳健，但面临NVIDIA主导的市场份额压力和专利到期风险，且TAM虽大但实际空间有限。GammaEdge增速最高但利润率低、监管风险高，且TAM连续下调。BetaCore虽增长平缓，但财务稳健、监管风险极低、客户锁定效应强，且企业SaaS市场可能很大。CEO强调AI和边缘计算，但这两个赛道均有明显风险，而BetaCore的稳健性可能被低估。考虑到基金策略要求高增长和高技术壁垒，但风险控制同样重要，BetaCore的低风险和高客户锁定使其成为更安全的选择。因此排名：BetaCore第一，AlphaTech第二，GammaEdge第三。",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "AlphaTech (AI芯片)",
+    "BetaCore (企业服务)",
+    "GammaEdge (边缘计算)"
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "runId": "invest_none_11",
+  "ablation": "none",
+  "runIndex": 11,
+  "timestamp": "2026-07-12T04:09:57.737Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
+  "tauTrajectory": [
+    0.3333333333333333,
+    1,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.6152923187665731,
+  "opinionDiversity": 0.19235384061671346,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "evaluationScores": {
+    "consensus": 77.46220649173122,
+    "reliability": 16.1,
+    "dispersion": 77.5,
+    "stability": 75,
+    "influenceAnalysis": 64.5,
+    "overall": 59.4
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.3,
+        "a2": 0.3,
+        "a3": 0.2,
+        "a4": -0.2,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 70,
+        "a2": 60,
+        "a3": 70,
+        "a4": 70,
+        "a5": 70
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 72.8518934544433,
+        "reliability": 13.7,
+        "dispersion": 75.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 58.5
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.4,
+        "a2": 0.2,
+        "a3": 0.4,
+        "a4": -0.1,
+        "a5": 0.1
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 70,
+        "a3": 75,
+        "a4": 75,
+        "a5": 70
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 76.14891037591794,
+        "reliability": 14.7,
+        "dispersion": 77.5,
+        "stability": 75,
+        "influenceAnalysis": 70.5,
+        "overall": 59.8
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.3,
+        "a2": 0.2,
+        "a3": 0.4,
+        "a4": -0.1,
+        "a5": 0.3
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 75,
+        "a3": 80,
+        "a4": 85,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 77.46220649173122,
+        "reliability": 16.1,
+        "dispersion": 77.5,
+        "stability": 75,
+        "influenceAnalysis": 64.5,
+        "overall": 59.4
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.22 - neutral):\n\na1: 综合所有数据，AlphaTech增速35%稳健，利润率28%尚可，护城河4/5但专利到期风险，市场被NVIDIA主导；GammaEdge增速45%但下降，利润率12%低，监管风险高，TAM下调；BetaCore增速未知但风险极低，护城河持久，企业SaaS市场稳健。CEO强调AI和边缘计算，但实际市场空间有限，风险控制重要。因此排名：BetaCore第一（低风险、持久护城河），AlphaTech第二（赛道符合但风险未知），GammaEdge第三（高增速但多重风险）。\n\na2: 综合各方数据，AlphaTech在AI芯片赛道技术壁垒高，增速稳健（35%），利润率28%尚可，但面临NVIDIA主导的市场份额压力和专利到期风险。GammaEdge增速最高（45%）但利润率低（12%），且市场TAM下调、监管风险高。BetaCore虽增长平缓，但企业SaaS通常利润率较高，风险极低，且客户切换成本高形成持久护城河。CEO强调AI和边缘计算，但市场实际空间有限，风险控制重要。因此排名：AlphaTech第一，BetaCore第二，GammaEdge第三。\n\na3: 综合所有讨论，AlphaTech在AI芯片赛道技术壁垒高，增速稳健（35%），利润率28%尚可，但面临NVIDIA主导的市场份额压力和专利到期风险。GammaEdge增速最高（45%）但利润率低（12%），且市场TAM下调、监管风险高。BetaCore虽增长平缓，但企业SaaS通常利润率较高，风险极低，且客户切换成本高形成持久护城河。CEO强调AI和边缘计算，但实际市场空间有限，风险控制重要。因此排名：BetaCore第一，AlphaTech第二，GammaEdge第三。\n\na4: 作为风控合规官，我掌握BetaCore的监管风险极低（1/5），GammaEdge面临欧盟GDPR调查（4/5），AlphaTech风险未知但中美芯片管制升级可能带来风险。CEO强调AI和边缘计算赛道，但风险控制同样重要。BetaCore虽然增长平缓，但零监管风险且客户切换成本高（来自a3），财务稳健性可能被低估。GammaEdge增速高但利润率低（a2）且监管风险高，市场TAM下调（a5）。AlphaTech技术壁垒高但市场被NVIDIA主导（a5），且风险未知。综合来看，BetaCore风险最低，AlphaTech需更多信息，GammaEdge风险最高。因此排名：BetaCore第一，AlphaTech第二，GammaEdge第三。\n\na5: 综合所有已知数据，AlphaTech在AI芯片赛道技术壁垒高，增速稳健（35%），利润率28%尚可，但面临NVIDIA主导的市场份额压力和专利到期风险。GammaEdge增速最高（45%）但利润率低（12%），且市场TAM连续下调、监管风险高。BetaCore虽增长平缓，但企业SaaS市场巨大，护城河持久（客户切换成本高），风险极低。CEO强调AI和边缘计算，但实际市场状况不佳（AlphaTech被NVIDIA压制，GammaEdge市场萎缩），BetaCore的稳健性和低风险更符合当前环境。因此排名：BetaCore第一，AlphaTech第二，GammaEdge第三。",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "BetaCore (企业服务)",
+    "AlphaTech (AI芯片)",
+    "GammaEdge (边缘计算)"
+  ]
+}

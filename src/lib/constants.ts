@@ -113,7 +113,7 @@ export const INFERENCE_HIGH_CONF_WEIGHT_THRESHOLD = 0.5;
 
 /** 回音室检测阈值 */
 export const GOVERNANCE_ECHO_CHAMBER_THRESHOLD = 0.5;
-/** 权威偏差检测阈值 */
+/** 权威偏差检测阈值（基于引用网络份额：max(references)/totalReferences） */
 export const GOVERNANCE_AUTHORITY_BIAS_THRESHOLD = 0.25;
 /** 极化检测阈值 */
 export const GOVERNANCE_POLARIZATION_THRESHOLD = 0.30;

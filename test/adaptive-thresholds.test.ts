@@ -12,7 +12,7 @@ import {
   buildSensitivityGraph,
   answerWhatInfluencedChange,
   decomposeBeliefChange,
-} from "@/lib/discussion/causalTrace";
+} from "@/lib/discussion/sensitivityTrace";
 
 describe("Adaptive Thresholds", () => {
   it("应该从校准数据计算指标", () => {

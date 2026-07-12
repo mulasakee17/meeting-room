@@ -98,6 +98,12 @@ interface ExperimentResult {
   finalDecision: string;
   groundTruth: Record<string, number>;
   extractedRanking: string[];
+
+  // 实验失败时填充——错误隔离占位
+  task?: string;
+  llmSeed?: number;
+  ablationConfig?: Record<string, unknown>;
+  error?: string;
 }
 
 // ============================================================================
@@ -110,8 +116,8 @@ const PARAMS = {
   temperature: 0.2,
   model: "deepseek-chat",
   provider: "deepseek" as const,
-  runsPerCondition: 10,
-  ablationModes: ["none", "full", "shuffle", "full_diversity", "full_weight", "full_reflection", "full_continue"] as Ablation[],
+  runsPerCondition: 15,
+  ablationModes: ["none", "full"] as Ablation[],
 };
 
 const LLM_CONFIG: LLMConfig = {
@@ -119,6 +125,11 @@ const LLM_CONFIG: LLMConfig = {
   model: PARAMS.model,
   temperature: PARAMS.temperature,
 };
+
+/** 每次实验用不同 seed，保证可复现性的同时引入方差 */
+function makeLLMConfig(runIndex: number): LLMConfig {
+  return { ...LLM_CONFIG, seed: 42 + runIndex };
+}
 
 // ============================================================================
 // Accuracy: Kendall's τ rank correlation
@@ -187,23 +198,29 @@ function kendallTau(groundTruth: Record<string, number>, extracted: string[]): n
   // Count concordant and discordant pairs
   let concordant = 0;
   let discordant = 0;
-  let tiesX = 0;
-  let tiesY = 0;
+  // 精确 tie 分组计算：统计每个 rank 值出现的次数
+  const xGroups = new Map<number, number>();
+  const yGroups = new Map<number, number>();
+  for (let i = 0; i < n; i++) {
+    xGroups.set(x[i], (xGroups.get(x[i]) || 0) + 1);
+    yGroups.set(y[i], (yGroups.get(y[i]) || 0) + 1);
+  }
 
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       const dx = x[i] - x[j];
       const dy = y[i] - y[j];
-      if (dx === 0) tiesX++;
-      if (dy === 0) tiesY++;
       if (dx * dy > 0) concordant++;
       else if (dx * dy < 0) discordant++;
     }
   }
 
+  // τ-b 精确 tie 修正：n1 = Σ t_i*(t_i-1)/2，按 tie 组分组求和
   const n0 = n * (n - 1) / 2;
-  const n1 = tiesX * (tiesX - 1) / 2; // simplified; exact tie counting would be per-group
-  const n2 = tiesY * (tiesY - 1) / 2;
+  let n1 = 0;
+  for (const count of xGroups.values()) n1 += count * (count - 1) / 2;
+  let n2 = 0;
+  for (const count of yGroups.values()) n2 += count * (count - 1) / 2;
   const denom = Math.sqrt((n0 - n1) * (n0 - n2));
 
   return denom === 0 ? 0 : (concordant - discordant) / denom;
@@ -221,7 +238,7 @@ function tauToQuality(tau: number): number {
 // Agent creation
 // ============================================================================
 
-function createAgents(task: TaskConfig): DiscussionAgent[] {
+function createAgents(task: TaskConfig, llmConfig: LLMConfig): DiscussionAgent[] {
   return task.agents.map(info => {
     const systemPrompt =
       `${task.sharedBriefing}\n\n---\n你的独有专业知识（其他成员不知道）：\n${info.knownItems}\n---\n${info.initialBias}\n\n`
@@ -238,13 +255,13 @@ function createAgents(task: TaskConfig): DiscussionAgent[] {
       + `  "nextOpinion": "下一步讨论方向",\n`
       + `  "referencedAgents": ["a2"],\n`
       + `  "itemBeliefs": [\n`
-      + `    {"item": "BetaCore (企业服务)", "rank": 1, "belief": 0.8, "confidence": 90},\n`
-      + `    {"item": "AlphaTech (AI芯片)", "rank": 2, "belief": 0.3, "confidence": 70},\n`
-      + `    {"item": "GammaEdge (边缘计算)", "rank": 3, "belief": -0.4, "confidence": 60}\n`
+      + `    {"item": "CompanyX (行业A)", "rank": 3, "belief": -0.5, "confidence": 85},\n`
+      + `    {"item": "CompanyY (行业B)", "rank": 1, "belief": 0.7, "confidence": 90},\n`
+      + `    {"item": "CompanyZ (行业C)", "rank": 2, "belief": 0.1, "confidence": 65}\n`
       + `  ]\n`
       + `}\n`
       + `itemBeliefs中：rank为你认为的排名(1=最优)，belief为对该选项的独立偏好(-1=强烈反对,0=中立,1=强烈支持)，confidence为置信度(0-100)`;
-    return new CustomAgent(info.id, info.name, info.role, "default", LLM_CONFIG, systemPrompt) as unknown as DiscussionAgent;
+    return new CustomAgent(info.id, info.name, info.role, "default", llmConfig, systemPrompt) as unknown as DiscussionAgent;
   });
 }
 
@@ -313,7 +330,7 @@ async function runSingle(
 ): Promise<ExperimentResult> {
   // ── Shuffle control: scramble agent knowledge to break coherence ────
   const effectiveTask = ablation === "shuffle" ? shuffleTask(task) : task;
-  const agents = createAgents(effectiveTask);
+  const agents = createAgents(effectiveTask, makeLLMConfig(runIndex));
   const runId = `${task.id}_${ablation}_${runIndex}`;
 
   // Build governance mode and config for DiscussionEngine
@@ -562,7 +579,11 @@ function cohensD(a: number[], b: number[]): number {
 
 async function main() {
   const task = TASK_INVEST;
-  const DATA_DIR = path.resolve(__dirname, task.id === "ma" ? "data" : "data_invest");
+  // 根据 maxRounds 选择数据目录：3轮→data_invest_3round，5轮→data_invest
+  const dataDirName = task.id === "ma" ? "data"
+    : PARAMS.maxRounds === 3 ? "data_invest_3round"
+    : "data_invest";
+  const DATA_DIR = path.resolve(__dirname, dataDirName);
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   const allResults: ExperimentResult[] = [];
 
@@ -584,16 +605,47 @@ async function main() {
         console.log(`  [${i + 1}/${PARAMS.runsPerCondition}] (cached) τ=${existing.kendallTau.toFixed(3)} | Q=${existing.decisionQuality}`);
         continue;
       }
-      const result = await runSingle(task, ablation, i);
-      allResults.push(result);
-
-      // Save individual result
-      fs.writeFileSync(filename, JSON.stringify(result, null, 2));
-
-      const intvStr = result.totalInterventions > 0
-        ? ` | ${result.totalInterventions} interventions, ${result.interventionEffects.filter(e => e.effective).length} effective`
-        : "";
-      console.log(`  [${i + 1}/${PARAMS.runsPerCondition}] τ=${result.kendallTau.toFixed(3)} | Q=${result.decisionQuality} | rounds=${result.totalRounds}${intvStr}`);
+      // 错误隔离：单次实验失败不应中止整批
+      // 最多重试 3 次，指数退避（1s, 2s, 4s）
+      let result: ExperimentResult | null = null;
+      const maxRetries = 3;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          result = await runSingle(task, ablation, i);
+          break;
+        } catch (err) {
+          const isLastAttempt = attempt === maxRetries;
+          const waitMs = Math.pow(2, attempt - 1) * 1000;
+          const errMsg = err instanceof Error ? err.message : String(err);
+          if (isLastAttempt) {
+            console.error(`  [${i + 1}/${PARAMS.runsPerCondition}] FAILED after ${maxRetries} attempts: ${errMsg}`);
+            // 写入错误占位文件，分析时可识别
+            const errorResult: ExperimentResult = {
+              task: task.id, ablation, runIndex: i,
+              timestamp: new Date().toISOString(),
+              finalDecision: `[ERROR] ${errMsg}`,
+              rounds: [], totalRounds: 0,
+              kendallTau: 0, decisionQuality: 0,
+              totalInterventions: 0, interventionEffects: [],
+              ablationConfig: {}, llmSeed: 42 + i,
+              error: errMsg,
+            };
+            fs.writeFileSync(filename, JSON.stringify(errorResult, null, 2));
+            allResults.push(errorResult);
+          } else {
+            console.warn(`  [${i + 1}/${PARAMS.runsPerCondition}] attempt ${attempt}/${maxRetries} failed: ${errMsg}. Retrying in ${waitMs}ms...`);
+            await new Promise(r => setTimeout(r, waitMs));
+          }
+        }
+      }
+      if (result) {
+        allResults.push(result);
+        fs.writeFileSync(filename, JSON.stringify(result, null, 2));
+        const intvStr = result.totalInterventions > 0
+          ? ` | ${result.totalInterventions} interventions, ${result.interventionEffects.filter(e => e.effective).length} effective`
+          : "";
+        console.log(`  [${i + 1}/${PARAMS.runsPerCondition}] τ=${result.kendallTau.toFixed(3)} | Q=${result.decisionQuality} | rounds=${result.totalRounds}${intvStr}`);
+      }
     }
   }
 

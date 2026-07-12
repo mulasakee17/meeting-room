@@ -56,6 +56,14 @@ export {
   adapterRegistry,
   CustomAdapter,
   AutoGenAdapter,
+  StateInferenceBridge,
+  // Prompt injection utilities (for external framework integration)
+  buildGovernanceExtension,
+  extractGovTag,
+  stripGovTag,
+  interventionToPrompt,
+  getInterventionTargets,
+  type ExtractedState,
 } from "./adapters";
 
 export type {

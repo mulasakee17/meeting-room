@@ -43,6 +43,7 @@ import type {
   GovernanceConfig,
   GovernanceIssue,
   Intervention,
+  GovernanceState,
 } from "../lib/governance/types";
 import { EvaluationEngine } from "../lib/evaluation";
 import type { EvaluationResult, AgentDecision, AgentInfo, InteractionRound } from "../lib/evaluation/types";
@@ -94,12 +95,23 @@ export class GovernanceRuntime {
   constructor(config?: Partial<RuntimeConfig>) {
     this.config = { ...DEFAULT_RUNTIME_CONFIG, ...config };
 
-    const govConfig: GovernanceConfig = {
+    // 将 RuntimeConfig 顶层的自适应开关合并到 governanceConfig，
+    // 确保 diagnoseAndIntervene 和 calibrateThresholds 能读到正确值。
+    // 同时回写到 this.config.governanceConfig，使 processRound 各处传参一致。
+    this.config.governanceConfig = {
       ...this.config.governanceConfig,
       maxRounds: this.config.maxRounds,
+      enableAdaptiveThresholds:
+        this.config.enableAdaptiveThresholds ??
+        this.config.governanceConfig?.enableAdaptiveThresholds ??
+        false,
+      enableAdaptiveDosage:
+        this.config.enableAdaptiveDosage ??
+        this.config.governanceConfig?.enableAdaptiveDosage ??
+        false,
     };
 
-    this.governanceEngine = new GovernanceEngine(govConfig);
+    this.governanceEngine = new GovernanceEngine(this.config.governanceConfig);
     this.evaluationEngine = new EvaluationEngine();
 
     this.state = {
@@ -134,6 +146,28 @@ export class GovernanceRuntime {
     // Update agent beliefs from messages
     this.updateBeliefsFromMessages(messages);
 
+    // 自适应阈值校准——第一轮后自动校准（如果启用）
+    // 注意：从 RuntimeConfig 顶层读取，而非 governanceConfig（后者可能未合并）
+    if (
+      this.config.enableAdaptiveThresholds &&
+      roundNumber === 1 &&
+      this.state.agentBeliefs.length > 0
+    ) {
+      const beliefs = this.state.agentBeliefs.map(b => b.belief);
+      this.governanceEngine.calibrateThresholds({
+        convergenceRounds: 1,
+        maxRounds: this.config.maxRounds || 5,
+        beliefs,
+        messages: messages.map(m => ({
+          agentId: m.agentId,
+          content: m.content,
+          timestamp: m.timestamp,
+          referencedAgents: m.referencedAgents,
+        })),
+        agentCount: this.state.agentBeliefs.length,
+      });
+    }
+
     // Build the round record
     const round: DiscussionRound = {
       roundNumber,
@@ -157,6 +191,8 @@ export class GovernanceRuntime {
     let governanceResult: GovernanceResult;
     let interventions: Intervention[] = [];
     let hasIntervention = false;
+    /** 干预效果指标——由 evaluateEffects 填充，回传给 effectMetrics */
+    let effectMetrics: Record<string, number> = {};
 
     switch (this.config.governanceMode) {
       case "none":
@@ -172,7 +208,7 @@ export class GovernanceRuntime {
         );
         break;
 
-      case "random-intervene":
+      case "random-intervene": {
         // Run detection for measurement, but apply random interventions
         governanceResult = this.governanceEngine.diagnose(
           agentBeliefs, messageInfos, agentIds,
@@ -180,7 +216,44 @@ export class GovernanceRuntime {
         );
         interventions = this.generateRandomInterventions(agentBeliefs);
         hasIntervention = interventions.length > 0;
+        if (hasIntervention) {
+          // 深拷贝干预前状态——避免与干预后共享引用导致 evaluateEffects 恒返回 0
+          const beforeBeliefs = this.state.agentBeliefs.map(b => ({ ...b }));
+          const interactionGraph = this.buildInteractionGraphFromState();
+          const beforeState: GovernanceState = {
+            agentBeliefs: beforeBeliefs,
+            messages: messageInfos,
+            agentIds,
+            interactionGraph: { nodes: [...interactionGraph.nodes], edges: interactionGraph.edges.map(e => ({ ...e })) },
+          };
+          const govState: GovernanceState = {
+            agentBeliefs,
+            messages: messageInfos,
+            agentIds,
+            interactionGraph: this.buildInteractionGraphFromState(),
+          };
+          const results = this.governanceEngine.applyInterventions(interventions, govState);
+          for (const result of results) {
+            if (result.success && result.stateChanges?.updatedBeliefs) {
+              for (const updated of result.stateChanges.updatedBeliefs) {
+                const idx = this.state.agentBeliefs.findIndex(b => b.agentId === updated.agentId);
+                if (idx >= 0) this.state.agentBeliefs[idx] = { ...updated };
+              }
+            }
+          }
+          // 构建干预后状态并评估效果
+          const afterState: GovernanceState = {
+            agentBeliefs: this.state.agentBeliefs.map(b => ({ ...b })),
+            messages: messageInfos,
+            agentIds,
+            interactionGraph: this.buildInteractionGraphFromState(),
+          };
+          effectMetrics = this.governanceEngine.evaluateEffects(beforeState, afterState, interventions);
+          // 基于结构化指标记录效果（无偏：diversity 增加=改善）
+          this.recordEffectsFromMetrics(interventions, effectMetrics);
+        }
         break;
+      }
 
       case "full":
       default: {
@@ -195,12 +268,45 @@ export class GovernanceRuntime {
           interventions = diagResult.interventions;
           hasIntervention = true;
 
-          // Apply interventions to governance state
-          this.governanceEngine.applyInterventions(interventions, {
+          // 深拷贝干预前状态
+          const beforeBeliefs = this.state.agentBeliefs.map(b => ({ ...b }));
+          const interactionGraph = this.buildInteractionGraphFromState();
+          const beforeState: GovernanceState = {
+            agentBeliefs: beforeBeliefs,
+            messages: messageInfos,
+            agentIds,
+            interactionGraph: { nodes: [...interactionGraph.nodes], edges: interactionGraph.edges.map(e => ({ ...e })) },
+          };
+          const govState: GovernanceState = {
             agentBeliefs,
             messages: messageInfos,
             agentIds,
-          });
+            interactionGraph: this.buildInteractionGraphFromState(),
+          };
+          const results = this.governanceEngine.applyInterventions(interventions, govState);
+
+          // 显式将干预效果写回 runtime 持久状态
+          for (const result of results) {
+            if (result.success && result.stateChanges) {
+              if (result.stateChanges.updatedBeliefs) {
+                for (const updated of result.stateChanges.updatedBeliefs) {
+                  const idx = this.state.agentBeliefs.findIndex(b => b.agentId === updated.agentId);
+                  if (idx >= 0) {
+                    this.state.agentBeliefs[idx] = { ...updated };
+                  }
+                }
+              }
+            }
+          }
+          // 构建干预后状态并评估效果
+          const afterState: GovernanceState = {
+            agentBeliefs: this.state.agentBeliefs.map(b => ({ ...b })),
+            messages: messageInfos,
+            agentIds,
+            interactionGraph: this.buildInteractionGraphFromState(),
+          };
+          effectMetrics = this.governanceEngine.evaluateEffects(beforeState, afterState, interventions);
+          this.recordEffectsFromMetrics(interventions, effectMetrics);
         }
         break;
       }
@@ -214,6 +320,10 @@ export class GovernanceRuntime {
 
     // Collect interventions
     if (hasIntervention) {
+      // 标记干预应用的轮次
+      for (const intv of interventions) {
+        intv.round = roundNumber;
+      }
       this.state.interventions.push(...interventions);
 
       // Fire intervention handlers
@@ -221,7 +331,7 @@ export class GovernanceRuntime {
         handler({
           roundNumber,
           intervention: interventions[0], // Primary intervention
-          effectMetrics: {},
+          effectMetrics,
           timestamp: new Date().toISOString(),
         });
       }
@@ -256,7 +366,32 @@ export class GovernanceRuntime {
       issues,
       interventions,
       hasIntervention,
+      effectMetrics,
     };
+  }
+
+  /**
+   * 基于 evaluateEffects 返回的结构化指标记录干预效果到 adaptive dosage 历史。
+   *
+   * 无偏判定：用 belief_diversity_change（std 变化）作为通用效果指标。
+   * - diversity 增加 > 0.05 → 改善（+0.5）：干预成功引入了观点多样性
+   * - diversity 减少 > 0.05 → 恶化（-0.3）：干预压制了有用分歧
+   * - 变化微小 → 无效果（0）
+   *
+   * 这比"belief 上升=改善"的旧启发式更合理：reduce_weight 期望压制主导 agent，
+   * 其 belief 下降本应是改善，但旧逻辑会误判为恶化。
+   */
+  private recordEffectsFromMetrics(
+    interventions: Intervention[],
+    metrics: Record<string, number>
+  ): void {
+    const diversityChange = metrics["belief_diversity_change"] ?? 0;
+    const effectiveness = diversityChange > 0.05 ? 0.5
+      : diversityChange < -0.05 ? -0.3
+      : 0;
+    for (const intv of interventions) {
+      this.governanceEngine.recordInterventionEffect(intv.type, effectiveness);
+    }
   }
 
   /**
@@ -342,6 +477,7 @@ export class GovernanceRuntime {
         agentId: m.agentId,
         content: m.content,
         timestamp: m.timestamp,
+        referencedAgents: m.referencedAgents,
       })),
       beliefs: Object.fromEntries(
         r.messages.map(m => [m.agentId, m.belief])
@@ -484,6 +620,42 @@ export class GovernanceRuntime {
         });
       }
     }
+  }
+
+  /**
+   * 从累积的讨论消息中重建交互图（best-effort）。
+   * SDK 路径没有 DiscussionEngine 的完整交互图，
+   * 但可以从 messages[].referencedAgents 提取引用关系。
+   */
+  private buildInteractionGraphFromState(): {
+    nodes: string[];
+    edges: Array<{ source: string; target: string; weight: number; type: string }>;
+  } {
+    const nodes = this.state.agentBeliefs.map(b => b.agentId);
+
+    const edgeMap = new Map<string, { source: string; target: string; weight: number; type: string }>();
+
+    for (const round of this.state.rounds) {
+      for (const msg of round.messages) {
+        const refs = (msg as DiscussionMessage).referencedAgents || [];
+        for (const ref of refs) {
+          if (ref === msg.agentId) continue;
+          const key = `${msg.agentId}→${ref}`;
+          if (!edgeMap.has(key)) {
+            edgeMap.set(key, {
+              source: msg.agentId,
+              target: ref,
+              type: "reference",
+              weight: 1,
+            });
+          } else {
+            edgeMap.get(key)!.weight += 0.3; // 多次引用增强权重
+          }
+        }
+      }
+    }
+
+    return { nodes, edges: Array.from(edgeMap.values()) };
   }
 
   private createEmptyGovernanceResult(): GovernanceResult {

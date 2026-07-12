@@ -2,46 +2,116 @@
   "runId": "invest_full_0",
   "ablation": "full",
   "runIndex": 0,
-  "timestamp": "2026-07-05T02:17:47.120Z",
-  "kendallTau": 1,
-  "decisionQuality": 100,
+  "timestamp": "2026-07-12T00:52:16.710Z",
+  "kendallTau": 0.3333333333333333,
+  "decisionQuality": 67,
   "tauTrajectory": [
-    -1,
+    -0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
     1
   ],
-  "totalRounds": 2,
-  "converged": true,
-  "consensusLevel": 0.8904554884989667,
-  "opinionDiversity": 0.05477225575051666,
-  "totalInterventions": 1,
+  "totalRounds": 5,
+  "converged": false,
+  "consensusLevel": 0.5852711729334457,
+  "opinionDiversity": 0.2073644135332772,
+  "totalInterventions": 8,
   "issuesDetected": [
-    "premature_consensus"
+    "authority_bias",
+    "premature_consensus",
+    "echo_chamber"
   ],
-  "interventionEffects": [],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.3,
+      "beliefAfter": 0.3,
+      "effective": false
+    },
+    {
+      "round": 4,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a5",
+      "beliefBefore": 0.2,
+      "beliefAfter": 0.2,
+      "effective": false
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 2,
+    "continue_discussion": 4,
+    "introduce_diversity": 2
+  },
   "evaluationScores": {
-    "consensus": 83.66571666447868,
-    "reliability": 17.7,
-    "dispersion": 80.3,
+    "consensus": 76.63621739645639,
+    "reliability": 15.7,
+    "dispersion": 76.2,
     "stability": 75,
-    "influenceAnalysis": 70,
-    "overall": 62.6
+    "influenceAnalysis": 63,
+    "overall": 58.6
   },
   "rounds": [
     {
       "roundNumber": 1,
       "beliefs": {
-        "a1": 0.5,
+        "a1": 0.3,
         "a2": 0.3,
-        "a3": 0.6,
-        "a4": 0.3,
+        "a3": 0.2,
+        "a4": -0.2,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 70,
+        "a2": 70,
+        "a3": 70,
+        "a4": 75,
+        "a5": 60
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "premature_consensus",
+        "authority_bias",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        },
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "tau": -0.3333333333333333,
+      "decisionQuality": 33,
+      "evalScores": {
+        "consensus": 76.63621739645639,
+        "reliability": 13.9,
+        "dispersion": 76.3,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.4
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.3,
+        "a2": 0.3,
+        "a3": 0.3,
+        "a4": -0.2,
         "a5": 0.2
       },
       "confidences": {
         "a1": 75,
-        "a2": 65,
-        "a3": 80,
-        "a4": 65,
-        "a5": 60
+        "a2": 75,
+        "a3": 75,
+        "a4": 85,
+        "a5": 75
       },
       "converged": false,
       "issues": [
@@ -53,57 +123,160 @@
           "type": "continue_discussion"
         }
       ],
-      "tau": -1,
-      "decisionQuality": 0,
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
       "evalScores": {
-        "consensus": 78.9518282127415,
-        "reliability": 13.9,
-        "dispersion": 75.9,
+        "consensus": 76.09539072802876,
+        "reliability": 15.5,
+        "dispersion": 76.6,
         "stability": 75,
-        "influenceAnalysis": 70,
-        "overall": 59.8
+        "influenceAnalysis": 64.5,
+        "overall": 58.8
       }
     },
     {
-      "roundNumber": 2,
+      "roundNumber": 3,
       "beliefs": {
-        "a1": 0.8,
-        "a2": 0.7,
-        "a3": 0.8,
-        "a4": 0.7,
-        "a5": 0.8
+        "a1": 0.3,
+        "a2": 0.3,
+        "a3": 0.3,
+        "a4": -0.2,
+        "a5": 0.3
       },
       "confidences": {
-        "a1": 90,
-        "a2": 85,
-        "a3": 90,
+        "a1": 85,
+        "a2": 80,
+        "a3": 80,
         "a4": 85,
-        "a5": 90
+        "a5": 80
       },
-      "converged": true,
-      "issues": [],
-      "interventions": [],
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "echo_chamber"
+      ],
+      "interventions": [
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 78.73863375370597,
+        "reliability": 16.6,
+        "dispersion": 77.3,
+        "stability": 75,
+        "influenceAnalysis": 66,
+        "overall": 60
+      }
+    },
+    {
+      "roundNumber": 4,
+      "beliefs": {
+        "a1": 0.3,
+        "a2": 0.2,
+        "a3": 0.3,
+        "a4": -0.2,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 60,
+        "a3": 75,
+        "a4": 85,
+        "a5": 70
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "authority_bias",
+        "premature_consensus",
+        "echo_chamber",
+        "authority_bias",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a5"
+        },
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a1",
+            "a3",
+            "a5"
+          ]
+        },
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 76.63621739645639,
+        "reliability": 14.7,
+        "dispersion": 74.7,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.3
+      }
+    },
+    {
+      "roundNumber": 5,
+      "beliefs": {
+        "a1": 0.3,
+        "a2": 0.2,
+        "a3": 0.3,
+        "a4": -0.2,
+        "a5": 0.2
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 70,
+        "a3": 80,
+        "a4": 85,
+        "a5": 75
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ],
       "tau": 1,
       "decisionQuality": 100,
       "evalScores": {
-        "consensus": 83.66571666447868,
-        "reliability": 17.7,
-        "dispersion": 80.3,
+        "consensus": 76.63621739645639,
+        "reliability": 15.7,
+        "dispersion": 76.2,
         "stability": 75,
-        "influenceAnalysis": 70,
-        "overall": 62.6
+        "influenceAnalysis": 63,
+        "overall": 58.6
       }
     }
   ],
-  "finalDecision": "Final decision after 2 rounds (overall belief: 0.76 - positive):\n\na1: Based on all five dimensions now available, BetaCore appears strongest overall: it has the highest profit margin (42%), lowest regulatory risk (1/5), and largest market size ($25B), though its revenue growth (15%) and tech moat (2/5) are weaker. AlphaTech has strong growth (35%) and moat (4/5) but lower margin (28%), higher risk (2/5), and smaller market ($12B). GammaEdge has the highest growth (45%) but lowest margin (12%), highest risk (3/5), and smallest market ($6B). Given the fund's likely preference for risk-adjusted returns, BetaCore seems the best investment. I will share my revenue growth data and ask colleagues to confirm their data to ensure no errors.\n\na2: 作为利润率分析师，我掌握的数据显示BetaCore利润率42%远超其他，但营收增速和市场规模数据表明GammaEdge增速45%但市场仅$6B，BetaCore市场$25B但增速15%。技术护城河AlphaTech最强，监管风险BetaCore最低。综合来看，BetaCore在利润率、市场规模和监管风险上均占优，尽管增速较低，但高利润和低风险使其成为稳健选择。AlphaTech技术壁垒高但受监管风险影响，GammaEdge增速快但利润低且市场小。因此我倾向于BetaCore。\n\na3: 综合所有维度数据，AlphaTech在技术护城河（4/5）和营收增速（35%）上表现优异，但监管风险（2/5）和利润率（28%）中等，市场规模（$12B）尚可。BetaCore利润率最高（42%）、监管风险最低（1/5）、市场规模最大（$25B），但技术护城河弱（2/5）且营收增速低（15%）。GammaEdge营收增速最快（45%），但利润率低（12%）、监管风险高（3/5）、市场规模小（$6B），技术护城河中等（3/5）。权衡之下，BetaCore综合风险最低、盈利稳定，适合稳健投资；AlphaTech成长性高但受制于监管；GammaEdge风险最高。因此排序：BetaCore > AlphaTech > GammaEdge。\n\na4: 作为风控合规官，我掌握监管风险数据：AlphaTech 2/5（出口管制风险），BetaCore 1/5（几乎无风险），GammaEdge 3/5（数据本地化法规）。仅从风险看，BetaCore最优。但其他维度数据已分享：营收增速GammaEdge 45%最高，利润率BetaCore 42%最高，技术护城河AlphaTech 4/5最强，市场规模BetaCore $25B最大。综合来看，BetaCore在风险、利润率、市场规模上均领先，营收增速虽低但稳定，技术护城河较弱但可接受。AlphaTech技术强但风险高，GammaEdge增速快但风险高且利润率低。因此我倾向于BetaCore为最佳标的。\n\na5: 综合所有维度数据，BetaCore在利润率（42%）、监管风险（1/5）和市场规模（$25B）上均最优，营收增速（15%）虽低但稳定，技术护城河（2/5）较弱但可通过规模优势弥补。AlphaTech营收增速（35%）和技术护城河（4/5）强，但利润率（28%）中等，监管风险（2/5）和市场规模（$12B）一般。GammaEdge营收增速（45%）最高，但利润率（12%）、技术护城河（3/5）、监管风险（3/5）和市场规模（$6B）均较差。因此BetaCore综合最优，AlphaTech次之，GammaEdge最差。",
+  "finalDecision": "Final decision after 5 rounds (overall belief: 0.16 - neutral):\n\na1: 综合所有数据，AlphaTech增速35%稳定，利润率28%较高，护城河4/5但依赖即将到期专利，TAM $12B但NVIDIA占80%，监管风险未知。GammaEdge增速45%但减速，利润率12%低，护城河3/5但开源追赶，TAM $6B且萎缩，监管风险高（GDPR调查）。BetaCore增速未知但平缓，利润率未知但SaaS通常较高，护城河2/5但切换成本极高，监管风险极低1/5，TAM巨大。CEO强调AI和边缘计算，但BetaCore的低风险和高客户粘性使其成为稳健选择。AlphaTech技术壁垒高但竞争激烈且专利到期风险大；GammaEdge增长快但风险高且市场萎缩。因此排名：BetaCore第一（低风险、高粘性），AlphaTech第二（高增长但风险），GammaEdge第三（高增长但多重风险）。\n\na2: 作为利润率分析师，我掌握AlphaTech的EBITDA利润率28%和GammaEdge的12%。AlphaTech的利润率尚可但不算突出，GammaEdge的低利润率令人担忧。BetaCore的利润率未知，但SaaS行业通常较高。CEO强调AI和边缘计算，但BetaCore的低监管风险和高客户粘性（切换成本极高）使其成为稳健选择。AlphaTech面临NVIDIA垄断和专利到期风险，GammaEdge增速减速且监管风险高。综合来看，BetaCore在风险调整后可能最优，但缺乏增速和利润率数据。我倾向于BetaCore第一，AlphaTech第二，GammaEdge第三。\n\na3: I am the only one with complete moat data. BetaCore's switching cost moat is more durable than AlphaTech's patent-dependent moat. AlphaTech's patent is expiring, and NVIDIA dominates 80% of its TAM. GammaEdge has high regulatory risk and a shrinking TAM. BetaCore has zero regulatory risk, huge TAM, and high customer stickiness. Although its growth is unknown, its low risk and durable moat make it the best investment. CEO's focus on AI/edge is noted, but BetaCore's enterprise SaaS is still a large market and can benefit from AI integration. I rank BetaCore first, AlphaTech second, GammaEdge third.\n\na4: 作为风控合规官，我掌握监管风险数据：BetaCore风险评分1/5（零监管事故），GammaEdge风险评分4/5（欧盟GDPR调查中，潜在罚款4%营收），AlphaTech风险未知但中美芯片管制升级。CEO强调AI和边缘计算，但风险控制是首要任务。BetaCore虽然增长平缓，但低风险、高客户切换成本（a3指出95%续约率）和巨大SaaS市场使其成为稳健选择。AlphaTech技术壁垒高（4/5）但依赖即将到期专利，且NVIDIA占80%份额，实际空间有限。GammaEdge增速减速、利润率低、市场萎缩，且监管风险高。综合风险与收益，BetaCore第一，AlphaTech第二，GammaEdge第三。\n\na5: Governance intervention reveals critical data gaps. I have market size data: AlphaTech TAM $12B but NVIDIA 80% share, GammaEdge TAM shrinking from $10B to $6B. BetaCore's TAM unknown but enterprise SaaS is large. Others have growth, profit, moat, risk data. Echo chamber risk: many rank AlphaTech first. But my data shows AlphaTech's actual addressabl",
   "groundTruth": {
     "BetaCore (企业服务)": 1,
     "AlphaTech (AI芯片)": 2,
     "GammaEdge (边缘计算)": 3
   },
   "extractedRanking": [
-    "BetaCore (企业服务)",
     "AlphaTech (AI芯片)",
+    "BetaCore (企业服务)",
     "GammaEdge (边缘计算)"
   ]
 }

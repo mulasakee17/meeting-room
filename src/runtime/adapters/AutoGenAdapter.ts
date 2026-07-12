@@ -23,10 +23,13 @@
  *
  * ## Current Limitations
  *
- * This adapter currently provides the TypeScript-side interface and message
- * protocol. Full AutoGen integration requires a Python companion package
- * that implements the other half of the bridge. Until that package is
- * available, this adapter uses the built-in CustomAgent as a fallback.
+ * **Message adaptation (`adaptMessages`) is implemented** and can transform
+ * AutoGen's native message format into DiscussionMessage.
+ *
+ * **Intervention application (`applyIntervention`) is NOT implemented.**
+ * Full AutoGen integration requires a Python companion package that
+ * implements the other half of the bridge. Calling `applyIntervention`
+ * will throw an explicit error rather than silently pretending success.
  *
  * @see docs/integration/autogen.md for full integration guide
  */
@@ -87,45 +90,41 @@ export class AutoGenAdapter implements GovernanceBridge {
   /**
    * Apply a governance intervention to AutoGen agents.
    *
-   * In HTTP bridge mode, this sends a PATCH to the Python sidecar.
-   * In direct mode, this is handled by the Python-side governance package.
+   * **NOT IMPLEMENTED.** Full AutoGen integration requires a Python sidecar
+   * that handles the actual intervention application. Until that package
+   * is available, this method throws an explicit error rather than
+   * silently returning `true` and misleading the caller.
    *
-   * Currently logs the intervention and returns true for documentation purposes.
-   * Full implementation requires the Python bridge to be running.
+   * To actually apply interventions to AutoGen agents, either:
+   * 1. Implement the Python sidecar and set `this.options.sidecarUrl`
+   * 2. Use `StateInferenceBridge` instead, which applies interventions
+   *    via prompt injection (no Python sidecar needed)
    */
   async applyIntervention(
     intervention: Intervention,
     _context: unknown
   ): Promise<boolean> {
-    // When the Python bridge is available:
-    //   await fetch(`${sidecarUrl}/intervene`, {
-    //     method: "POST",
-    //     body: JSON.stringify(intervention),
-    //   });
-
-    console.log(
-      `[AutoGenAdapter] Intervention requested: ${intervention.type}` +
+    throw new Error(
+      `[AutoGenAdapter] applyIntervention is not implemented. ` +
+      `AutoGen intervention application requires a Python sidecar (not yet built). ` +
+      `Use StateInferenceBridge for prompt-based intervention, or implement the sidecar. ` +
+      `Intervention was: ${intervention.type}` +
       (intervention.targetAgentId ? ` on agent ${intervention.targetAgentId}` : "") +
       (intervention.targetAgents ? ` on agents [${intervention.targetAgents.join(", ")}]` : "")
     );
-
-    // Return true to indicate the intervention was acknowledged.
-    // The Python sidecar (when running) handles actual application.
-    return true;
   }
 
   /**
    * Extract agent beliefs from AutoGen context.
    *
    * In HTTP bridge mode, this would GET /agents/state from the sidecar.
+   * Currently only reads from the passed-in context object.
    */
   extractBeliefs(context: unknown): Array<{
     agentId: string;
     belief: number;
     confidence: number;
   }> {
-    // When the Python bridge is available, beliefs are fetched from the sidecar.
-    // For now, we return whatever the context provides.
     const ctx = context as Record<string, unknown> | null;
 
     if (ctx?.agents && Array.isArray(ctx.agents)) {

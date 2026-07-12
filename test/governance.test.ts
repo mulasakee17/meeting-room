@@ -21,7 +21,26 @@ describe("GovernanceEngine", () => {
         agentId,
         content: `Message ${i} from ${agentId}`,
         timestamp: new Date().toISOString(),
-        type: "text",
+      });
+    }
+    return messages;
+  };
+
+  /** 创建带引用网络的 mock 消息——其他 agent 引用 dominantAgent */
+  const createMockMessagesWithRefs = (count: number, dominantAgent?: string): MessageInfo[] => {
+    const messages: MessageInfo[] = [];
+    const agents = ["agent_0", "agent_1", "agent_2", "agent_3", "agent_4"];
+    for (let i = 0; i < count; i++) {
+      const agentId = `agent_${i % 5}`;
+      // 60% 的消息引用 dominantAgent，模拟权威偏差
+      const refs = dominantAgent && i < count * 0.6 && agentId !== dominantAgent
+        ? [dominantAgent]
+        : [];
+      messages.push({
+        agentId,
+        content: `Message ${i} from ${agentId} ${"x".repeat(20 + i * 5)}`,
+        timestamp: new Date().toISOString(),
+        referencedAgents: refs,
       });
     }
     return messages;
@@ -64,14 +83,15 @@ describe("GovernanceEngine", () => {
 
   it("should detect authority bias with dominant agent", () => {
     const beliefs = createMockBeliefs(5, 0.5);
-    const messages = createMockMessages(10, "agent_0");
-    
+    // 用引用网络模拟：其他 agent 引用 agent_0 → agent_0 是权威
+    const messages = createMockMessagesWithRefs(10, "agent_0");
+
     const result = engine.detectAuthorityBias(beliefs, messages, {
       enableAuthorityBiasDetection: true,
       authorityBiasThreshold: 0.4,
       interventionLevel: "medium",
     });
-    
+
     expect(result.detected).toBe(true);
     expect(result.dominantAgent).toBe("agent_0");
     expect(result.influenceRatio).toBeGreaterThan(0.4);
@@ -79,14 +99,15 @@ describe("GovernanceEngine", () => {
 
   it("should not detect authority bias with balanced contributions", () => {
     const beliefs = createMockBeliefs(5, 0.5);
-    const messages = createMockMessages(10);
-    
+    // 无引用数据，均匀内容长度 → 不应触发
+    const messages = createMockMessagesWithRefs(10);
+
     const result = engine.detectAuthorityBias(beliefs, messages, {
       enableAuthorityBiasDetection: true,
       authorityBiasThreshold: 0.4,
       interventionLevel: "none",
     });
-    
+
     expect(result.detected).toBe(false);
     expect(result.intervention.applied).toBe(false);
   });
@@ -136,14 +157,14 @@ describe("GovernanceEngine", () => {
 
   it("should apply medium intervention for authority bias", () => {
     const beliefs = createMockBeliefs(5, 0.5);
-    const messages = createMockMessages(10, "agent_0");
-    
+    const messages = createMockMessagesWithRefs(10, "agent_0");
+
     const result = engine.detectAuthorityBias(beliefs, messages, {
       enableAuthorityBiasDetection: true,
       authorityBiasThreshold: 0.4,
       interventionLevel: "medium",
     });
-    
+
     expect(result.intervention.applied).toBe(true);
     expect(result.intervention.type).toBe("reduce_weight");
   });

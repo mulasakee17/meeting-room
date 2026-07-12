@@ -17,6 +17,8 @@ export interface Intervention {
   parameters?: Record<string, unknown>;
   effect: string;
   applied: boolean;
+  /** 干预应用的轮次（由 GovernanceRuntime 设置） */
+  round?: number;
 }
 
 export interface GovernanceState {
@@ -89,6 +91,8 @@ export interface PolarizationDetection {
     belief: number;
   }[];
   polarizationIndex: number;
+  /** 双峰系数 BC = (skewness² + 1) / kurtosis；BC > 0.555 提示双峰分布 */
+  bimodalityCoefficient?: number;
   intervention: {
     type: InterventionType;
     applied: boolean;
@@ -145,6 +149,10 @@ export interface GovernanceConfig {
   diversityPerturbation?: number;
   /** Override INTERVENTION_REFLECTION_FACTOR (default 0.2) */
   reflectionFactor?: number;
+  /** 启用自适应阈值——第一轮后自动校准检测阈值（默认 false） */
+  enableAdaptiveThresholds?: boolean;
+  /** 启用自适应剂量——干预强度根据严重度和历史效果动态调整（默认 false） */
+  enableAdaptiveDosage?: boolean;
 }
 
 export interface AgentBelief {

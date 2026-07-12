@@ -50,8 +50,12 @@ export class CustomAdapter implements GovernanceBridge {
     intervention: Intervention,
     context: unknown
   ): Promise<boolean> {
-    // For the Custom framework, interventions are applied by directly
-    // modifying agent state. The context should contain agent references.
+    // continue_discussion is a signal-type intervention — no agent state needed.
+    if (intervention.type === "continue_discussion") {
+      return true;
+    }
+
+    // For other interventions, agent context is required.
     const ctx = context as {
       agents?: Array<{
         id: string;
@@ -123,11 +127,6 @@ export class CustomAdapter implements GovernanceBridge {
         }
         return applied;
       }
-
-      case "continue_discussion":
-        // This intervention just signals to continue — no state change needed.
-        // The caller (discussion engine) handles extending rounds.
-        return true;
 
       default:
         console.warn(`[CustomAdapter] Unknown intervention type: ${intervention.type}`);

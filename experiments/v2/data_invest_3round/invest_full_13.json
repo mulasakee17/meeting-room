@@ -1,0 +1,169 @@
+{
+  "runId": "invest_full_13",
+  "ablation": "full",
+  "runIndex": 13,
+  "timestamp": "2026-07-12T04:13:06.500Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
+  "tauTrajectory": [
+    0.3333333333333333,
+    1,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.37390096630005887,
+  "opinionDiversity": 0.31304951684997057,
+  "totalInterventions": 2,
+  "issuesDetected": [
+    "authority_bias"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.3,
+      "beliefAfter": 0.3,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.5,
+      "beliefAfter": 0,
+      "effective": false
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 2
+  },
+  "evaluationScores": {
+    "consensus": 70.44086137352194,
+    "reliability": 15.7,
+    "dispersion": 74.9,
+    "stability": 75,
+    "influenceAnalysis": 66,
+    "overall": 57.6
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.3,
+        "a3": 0.3,
+        "a4": -0.2,
+        "a5": 0.1
+      },
+      "confidences": {
+        "a1": 70,
+        "a2": 70,
+        "a3": 70,
+        "a4": 70,
+        "a5": 70
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "authority_bias"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        }
+      ],
+      "tau": 0.3333333333333333,
+      "decisionQuality": 67,
+      "evalScores": {
+        "consensus": 70.63322484576281,
+        "reliability": 14.1,
+        "dispersion": 77.2,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 58.4
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.3,
+        "a3": 0.4,
+        "a4": -0.2,
+        "a5": 0.5
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 70,
+        "a3": 80,
+        "a4": 70,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 69.95736134457643,
+        "reliability": 15.3,
+        "dispersion": 74.5,
+        "stability": 75,
+        "influenceAnalysis": 72,
+        "overall": 58.4
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.5,
+        "a2": 0.5,
+        "a3": 0.5,
+        "a4": -0.2,
+        "a5": 0.5
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 80,
+        "a3": 80,
+        "a4": 70,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "authority_bias"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a3"
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 70.44086137352194,
+        "reliability": 15.7,
+        "dispersion": 74.9,
+        "stability": 75,
+        "influenceAnalysis": 66,
+        "overall": 57.6
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.36 - positive):\n\na1: 综合所有信息，CEO强调AI和边缘计算是核心赛道，但AlphaTech和GammaEdge均有明显短板：AlphaTech面临NVIDIA竞争、专利到期和芯片管制风险；GammaEdge增速放缓、利润率低、TAM下调且有监管风险。BetaCore虽增长平缓，但客户切换成本高、财务稳健、无监管风险，且企业SaaS市场广阔。a5指出BetaCore市场广阔，a3强调其护城河持久。尽管a2可能倾向于AlphaTech，但独立判断下，BetaCore在风险调整后更具吸引力。因此排名：BetaCore第一，AlphaTech第二，GammaEdge第三。\n\na2: 综合所有讨论，CEO强调AI和边缘计算是核心赛道，但AlphaTech和GammaEdge均有明显短板：AlphaTech面临NVIDIA竞争、专利到期和芯片管制风险；GammaEdge增速放缓、利润率低、TAM下调且有监管风险。BetaCore虽增长平缓，但财务稳健、客户切换成本高、无监管风险，且企业SaaS利润率通常较高，符合基金对高壁垒的要求。因此我认为BetaCore是最优选择，AlphaTech次之，GammaEdge最差。\n\na3: CEO强调AI和边缘计算是核心赛道，但AlphaTech的TAM有限且受NVIDIA压制，GammaEdge的TAM下调且增速放缓，BetaCore虽增长平缓但客户锁定壁垒高、财务稳健、无监管风险。结合我掌握的护城河数据，BetaCore的切换成本型护城河更持久，且无监管风险。因此我认为BetaCore是最优选择，AlphaTech次之，GammaEdge最差。\n\na4: 作为风控合规官，我优先关注监管风险。BetaCore几乎无监管风险，但增长平缓，不符合高增长策略。GammaEdge有欧盟GDPR调查，风险高。AlphaTech虽技术壁垒高，但中美芯片管制升级可能带来重大风险，且我缺乏其具体风险数据。需要与同事分享信息以补全数据。目前倾向于BetaCore因其低风险，但需平衡增长要求。\n\na5: CEO强调AI和边缘计算是核心赛道，但AlphaTech的TAM受NVIDIA压制，GammaEdge的TAM连续下调且增速放缓、利润率低、有监管风险。BetaCore虽增长平缓，但企业SaaS市场广阔，客户切换成本高，财务稳健，无监管风险，且a3指出其护城河更持久。综合来看，BetaCore在风险调整后更具吸引力，符合基金对高增长和高技术壁垒的要求（尽管增长平缓，但壁垒持久）。AlphaTech技术壁垒高但市场受限，GammaEdge风险最大。因此排名：BetaCore第一，AlphaTech第二，GammaEdge第三。",
+  "groundTruth": {
+    "BetaCore (企业服务)": 1,
+    "AlphaTech (AI芯片)": 2,
+    "GammaEdge (边缘计算)": 3
+  },
+  "extractedRanking": [
+    "BetaCore (企业服务)",
+    "AlphaTech (AI芯片)",
+    "GammaEdge (边缘计算)"
+  ]
+}

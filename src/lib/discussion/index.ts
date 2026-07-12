@@ -28,7 +28,7 @@ import { InferenceLayer } from "../inference";
 import type { RawObservation, ObserverAgent, OpinionParser } from "../observation";
 import type { StateDelta } from "../inference";
 import type { EvaluationConfig } from "../evaluation/types";
-import { selectCounterfactualDropout, type DropoutObservation } from "./causalTrace";
+import { selectCounterfactualDropout, type DropoutObservation } from "./sensitivityTrace";
 import {
   shouldActivateCrossExamination,
   formCamps,
@@ -828,13 +828,27 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
       }
 
       const state = { agentBeliefs, messages, agentIds, interactionGraph };
+      // 深拷贝 beforeState，避免与 afterState 共享 agentBeliefs 数组引用
+      const beforeState = {
+        agentBeliefs: agentBeliefs.map(b => ({ ...b })),
+        messages,
+        agentIds,
+        interactionGraph,
+      };
       const results = this.governanceEngine.applyInterventions(randomInterventions, state, this.agentKnowledge);
 
       // Apply intervention effects to graph and agent states
       this.applyInterventionEffects(results, graph, agentStates, agents);
 
+      // 修复：传入不同的 before/after state，而非同一引用
+      const afterState = {
+        agentBeliefs: state.agentBeliefs.map(b => ({ ...b })),
+        messages,
+        agentIds,
+        interactionGraph,
+      };
       const effectMetrics = this.governanceEngine.evaluateEffects(
-        state, state, randomInterventions
+        beforeState, afterState, randomInterventions
       );
 
       return {
@@ -869,7 +883,13 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     }
 
     const state = { agentBeliefs, messages, agentIds, interactionGraph };
-    const beforeState = { ...state };
+    // 深拷贝 beforeState，避免 applyInterventions 修改 state.agentBeliefs 后 before 也跟着变
+    const beforeState = {
+      agentBeliefs: agentBeliefs.map(b => ({ ...b })),
+      messages,
+      agentIds,
+      interactionGraph,
+    };
     const results = this.governanceEngine.applyInterventions(interventions, state, this.agentKnowledge);
 
     // ── Collect information-layer prompts from intervention results ────
@@ -891,7 +911,13 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
 
     this.applyInterventionEffects(results, graph, agentStates, agents);
 
-    const afterState = { ...state };
+    // 深拷贝 afterState
+    const afterState = {
+      agentBeliefs: state.agentBeliefs.map(b => ({ ...b })),
+      messages,
+      agentIds,
+      interactionGraph,
+    };
     const effectMetrics = this.governanceEngine.evaluateEffects(
       beforeState,
       afterState,
@@ -1314,7 +1340,7 @@ export * from "./beliefUpdate";
 export * from "./influence";
 export * from "./interactionGraph";
 export * from "./decisionTrace";
-export * from "./causalTrace";
+export * from "./sensitivityTrace";
 export * from "./influenceUtils";
 export * from "./crossExamination";
 export * from "./topology";

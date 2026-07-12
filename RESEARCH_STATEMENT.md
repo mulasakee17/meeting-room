@@ -16,29 +16,29 @@ LLM multi-agent systems (AutoGen, CrewAI, LangGraph) are being deployed in high-
 
 SwarmAlpha is an **embeddable governance runtime** — a drop-in layer that plugs into any multi-agent framework to observe, detect, and intervene on collective decision failures.
 
-**Core architecture**: LLMs only perform perception (extracting beliefs and emotions from natural language). All governance logic — consensus computation, bias detection, belief dynamics — uses pure mathematics (Kuramoto synchronization, Bayesian inference, information entropy, Gini coefficient). This means the runtime operates as a **lightweight plugin** with zero additional LLM calls.
+**Core architecture**: LLMs only perform perception (extracting beliefs and emotions from natural language). All governance logic — consensus computation, bias detection, belief dynamics — uses pure mathematics (Kuramoto synchronization, Gini coefficient, bimodality coefficient, Cronbach's α). This means the runtime operates as a **lightweight plugin** with zero additional LLM calls.
 
-**Seven ablation modes**: none (baseline), full, shuffle (regression-to-mean control), and four single-intervention modes isolating individual governance mechanisms. Bootstrap 95% CI + p-values on all key comparisons.
+**Seven ablation modes**: none (baseline), full, shuffle (placebo test / identification strategy — scrambles agent knowledge to rule out regression-to-mean), and four single-intervention modes isolating individual governance mechanisms. t-distribution 95% CI + permutation test p-values on all key comparisons.
 
-**Five-dimension evaluation**: Consensus, Reliability, Dispersion, Stability, and Influence Analysis — all with statistical grounding (Cronbach's α, Cohen's d, bootstrap confidence intervals, parameter sensitivity analysis).
+**Five-dimension evaluation**: Consensus, Reliability, Dispersion, Stability, and Influence Analysis — all with statistical grounding (Cronbach's α, Cohen's d, t-distribution confidence intervals, parameter sensitivity analysis).
 
 ---
 
 ## Results
 
-140 controlled experiments across 2 tasks × 7 ablation modes × n=10-15, with Kendall's τ, within-group τ trajectory (Δτ), shuffle control, and single-intervention ablation. Statistical inference via bootstrap 95% CI (10k resamples).
+165 controlled experiments across 2 tasks (M&A: 5 rounds, n=15 for none/full, n=10 for others; Invest: 5-round n=15 for none/full & n=5 for others, 3-round n=15 with none & full only — a 2×2 factorial design on round count × governance), with Kendall's τ, within-group τ trajectory (Δτ), shuffle control, and single-intervention ablation. Statistical inference via t-distribution 95% CI + permutation test p-values.
 
 ### Primary Findings
 
-- **Governance has a boundary condition**: On interdependent tasks (Invest), governance lifts τ from 0.022→0.556 (Δτ=+0.84, 95% CI [+0.27, +1.38]). On weakly-interdependent tasks (M&A), Δτ=−0.12 (95% CI [−0.25, −0.02]), Full vs None ΔQ=+4.0, p=0.280 — not significant.
+- **2×2 factorial design reveals round moderation**: The 2×2 design (3-round vs 5-round × none vs full, n=15 per cell) is the key methodological contribution. On 3-round Invest, full governance shows a medium effect (d=+0.65, p=0.152, Net Δτ=+0.133, 95% CI [−0.09, +0.35]) — suggestive but not significant. On 5-round Invest, full governance shows zero effect (τ=0.778 vs 0.778, d=+0.00, p=1.0 — identical to baseline). The pattern: governance has directional benefit in limited rounds but zero effect with sufficient rounds. No positive governance effect reaches significance across all 165 experiments.
 
-- **Shuffle control excludes regression-to-mean**: With scrambled agent knowledge, Invest τ drops to 0.000 despite full governance. Governance improvement requires coherent information integration, not just "discussing more." On M&A, shuffle τ=0.900 actually *exceeds* full governance τ=0.613 — agents already know all 5 companies; unfamiliar data (from shuffle) breaks their professional overconfidence, forcing them to listen more to each other. On weakly-interdependent tasks, reducing overconfidence outperforms targeted governance intervention.
+- **The only significant governance effect is HARMFUL**: On 5-round Invest, full_reflection (n=5) produces τ=0.333, ΔQ=−22.2, p=0.048 — significantly harmful, the first and only statistically significant governance effect. full_weight (τ=0.467, ΔQ=−15.6, p=0.173) shows a harmful trend. This honest negative finding clarifies the boundary conditions under which governance adds value: not all interventions help, and some actively harm.
 
-- **Single-intervention ablation identifies the key mechanism**: On Invest, only `full_diversity` (echo chamber → diversity injection) is statistically significant (τ=0.667, ΔQ=+32.2, p=0.003), slightly exceeding full governance. `full_weight` (authority bias → weight reduction) is actively harmful (τ=−0.267) — cutting a dominant agent's influence on interdependent tasks destroys unique information. `full_reflection` (τ=0.333) and `full_continue` (τ=0.200) are directionally positive but not significant alone. The mechanism is precise: surface hidden information via diversity injection, not more rounds or forced reflection.
+- **Shuffle control is the strongest positive finding**: On M&A, shuffle (scrambled agent knowledge) produces τ=0.900±0.194, d=+1.80, p=0.0009 — the only statistically significant *positive* result across all 165 experiments. Agents already know all 5 companies; unfamiliar data breaks their professional overconfidence, forcing them to listen to each other. On weakly-interdependent tasks, breaking overconfidence outperforms targeted governance intervention. Single-intervention ablations on M&A (full_diversity p=0.174, full_weight p=0.171, full_reflection p=0.183, full_continue p=0.267) none reach significance — no single governance mechanism drives the effect.
 
 ### Methodological Contribution
 
-Standard between-group effect sizes (Cohen's d) showed both tasks improving (+0.71 and +0.58). Only within-group Δτ revealed they went in opposite directions. Shuffle control validates that the effect is genuine, not regression-to-mean. This combination — Δτ + shuffle + single-intervention ablation + bootstrap CI — provides a template for rigorous evaluation of multi-agent governance systems.
+The 2×2 factorial design (3-round vs 5-round × none vs full, n=15 per cell) is the key methodological contribution — it isolates the round-count moderation effect that between-group comparisons alone missed. Standard Cohen's d showed 3-round Invest with a medium effect (d=+0.65, p=0.152) while 5-round Invest showed zero effect (d=+0.00, p=1.0), confirming that governance's marginal value diminishes with sufficient discussion rounds. The shuffle control — designed to rule out regression-to-mean — instead became the strongest positive finding (M&A p=0.0009). Critically, the only statistically significant governance effect was HARMFUL: full_reflection on 5-round Invest (p=0.048). This combination — 2×2 factorial design + Δτ + shuffle + single-intervention ablation + permutation test — provides a template for rigorous evaluation even when the primary hypothesis is not supported. The honest null-to-harmful result on governance is itself a contribution: it clarifies the boundary conditions under which governance adds value.
 
 ---
 
@@ -46,12 +46,23 @@ Standard between-group effect sizes (Cohen's d) showed both tasks improving (+0.
 
 | | |
 |---|---|
-| **Code** | ~18,400 lines TypeScript, 112 automated tests |
+| **Code** | ~13,000 lines TypeScript, 149 automated tests |
 | **Architecture** | Strategy pattern + Adapter pattern + Dependency Injection + Event Bus |
 | **Math** | Full formal framework: 13 sections, complete LaTeX |
 | **Models** | DeepSeek-V3 (primary), OpenAI, Anthropic, Local (Ollama) |
-| **Integrations** | Framework-agnostic adapter layer; Custom, AutoGen, CrewAI, LangGraph |
+| **Integrations** | Framework-agnostic adapter layer; Custom (full), AutoGen (TypeScript bridge, Python sidecar needed), CrewAI/LangGraph (planned) |
 | **Stack** | Next.js 14, TypeScript 5.5, Vitest, Tailwind CSS |
+
+---
+
+## Honest Limitations
+
+- **Parameter calibration**: 16 belief-update constants are hand-tuned, not empirically calibrated. Parameter sensitivity infrastructure exists (`experiments/v2/sensitivity.ts`) but has not been systematically run.
+- **Adaptive modules**: Adaptive thresholds and adaptive dosage are implemented, unit-tested, and integrated into GovernanceRuntime (config-gated, default off). The 165 prior experiments used fixed parameters; adaptive modules are not yet experimentally validated.
+- **Topology**: Only `FlatTopology` (5 agents) is experimentally validated. `GroupedTopology` and `CommitteeTopology` are implemented but untested.
+- **Evaluation weights**: The 5-dimension weights (0.20/0.25/0.20/0.17/0.18) are heuristic, not data-driven. Equal-weight robustness check is planned.
+- **Single-model validation**: All experiments use DeepSeek-V3 only. Cross-model generalization is untested.
+- **Sensitivity vs. causality**: The dropout analysis module (`sensitivityTrace.ts`) is explicitly a sensitivity diagnostic, not a causal identification method. SUTVA violations are documented in code comments.
 
 ---
 

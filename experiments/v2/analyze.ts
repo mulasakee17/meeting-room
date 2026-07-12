@@ -14,20 +14,29 @@ interface ExperimentResult {
 
 const DATA_DIR = path.resolve(__dirname, "data");
 const DATA_INVEST_DIR = path.resolve(__dirname, "data_invest");
+const DATA_INVEST_3ROUND_DIR = path.resolve(__dirname, "data_invest_3round");
 
 function loadData(dir: string): ExperimentResult[] {
   if (!fs.existsSync(dir)) return [];
   const files = fs.readdirSync(dir).filter(f => f.endsWith(".json") && f !== "summary.json");
-  return files.map(f =>
+  const results = files.map(f =>
     JSON.parse(fs.readFileSync(path.join(dir, f), "utf-8"))
   );
+  // 过滤掉错误实验（run.ts 错误隔离写入的占位文件）
+  const valid = results.filter(r => !r.error);
+  if (valid.length < results.length) {
+    console.warn(`[loadData] ${results.length - valid.length} error placeholder(s) skipped in ${dir}`);
+  }
+  return valid;
 }
 
 function mean(v: number[]) { return v.reduce((a, b) => a + b, 0) / v.length; }
-function stdDev(v: number[]) {
+function stdDev(v: number[]): number {
+  if (v.length < 2) return 0;  // n<2 时返回 0 而非 NaN
   const m = mean(v); return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
 }
-function cohensD(a: number[], b: number[]) {
+function cohensD(a: number[], b: number[]): number {
+  if (a.length < 2 || b.length < 2) return 0;  // 小样本无法可靠估计效应量
   const ma = mean(a), mb = mean(b);
   const va = a.reduce((s, v) => s + (v - ma) ** 2, 0) / (a.length - 1);
   const vb = b.reduce((s, v) => s + (v - mb) ** 2, 0) / (b.length - 1);
@@ -36,10 +45,10 @@ function cohensD(a: number[], b: number[]) {
 }
 
 // ============================================================================
-// Bootstrap inference (percentile method, 10000 resamples)
+// 统计推断：Bootstrap CI（百分位法）+ 置换检验 p-value
 // ============================================================================
 
-/** Deterministic PRNG (mulberry32) for reproducible bootstrap results. */
+/** 确定性 PRNG (mulberry32)，保证 bootstrap/置换结果可复现 */
 function mulberry32(seed: number): () => number {
   return () => {
     seed |= 0; seed = seed + 0x6D2B79F5 | 0;
@@ -51,15 +60,38 @@ function mulberry32(seed: number): () => number {
 
 const RNG_SEED = 42;
 const N_BOOT = 10000;
+const N_PERM = 10000;  // 置换次数
 const ALPHA = 0.05;
 
+/** t 分布临界值表（双侧 α=0.05），用于小样本 CI */
+const T_TABLE_005: Record<number, number> = {
+  1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
+  6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
+  12: 2.179, 14: 2.145, 15: 2.131, 19: 2.093, 20: 2.086,
+  24: 2.064, 25: 2.060, 29: 2.045, 30: 2.042, 40: 2.021,
+  60: 2.000, 120: 1.980,
+};
+function tCritical(df: number): number {
+  if (df <= 0) return 12.706;
+  if (T_TABLE_005[df]) return T_TABLE_005[df];
+  // 线性插值
+  const keys = Object.keys(T_TABLE_005).map(Number).sort((a, b) => a - b);
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (df > keys[i] && df < keys[i + 1]) {
+      const t0 = T_TABLE_005[keys[i]], t1 = T_TABLE_005[keys[i + 1]];
+      return t0 + (t1 - t0) * (df - keys[i]) / (keys[i + 1] - keys[i]);
+    }
+  }
+  return 1.96; // df > 120 时近似 z
+}
+
 /**
- * Percentile bootstrap 95% CI for a mean.
- * Returns { mean, ci95: [lo, hi] }.
+ * Bootstrap 百分位 CI（用于均值）。
+ * 小样本时同时输出 t 分布 CI。
  */
 function bootstrapCI(samples: number[], nBoot = N_BOOT, alpha = ALPHA) {
   const n = samples.length;
-  if (n === 0) return { mean: 0, ci95: [0, 0] as [number, number] };
+  if (n === 0) return { mean: 0, ci95: [0, 0] as [number, number], ci95_t: [0, 0] as [number, number] };
   const rng = mulberry32(RNG_SEED);
   const means: number[] = [];
   for (let i = 0; i < nBoot; i++) {
@@ -71,16 +103,51 @@ function bootstrapCI(samples: number[], nBoot = N_BOOT, alpha = ALPHA) {
   const lo = means[Math.floor(nBoot * alpha / 2)];
   const hi = means[Math.floor(nBoot * (1 - alpha / 2))];
   const m = mean(samples);
-  return { mean: m, ci95: [lo, hi] as [number, number] };
+  // t 分布 CI（小样本校正）
+  const sd = stdDev(samples);
+  const tcrit = tCritical(n - 1);
+  const margin = (tcrit * sd) / Math.sqrt(n);
+  return { mean: m, ci95: [lo, hi] as [number, number], ci95_t: [m - margin, m + margin] as [number, number] };
+}
+
+/**
+ * 置换检验（permutation test）—— 替代 bootstrap p-value。
+ *
+ * 原理：在零假设下（两组来自同一分布），合并后随机分配到两组，
+ * 计算均值差，重复 N_PERM 次，p-value = 置换中 |diff| >= |obsDiff| 的比例。
+ *
+ * 这是正确的非参数假设检验方法，不依赖正态假设，不存在 bootstrap p-value 的循环推理问题。
+ */
+function permutationTest(a: number[], b: number[], nPerm = N_PERM) {
+  if (a.length === 0 || b.length === 0) return { meanDiff: 0, pValue: 1 };
+  const obsDiff = mean(a) - mean(b);
+  const pooled = [...a, ...b];
+  const nA = a.length;
+  const rng = mulberry32(RNG_SEED + 0x50E8);  // 独立 seed 流
+  let count = 0;
+  for (let i = 0; i < nPerm; i++) {
+    // Fisher-Yates 部分洗牌：前 nA 个作为 "组A"
+    const arr = [...pooled];
+    for (let j = 0; j < nA; j++) {
+      const k = j + Math.floor(rng() * (arr.length - j));
+      [arr[j], arr[k]] = [arr[k], arr[j]];
+    }
+    const permA = arr.slice(0, nA);
+    const permB = arr.slice(nA);
+    const permDiff = mean(permA) - mean(permB);
+    if (Math.abs(permDiff) >= Math.abs(obsDiff)) count++;
+  }
+  return { meanDiff: obsDiff, pValue: count / nPerm };
 }
 
 /**
  * Bootstrap CI for the difference in means between two groups.
- * Returns { meanDiff, ci95: [lo, hi], pValue (two-sided) }.
+ * p-value 来自置换检验（非 bootstrap p-value）。
+ * Returns { meanDiff, ci95: [lo, hi], ci95_t: [lo, hi], pValue }.
  */
 function bootstrapMeanDiff(a: number[], b: number[], nBoot = N_BOOT, alpha = ALPHA) {
-  if (a.length === 0 || b.length === 0) return { meanDiff: 0, ci95: [0, 0] as [number, number], pValue: 1 };
-  const rng = mulberry32(RNG_SEED + 0x5EED);  // independent seed stream
+  if (a.length === 0 || b.length === 0) return { meanDiff: 0, ci95: [0, 0] as [number, number], ci95_t: [0, 0] as [number, number], pValue: 1 };
+  const rng = mulberry32(RNG_SEED + 0x5EED);
   const diffs: number[] = [];
   const obsDiff = mean(a) - mean(b);
   for (let i = 0; i < nBoot; i++) {
@@ -92,11 +159,20 @@ function bootstrapMeanDiff(a: number[], b: number[], nBoot = N_BOOT, alpha = ALP
   diffs.sort((x, y) => x - y);
   const lo = diffs[Math.floor(nBoot * alpha / 2)];
   const hi = diffs[Math.floor(nBoot * (1 - alpha / 2))];
-  // Two-sided bootstrap p-value: proportion of bootstrap diffs ≤ 0 (if obs > 0) or ≥ 0 (if obs < 0), doubled
-  const propBelow = diffs.filter(d => d <= 0).length / nBoot;
-  const propAbove = diffs.filter(d => d >= 0).length / nBoot;
-  const pValue = obsDiff > 0 ? 2 * propBelow : 2 * propAbove;
-  return { meanDiff: obsDiff, ci95: [lo, hi] as [number, number], pValue: Math.min(pValue, 1) };
+  // 置换检验 p-value（正确方法）
+  const permResult = permutationTest(a, b);
+  // t 分布 CI（Welch 近似，不假设等方差）
+  // 小样本 guard：n<2 时 stdDev 返回 0，se=0，margin=0，CI 退化为点估计
+  const sdA = stdDev(a), sdB = stdDev(b);
+  const se = Math.sqrt(sdA * sdA / a.length + sdB * sdB / b.length);
+  let margin = 0;
+  if (a.length >= 2 && b.length >= 2 && se > 0) {
+    const df = Math.pow(sdA * sdA / a.length + sdB * sdB / b.length, 2) /
+      (Math.pow(sdA * sdA / a.length, 2) / (a.length - 1) + Math.pow(sdB * sdB / b.length, 2) / (b.length - 1));
+    const tcrit = tCritical(Math.floor(df));
+    margin = tcrit * se;
+  }
+  return { meanDiff: obsDiff, ci95: [lo, hi] as [number, number], ci95_t: [obsDiff - margin, obsDiff + margin] as [number, number], pValue: permResult.pValue };
 }
 
 /** Format a CI as [+X.XX, +X.XX] */
@@ -289,16 +365,18 @@ function analyze(label: string, dir: string) {
   }
 
   // ════════════════════════════════════════════════════════════════════
-  // STATISTICAL INFERENCE — bootstrap 95% CI (10000 resamples)
+  // STATISTICAL INFERENCE — bootstrap CI + permutation test p-value
   // ════════════════════════════════════════════════════════════════════
   console.log("\n" + "-".repeat(80));
-  console.log("  BOOTSTRAP INFERENCE (percentile, 10000 resamples, α=0.05)");
+  console.log("  STATISTICAL INFERENCE (bootstrap CI + permutation test, 10000 resamples, α=0.05)");
   console.log("-".repeat(80));
 
   const baselineQs = baseline.map(r => r.decisionQuality);
   const baselineTs = baseline.map(r => r.kendallTau);
   const baselineCI = bootstrapCI(baselineQs);
-  console.log(`\n  Baseline (none):  Q = ${baselineCI.mean.toFixed(1)}, 95% CI ${fmtCI(baselineCI.ci95)}`);
+  console.log(`\n  Baseline (none):  Q = ${baselineCI.mean.toFixed(1)}`);
+  console.log(`                    95% CI (bootstrap) ${fmtCI(baselineCI.ci95)}`);
+  console.log(`                    95% CI (t-dist)    ${fmtCI(baselineCI.ci95_t)}`);
 
   // Full vs none — the primary claim
   if (fullG) {
@@ -308,63 +386,101 @@ function analyze(label: string, dir: string) {
     const diffFullVsNone = bootstrapMeanDiff(fullQs, baselineQs);
     const dFullVsNone = cohensD(fullQs, baselineQs);
 
-    console.log(`  Full governance:  Q = ${fullCI.mean.toFixed(1)}, 95% CI ${fmtCI(fullCI.ci95)}`);
+    console.log(`  Full governance:  Q = ${fullCI.mean.toFixed(1)}`);
+    console.log(`                    95% CI (bootstrap) ${fmtCI(fullCI.ci95)}`);
+    console.log(`                    95% CI (t-dist)    ${fmtCI(fullCI.ci95_t)}`);
     console.log(`  Full vs None:     ΔQ = ${diffFullVsNone.meanDiff >= 0 ? "+" : ""}${diffFullVsNone.meanDiff.toFixed(1)}`);
-    console.log(`                    95% CI ${fmtCI(diffFullVsNone.ci95)}`);
+    console.log(`                    95% CI (bootstrap) ${fmtCI(diffFullVsNone.ci95)}`);
+    console.log(`                    95% CI (t-dist)    ${fmtCI(diffFullVsNone.ci95_t)}`);
     console.log(`                    Cohen's d = ${dFullVsNone >= 0 ? "+" : ""}${dFullVsNone.toFixed(2)}`);
-    console.log(`                    p = ${diffFullVsNone.pValue.toFixed(3)} (bootstrap, two-sided)`);
+    console.log(`                    p = ${diffFullVsNone.pValue.toFixed(4)} (permutation test, two-sided)`);
 
-    if (diffFullVsNone.ci95[0] > 0) {
-      console.log(`  ✓ Full > None is statistically significant (95% CI excludes 0).`);
-    } else if (diffFullVsNone.ci95[1] < 0) {
-      console.log(`  ✗ Full < None is statistically significant (95% CI excludes 0).`);
+    if (diffFullVsNone.pValue < 0.05) {
+      console.log(`  ✓ Full vs None is statistically significant (p < 0.05).`);
     } else {
-      console.log(`  ⚠ Full vs None is NOT statistically significant (95% CI includes 0).`);
+      console.log(`  ⚠ Full vs None is NOT statistically significant (p = ${diffFullVsNone.pValue.toFixed(4)} ≥ 0.05).`);
       console.log(`    With n=${baselineQs.length} per group, the observed effect may be noise.`);
-      console.log(`    Consider increasing n or reducing between-run variance.`);
     }
   }
 
-  // Shuffle control — bootstrap test
+  // Shuffle control — permutation test
   if (shuffleG && fullG) {
     const shuffleQs = shuffleG.map(r => r.decisionQuality);
     const diffShuffleVsNone = bootstrapMeanDiff(shuffleQs, baselineQs);
     console.log(`\n  Shuffle vs None:  ΔQ = ${diffShuffleVsNone.meanDiff >= 0 ? "+" : ""}${diffShuffleVsNone.meanDiff.toFixed(1)}`);
-    console.log(`                    95% CI ${fmtCI(diffShuffleVsNone.ci95)}`);
-    console.log(`                    p = ${diffShuffleVsNone.pValue.toFixed(3)}`);
+    console.log(`                    95% CI (t-dist) ${fmtCI(diffShuffleVsNone.ci95_t)}`);
+    console.log(`                    p = ${diffShuffleVsNone.pValue.toFixed(4)} (permutation)`);
 
     const diffFullVsShuffle = bootstrapMeanDiff(fullG.map(r => r.decisionQuality), shuffleQs);
     console.log(`  Full vs Shuffle:  ΔQ = ${diffFullVsShuffle.meanDiff >= 0 ? "+" : ""}${diffFullVsShuffle.meanDiff.toFixed(1)}`);
-    console.log(`                    95% CI ${fmtCI(diffFullVsShuffle.ci95)}`);
-    console.log(`                    p = ${diffFullVsShuffle.pValue.toFixed(3)}`);
+    console.log(`                    95% CI (t-dist) ${fmtCI(diffFullVsShuffle.ci95_t)}`);
+    console.log(`                    p = ${diffFullVsShuffle.pValue.toFixed(4)} (permutation)`);
   }
 
-  // Within-group Δτ bootstrap
+  // Within-group Δτ — 减去基线 Δτ 后的净效应
+  const baselineDeltas = baseline
+    .filter(r => r.tauTrajectory && r.tauTrajectory.length >= 2)
+    .map(r => r.tauTrajectory![r.tauTrajectory!.length - 1] - r.tauTrajectory![0]);
+  const baselineDeltaMean = baselineDeltas.length > 0 ? mean(baselineDeltas) : 0;
+
   const fullDeltas = fullG
     ?.filter(r => r.tauTrajectory && r.tauTrajectory.length >= 2)
     .map(r => r.tauTrajectory![r.tauTrajectory!.length - 1] - r.tauTrajectory![0]) ?? [];
+
   if (fullDeltas.length > 0) {
     const deltaCI = bootstrapCI(fullDeltas);
-    console.log(`\n  Full within-group Δτ: ${deltaCI.mean >= 0 ? "+" : ""}${deltaCI.mean.toFixed(3)}, 95% CI ${fmtCI(deltaCI.ci95)}`);
-    if (deltaCI.ci95[0] > 0) {
-      console.log(`  ✓ Within-group Δτ is significantly positive (95% CI excludes 0).`);
-    } else if (deltaCI.ci95[1] < 0) {
-      console.log(`  ✗ Within-group Δτ is significantly negative.`);
+    // 净 Δτ = Full Δτ - Baseline Δτ（扣除讨论机制自然改善）
+    const netDeltas = fullDeltas.map(d => d - baselineDeltaMean);
+    const netDeltaCI = bootstrapCI(netDeltas);
+    console.log(`\n  Full within-group Δτ:        ${deltaCI.mean >= 0 ? "+" : ""}${deltaCI.mean.toFixed(3)}, 95% CI ${fmtCI(deltaCI.ci95_t)}`);
+    console.log(`  Baseline within-group Δτ:    ${baselineDeltaMean >= 0 ? "+" : ""}${baselineDeltaMean.toFixed(3)} (讨论机制自然改善)`);
+    console.log(`  Net Δτ (Full - Baseline):    ${netDeltaCI.mean >= 0 ? "+" : ""}${netDeltaCI.mean.toFixed(3)}, 95% CI ${fmtCI(netDeltaCI.ci95_t)}`);
+    if (netDeltaCI.ci95_t[0] > 0) {
+      console.log(`  ✓ 净 Δτ 显著为正（扣除基线后治理仍有改善）`);
+    } else if (netDeltaCI.ci95_t[1] < 0) {
+      console.log(`  ✗ 净 Δτ 显著为负（治理造成退化）`);
     } else {
-      console.log(`  ⚠ Within-group Δτ is NOT significantly different from 0.`);
+      console.log(`  ⚠ 净 Δτ 不显著（治理的边际贡献无法与讨论机制区分）`);
     }
   }
 
   // Single-intervention bootstrap comparison
   if (hasSingleModes) {
     console.log(`\n  Single-intervention bootstrap (vs baseline):`);
+
+    // 收集所有 p 值用于多重比较校正
+    const pValues: { mode: string; pValue: number; meanDiff: number; ci95: [number, number] }[] = [];
     for (const mode of singleModes) {
       const g = groups.get(mode);
       if (!g || g.length === 0) continue;
       const diff = bootstrapMeanDiff(g.map(r => r.decisionQuality), baselineQs);
-      const sig = diff.ci95[0] > 0 ? "✓ sig" : diff.ci95[1] < 0 ? "✗ sig(neg)" : "— n.s.";
-      console.log(`    ${mode.padEnd(16)} ΔQ = ${diff.meanDiff >= 0 ? "+" : ""}${diff.meanDiff.toFixed(1)} ${fmtCI(diff.ci95).padStart(14)} p=${diff.pValue.toFixed(3)} ${sig}`);
+      pValues.push({ mode, pValue: diff.pValue, meanDiff: diff.meanDiff, ci95: diff.ci95 });
     }
+
+    // Bonferroni 校正
+    const nTests = pValues.length;
+    const bonferroniAlpha = 0.05 / nTests;
+
+    // Benjamini-Hochberg FDR 校正
+    const sortedP = [...pValues].sort((a, b) => a.pValue - b.pValue);
+    const bhCritical: Record<string, number> = {};
+    for (let i = 0; i < sortedP.length; i++) {
+      const rank = i + 1;
+      bhCritical[sortedP[i].mode] = (0.05 * rank) / nTests;
+    }
+
+    console.log(`  Bonferroni-corrected α = ${bonferroniAlpha.toFixed(4)} (${nTests} tests)`);
+    console.log("");
+
+    for (const { mode, pValue, meanDiff, ci95 } of pValues) {
+      const sig = ci95[0] > 0 ? "✓ sig" : ci95[1] < 0 ? "✗ sig(neg)" : "— n.s.";
+      const bonfSig = pValue < bonferroniAlpha ? "✓" : "—";
+      const bhSig = pValue < bhCritical[mode] ? "✓" : "—";
+      console.log(
+        `    ${mode.padEnd(16)} ΔQ = ${meanDiff >= 0 ? "+" : ""}${meanDiff.toFixed(1)} ${fmtCI(ci95).padStart(14)} p=${pValue.toFixed(3)} ${sig} | bonf${bonfSig} bh${bhSig}`
+      );
+    }
+    console.log(`    Legend: sig = uncorrected 95% CI | bonf = Bonferroni | bh = Benjamini-Hochberg FDR`);
   }
 }
 
@@ -376,7 +492,8 @@ console.log("=".repeat(80));
 console.log("  SwarmAlpha V2 — Experiment Analysis");
 console.log("=".repeat(80));
 
-analyze("M&A Task", DATA_DIR);
-analyze("Invest Task", DATA_INVEST_DIR);
+analyze("M&A Task (5 rounds)", DATA_DIR);
+analyze("Invest Task (5 rounds)", DATA_INVEST_DIR);
+analyze("Invest Task (3 rounds)", DATA_INVEST_3ROUND_DIR);
 
 console.log("\nDone.");

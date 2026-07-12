@@ -27,16 +27,16 @@ SwarmAlpha is **not another multi-agent framework**. It's an **embeddable govern
 
 ```
 Without SwarmAlpha:
-  AutoGen/CrewAI → Agents discuss → Vote → Done  (no quality check)
+  Multi-agent framework → Agents discuss → Vote → Done  (no quality check)
 
 With SwarmAlpha:
-  AutoGen/CrewAI → Agents discuss → [Governance Runtime: observe → detect → intervene] → Quality-evaluated decision
+  Multi-agent framework → Agents discuss → [Governance Runtime: observe → detect → intervene] → Quality-evaluated decision
 ```
 
 ### Three Core Components
 
 1. **Governance Runtime** — Framework-agnostic engine that monitors 4 failure modes in real time and triggers targeted interventions
-2. **5-Dimension Evaluation** — Statistically-grounded scoring (Consensus, Reliability, Dispersion, Stability, Influence Analysis) — not just "was it right?"
+2. **5-Dimension Evaluation** — Multi-dimensional scoring (Consensus, Reliability, Dispersion, Stability, Influence Analysis) — not just "was it right?"
 3. **Decision Trace** — Full auditable decision chain: who influenced whom, why beliefs shifted, when governance intervened
 
 ### Key Innovation: LLM Perception / Math Evolution Separation
@@ -45,38 +45,48 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 
 ---
 
-## Experimental Evidence (140 controlled experiments)
+## Experimental Evidence (165 controlled experiments)
 
-2 tasks × 7 ablation modes × n=10-15. Primary metric: Kendall's τ + within-group Δτ. Bootstrap 95% CI (10k resamples).
+2 tasks (M&A: 5 rounds, n=15 for none/full, n=10 for others; Invest: 5-round n=15 for none/full & n=5 for others, 3-round n=15 with none & full only — a 2×2 factorial design on round count × governance). Primary metric: Kendall's τ + within-group Δτ (baseline-corrected). t-distribution 95% CI + permutation test p-values.
 
 ### Interdependent Investment Task
 *(No single agent can determine the answer alone.)*
 
-| Ablation | τ | Δτ | Key finding |
-|----------|------|-----|-------------|
-| None | 0.022 | +0.40 | Baseline: near-random |
-| **Full** | **0.556** | **+0.84** ✓ | Governance works (CI [+0.27, +1.38]) |
-| Shuffle | 0.000 | −0.33 | Knowledge scramble → collapse → **rules out regression-to-mean** |
-| **full_diversity** | **0.667** | **+1.13** ★ | **Only significant single intervention (p=0.003)** |
-| full_reflection | 0.333 | +0.67 | Directional, not significant (p=0.39) |
-| full_continue | 0.200 | +0.67 | "More rounds" recovers <40% (p=0.64) |
-| full_weight | −0.267 | +0.07 | **Harmful** — cutting influence destroys unique info |
+**5-round variant (n=15 for none/full, n=5 for others)**
+
+| Ablation | τ | Q | d | p | Key finding |
+|----------|------|------|---|---|-------------|
+| None | 0.778±0.325 | 89.0±16.1 | — | — | Baseline: already strong |
+| Full | 0.778±0.325 | 89.0±16.1 | +0.00 | 1.0 | Zero effect — identical to baseline |
+| Shuffle | 1.000±0.000 | 100.0±0.0 | +1.03 | 0.44 | NOT sig (n=5 too small) |
+| full_weight | 0.467±0.558 | — | −0.57 | 0.173 | Harmful trend (ΔQ=−15.6) |
+| full_reflection | 0.333±0.471 | — | −0.95 | **0.048** | **SIG: significantly harmful (ΔQ=−22.2)** |
+
+**3-round variant (n=15, only none & full)**
+
+| Ablation | τ | Q | Δτ | Net Δτ | d | p | Key finding |
+|----------|------|------|-----|--------|---|---|-------------|
+| None | 0.422±0.344 | 71.3±17.2 | — | — | — | — | Baseline |
+| Full | 0.644±0.344 | 82.4±17.0 | — | +0.133 | +0.65 | 0.152 | Medium effect, NOT sig (CI [−0.09, +0.35]) |
 
 ### M&A Target Selection
-*(Agents can perform reasonably without collaboration.)*
+*(Agents can perform reasonably without collaboration. 5 rounds, n=15 for none/full, n=10 for others)*
 
-| Ablation | τ | Δτ | Key finding |
-|----------|------|-----|-------------|
-| None | 0.533 | 0.00 | Baseline: already decent |
-| **Full** | **0.613** | **−0.12** ✗ | Governance doesn't help (p=0.28) |
-| Shuffle | **0.900** | −0.11 | Cognitive conflict > governance (counterintuitive) |
-| full_continue | 0.620 | −0.14 | Nearly identical to full |
+| Ablation | τ | Q | Δτ | d | p | Key finding |
+|----------|------|------|-----|---|---|-------------|
+| None | 0.533±0.209 | 76.7±10.5 | — | — | — | Baseline: already decent |
+| **Full** | 0.613±0.177 | 80.7±8.8 | −0.123 | +0.41 | 0.36 | NOT significant |
+| **Shuffle** | **0.900±0.194** | **95.0±9.7** | — | **+1.80** | **0.0009** | **SIG: breaking overconfidence helps** |
+| full_diversity | 0.660±0.190 | — | — | +0.63 | 0.174 | NOT sig |
+| full_weight | 0.700±0.316 | — | — | +0.65 | 0.171 | NOT sig |
+| full_reflection | 0.660±0.190 | — | — | +0.63 | 0.183 | NOT sig |
+| full_continue | 0.620±0.063 | — | — | +0.52 | 0.267 | NOT sig |
 
 **Three conclusions, each with direct evidence**:
 
-1. **Governance has a boundary condition** — Works on interdependent tasks (Δτ=+0.84), doesn't on weakly-interdependent (Δτ=−0.12, p=0.28)
-2. **Introduce diversity is the key mechanism** — Only full_diversity is statistically significant (p=0.003); weight reduction is actively harmful (τ=−0.267); more rounds and reflection don't help alone
-3. **Breaking overconfidence outperforms governance on easy tasks** — M&A Shuffle τ=0.900 > Full τ=0.613: scrambled data breaks professional overconfidence, forcing agents to listen
+1. **2×2 factorial design reveals round moderation** — The 2×2 design (3-round vs 5-round × none vs full, n=15 per cell) is the methodological contribution. On 3-round Invest, full governance shows a medium effect (d=+0.65, p=0.152, Net Δτ=+0.133, CI [−0.09, +0.35]) — suggestive but not significant. On 5-round Invest, full governance shows zero effect (d=+0.00, p=1.0, identical to baseline). Governance has directional benefit in limited rounds but zero effect with sufficient rounds.
+2. **The only significant governance effect is HARMFUL** — On 5-round Invest, full_reflection (n=5) produces τ=0.333, ΔQ=−22.2, p=0.048 — significantly harmful, the first and only statistically significant governance effect. full_weight (τ=0.467, ΔQ=−15.6, p=0.173) shows a harmful trend. No positive governance effect reaches significance across all 165 experiments.
+3. **Breaking overconfidence is the strongest positive finding** — M&A Shuffle (τ=0.900, d=+1.80, p=0.0009) is the only statistically significant *positive* result across all 165 experiments. On weakly-interdependent tasks, scrambling data breaks professional overconfidence, forcing agents to listen to each other — outperforming targeted governance.
 
 ---
 
@@ -84,18 +94,18 @@ LLMs only extract beliefs and emotions from natural language. All governance log
 
 | Feature | Description |
 |---------|-------------|
-| **Framework-Agnostic** | Works with AutoGen, CrewAI, LangGraph, or custom frameworks via adapter pattern |
+| **Framework-Agnostic** | Custom framework (full); AutoGen (TypeScript bridge, Python sidecar needed); CrewAI/LangGraph (planned) |
 | **Embeddable SDK** | `import { GovernanceRuntime } from "@/runtime"` — one class, zero framework deps |
-| **Adaptive Governance** | Thresholds auto-calibrate per task; intervention dosage scales with severity |
+| **Adaptive Governance** | Thresholds calibrate from round-1 data; intervention dosage scales with severity (config-gated, default off) |
 | **Cross-Examination** | Adversarial debate engine: splits agents into PRO/CON camps, synthesizes verdict |
 | **7 Ablation Modes** | Full + shuffle control + 4 single-intervention modes isolate which mechanism matters |
-| **Bootstrap Inference** | 95% CI + p-values (10k resamples, deterministic seed) on all key comparisons |
+| **Statistical Inference** | t-distribution 95% CI + permutation test p-values on all key comparisons; Δτ baseline-corrected |
 | **Parameter Sensitivity** | One-at-a-time sweep over 5 governance parameters verifies robustness |
 | **Dropout Sensitivity** | Agent dropout analysis measures outcome sensitivity to each agent's presence |
 | **Multi-LLM Support** | DeepSeek / OpenAI / Anthropic / Local (Ollama) — unified interface |
 | **Extensible Detection** | Custom bias detectors via `registerDetector()` — no core engine changes needed |
 | **Shared Utilities** | Registry/JSON/stats modules eliminate code duplication across the codebase |
-| **112 Automated Tests** | All core modules covered, 11 test files |
+| **149 Automated Tests** | All core modules covered, 11 test files |
 | **Demo Mode** | Zero-config, no API key needed — instant visualization |
 
 ---
@@ -124,6 +134,19 @@ const evaluation = runtime.getSessionResult(finalDecision);
 
 ---
 
+## Honest Limitations
+
+| Area | Status | Detail |
+|------|--------|--------|
+| **Parameter calibration** | ⚠️ Hand-tuned | 16 belief-update constants not empirically calibrated; sensitivity sweep infrastructure exists but not systematically run |
+| **Adaptive modules** | 🔧 Unvalidated | Adaptive thresholds & dosage implemented + unit-tested, but not used in 165 experiments |
+| **Topology** | 🔧 Unvalidated | Only FlatTopology (5 agents) tested; Grouped/Committee implemented but untested |
+| **Evaluation weights** | ⚠️ Heuristic | 5-dimension weights (0.20/0.25/0.20/0.17/0.18) not data-driven; equal-weight robustness check planned |
+| **Single model** | ⚠️ DeepSeek only | Cross-model generalization untested |
+| **Sensitivity ≠ causality** | ✅ Honest | Dropout analysis explicitly labeled as sensitivity diagnostic, not causal identification |
+
+---
+
 ## Who Built This
 
 **贺孟元** — High school student. Independent architecture design, implementation (~13,000 lines TypeScript), experiment design, and data analysis.
@@ -139,7 +162,7 @@ AI-assisted coding (Claude Code). Architecture decisions and experiment design a
 
 - **Short-term**: Run parameter sensitivity sweep + GPT-4o cross-model validation (n=5)
 - **Medium-term**: Python SDK for native AutoGen/CrewAI integration; formalize governance theory
-- **Statistical**: Bootstrap BCa correction; power analysis for sample size planning
+- **Statistical**: Power analysis for sample size planning; cross-model validation
 
 ## Long-Term Vision: Agent Society Governance Infrastructure
 

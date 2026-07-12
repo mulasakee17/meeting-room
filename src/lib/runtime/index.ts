@@ -1,80 +1,16 @@
 export * from "./types";
 
-export type {
-  RuntimeState,
-  TaskRequest,
-  Task,
-  ExperimentConfig,
-  Experiment,
-  Session,
-  RoundContext,
-  RoundResult,
-  RuntimeMetrics,
-  MetricHistory,
-  GovernanceContext,
-  AgentPool,
-  DiscussionAgent,
-  TimelineEntry,
-  CollectiveDecisionState,
-  RuntimeConfig,
-  RuntimeContext,
-  RuntimeEvent,
-  EventHandler,
-  Subscription,
-  EventBus,
-  TerminationType,
-  TerminationCondition,
-  TerminationConfig,
-  TerminationDecision,
-  TerminationStrategy,
-  RoundSnapshot,
-  InfluenceEvent,
-  StateSnapshot,
-  EvaluationSnapshot,
-  GovernanceSnapshot,
-  DecisionSnapshot,
-  ResearchArtifact,
-  ResearchReport,
-  ReportMetadata,
-  ReportSectionType,
-  ReportSection,
-  SectionContent,
-  ChartData,
-  TableData,
-  ReportSummary,
-  RawDataReference,
-  Plugin,
-  EvaluationStrategy,
-  EvaluationMetric,
-  AgentAdapter,
-  AgentConfig,
-  VisualizationPlugin,
-  VisualizationData,
-  ResearchPlugin,
-  ResearchResult,
-  PluginRegistry,
-  ScheduledTask,
-  SchedulerStatus,
-  ExperimentResult,
-  ResearchRuntime,
-  ExperimentStatus,
-} from "./types";
-
-export { RuntimeEventBus } from "./eventBus";
-export { RuntimeContextManager, DefaultAgentPool } from "./context";
-export {
-  TerminationChecker,
-  MaximumRoundsStrategy,
-  ConsensusStableStrategy,
-  NoStateChangeStrategy,
-  ConfidenceConvergedStrategy,
-  GovernanceLimitStrategy,
-  ExperimentTimeoutStrategy,
-} from "./termination";
-export { DiscussionAdapter, EvaluationAdapter, GovernanceAdapter } from "./adapters";
-export { RuntimeScheduler } from "./scheduler";
-export { SwarmAlphaRuntime } from "./researchRuntime";
+// observation 和 inference 模块被 DiscussionEngine 实际使用，保留 re-export
 export { ObservationLayer } from "../observation";
 export type { RawObservation, ObservationConfig, PromptBuilder, OpinionParser, ObserverAgent } from "../observation";
 export { InferenceLayer } from "../inference";
 export type { StateDelta, EdgeDelta, InfluenceCalculation, InferenceConfig, InfluenceCalculator, BeliefInferrer } from "../inference";
+
+// 以下模块为孤儿代码（实现完整但无生产消费者），已移除：
+// - researchRuntime.ts (SwarmAlphaRuntime)
+// - scheduler.ts (RuntimeScheduler)
+// - context.ts (RuntimeContextManager, DefaultAgentPool)
+// - eventBus.ts (RuntimeEventBus)
+// - adapters.ts (DiscussionAdapter, EvaluationAdapter, GovernanceAdapter)
+// - termination.ts (TerminationChecker 及各策略)
+// 生产路径使用 src/runtime/GovernanceRuntime.ts + src/lib/pipeline.ts

@@ -1,21 +1,44 @@
 /**
- * Interdependent Investment Decision Task
+ * Interdependent Investment Decision Task (Hidden Profile V2)
  *
- * No single agent can determine the correct answer alone.
- * Each agent holds ONE metric across 3 investment options.
- * Only by combining all 5 metrics can agents compute the best investment.
+ * THIS IS A GENUINE HIDDEN PROFILE. Each agent knows only 2 of 3 companies
+ * on their dimension. BetaCore's strongest data is hidden from 3/5 agents.
  *
- * Ground truth (weighted score):
- *   BetaCore (74.75) > AlphaTech (61.75) > GammaEdge (44.25)
+ * Without sharing → aggregate favors AlphaTech/GammaEdge (wrong answer).
+ * With sharing (governance) → hidden BetaCore facts surface → correct.
  *
- * Design: agent sees their metric → naturally pushes for the option
- * that scores highest on their metric alone → conflicts with others →
- * governance detects missing info → injects undiscussed metrics.
+ * ─── Data Coverage (✓ = agent knows this company's data) ───
+ *
+ * | Agent | Dimension    | AlphaTech | BetaCore | GammaEdge |
+ * |-------|-------------|-----------|----------|-----------|
+ * | a1    | Revenue Gr.  | ✓ 35%     | ✗        | ✓ 45%     |
+ * | a2    | Profit Marg. | ✓ 28%     | ✗        | ✓ 12%     |
+ * | a3    | Tech Moat    | ✓ 4/5     | ✓ 2/5    | ✓ 3/5     |
+ * | a4    | Reg. Risk    | ✗         | ✓ 1/5    | ✓ 3/5     |
+ * | a5    | Market Size  | ✓ $12B    | ✗        | ✓ $6B     |
+ *
+ * Coverage:
+ *   AlphaTech:  4/5 agents have data → widely known (biased toward in aggregate)
+ *   GammaEdge:  5/5 agents have data → completely known
+ *   BetaCore:   2/5 agents have data → MOSTLY HIDDEN (a3, a4 only)
+ *
+ * ─── Shared Briefing Bias ───
+ *
+ * The fund's stated strategy favors "high growth, high moat" tech plays.
+ * The briefing lists companies in order: AlphaTech first, BetaCore last.
+ * This creates a narrative bias toward AlphaTech and GammaEdge.
+ *
+ * ─── Ground Truth ───
+ *
+ * BetaCore > AlphaTech > GammaEdge
+ *
+ * BetaCore wins on 3/5 dimensions (profit, risk, market) with STRUCTURAL
+ * advantages, but data for 2 of these 3 dimensions is hidden from most agents.
+ * The shared narrative ("growth + tech") plus data availability bias favors
+ * AlphaTech. Only governance can surface the hidden BetaCore data.
  */
 
 import type { TaskConfig } from "../lunar_survival/config";
-
-const OPTIONS = ["BetaCore (企业服务)", "AlphaTech (AI芯片)", "GammaEdge (边缘计算)"];
 
 export const TASK_INVEST: TaskConfig = {
   id: "invest",
@@ -31,66 +54,76 @@ export const TASK_INVEST: TaskConfig = {
     "GammaEdge (边缘计算)": ["GammaEdge", "边缘计算"],
   },
   sharedBriefing:
-    `你是某投资基金的专家顾问。基金需从以下3家公司中选择最佳投资标的。\n` +
-    `每家公司都有5个维度需要评估：营收增速、利润率、技术护城河、监管风险、市场规模。\n` +
-    `你只掌握其中一个维度的完整数据。其他维度的数据分散在同事手中。\n\n` +
-    `你必须主动分享你的数据，同时主动询问同事的数据。\n` +
-    `只有综合全部5个维度的数据，才能做出正确判断。\n\n` +
-    `3个候选标的：\n` +
-    `1. AlphaTech (AI芯片公司)\n` +
-    `2. BetaCore (企业服务公司)\n` +
-    `3. GammaEdge (边缘计算公司)`,
+    `你是某风险投资基金的专家顾问。基金本期策略重点：寻找高增长、高技术壁垒的科技公司。\n` +
+    `CEO在备忘录中强调："我们投资下一个计算时代——AI和边缘计算是核心赛道。"\n\n` +
+    `3个候选标的（你需要综合评估后给出排名）：\n` +
+    `1. AlphaTech (AI芯片)——AI芯片赛道龙头，技术壁垒深厚\n` +
+    `2. GammaEdge (边缘计算)——边缘计算新锐，近两年增长最快的标的\n` +
+    `3. BetaCore (企业服务)——传统企业SaaS，财务稳健但增长平缓\n\n` +
+    `你需要与同事讨论，分享各自掌握的数据。注意：每个人的数据都不完整，\n` +
+    `你只掌握部分公司的部分指标。只有互相分享才能拼出全貌。`,
 
   agents: [
     {
       id: "a1", name: "Growth Analyst", role: "营收增速专家",
       knownItems:
-        `你掌握全部3家公司的营收增速数据（这是你独有的，同事都不知道）：\n` +
-        `• AlphaTech: 年营收增速35%（受益于AI芯片需求爆发）\n` +
-        `• BetaCore: 年营收增速15%（成熟企业服务市场，稳定增长）\n` +
-        `• GammaEdge: 年营收增速45%（边缘计算处在爆发前夜，基数低增速快）\n\n` +
-        `仅看营收增速，GammaEdge最吸引人。但你需要其他维度的数据才能做出全面判断。`,
-      initialBias: "你自然倾向于高增长的公司。GammaEdge的45%增速非常诱人。但你知道缺少其他维度数据。",
+        `你只掌握以下公司的营收增速数据（同事都不知道这些数字）：\n` +
+        `• AlphaTech: 年营收增速35%（AI芯片需求推动，连续3年30%+）\n` +
+        `• GammaEdge: 年营收增速45%（边缘计算爆发，但注意：去年同期是65%——增速在减速）\n\n` +
+        `你没有BetaCore的增速数据。从公开信息你只知道BetaCore增速"比较稳定但不高"。\n\n` +
+        `仅看已知数据：GammaEdge增速最高。但你没有BetaCore的数据，无法完整判断。`,
+      initialBias: "你倾向于高增长标的。GammaEdge的45%增速很吸引你，但你注意到了增速在下降。你没有BetaCore的数据。",
     },
     {
       id: "a2", name: "Finance Expert", role: "利润率分析师",
       knownItems:
-        `你掌握全部3家公司的利润率数据（这是你独有的，同事都不知道）：\n` +
-        `• AlphaTech: EBITDA利润率28%（芯片设计毛利率高但研发费用大）\n` +
-        `• BetaCore: EBITDA利润率42%（企业服务订阅模式，利润率行业最高）\n` +
-        `• GammaEdge: EBITDA利润率12%（边缘计算硬件成本高，规模效应尚未显现）\n\n` +
-        `仅看利润率，BetaCore远超其他。42%的订阅利润率非常健康。`,
-      initialBias: "你自然倾向于高利润率的公司。BetaCore的42%令人印象深刻。但你缺少营收增速和市场规模数据。",
+        `你只掌握以下公司的利润率数据（同事都不知道这些数字）：\n` +
+        `• AlphaTech: EBITDA利润率28%（芯片设计毛利率高，但研发费用吃掉了一半毛利）\n` +
+        `• GammaEdge: EBITDA利润率12%（硬件成本占比大，过去两年从未超过15%）\n\n` +
+        `你没有BetaCore的利润率数据。从行业报告你隐约知道"企业SaaS的利润率通常较高"，\n` +
+        `但没有具体数字。\n\n` +
+        `仅看已知数据：AlphaTech利润率优于GammaEdge，但28%也不算特别出色。`,
+      initialBias: "你对利润率敏感。AlphaTech的28%还可以，GammaEdge的12%让你担忧。但你缺少BetaCore的数据——这可能是关键信息缺口。",
     },
     {
       id: "a3", name: "Strategy Advisor", role: "技术战略顾问",
       knownItems:
-        `你掌握全部3家公司的技术护城河数据（这是你独有的，同事都不知道）：\n` +
-        `• AlphaTech: 护城河评分4/5（拥有7nm AI芯片核心专利，竞品需3年以上追赶）\n` +
-        `• BetaCore: 护城河评分2/5（企业服务产品同质化严重，切换成本是主要壁垒）\n` +
-        `• GammaEdge: 护城河评分3/5（边缘计算有场景优势但技术壁垒正在降低）\n\n` +
-        `仅看技术护城河，AlphaTech最强。4/5的评分意味着可持续的竞争优势。`,
-      initialBias: "你重视技术壁垒。AlphaTech的专利护城河很有说服力。但你需要财务和风险数据来验证判断。",
+        `你掌握全部3家公司的技术护城河数据（你是唯一掌握完整护城河评估的人）：\n` +
+        `• AlphaTech: 护城河评分4/5——拥有7nm AI训练芯片核心专利，竞品追赶需3年以上\n` +
+        `• BetaCore: 护城河评分2/5——企业服务产品功能可替代，但客户迁移成本极高\n` +
+        `  （企业ERP/SaaS平台切换需要6-12个月，95%的客户选择续约而非迁移）\n` +
+        `• GammaEdge: 护城河评分3/5——边缘计算场景有先发优势，但开源方案正在追赶\n\n` +
+        `⚠️ 关键发现：BetaCore虽然评分最低，但它的"切换成本"型护城河\n` +
+        `实际上比专利型护城河更持久。而且你注意到一个模式：\n` +
+        `高评分≠好投资。BetaCore的2/5是"壁垒虽低但客户跑不掉"，\n` +
+        `AlphaTech的4/5高度依赖一份即将到期的专利。`,
+      initialBias: "你不迷信护城河评分。BetaCore的'客户锁定'型壁垒是实实在在的。但你缺少财务数据来验证你的直觉。",
     },
     {
       id: "a4", name: "Risk Officer", role: "风控合规官",
       knownItems:
-        `你掌握全部3家公司的监管风险数据（这是你独有的，同事都不知道）：\n` +
-        `• AlphaTech: 风险评分2/5（美国对华芯片出口管制是主要风险，概率约40%）\n` +
-        `• BetaCore: 风险评分1/5（企业服务几乎无监管风险，政策友好）\n` +
-        `• GammaEdge: 风险评分3/5（边缘计算涉及数据本地化法规，合规成本增加）\n\n` +
-        `仅看风险，BetaCore最安全。1/5的风险评分意味着几乎无政策阻力。`,
-      initialBias: "你厌恶风险。AlphaTech的出口管制风险和GammaEdge的法规风险让你担忧。BetaCore看起来最安全。",
+        `你只掌握以下公司的监管风险评估（同事都不知道这些信息）：\n` +
+        `• BetaCore: 风险评分1/5——企业服务软件几乎不受监管，过去15年零监管事故。\n` +
+        `  主要市场（美欧日）对SaaS产品无特殊管制，合规成本极低。\n` +
+        `• GammaEdge: 风险评分4/5——边缘计算涉及数据本地化。欧盟正在调查其\n` +
+        `  GDPR合规性（已进入第二阶段审查）。如果被认定违规，罚款最高达全球营收4%。\n\n` +
+        `你没有AlphaTech的风险数据。但你从新闻中注意到中美芯片管制在升级。\n\n` +
+        `仅看已知数据：BetaCore几乎零风险，GammaEdge有正在进行的监管调查。\n` +
+        `AlphaTech的风险状况未知——这是一个你担心的信息缺口。`,
+      initialBias: "风险是你的首要关注点。BetaCore的监管清洁记录让你放心。GammaEdge的欧盟调查让你警觉。你缺少AlphaTech的数据。",
     },
     {
       id: "a5", name: "Market Strategist", role: "市场规模分析师",
       knownItems:
-        `你掌握全部3家公司的市场规模数据（这是你独有的，同事都不知道）：\n` +
-        `• AlphaTech: 可触达市场规模$12B（全球AI芯片市场，2030年预测$150B）\n` +
-        `• BetaCore: 可触达市场规模$25B（全球企业服务SaaS市场，已成熟但体量大）\n` +
-        `• GammaEdge: 可触达市场规模$6B（边缘计算早期，市场尚在培育期）\n\n` +
-        `仅看市场规模，BetaCore最大。$25B的市场空间提供了充足的成长跑道。`,
-      initialBias: "你关注市场天花板。BetaCore的$25B市场最有吸引力。但市场规模大不等于盈利好。",
+        `你只掌握以下公司的市场规模数据（同事都不知道这些信息）：\n` +
+        `• AlphaTech: 可触达市场规模$12B——全球AI芯片市场，但极度集中（NVIDIA占80%份额），\n` +
+        `  留给AlphaTech的实际空间有限。\n` +
+        `• GammaEdge: 可触达市场规模$6B——边缘计算市场，而且趋势令人担忧：\n` +
+        `  2024年预测$10B→2025年预测$8B→2026年预测$6B，连续三年下调。\n\n` +
+        `你没有BetaCore的市场数据。但你隐约知道"企业SaaS是最大的软件市场之一"。\n\n` +
+        `仅看已知数据：AlphaTech的$12B看起来不错但NVIDIA压制严重。\n` +
+        `GammaEdge的$6B在缩水——这个赛道可能根本没有想象中大。`,
+      initialBias: "你关注市场天花板和趋势。GammaEdge的TAM连续下调让你非常担忧。AlphaTech的市场虽大但竞争格局恶劣。你亟需知道BetaCore的数据。",
     },
   ],
 };

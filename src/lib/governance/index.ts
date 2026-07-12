@@ -17,7 +17,8 @@ import {
   BiasDetector,
 } from "./types";
 import { ReduceWeightIntervention, IntroduceDiversityIntervention, ForceReflectionIntervention, ContinueDiscussionIntervention } from "./interventions";
-import { computeAdaptiveThresholds, type CalibrationMetrics } from "./adaptiveThresholds";
+import { computeAdaptiveThresholds, computeCalibrationMetrics, type CalibrationMetrics } from "./adaptiveThresholds";
+import { computeAdaptiveDosage, type DosageContext } from "./adaptiveDosage";
 import {
   GOVERNANCE_ECHO_CHAMBER_THRESHOLD,
   GOVERNANCE_AUTHORITY_BIAS_THRESHOLD,
@@ -46,6 +47,10 @@ export class GovernanceEngine {
   private strategies: Map<InterventionType, InterventionStrategy> = new Map();
   /** 可扩展的自定义检测器——内置 4 个检测器之外追加的 */
   private customDetectors: Map<string, BiasDetector> = new Map();
+  /** 自适应阈值校准指标——首次调用后缓存 */
+  private calibration: CalibrationMetrics | null = null;
+  /** 每种干预类型的历史效果记录——用于自适应剂量 */
+  private interventionHistory: Map<InterventionType, number[]> = new Map();
 
   constructor(adaptiveConfig?: Partial<GovernanceConfig>) {
     this.registerStrategy(new ReduceWeightIntervention());
@@ -55,6 +60,44 @@ export class GovernanceEngine {
     if (adaptiveConfig) {
       this.defaultConfig = { ...this.defaultConfig, ...adaptiveConfig };
     }
+  }
+
+  /**
+   * 校准自适应阈值——从已有讨论数据计算基线指标并调整阈值。
+   * 在 processRound 的第一轮后自动调用（当 enableAdaptiveThresholds=true）。
+   */
+  calibrateThresholds(params: {
+    convergenceRounds: number;
+    maxRounds: number;
+    beliefs: number[];
+    messages: MessageInfo[];
+    agentCount: number;
+  }): void {
+    this.calibration = computeCalibrationMetrics(params);
+    const adaptiveConfig = computeAdaptiveThresholds(this.calibration);
+    this.defaultConfig = { ...this.defaultConfig, ...adaptiveConfig };
+  }
+
+  /**
+   * 记录干预效果——供下一轮自适应剂量计算使用。
+   * @param type 干预类型
+   * @param effectiveness 效果评分 [-1, 1]（1=改善, -1=恶化）
+   */
+  recordInterventionEffect(type: InterventionType, effectiveness: number): void {
+    const history = this.interventionHistory.get(type) || [];
+    history.push(effectiveness);
+    // 只保留最近 5 次记录，避免历史数据过多稀释当前趋势
+    if (history.length > 5) history.shift();
+    this.interventionHistory.set(type, history);
+  }
+
+  /**
+   * 获取某干预类型的平均历史效果。
+   */
+  private getHistoryEffectiveness(type: InterventionType): number {
+    const history = this.interventionHistory.get(type);
+    if (!history || history.length === 0) return 0;
+    return history.reduce((a, b) => a + b, 0) / history.length;
   }
 
   /**
@@ -252,12 +295,44 @@ export class GovernanceEngine {
       return notDetected();
     }
 
-    const messageCounts: Record<string, number> = {};
-    messages.forEach(m => { messageCounts[m.agentId] = (messageCounts[m.agentId] || 0) + 1; });
-    const totalMessages = Object.values(messageCounts).reduce((a, b) => a + b, 0) || 1;
-    const maxMessages = Math.max(...Object.values(messageCounts));
-    const influenceRatio = maxMessages / totalMessages;
-    const dominantAgent = Object.keys(messageCounts).find(id => messageCounts[id] === maxMessages);
+    // 修复：用引用网络度量替代消息计数度量
+    // 旧逻辑用 messageCounts，每 agent 1 条消息时 influenceRatio=1/N，
+    // N≥5 时永远 < 0.25 阈值 → 永不触发。
+    // 新逻辑：统计每个 agent 被其他 agent 引用的次数，
+    // influenceRatio = max(references) / totalReferences
+    // 这直接反映"组里在听谁"——权威偏差的定义。
+    const referenceCounts: Record<string, number> = {};
+    let totalReferences = 0;
+
+    for (const msg of messages) {
+      const refs = msg.referencedAgents || [];
+      for (const ref of refs) {
+        if (ref === msg.agentId) continue; // 自引用不计
+        referenceCounts[ref] = (referenceCounts[ref] || 0) + 1;
+        totalReferences++;
+      }
+    }
+
+    let influenceRatio: number;
+    let dominantAgent: string | undefined;
+
+    if (totalReferences > 0) {
+      // 有引用数据：用引用份额作为权威偏差度量
+      const maxRefs = Math.max(...Object.values(referenceCounts));
+      influenceRatio = maxRefs / totalReferences;
+      dominantAgent = Object.keys(referenceCounts).find(id => referenceCounts[id] === maxRefs);
+    } else {
+      // 回退：首轮无引用数据时，用消息内容长度份额作为粗略代理
+      // （长发言 = 信息输出多 = 潜在权威影响）
+      const contentLengths: Record<string, number> = {};
+      messages.forEach(m => {
+        contentLengths[m.agentId] = (contentLengths[m.agentId] || 0) + (m.content?.length || 0);
+      });
+      const totalLength = Object.values(contentLengths).reduce((a, b) => a + b, 0) || 1;
+      const maxLength = Math.max(...Object.values(contentLengths));
+      influenceRatio = maxLength / totalLength;
+      dominantAgent = Object.keys(contentLengths).find(id => contentLengths[id] === maxLength);
+    }
 
     const detected = influenceRatio >= (config.authorityBiasThreshold ?? GOVERNANCE_AUTHORITY_BIAS_THRESHOLD);
     const severity = this.getSeverity(influenceRatio, GOVERNANCE_SEVERITY_AUTHORITY_BIAS);
@@ -288,8 +363,22 @@ export class GovernanceEngine {
       return notDetected();
     }
 
-    const polarizationIndex = this.computeStd(agentBeliefs.map(b => b.belief));
-    const detected = polarizationIndex >= (config.polarizationThreshold ?? GOVERNANCE_POLARIZATION_THRESHOLD);
+    const beliefs = agentBeliefs.map(b => b.belief);
+    const polarizationIndex = this.computeStd(beliefs);
+
+    // 双峰系数 (Bimodality Coefficient, BC)
+    // BC = (skewness² + 1) / kurtosis
+    // BC > 0.555 表明分布是双峰的（真正的极化）
+    // 这避免了将"均匀高方差分布"误判为极化
+    const bimodalityCoeff = this.computeBimodalityCoefficient(beliefs);
+
+    // 极化检测需要同时满足：
+    // 1. 高方差（信念分散）—— polarizationIndex >= threshold
+    // 2. 双峰分布（形成对立阵营）—— bimodalityCoeff > 0.555
+    // 或者：极高方差（polarizationIndex >= threshold * 1.5）作为 fallback
+    const threshold = config.polarizationThreshold ?? GOVERNANCE_POLARIZATION_THRESHOLD;
+    const detected = (polarizationIndex >= threshold && bimodalityCoeff > 0.555)
+      || polarizationIndex >= threshold * 1.5;
     const severity = this.getSeverity(polarizationIndex, GOVERNANCE_SEVERITY_POLARIZATION);
     const groups = this.clusterAgentsByBelief(agentBeliefs);
 
@@ -302,8 +391,39 @@ export class GovernanceEngine {
     return {
       detected, severity, groups,
       polarizationIndex: Math.round(polarizationIndex * 100) / 100,
+      bimodalityCoefficient: Math.round(bimodalityCoeff * 1000) / 1000,
       intervention,
     };
+  }
+
+  /**
+   * 计算双峰系数 (Bimodality Coefficient)
+   *
+   * BC = (g² + 1) / k
+   * 其中 g = 偏度 (skewness), k = 峰度 (kurtosis)
+   *
+   * BC > 0.555 表明分布是双峰的（SAS JMP 标准）
+   * 这能区分"均匀高方差"（BC 低，非极化）和"双峰对立"（BC 高，真正极化）
+   */
+  private computeBimodalityCoefficient(values: number[]): number {
+    const n = values.length;
+    if (n < 4) return 0;
+
+    const mean = values.reduce((a, b) => a + b, 0) / n;
+    const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / n;
+    if (variance === 0) return 0;
+    const std = Math.sqrt(variance);
+
+    // 偏度 (skewness) —— 使用调整后的样本偏度 (G1)
+    const skewness = values.reduce((s, v) => s + ((v - mean) / std) ** 3, 0) / n;
+
+    // 峰度 (kurtosis) —— 使用调整后的样本峰度 (G2)
+    const kurtosis = values.reduce((s, v) => s + ((v - mean) / std) ** 4, 0) / n;
+
+    // BC = (skewness² + 1) / kurtosis
+    // 当 kurtosis 接近 0 时返回 0（避免除零）
+    if (kurtosis < 0.01) return 0;
+    return (skewness * skewness + 1) / kurtosis;
   }
 
   detectPrematureConsensus(
@@ -516,21 +636,54 @@ export class GovernanceEngine {
     const result = this.diagnose(agentBeliefs, messages, agentIds, mergedConfig);
     const interventions: Intervention[] = [];
 
+    // 自适应剂量计算（如果启用）
+    const useAdaptiveDosage = mergedConfig.enableAdaptiveDosage === true;
+    const currentRound = mergedConfig.currentRound || 1;
+    const maxRounds = mergedConfig.maxRounds || 5;
+    const roundProgress = currentRound / maxRounds;
+
+    // 信息覆盖率估算（从 messages 中提取）
+    const informationCoverage = this.estimateInformationCoverage(messages, agentIds);
+
     if (result.authorityBias.detected && result.authorityBias.dominantAgent) {
+      let reductionFactor = mergedConfig.reduceWeightFactor ?? INTERVENTION_REDUCE_WEIGHT_FACTOR;
+      if (useAdaptiveDosage) {
+        const dosage = computeAdaptiveDosage({
+          severity: this.severityToScore(result.authorityBias.severity),
+          informationCoverage,
+          historyEffectiveness: this.getHistoryEffectiveness("reduce_weight"),
+          roundProgress,
+          agentCount: agentIds.length,
+          baseMaxRounds: maxRounds,
+        });
+        reductionFactor = dosage.weightReduction;
+      }
       interventions.push({
         type: "reduce_weight",
         targetAgentId: result.authorityBias.dominantAgent,
-        parameters: { reductionFactor: mergedConfig.reduceWeightFactor ?? INTERVENTION_REDUCE_WEIGHT_FACTOR },
+        parameters: { reductionFactor },
         effect: "",
         applied: false,
       });
     }
 
     if (result.echoChamber.detected && result.echoChamber.redundantAgents.length > 0) {
+      let perturbationAmount = mergedConfig.diversityPerturbation ?? INTERVENTION_DIVERSITY_PERTURBATION;
+      if (useAdaptiveDosage) {
+        const dosage = computeAdaptiveDosage({
+          severity: this.severityToScore(result.echoChamber.severity),
+          informationCoverage,
+          historyEffectiveness: this.getHistoryEffectiveness("introduce_diversity"),
+          roundProgress,
+          agentCount: agentIds.length,
+          baseMaxRounds: maxRounds,
+        });
+        perturbationAmount = dosage.perturbationAmount;
+      }
       interventions.push({
         type: "introduce_diversity",
         targetAgents: result.echoChamber.redundantAgents,
-        parameters: { perturbationAmount: mergedConfig.diversityPerturbation ?? INTERVENTION_DIVERSITY_PERTURBATION },
+        parameters: { perturbationAmount },
         effect: "",
         applied: false,
       });
@@ -542,10 +695,22 @@ export class GovernanceEngine {
         .flatMap(g => g.agentIds);
 
       if (extremeAgents.length > 0) {
+        let reflectionFactor = mergedConfig.reflectionFactor ?? INTERVENTION_REFLECTION_FACTOR;
+        if (useAdaptiveDosage) {
+          const dosage = computeAdaptiveDosage({
+            severity: this.severityToScore(result.polarization.severity),
+            informationCoverage,
+            historyEffectiveness: this.getHistoryEffectiveness("force_reflection"),
+            roundProgress,
+            agentCount: agentIds.length,
+            baseMaxRounds: maxRounds,
+          });
+          reflectionFactor = dosage.reflectionStrength;
+        }
         interventions.push({
           type: "force_reflection",
           targetAgents: extremeAgents,
-          parameters: { reflectionFactor: mergedConfig.reflectionFactor ?? INTERVENTION_REFLECTION_FACTOR },
+          parameters: { reflectionFactor },
           effect: "",
           applied: false,
         });
@@ -553,17 +718,29 @@ export class GovernanceEngine {
     }
 
     if (result.prematureConsensus.detected) {
-      const currentRound = result.prematureConsensus.roundNumber;
-      const maxRounds = result.prematureConsensus.maxRounds;
+      const pcRound = result.prematureConsensus.roundNumber;
+      const pcMaxRounds = result.prematureConsensus.maxRounds;
       const threshold = mergedConfig.prematureConsensusThreshold ?? 0.5;
-      const roundProgress = currentRound / maxRounds;
-      const additionalRounds = Math.ceil(maxRounds * (threshold - roundProgress));
-      
+      const pcRoundProgress = pcRound / pcMaxRounds;
+      let additionalRounds = Math.ceil(pcMaxRounds * (threshold - pcRoundProgress));
+
+      if (useAdaptiveDosage) {
+        const dosage = computeAdaptiveDosage({
+          severity: this.severityToScore(result.prematureConsensus.severity),
+          informationCoverage,
+          historyEffectiveness: this.getHistoryEffectiveness("continue_discussion"),
+          roundProgress: pcRoundProgress,
+          agentCount: agentIds.length,
+          baseMaxRounds: pcMaxRounds,
+        });
+        additionalRounds = dosage.additionalRounds;
+      }
+
       interventions.push({
         type: "continue_discussion",
         parameters: {
           additionalRounds: Math.max(additionalRounds, 1),
-          reason: `Premature consensus at round ${currentRound}`,
+          reason: `Premature consensus at round ${pcRound}`,
         },
         effect: "",
         applied: false,
@@ -571,6 +748,24 @@ export class GovernanceEngine {
     }
 
     return { result, interventions };
+  }
+
+  /** 估算信息覆盖率——从消息中提取唯一关键词的比例 */
+  private estimateInformationCoverage(messages: MessageInfo[], agentIds: string[]): number {
+    if (messages.length === 0) return 0;
+    // 简化估算：有多少 agent 至少发过一条消息
+    const activeAgents = new Set(messages.map(m => m.agentId));
+    return activeAgents.size / Math.max(agentIds.length, 1);
+  }
+
+  /** 将 severity 字符串转为 [0,1] 分数 */
+  private severityToScore(severity: string): number {
+    switch (severity) {
+      case "high": return 0.9;
+      case "medium": return 0.6;
+      case "low": return 0.3;
+      default: return 0.5;
+    }
   }
 
   evaluateEffects(

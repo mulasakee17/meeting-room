@@ -37,6 +37,7 @@ export interface LLMConfig {
   baseUrl?: string;
   timeout?: number;   // 超时时间（毫秒）
   temperature?: number; // 温度参数 (0-2)
+  seed?: number;       // 随机种子（DeepSeek/OpenAI 支持，用于可复现性）
 }
 
 export interface LLMResponse {
@@ -202,6 +203,7 @@ async function callOpenAI(
           ],
           response_format: { type: "json_object" },
           temperature,
+          ...(config?.seed !== undefined ? { seed: config.seed } : {}),
         }),
       },
       timeout
@@ -399,6 +401,7 @@ async function callDeepSeek(
           ],
           response_format: { type: "json_object" },
           temperature,
+          ...(config?.seed !== undefined ? { seed: config.seed } : {}),
         }),
       },
       timeout
