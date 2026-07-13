@@ -445,28 +445,77 @@ export function permutationTest(
   // 合并池
   const pool = [...treated, ...donors];
   const nTreated = treated.length;
+  const nPool = pool.length;
+
+  // P2 性能优化：预计算 n×n 距离矩阵
+  // computeDistance 只依赖轨迹第 1 轮数据，置换不改变轨迹本身
+  // 原实现每次置换都重算 O(nTreated × nDonors) 距离，10000 次置换累计 6000 万次操作
+  // 预计算后置换内只做索引查表 + sort，加速 10-50×
+  const distMatrix: number[][] = new Array(nPool);
+  for (let i = 0; i < nPool; i++) {
+    distMatrix[i] = new Array(nPool);
+    for (let j = 0; j < nPool; j++) {
+      distMatrix[i][j] = (i === j) ? Infinity : computeDistance(pool[i], pool[j]);
+    }
+  }
+
+  // 预提取每个 pool 元素的 finalTau（反事实估计需要）
+  const finalTaus = pool.map((p) => p.finalTau);
 
   // 置换
   let countExtreme = 0;
+  const indices = new Array(nPool);
   for (let perm = 0; perm < nPerms; perm++) {
     // Fisher-Yates 部分洗牌: 选 nTreated 个作为伪处理组
-    const indices = pool.map((_, i) => i);
+    for (let i = 0; i < nPool; i++) indices[i] = i;
     for (let i = 0; i < nTreated; i++) {
-      const j = i + Math.floor(rng() * (pool.length - i));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
+      const j = i + Math.floor(rng() * (nPool - i));
+      const tmp = indices[i]; indices[i] = indices[j]; indices[j] = tmp;
     }
 
-    const pseudoTreated = indices.slice(0, nTreated).map((i) => pool[i]);
-    const pseudoDonors = indices.slice(nTreated).map((i) => pool[i]);
+    // 伪 donor 索引 = indices[nTreated..nPool)
+    const nDonors = nPool - nTreated;
+    if (nDonors === 0) continue;
 
-    if (pseudoDonors.length === 0) continue;
+    let sumEffect = 0;
+    for (let ti = 0; ti < nTreated; ti++) {
+      const tIdx = indices[ti];
+      const observedTau = finalTaus[tIdx];
 
-    const pseudoEffects = pseudoTreated.map((t) =>
-      estimateCausalEffect(t, pseudoDonors, k)
-    );
-    const pseudoMean =
-      pseudoEffects.reduce((s, e) => s + e.effect, 0) / pseudoEffects.length;
+      // 从距离矩阵查表找 k 近邻（仅在被选为 donor 的索引中）
+      const donorDists: Array<{ idx: number; dist: number }> = [];
+      for (let di = nTreated; di < nPool; di++) {
+        const dIdx = indices[di];
+        const d = distMatrix[tIdx][dIdx];
+        if (isFinite(d)) donorDists.push({ idx: dIdx, dist: d });
+      }
+      donorDists.sort((a, b) => a.dist - b.dist);
+      const matched = donorDists.slice(0, Math.min(k, donorDists.length));
 
+      // 严格复刻 estimateCounterfactual：matched 为空时返回 NaN
+      let counterfactualTau: number;
+      if (matched.length === 0) {
+        counterfactualTau = NaN;
+      } else {
+        const epsilon = 1e-6;
+        const allZero = matched.every((m) => m.dist < epsilon);
+        if (allZero) {
+          counterfactualTau = matched.reduce((s, m) => s + finalTaus[m.idx], 0) / matched.length;
+        } else {
+          let sumW = 0, sumWxTau = 0;
+          for (const m of matched) {
+            const w = 1 / (m.dist + epsilon);
+            sumW += w;
+            sumWxTau += w * finalTaus[m.idx];
+          }
+          counterfactualTau = sumW > 0 ? sumWxTau / sumW : NaN;
+        }
+      }
+      // NaN 传播：matched 为空时 effect=NaN，pseudoMean=NaN，不计数（与原版一致）
+      sumEffect += observedTau - counterfactualTau;
+    }
+
+    const pseudoMean = sumEffect / nTreated;
     if (Math.abs(pseudoMean) >= absObserved) {
       countExtreme++;
     }
