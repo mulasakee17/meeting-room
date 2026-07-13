@@ -137,7 +137,8 @@ function permutationTest(a: number[], b: number[], nPerm = N_PERM) {
     const permDiff = mean(permA) - mean(permB);
     if (Math.abs(permDiff) >= Math.abs(obsDiff)) count++;
   }
-  return { meanDiff: obsDiff, pValue: count / nPerm };
+  // H32 修复：(count+1)/(nPerm+1) 校正，避免 p=0 假阳性
+  return { meanDiff: obsDiff, pValue: (count + 1) / (nPerm + 1) };
 }
 
 /**

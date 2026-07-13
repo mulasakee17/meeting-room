@@ -66,6 +66,8 @@ export class GovernanceEngine {
   private calibration: CalibrationMetrics | null = null;
   /** 每种干预类型的历史效果记录——用于自适应剂量 */
   private interventionHistory: Map<InterventionType, number[]> = new Map();
+  /** 构造时的初始 defaultConfig 快照——reset() 时恢复 */
+  private initialDefaultConfig: GovernanceConfig;
 
   constructor(adaptiveConfig?: Partial<GovernanceConfig>, seed?: number) {
     this.registerStrategy(new ReduceWeightIntervention());
@@ -78,6 +80,23 @@ export class GovernanceEngine {
     }
     if (adaptiveConfig) {
       this.defaultConfig = { ...this.defaultConfig, ...adaptiveConfig };
+    }
+    // 保存初始配置快照，供 reset() 恢复
+    this.initialDefaultConfig = { ...this.defaultConfig };
+  }
+
+  /**
+   * 重置引擎的运行时状态——供批量实验间调用，防止跨实验污染。
+   *
+   * 清除：校准缓存、干预历史、PRNG 状态、defaultConfig（恢复到构造时）。
+   * 保留：已注册的 strategies 和 customDetectors（用户配置不应丢失）。
+   */
+  reset(): void {
+    this.calibration = null;
+    this.interventionHistory.clear();
+    this.defaultConfig = { ...this.initialDefaultConfig };
+    if (this.seed !== undefined) {
+      this.rng = mulberry32(this.seed);
     }
   }
 

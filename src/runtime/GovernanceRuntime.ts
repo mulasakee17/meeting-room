@@ -59,6 +59,17 @@ import type {
   RoundCompleteHandler,
 } from "./types";
 
+// H24 修复：种子化 PRNG，保证 random-intervene 模式可复现
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 // ============================================================================
 // Default Configuration
 // ============================================================================
@@ -573,6 +584,8 @@ export class GovernanceRuntime {
       active: true,
       lastGovernanceResult: null,
     };
+    // H23 修复：重置 GovernanceEngine 运行时状态，防止跨实验校准缓存/干预历史污染
+    this.governanceEngine.reset();
   }
 
   /** Update configuration at runtime. */
@@ -691,11 +704,13 @@ export class GovernanceRuntime {
     const types: Array<Intervention["type"]> = [
       "reduce_weight", "introduce_diversity", "force_reflection", "continue_discussion",
     ];
-    const count = 1 + Math.floor(Math.random() * 3); // 1-3 random interventions
+    // H24 修复：用种子化 PRNG 替代 Math.random，保证可复现
+    const rng = mulberry32((this.config.seed ?? 42) + 0x5A4D);
+    const count = 1 + Math.floor(rng() * 3); // 1-3 random interventions
 
     return Array.from({ length: count }, () => {
-      const type = types[Math.floor(Math.random() * types.length)];
-      const target = agentBeliefs[Math.floor(Math.random() * agentBeliefs.length)];
+      const type = types[Math.floor(rng() * types.length)];
+      const target = agentBeliefs[Math.floor(rng() * agentBeliefs.length)];
       return {
         type,
         targetAgentId: target?.agentId,

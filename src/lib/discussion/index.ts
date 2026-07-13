@@ -48,6 +48,17 @@ import {
 import type { GovernanceRuntime as GovernanceRuntimeType } from "@/runtime/GovernanceRuntime";
 import type { DiscussionMessage } from "@/runtime/types";
 
+// H25 修复：种子化 PRNG，保证 random-intervene 模式可复现
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export interface DiscussionAgent {
   id: string;
   name: string;
@@ -1144,7 +1155,8 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
   ): Intervention[] {
     const interventions: Intervention[] = [];
     const agentIds = agentBeliefs.map(b => b.agentId);
-    const rng = () => Math.random();
+    // H25 修复：用种子化 PRNG 替代 Math.random，保证可复现
+    const rng = mulberry32((this.config.seed ?? 42) + 0x5A4D);
 
     // Pick 1-3 random intervention types
     const allTypes: Array<{ type: Intervention["type"]; build: () => Intervention }> = [
@@ -1381,6 +1393,8 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     this.eventTracker.clear();
     this.roundDataArray = [];
     this.dropoutObservations = [];
+    // H23 修复：重置 GovernanceEngine 运行时状态，防止跨实验校准缓存/干预历史污染
+    this.governanceEngine.reset();
   }
 }
 

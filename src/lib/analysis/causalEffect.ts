@@ -472,7 +472,8 @@ export function permutationTest(
     }
   }
 
-  return countExtreme / nPerms;
+  // H31 修复：(count+1)/(nPerms+1) 校正，避免 p=0 假阳性
+  return (countExtreme + 1) / (nPerms + 1);
 }
 
 /**

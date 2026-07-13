@@ -1,6 +1,7 @@
 import type { RawObservation, ObservationConfig, PromptBuilder, OpinionParser, ObserverAgent } from "./types";
 import type { AgentOpinion, DiscussionTask, DiscussionMemoryEntry } from "../discussion/types";
 import type { RuntimeContext } from "../runtime/types";
+import { safeJsonParse } from "../utils/jsonUtils";
 
 class DefaultPromptBuilder implements PromptBuilder {
   buildPrompt(
@@ -55,7 +56,9 @@ class DefaultOpinionParser implements OpinionParser {
     roundNumber: number
   ): AgentOpinion {
     try {
-      const parsed = JSON.parse(response);
+      // H35 修复：用 safeJsonParse 替代裸 JSON.parse，处理 markdown 代码块/截断等异常
+      const parsed = safeJsonParse(response);
+      if (!parsed) throw new Error("Empty parse result");
 
       return {
         agentId,

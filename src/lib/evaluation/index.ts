@@ -636,9 +636,8 @@ export class EvaluationEngine {
     agentIds.forEach(id => {
       let degree = 0;
       interactionHistory.forEach(r => {
-        const mentions = r.messages.filter(m => this.agentReferencesAgent(m, id)).length;
-        const mentionsByOthers = r.messages.filter(m => m.agentId !== id && this.agentReferencesAgent(m, id)).length;
-        degree += mentions + mentionsByOthers;
+        // H39 修复：mentions 已包含 mentionsByOthers，原代码双重计数
+        degree += r.messages.filter(m => this.agentReferencesAgent(m, id)).length;
       });
       centrality[id] = degree;
     });
