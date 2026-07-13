@@ -1,8 +1,8 @@
 # 🐜 SwarmAlpha
 
-> **An embeddable governance runtime for multi-agent systems — process monitoring, decision audit, and adaptive intervention as three independent value pillars.**
+> **An embeddable governance runtime for multi-agent systems.**
 >
-> *First open-source governance layer for AI agent collectives. Framework-agnostic. Zero extra LLM calls.*
+> *Controlled experiments to demarcate when governance helps, when it's neutral, and when it harms multi-agent decision quality.*
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
@@ -27,7 +27,9 @@
 | **Decision Audit** | Full traceable decision chain: who influenced whom, when beliefs shifted, when governance intervened | Post-hoc accountability and compliance. Doesn't change outcomes — changes *responsibility attribution*. |
 | **Adaptive Intervention** | Targeted prompts injected when bias detected (diversity injection, forced reflection, weight reduction, continue discussion) | Accelerates convergence on genuinely interdependent tasks — but has clear boundary conditions |
 
-### 2×2 Factorial Design — Decision Quality Results (n=15 per cell)
+### 2×2 Factorial Design — Preliminary Results (n=15 per cell)
+
+> ⚠️ **These data were collected before the governance loop was fully repaired.** State-modification interventions (reduce_weight, force_reflection) may be underestimated. The engine is ready; reliable experimental conclusions require re-running with the repaired loop. See [ROADMAP.md](ROADMAP.md).
 
 | | Invest — 3 rounds (Strong Interdependence) | Invest — 5 rounds | M&A — 5 rounds (Weak Interdependence) |
 |---|---|---|---|
@@ -36,7 +38,7 @@
 | **Net Δτ** | +0.133 ([−0.09, +0.35], p=0.152) | −0.089 ([−0.38, +0.21], p=1.0) | −0.123 ([−0.27, +0.02], p=0.36) |
 | **Cohen's d** | +0.65 (medium, NOT sig) | +0.00 (null) | +0.41 (NOT sig) |
 | **Shuffle τ** | — | 1.000 (n=5, NOT sig) | **0.900 (p=0.0009)** |
-| **Conclusion** | Directional improvement, NOT sig | Completely null | Governance doesn't help; breaking overconfidence does |
+| **Direction** | Governance may accelerate convergence | With sufficient rounds, baseline catches up | Governance unnecessary; breaking overconfidence works |
 
 **Key insight**: On weakly-interdependent tasks, governance is unnecessary (M&A p=0.36). On strongly-interdependent tasks with limited rounds, governance shows directional but non-significant improvement (d=+0.65, p=0.152). With sufficient rounds, baseline agents catch up and governance becomes null (p=1.0). **The only statistically significant positive finding is the shuffle control on M&A (p=0.0009)** — breaking professional overconfidence outperforms targeted governance. Notably, `full_reflection` is significantly *harmful* on Invest 5-round (p=0.048) — forcing reflection when agents already converge naturally hurts performance.
 
@@ -93,7 +95,7 @@ It does NOT create agents or manage workflows. It plugs into existing frameworks
 - 📈 **Evaluation** — 5-dimension scoring with t-distribution confidence intervals
 - 🧪 **Causal Effect Estimation** — nearest-neighbor trajectory matching + permutation test to estimate counterfactual intervention effects
 
-**Key principle**: LLMs only do perception (extracting beliefs from language). Mathematics handles everything else — consensus computation, bias detection, belief dynamics. This means the governance runtime is **fast, cheap, and interpretable** with zero additional LLM calls.
+**Key principle**: LLMs only do perception (extracting beliefs from language). Mathematics handles everything else — consensus computation, bias detection, belief dynamics. This means the governance runtime is **fast, cheap, and interpretable** with near-zero additional LLM calls (only when agents fail to output the `[GOV]` structured tag does `StateInferenceBridge` fall back to LLM inference).
 
 ---
 
@@ -255,7 +257,7 @@ Thresholds and intervention strength adapt to task context:
 
 - **Adaptive Thresholds** 🔧 *implemented, not yet experimentally validated*: Run a calibration discussion → measure convergence speed, base redundancy, influence concentration → auto-scale detection thresholds per task
 - **Adaptive Dosage** 🔧 *implemented, not yet experimentally validated*: Intervention strength scales with deviation severity, information coverage, and historical intervention effectiveness
-- **Cross-Examination Engine** ✅ *validated*: When agents disagree, automatically split into PRO/CON camps, run adversarial debate, synthesize verdict with minority report
+- **Cross-Examination Engine** ✅ *implemented + unit-tested*: When agents disagree, automatically split into PRO/CON camps, run adversarial debate, synthesize verdict with minority report
 
 > **Honest scope note**: The 165 experiments on this page use fixed thresholds and fixed dosage. Adaptive threshold/dosage code exists but has not been experimentally compared against fixed parameters. The 5-dimension evaluation weights (0.20/0.25/0.20/0.17/0.18) are heuristic, not empirically calibrated — an equal-weight robustness check is planned.
 
@@ -380,23 +382,23 @@ Agents can reason independently. n=15 (none/full), n=10 (others). Baseline τ = 
 - **No single-intervention ablation reaches significance** — all directionally positive but underpowered
 - Governance doesn't help on weakly-interdependent tasks; breaking overconfidence (shuffle) does
 
-### The Boundary Condition — 2×2 Factorial Design (with evidence)
+### The Boundary Condition — Fractional Factorial Design (with evidence)
 
-The 2×2 factorial design (Task interdependence × Round budget) is the key methodological contribution. Holding one factor constant while varying the other isolates each moderator:
+Two controlled comparisons isolate each moderator. Note: this is a fractional (not complete 2×2) design — M&A 3-round cell is missing.
 
 | Claim | Evidence |
 |-------|----------|
-| **2×2 design isolates round-budget moderation** | Invest (strong interdependence) held constant: 3-round d=+0.65 (p=0.152, NOT sig) vs 5-round d=+0.00 (p=1.0, null). Pattern supports boundary hypothesis but is NOT statistically confirmed. |
-| **2×2 design isolates task-interdependence moderation** | 5 rounds held constant: Invest (strong) d=+0.00 (null) vs M&A (weak) d=+0.41 (p=0.36, NOT sig). Governance doesn't significantly help either task type with sufficient rounds. |
+| **Round-budget moderation** | Invest (strong interdependence) held constant: 3-round d=+0.65 (p=0.152, NOT sig) vs 5-round d=+0.00 (p=1.0, null). Pattern supports boundary hypothesis but is NOT statistically confirmed. |
+| **Task-interdependence moderation** | 5 rounds held constant: Invest (strong) d=+0.00 (null) vs M&A (weak) d=+0.41 (p=0.36, NOT sig). Governance doesn't significantly help either task type with sufficient rounds. |
 | Governance shows directional improvement only in limited rounds | Invest 3-round Δτ=+0.133 (CI [−0.09, +0.35], p=0.152, d=+0.65) — medium effect, NOT significant |
 | Effect disappears completely with more rounds | Invest 5-round Δτ=−0.089 (CI [−0.38, +0.21], p=1.0, d=+0.00) — completely null |
 | Governance does NOT help weakly-interdependent tasks | M&A Δτ=−0.123 (CI [−0.27, +0.02], p=0.36) |
-| **First significant governance finding is HARMFUL** | Invest 5-round `full_reflection`: τ=0.333, ΔQ=−22.2, **p=0.048** — forcing reflection on interdependent tasks with sufficient rounds hurts |
+| **First significant governance finding is HARMFUL (uncorrected)** | Invest 5-round `full_reflection`: τ=0.333, ΔQ=−22.2, **p=0.048 (uncorrected; does NOT survive Bonferroni correction)** — forcing reflection on interdependent tasks with sufficient rounds hurts |
 | No positive single intervention is significant | All M&A ablation p-values > 0.17; Invest 5-round `full_weight` p=0.173 (harmful trend) |
 | Shuffle is the only positive significant finding | M&A Shuffle τ=0.900, d=+1.80, **p=0.0009** |
-| Weight reduction / reflection are harmful on interdependent tasks | Invest 5-round: full_weight ΔQ=−15.6 (p=0.173), full_reflection ΔQ=−22.2 (**p=0.048, significantly harmful**) |
+| Weight reduction / reflection are harmful on interdependent tasks | Invest 5-round: full_weight ΔQ=−15.6 (p=0.173), full_reflection ΔQ=−22.2 (**p=0.048 uncorrected; does NOT survive Bonferroni correction**) |
 
-**Statistical rigor**: t-distribution 95% CI + permutation test p-values. 9 ablation modes. 2×2 factorial design (n=15 per cell on Invest). Parameter sensitivity infrastructure (5×5×5 sweep). All raw data preserved in `experiments/v2/data*/`.
+**Statistical rigor**: t-distribution 95% CI + permutation test p-values (with Bonferroni/BH FDR correction for multi-comparison). 9 total configurations (4 governance modes + 5 extended ablation). Fractional factorial design (n=15 per cell on Invest). Parameter sensitivity infrastructure (5×5×5 sweep). All raw data preserved in `experiments/v2/data*/`.
 
 ### Causal Effect Estimation (Trajectory Matching)
 
@@ -430,9 +432,9 @@ SwarmAlpha provides three layers of value:
 
 2. **Decision Audit (independent of intervention)** — Full traceable decision chains answer "why did the agent team decide this?" Post-hoc accountability is valuable for compliance (EU AI Act), debugging, and trust — regardless of whether the decision was correct.
 
-3. **Targeted Intervention (with clear boundary conditions)** — Governance does NOT unconditionally improve decision quality. Our 2×2 factorial design shows: directional improvement only on interdependent tasks with limited rounds (d=+0.65, p=0.152, NOT sig); completely null with sufficient rounds (p=1.0); significantly harmful when forcing reflection on tasks agents already handle well (p=0.048). The implication: **governance is a tool for specific conditions, not a universal upgrade**.
+3. **Targeted Intervention (with clear boundary conditions)** — Governance does NOT unconditionally improve decision quality. Our fractional factorial design shows: directional improvement only on interdependent tasks with limited rounds (d=+0.65, p=0.152, NOT sig); completely null with sufficient rounds (p=1.0); directionally harmful when forcing reflection on tasks agents already handle well (p=0.048 uncorrected, does NOT survive Bonferroni correction). The implication: **governance is a tool for specific conditions, not a universal upgrade**.
 
-**The engine has been independently audited** — all 4 bias detectors, 4 intervention strategies, and the StateInferenceBridge work without the built-in DiscussionEngine, making them genuinely embeddable. Integrating into any framework takes 2-4 hours for a working prototype.
+**The engine has been self-verified for framework independence** — all 4 bias detectors, 4 intervention strategies, and the StateInferenceBridge work without the built-in DiscussionEngine, making them genuinely embeddable. Integrating into any framework takes 2-4 hours for a working prototype.
 
 **The implication for AI deployment**: Don't blindly deploy governance. But also don't deploy agent teams without *any* process monitoring. SwarmAlpha provides the observability layer that every multi-agent system currently lacks — and the intervention layer for the specific conditions where it demonstrably helps.
 
@@ -536,4 +538,4 @@ AI-assisted development (Claude Code). Architecture decisions and experiment des
 
 ---
 
-> *"Not replacing how agents decide — ensuring what they decide holds up to scrutiny."*
+> *"Every operating system has a kernel. This is the kernel for governing AI societies."*

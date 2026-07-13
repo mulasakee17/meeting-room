@@ -11,7 +11,7 @@
 |------|------|------|------|
 | M&A (5轮) | none, full | 15 | 勉强可用，但 full vs none p=0.36 不显著 |
 | M&A (5轮) | shuffle, single-intervention | 10 | 单干预模式 n=10，统计功效有限 |
-| Invest (5轮) | none, full | 15 | 功效充分，p=1.0 确认零效应 (d=+0.00) |
+| Invest (5轮) | none, full | 15 | 效应为零（两组 τ 完全相同 0.778 vs 0.778），无需功效论证 (d=+0.00) |
 | Invest (5轮) | shuffle, single-intervention | 5 | **严重不足**，n=5 远低于统计显著性要求 |
 | Invest (3轮) | none, full | 15 | p=0.152 中等效应 (d=+0.65) 但未达显著 |
 

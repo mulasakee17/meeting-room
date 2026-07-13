@@ -22,8 +22,8 @@
 - [x] ROADMAP.md —— 本文件
 - [x] README.md —— 更新实验数据和技术亮点，对齐新叙事
 - [x] ONEPAGER.md —— 更新一页摘要
-- [ ] README_CN.md —— 同步中文版 README
-- [ ] RESEARCH_STATEMENT.md —— 更新研究声明
+- [x] README_CN.md —— 同步中文版 README
+- [x] RESEARCH_STATEMENT.md —— 更新研究声明
 
 ### 1.2 代码清理
 - [x] 保留 AutoGenAdapter 的 throw Error（不静默降级是正确行为），转而给 StateInferenceBridge 补 LLM 推断层
@@ -33,7 +33,7 @@
 - [ ] 给 GovernanceRuntime 写 3 个使用示例（node 脚本、Express 中间件、WebSocket 实时监控）
 
 ### 1.3 测试与质量
-- [x] 确认 181 tests 全部通过（149 原有 + 32 新增 StateInferenceBridge/PromptInjector 测试）
+- [x] 确认 209 tests 全部通过（149 原有 + 32 StateInferenceBridge/PromptInjector + 28 causalEffect 测试）
 - [x] 给 StateInferenceBridge 补测试（34 个测试覆盖三级提取、干预转译、LLM 推断、统计监控）
 - [x] 修复 extractGovTag 截断 JSON 容错 bug（正则匹配失效，改为 indexOf 定位 + 手动补全）
 

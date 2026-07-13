@@ -54,7 +54,7 @@ Fixing all 4 defects is what **closes the governance loop** — observe → dete
 
 | | |
 |---|---|
-| **Code** | ~13,000 lines TypeScript, 149 automated tests |
+| **Code** | ~13,000 lines TypeScript, 209 automated tests |
 | **Architecture** | Strategy pattern + Adapter pattern + Dependency Injection + Event Bus |
 | **Math** | Full formal framework: 13 sections, complete LaTeX |
 | **Models** | DeepSeek-V3 (primary), OpenAI, Anthropic, Local (Ollama) |

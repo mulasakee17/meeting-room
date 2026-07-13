@@ -406,7 +406,9 @@ $$
 
 其中 $k$ = 讨论轮次数（$\geq 3$），$\sigma_r^2$ = 第 $r$ 轮 Agent beliefs 的样本方差，$\sigma_{\text{total}}^2$ = 所有轮次 beliefs 的总体方差。
 
-高 $\alpha_{\text{round}}$ → Agent 在多轮中维持一致的相对信念排名。低 $\alpha$ → 信念排名在轮次间剧烈波动。
+高 $\alpha_{\text{round}}$ → 轮间方差占主导（Agent 信念在轮次间变化大，但变化方向一致）。低 $\alpha$ → 轮内方差占主导（信念在每轮内部离散度高）。
+
+> **⚠️ 语义争议（H5）**：此指标将轮次作为 item 测量一致性，语义偏向"讨论整体稳定性"而非"个体排名一致性"。详见 `PROJECT_DEEP_ANALYSIS.md` H5 条目。
 
 #### 离散度 ($S_{\text{disp}}$) — 权重 0.20
 

@@ -350,11 +350,18 @@ SwarmAlpha's framework-agnostic adapter layer, LLM/mathematics separation, and e
 
 | ID | 问题 | 状态 | 说明 |
 |----|------|------|------|
+| **H2** | ablationModes 不完整 | ✅ 已修复 | 从 `["none","full"]` 扩展为 7 种完整模式（`none / full / shuffle / full_diversity / full_weight / full_reflection / full_continue`） |
 | **H4** | Kuramoto 相位映射错误 | ✅ 已修复 | 旧映射 `θ = π·b` 使 `b=±0.99` 在单位圆上几乎重合（均落在 `(-1,0)` 附近），`R≈1`，误判极化为共识。已修正为 `θ = (π/2)·b`。详见 `MATHEMATICAL_FRAMEWORK.md` §4.1 |
 | **H6** | convergenceSpeed 注释错误 | ✅ 已纠正 | `convergenceSpeed = convergenceRounds / maxRounds`，值大表示**慢收敛**（非快收敛）。`scalePrematureConsensus = 0.7 + speed × 0.6` 公式方向正确，仅注释曾写反。详见 `MATHEMATICAL_FRAMEWORK.md` §10 |
 | **H17** | 缓存污染 | ✅ 已修复 | 跨实验/跨会话的状态泄漏已消除，运行间状态干净隔离 |
 | **H18** | interventionPrompt 不统一 | ✅ 已修复 | 所有干预策略的 prompt 头/尾格式已统一接入 `src/lib/utils/interventionPrompt.ts`，消除各策略自定义格式的不一致 |
+| **H19** | 非确定性随机扰动 | ✅ 已修复 | `introduceDiversity` 的 `Math.random()` 替换为 `mulberry32` 种子化 PRNG，保证干预可复现 |
+| **H23** | GovernanceEngine 跨实验状态污染 | ✅ 已修复 | 新增 `reset()` 方法，清除 calibration/interventionHistory/rng/defaultConfig |
+| **H24/H25** | generateRandomInterventions 用 Math.random | ✅ 已修复 | 两处替换为 `mulberry32(seed)`，random-intervene 模式现可复现 |
+| **H31/H32** | permutationTest 无 (count+1)/(nPerm+1) 校正 | ✅ 已修复 | 避免 p=0 假阳性 |
+| **H35** | observation 用裸 JSON.parse | ✅ 已修复 | 替换为 `safeJsonParse`，处理 markdown 代码块/截断 |
+| **H39** | computeDegreeCentrality 双重计数 | ✅ 已修复 | 删除 `mentions + mentionsByOthers` 重复 |
 
 ---
 
-> **Code**: ~13,000 TypeScript | **Tests**: 149 | **Experiments**: 165 | **Docs**: 5 core documents
+> **Code**: ~13,000 TypeScript | **Tests**: 209 | **Experiments**: 165 | **Docs**: 5 core documents

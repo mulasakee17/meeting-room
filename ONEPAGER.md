@@ -43,11 +43,11 @@ With SwarmAlpha:
 
 ### Key Innovation: LLM Perception / Math Evolution Separation
 
-LLMs only extract beliefs and emotions from natural language. All governance logic (consensus computation, bias detection, belief dynamics) uses pure mathematics. Result: **fast, cheap, interpretable** — deployable as a lightweight plugin with zero additional LLM calls.
+LLMs only extract beliefs and emotions from natural language. All governance logic (consensus computation, bias detection, belief dynamics) uses pure mathematics. Result: **fast, cheap, interpretable** — deployable as a lightweight plugin with near-zero additional LLM calls (only when agents fail to output the `[GOV]` structured tag does `StateInferenceBridge` fall back to LLM inference).
 
-### Independent Audit Result
+### Framework Independence Verification
 
-The core governance engine (all 4 detectors, 4 intervention strategies, adaptive thresholds) has been verified to work **without the built-in DiscussionEngine**. Integration into any framework requires only: (1) append belief-extraction tags to agent prompts, (2) adapt messages via `StateInferenceBridge`, (3) call `processRound()`, (4) inject intervention prompts. Working prototype per framework: 2-4 hours.
+The core governance engine (all 4 detectors, 4 intervention strategies, adaptive thresholds) has been self-verified to work **without the built-in DiscussionEngine**. Integration into any framework requires only: (1) append belief-extraction tags to agent prompts, (2) adapt messages via `StateInferenceBridge`, (3) call `processRound()`, (4) inject intervention prompts. Working prototype per framework: 2-4 hours.
 
 ### Cognitive Defect Diagnosis of the Multi-Agent Discussion Paradigm
 
@@ -97,7 +97,7 @@ A deeper architectural review diagnosed **4 root cognitive defects** in the prev
 | **Adaptive Governance** | Thresholds calibrate from round-1 data; intervention dosage scales with severity (config-gated, default off) |
 | **Cross-Examination** | Adversarial debate engine: splits agents into PRO/CON camps, synthesizes verdict |
 | **7 Ablation Modes** | Full + shuffle control + 4 single-intervention modes isolate which mechanism matters. **[Updated]** Expanded from 2 implemented modes to 7; full 105-run experiment pending lab execution |
-| **7 Hard Fixes** | H4 Kuramoto mapping corrected; H6 `convergenceSpeed` annotation fixed; H2 `ablationModes` expanded (2→7); H19 seeded PRNG for reproducibility; H17 cache pollution eliminated; H18 `interventionPrompt` unified across modes |
+| **6 Hard Fixes (H-series)** | H4 Kuramoto mapping corrected; H6 `convergenceSpeed` annotation fixed; H2 `ablationModes` expanded (2→7); H19 seeded PRNG for reproducibility; H17 cache pollution eliminated; H18 `interventionPrompt` unified across modes. H23-H39 fixed in 2026-07-13 audit pass. |
 | **Causal Effect Estimation** | 🆕 Nearest-neighbor trajectory matching (k=5) + 10000-permutation test + bootstrap CI — estimates counterfactual intervention effects, not just correlations. M&A 5-round shows +0.135 effect (d=0.96, p=0.067, CI excludes 0) |
 | **Statistical Inference** | t-distribution 95% CI + permutation test p-values on all key comparisons; Δτ baseline-corrected |
 | **Parameter Sensitivity** | One-at-a-time sweep over 5 governance parameters verifies robustness |
