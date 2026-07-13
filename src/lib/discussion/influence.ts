@@ -76,7 +76,11 @@ export class RuleBasedInfluence implements InfluenceStrategy {
           existingEdge.weight = change.edge.weight;
         }
       } else {
-        graph.edges.push(change.edge);
+        // 只注入 reference 类型边（显式引用），跳过 agreement/disagreement/persuasion 等数值推断边
+        // 这与 interactionGraph.updateFromOpinions "只从显式引用建边" 的原则保持一致
+        if (change.edge.type === 'reference') {
+          graph.edges.push(change.edge);
+        }
       }
     }
   }

@@ -237,7 +237,7 @@ export function buildChallengePrompt(
   return {
     proPrompt:
       `⚖️ 交叉质证 第 ${round} 轮\n\n`
-      + `你是 PRO 阵营的代表。对方 (CON 阵营) 提出了以下核心论点，你必须逐一回应：\n\n${conArgs}\n\n`
+      + `你是 PRO 阵营的代表。对方 (CON 阵营) 提出了以下核心论点，你必须逐一回应：\n\n${proArgs}\n\n`
       + `回应要求：\n`
       + `1. 对每个论点，指出其逻辑漏洞或证据不足\n`
       + `2. 用你阵营的证据反驳\n`
@@ -247,7 +247,7 @@ export function buildChallengePrompt(
 
     conPrompt:
       `⚖️ 交叉质证 第 ${round} 轮\n\n`
-      + `你是 CON 阵营的代表。对方 (PRO 阵营) 提出了以下核心论点，你必须逐一回应：\n\n${proArgs}\n\n`
+      + `你是 CON 阵营的代表。对方 (PRO 阵营) 提出了以下核心论点，你必须逐一回应：\n\n${conArgs}\n\n`
       + `回应要求：\n`
       + `1. 对每个论点，指出其逻辑漏洞或证据不足\n`
       + `2. 用你阵营的证据反驳\n`

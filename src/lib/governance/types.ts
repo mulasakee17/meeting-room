@@ -1,11 +1,8 @@
 export type SeverityLevel = "low" | "medium" | "high";
 
-export type InterventionType = 
-  | "introduce_diversity" 
-  | "break_connections" 
-  | "reduce_weight" 
-  | "introduce_dissent" 
-  | "pair_opposites" 
+export type InterventionType =
+  | "introduce_diversity"
+  | "reduce_weight"
   | "force_reflection"
   | "continue_discussion"
   | "none";

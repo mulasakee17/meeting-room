@@ -193,7 +193,8 @@ export function computeHistoryEffectiveness(
 ): number {
   const diversityChange = previousEffects["belief_diversity_change"] || 0;
   const meanChange = Math.abs(previousEffects["belief_mean_change"] || 0);
-  const successRate = previousEffects["successful_interventions"] || 0;
+  // successful_interventions 是计数（整数），intervention_success_rate 才是百分比 0-100
+  const successRate = (previousEffects["intervention_success_rate"] || 0) / 100;
 
   // 多样性增加 + 有实质变化 + 有成功案例 → 正面
   const raw = diversityChange * 0.4 + meanChange * 0.3 + Math.min(successRate, 1) * 0.3;

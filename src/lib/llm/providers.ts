@@ -302,6 +302,7 @@ async function callAnthropic(
           max_tokens: 1024,
           system: systemPrompt,
           messages: [{ role: "user", content: userPrompt }],
+          ...(config?.temperature !== undefined ? { temperature: config.temperature } : {}),
         }),
       },
       timeout

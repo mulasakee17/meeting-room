@@ -68,10 +68,24 @@ export interface ExtractedState {
 }
 
 export function extractGovTag(text: string): ExtractedState | null {
-  const match = text.match(/\[GOV\]\s*(\{[\s\S]*\})/);
-  if (!match) return null;
+  // 先找 [GOV] 标记位置，再提取其后内容（到行尾或文末），最后做括号匹配
+  const govIdx = text.indexOf("[GOV]");
+  if (govIdx === -1) return null;
 
-  let jsonStr = match[1].trim();
+  let afterGov = text.slice(govIdx + 5).trimStart();
+  if (!afterGov.startsWith("{")) return null;
+
+  // 贪婪匹配到最后一个 } （处理嵌套对象），若无 } 则取到行尾/文末再做容错
+  const braceMatch = afterGov.match(/^(\{[\s\S]*\})/);
+  let jsonStr: string;
+  if (braceMatch) {
+    jsonStr = braceMatch[1].trim();
+  } else {
+    // 截断的 JSON（缺右花括号）——取到行尾，后续补全
+    const lineEnd = afterGov.indexOf("\n");
+    jsonStr = lineEnd === -1 ? afterGov : afterGov.slice(0, lineEnd);
+    jsonStr = jsonStr.trim();
+  }
 
   // 容错：如果 JSON 被截断（缺右花括号），尝试补全
   const openBraces = (jsonStr.match(/\{/g) || []).length;
@@ -108,7 +122,8 @@ export function extractGovTag(text: string): ExtractedState | null {
  * 从 agent 发言文本中移除 [GOV] 行，返回干净的发言内容。
  */
 export function stripGovTag(text: string): string {
-  return text.replace(/\[GOV\]\s*\{[\s\S]*?\}/g, "").trimEnd();
+  // 贪婪匹配，与 extractGovTag 一致，避免嵌套对象时残留 ]}
+  return text.replace(/\[GOV\]\s*\{[\s\S]*\}/g, "").trimEnd();
 }
 
 // ============================================================================

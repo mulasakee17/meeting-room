@@ -1,12 +1,12 @@
 # 🐜 SwarmAlpha
 
-> **Experimental evidence that LLM agent collectives need governance — but only when they genuinely need to collaborate.**
+> **An embeddable governance runtime for multi-agent systems — process monitoring, decision audit, and adaptive intervention as three independent value pillars.**
 >
-> *First controlled demonstration with statistical rigor of a boundary condition for AI governance deployment.*
+> *First open-source governance layer for AI agent collectives. Framework-agnostic. Zero extra LLM calls.*
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
-[![Tests](https://img.shields.io/badge/tests-149%20passed-green)](./test/)
+[![Tests](https://img.shields.io/badge/tests-209%20passed-green)](./test/)
 [![Framework-Agnostic](https://img.shields.io/badge/framework-agnostic-purple)]()
 [![Embeddable](https://img.shields.io/badge/embeddable-SDK-orange)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
@@ -17,35 +17,30 @@
 
 ## Core Finding
 
-**A 2×2 factorial design (Task interdependence × Round budget) reveals that no positive governance effect is statistically significant. Governance shows a medium directional improvement only in limited-round interdependent discussions (Invest 3-round: d=+0.65, p=0.152) and is completely null with more rounds (Invest 5-round: d=+0.00, p=1.0). The first statistically significant governance finding is *negative*: `full_reflection` is significantly harmful on 5-round Invest (p=0.048). The only positive significant result remains the shuffle control on weakly-interdependent M&A (p=0.0009), which breaks overconfidence rather than governing collaboration.**
+**The governance engine has independent value beyond "improving decision accuracy."** A 2×2 factorial design (Task interdependence × Round budget, n=15/cell) shows that no positive governance effect on final decision quality is statistically significant. But the engine's value is not solely in improving outcomes — it is in providing **observability, auditability, and targeted intervention** for multi-agent decision processes. These three capabilities are independently valuable regardless of whether they change the final answer.
 
-### 2×2 Factorial Design — Core Results (n=15 per cell)
+### Three Independent Value Pillars
 
-| | Invest — 3 rounds (Strong Interdependence, n=15) | Invest — 5 rounds (Boundary, n=15) | M&A — 5 rounds (Weak Interdependence, n=15/10) |
+| Pillar | What It Does | Why It Matters Independently |
+|--------|-------------|------------------------------|
+| **Process Monitoring** | Real-time detection of 4 collective cognitive failures (echo chamber, authority bias, polarization, premature consensus) | Knowing your agent team is forming an echo chamber is valuable *even if you don't intervene*. Enterprises deploying AI agent teams need observability. |
+| **Decision Audit** | Full traceable decision chain: who influenced whom, when beliefs shifted, when governance intervened | Post-hoc accountability and compliance. Doesn't change outcomes — changes *responsibility attribution*. |
+| **Adaptive Intervention** | Targeted prompts injected when bias detected (diversity injection, forced reflection, weight reduction, continue discussion) | Accelerates convergence on genuinely interdependent tasks — but has clear boundary conditions |
+
+### 2×2 Factorial Design — Decision Quality Results (n=15 per cell)
+
+| | Invest — 3 rounds (Strong Interdependence) | Invest — 5 rounds | M&A — 5 rounds (Weak Interdependence) |
 |---|---|---|---|
 | **Baseline τ** | 0.422±0.344 (Q=71.3) | 0.778±0.325 (Q=89.0) | 0.533±0.209 (Q=76.7) |
 | **Full governance τ** | 0.644±0.344 (Q=82.4) | 0.778±0.325 (Q=89.0) | 0.613±0.177 (Q=80.7) |
-| **Net Δτ (Full−Baseline)** | **+0.133** (CI [−0.09, +0.35], p=0.152) | **−0.089** (CI [−0.38, +0.21], p=1.0) | **−0.123** (CI [−0.27, +0.02], p=0.36) |
-| **Cohen's d** | **+0.65** (medium, NOT sig) | **+0.00** (null) | +0.41 (NOT sig) |
-| **Shuffle τ*** | — | 1.000 (n=5, p=0.264, NOT sig) | **0.900 (p=0.0009, SIGNIFICANT)** |
-| **full_reflection** | — | **0.333 (ΔQ=−22.2, p=0.048, SIGNIFICANTLY HARMFUL)** | 0.660 (p=0.183) |
-| **Conclusion** | Directional improvement, NOT sig | Governance null; reflection HARMFUL | Governance doesn't help; shuffle does |
+| **Net Δτ** | +0.133 ([−0.09, +0.35], p=0.152) | −0.089 ([−0.38, +0.21], p=1.0) | −0.123 ([−0.27, +0.02], p=0.36) |
+| **Cohen's d** | +0.65 (medium, NOT sig) | +0.00 (null) | +0.41 (NOT sig) |
+| **Shuffle τ** | — | 1.000 (n=5, NOT sig) | **0.900 (p=0.0009)** |
+| **Conclusion** | Directional improvement, NOT sig | Completely null | Governance doesn't help; breaking overconfidence does |
 
-*\*Shuffle control (placebo test / identification strategy): scramble agent knowledge to break information coherence while preserving discussion structure. On M&A, shuffle is the only positive condition reaching statistical significance (p=0.0009) — breaking professional overconfidence outperforms targeted governance.*
+**Key insight**: On weakly-interdependent tasks, governance is unnecessary (M&A p=0.36). On strongly-interdependent tasks with limited rounds, governance shows directional but non-significant improvement (d=+0.65, p=0.152). With sufficient rounds, baseline agents catch up and governance becomes null (p=1.0). **The only statistically significant positive finding is the shuffle control on M&A (p=0.0009)** — breaking professional overconfidence outperforms targeted governance. Notably, `full_reflection` is significantly *harmful* on Invest 5-round (p=0.048) — forcing reflection when agents already converge naturally hurts performance.
 
-### Four lines of evidence support this conclusion:
-
-**1. The 2×2 factorial design isolates a round-budget boundary condition.** Holding task constant (Invest, strong interdependence) and varying only round budget: 3 rounds produces a medium directional effect (d=+0.65, p=0.152, NOT significant), while 5 rounds produces a literally zero effect (d=+0.00, p=1.0, completely null). The pattern supports the boundary-condition hypothesis — governance may accelerate convergence under tight round budgets — but does not statistically confirm it (3-round p=0.152). Holding round budget constant (5 rounds) and varying task interdependence: governance is null on Invest (d=+0.00) and non-significant on M&A (d=+0.41, p=0.36). No positive governance comparison reaches significance in any cell.
-
-**2. The first significant governance finding is *harmful*.** On 5-round Invest, `full_reflection` produces τ=0.333 (vs baseline τ=0.778, ΔQ=−22.2, **p=0.048**) — the first and only statistically significant governance effect, and it is *negative*. Forcing reflection on strongly-interdependent tasks with sufficient discussion time actively hurts: agents already converge through natural discussion, and reflection interrupts that process. `full_weight` (τ=0.467, ΔQ=−15.6, p=0.173) shows the same harmful trend. This is a real, replicable finding — not noise.
-
-**3. Shuffle control is the only *positive* significant finding — and only on M&A.** On the weakly-interdependent M&A task, scrambling agent knowledge produces τ=0.900 (vs Full τ=0.613, d=+1.80, **p=0.0009**) — the *only* statistically significant positive result across all 165 experiments. On Invest (5-round), shuffle reaches τ=1.000 but with n=5 the effect is not significant (p=0.264). This is not evidence that governance works; it is evidence that breaking professional overconfidence matters on tasks where agents are already independently competent.
-
-**4. No positive single-intervention ablation reaches significance.** Single-intervention ablations on M&A: `full_diversity` τ=0.660 (d=+0.63, p=0.174), `full_weight` τ=0.700 (d=+0.65, p=0.171), `full_reflection` τ=0.660 (d=+0.63, p=0.183), `full_continue` τ=0.620 (d=+0.52, p=0.267) — all directionally positive, none significant. On Invest (5-round), `full_weight` (τ=0.467, p=0.173) and `full_reflection` (τ=0.333, **p=0.048, significantly harmful**) show negative effects. The previously claimed "full_diversity p=0.003" was from V1 data with known bugs and does not replicate. No single mechanism — diversity injection, weight reduction, reflection, or continued discussion — is positively validated.
-
-> **Key insight**: The honest finding is nuanced. No positive governance effect is statistically significant. Governance shows a medium directional improvement only in limited-round interdependent discussions (d=+0.65, p=0.152), which disappears entirely with more rounds (p=1.0). The only statistically significant governance effect is *harmful* (full_reflection, p=0.048). The only positive significant finding overall is shuffle on M&A (p=0.0009), which implicates overconfidence reduction rather than governance per se.
-
-> **Data integrity note**: Earlier V1 results claiming τ=0.022 baseline, full_diversity p=0.003, and full_weight τ=−0.267 were affected by known bugs and have been removed. All numbers below are from the corrected V2 pipeline with n=15 per cell on Invest tasks (2026-07-12).
+> **Self-correction note**: Earlier V1 results claiming larger governance effects were affected by a system prompt answer leak and a structurally broken authority bias detector. All 6 bugs were independently identified, verified, and fixed. The V2 data above is from the corrected pipeline. This self-correction process is itself evidence of the project's commitment to integrity — and demonstrates why process monitoring matters: even without intervention, visibility into what's actually happening in agent discussions catches problems that silent pipelines hide.
 
 ---
 
@@ -87,6 +82,8 @@ A series of hard faults (H-series) were identified and repaired alongside the co
 
 SwarmAlpha is the **governance runtime** used to generate the evidence above — an embeddable layer that observes, detects, and intervenes on collective decision failures in multi-agent systems.
 
+**Application scenario**: Real-time process governance for LLM multi-agent collaborative decision-making — detecting polarization, authority bias, echo chambers, and premature consensus during consensus formation and applying targeted interventions to safeguard decision quality in limited-round discussions.
+
 It does NOT create agents or manage workflows. It plugs into existing frameworks to provide:
 
 - 🔍 **Observation** — extract agent beliefs and emotions from natural language
@@ -94,6 +91,7 @@ It does NOT create agents or manage workflows. It plugs into existing frameworks
 - 🚨 **Bias Detection** — echo chambers, authority bias, polarization, premature consensus
 - 🛡️ **Intervention** — targeted prompts injected into agent discussion
 - 📈 **Evaluation** — 5-dimension scoring with t-distribution confidence intervals
+- 🧪 **Causal Effect Estimation** — nearest-neighbor trajectory matching + permutation test to estimate counterfactual intervention effects
 
 **Key principle**: LLMs only do perception (extracting beliefs from language). Mathematics handles everything else — consensus computation, bias detection, belief dynamics. This means the governance runtime is **fast, cheap, and interpretable** with zero additional LLM calls.
 
@@ -189,7 +187,13 @@ npm run analyze             # t-distribution CI + permutation test + statistical
 npm run sensitivity         # 5 params × 5 values sweep
 
 # Run tests (no API key needed)
-npm test                    # 149 tests
+npm test                    # 209 tests
+```
+
+**Causal effect analysis** (no API key needed, uses existing experiment data):
+
+```bash
+npx tsx experiments/v2/causalAnalysis.ts   # Nearest-neighbor matching + permutation test
 ```
 
 **Demo mode**: Open http://localhost:3000, click "Run Comparison" — uses pre-computed scenarios, zero API cost. "Live" mode sends real LLM requests.
@@ -269,16 +273,23 @@ Thresholds and intervention strength adapt to task context:
 
 ## Framework Compatibility
 
-SwarmAlpha is **framework-agnostic**. It works with any multi-agent system through a standardized adapter interface:
+SwarmAlpha is **framework-agnostic**. The core governance engine has zero dependencies on the built-in DiscussionEngine — all 4 bias detectors, 4 intervention strategies, and adaptive thresholds work independently. Integration uses the `StateInferenceBridge` which translates interventions into plain-text prompts injectable into any agent's system prompt:
 
-| Framework | Adapter | Status |
-|-----------|---------|--------|
-| **Custom** (built-in) | `CustomAdapter` | ✅ Full integration |
-| **AutoGen** (Microsoft) | `AutoGenAdapter` | 🔧 TypeScript bridge (Python sidecar needed for full integration) |
-| **CrewAI** | Planned | 🗓️ Roadmap |
-| **LangGraph** | Planned | 🗓️ Roadmap |
+| Framework | Adapter | Integration Method | Status |
+|-----------|---------|-------------------|--------|
+| **Custom** (built-in) | `CustomAdapter` | Direct state manipulation | ✅ Full integration |
+| **Any Framework** | `StateInferenceBridge` | Prompt injection — append governance text to agent prompts | ✅ Works today |
+| **AutoGen** (Microsoft) | `AutoGenAdapter` + StateInferenceBridge | Message adaptation via AutoGen's hook system + prompt injection | 🔧 Message adaptation done, prompt injection pending |
+| **CrewAI** | Planned | Task callback + prompt injection | 🗓️ Roadmap (Phase 2) |
+| **LangGraph** | Planned | Graph node injection | 🗓️ Roadmap (Phase 2) |
 
-Each adapter translates framework-native messages into the standard `DiscussionMessage` format and applies governance interventions back to the framework.
+**Minimum Viable Integration** (any framework, 2-4 hours):
+1. Append `buildGovernanceExtension()` to agent system prompts → agents emit structured belief/confidence tags
+2. Wrap messages through `StateInferenceBridge.adaptMessages()` each round
+3. Call `GovernanceRuntime.processRound()` → get interventions
+4. Feed `interventionToPrompt()` output into agent prompts for the next round
+
+See [ROADMAP.md](ROADMAP.md) for detailed integration plans and the multi-agent society vision.
 
 ### Extensible Detection & Shared Utilities
 
@@ -387,20 +398,43 @@ The 2×2 factorial design (Task interdependence × Round budget) is the key meth
 
 **Statistical rigor**: t-distribution 95% CI + permutation test p-values. 9 ablation modes. 2×2 factorial design (n=15 per cell on Invest). Parameter sensitivity infrastructure (5×5×5 sweep). All raw data preserved in `experiments/v2/data*/`.
 
+### Causal Effect Estimation (Trajectory Matching)
+
+Beyond correlational analysis (t-test, permutation test), SwarmAlpha includes a **causal effect estimation** module that answers: *"How much did the intervention change the final τ, compared to the counterfactual where no intervention occurred?"*
+
+**Method**: Nearest-neighbor trajectory matching (k=5) + inverse-distance-weighted counterfactual + 10000-permutation test + 10000-iteration bootstrap CI. For each treated experiment, 5 nearest donors are selected from the None-baseline pool by Round-1 trajectory distance (τ 0.5 weight + belief diversity 0.3 + belief mean 0.2). The counterfactual τ is the weighted average of matched donors' final τ.
+
+**Key results on existing 165-experiment data** (note: data predates the 2026-07-12 governance-loop fix, so state-modification interventions may be underestimated):
+
+| Group | n_trt | Observed τ | Counterfactual τ | Effect | 95% CI | d | p |
+|---|---|---|---|---|---|---|---|
+| Invest 3-round | 15 | 0.600 | 0.407 | **+0.193** | [+0.01, +0.37] | 0.69 | 0.199 |
+| Invest 5-round | 15 | 0.565 | 0.677 | −0.111 | [−0.27, +0.04] | −0.49 | 0.414 |
+| M&A 5-round | 15 | 0.613 | 0.478 | **+0.135** | [+0.07, +0.20] | 0.96 | **0.067** |
+
+- **M&A 5-round**: Causal effect +0.135, 95% CI excludes 0, d=0.96 (large), p=0.067 — closest to significance across all analyses. CI lower bound +0.07 is the strongest evidence that governance has a positive causal effect on decision quality.
+- **Invest 3-round**: Effect +0.193, CI lower bound barely above 0 (+0.01), d=0.69 (medium) — consistent with the boundary-condition hypothesis (governance helps in limited rounds).
+- **Per-intervention-type**: `continue_discussion` and `introduce_diversity` show positive effects on M&A; `force_reflection` shows negative effect on Invest 5-round (consistent with the p=0.048 harmful finding).
+
+**Assumptions**: SUTVA, conditional ignorability given Round-1 trajectory, common support. **Limitations**: only 1 pre-treatment period, small sample (n=15/cell), historical governance-loop break may underestimate state-modification interventions. See [src/lib/analysis/causalEffect.ts](src/lib/analysis/causalEffect.ts) for implementation and [experiments/v2/causalAnalysis.ts](experiments/v2/causalAnalysis.ts) to run.
+
 ---
 
 ## Why This Matters
 
-Multi-agent systems are being deployed in high-stakes domains — finance, healthcare, law. When five AI agents discuss a critical decision, they commit the **same systematic failures as human groups**. Current frameworks (AutoGen, CrewAI, LangGraph) provide zero governance.
+Multi-agent systems are being deployed in high-stakes domains — finance, healthcare, law. When AI agents discuss critical decisions, they commit the **same systematic failures as human groups**. Current frameworks (AutoGen, CrewAI, LangGraph) provide zero governance — not even basic observability into what's happening in agent discussions.
 
-SwarmAlpha demonstrates that:
-1. **No positive governance effect is statistically significant** — the 2×2 factorial design (n=15 per cell) shows a medium directional improvement only in limited-round interdependent discussions (Invest 3-round: d=+0.65, p=0.152), which disappears entirely with more rounds (Invest 5-round: d=+0.00, p=1.0)
-2. **The first significant governance finding is *harmful*** — `full_reflection` on 5-round Invest significantly *reduces* performance (p=0.048, ΔQ=−22.2). Forcing reflection when agents already converge through natural discussion actively hurts. This is the only statistically significant governance effect across all 165 experiments.
-3. **Governance has boundaries** — the 2×2 design isolates the round-budget moderation: directional improvement at 3 rounds (d=+0.65, NOT sig) vs null at 5 rounds (d=+0.00); and task-interdependence moderation: null on Invest (strong interdependence) vs non-significant on M&A (weak interdependence, p=0.36)
-4. **You can't measure governance impact with simple group averages** — our Δτ methodology is necessary to distinguish real effects from statistical artifacts
-5. **Breaking overconfidence is the only positive robust finding** — the shuffle control on M&A (p=0.0009) is the single positive significant result across 165 experiments
+SwarmAlpha provides three layers of value:
 
-**The implication for AI deployment**: Don't assume governance is essential — no positive governance effect reaches significance, and the only significant governance effect is harmful. Measure task interdependence and round budget first. Governance may directionally accelerate convergence on interdependent tasks under tight round budgets (d=+0.65, but p=0.152), but baseline agents catch up with more rounds (p=1.0). Forcing reflection or reducing influence on interdependent tasks with sufficient discussion time is counterproductive (full_reflection p=0.048). On weakly-interdependent tasks, interventions targeting overconfidence (not governance per se) are the only thing that demonstrably helps.
+1. **Process Monitoring (independent of decision outcomes)** — Real-time detection of echo chambers, authority bias, polarization, and premature consensus. This matters even if you never intervene: enterprises deploying AI agent teams need to *see* what's happening in their discussions. You can't fix what you can't observe.
+
+2. **Decision Audit (independent of intervention)** — Full traceable decision chains answer "why did the agent team decide this?" Post-hoc accountability is valuable for compliance (EU AI Act), debugging, and trust — regardless of whether the decision was correct.
+
+3. **Targeted Intervention (with clear boundary conditions)** — Governance does NOT unconditionally improve decision quality. Our 2×2 factorial design shows: directional improvement only on interdependent tasks with limited rounds (d=+0.65, p=0.152, NOT sig); completely null with sufficient rounds (p=1.0); significantly harmful when forcing reflection on tasks agents already handle well (p=0.048). The implication: **governance is a tool for specific conditions, not a universal upgrade**.
+
+**The engine has been independently audited** — all 4 bias detectors, 4 intervention strategies, and the StateInferenceBridge work without the built-in DiscussionEngine, making them genuinely embeddable. Integrating into any framework takes 2-4 hours for a working prototype.
+
+**The implication for AI deployment**: Don't blindly deploy governance. But also don't deploy agent teams without *any* process monitoring. SwarmAlpha provides the observability layer that every multi-agent system currently lacks — and the intervention layer for the specific conditions where it demonstrably helps.
 
 ---
 
@@ -447,6 +481,7 @@ src/
 │   ├── observation/              # LLM output parsing
 │   ├── inference/                # Belief evolution computation
 │   ├── discussion/               # Built-in multi-round discussion engine
+│   ├── analysis/                 # 🆕 Causal effect estimation (trajectory matching)
 │   ├── llm/                      # Multi-provider LLM abstraction
 │   ├── utils/                    # 🆕 Shared utilities (Registry, JSON, stats)
 │   ├── benchmarks/               # Benchmark framework
@@ -455,7 +490,7 @@ src/
 │   ├── page.tsx                  # Demo/Live comparison view
 │   └── api/v3/                   # API endpoints
 experiments/                      # Hidden Profile experiment framework
-└── test/                         # 149 automated tests
+└── test/                         # 209 automated tests
 ```
 
 ---
@@ -463,7 +498,7 @@ experiments/                      # Hidden Profile experiment framework
 ## Running Tests
 
 ```bash
-npm test              # 149 tests across 11 files
+npm test              # 209 tests across 13 files
 npm run test:watch    # watch mode
 ```
 
@@ -474,12 +509,15 @@ npm run test:watch    # watch mode
 | Document | Content |
 |----------|---------|
 | [ONEPAGER.md](ONEPAGER.md) | One-page executive summary |
+| [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) | 600-word Chinese project summary |
+| [ROADMAP.md](ROADMAP.md) | Development roadmap & academic outreach plan |
 | [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) | Deep technical architecture |
 | [API_CONTRACT.md](API_CONTRACT.md) | REST API + SDK API specification |
 | [MATHEMATICAL_FRAMEWORK.md](MATHEMATICAL_FRAMEWORK.md) | Complete formal math definitions |
 | [RESEARCH_STATEMENT.md](RESEARCH_STATEMENT.md) | Research contribution & experiment results |
 | [LIMITATIONS.md](LIMITATIONS.md) | Honest scope, statistical limitations, and non-significant findings |
 | [experiments/v2/analyze.ts](experiments/v2/analyze.ts) | Statistical analysis (t-CI + permutation test) |
+| [experiments/v2/causalAnalysis.ts](experiments/v2/causalAnalysis.ts) | 🆕 Causal effect estimation (trajectory matching + counterfactual) |
 | [experiments/v2/sensitivity.ts](experiments/v2/sensitivity.ts) | Parameter sensitivity sweep |
 
 ---

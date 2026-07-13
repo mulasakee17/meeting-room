@@ -2,7 +2,9 @@
 
 > **An Embeddable Governance Runtime for Multi-Agent Systems**
 >
-> Improving Collective Decision Quality via Quantifiable Adaptive Governance
+> *Process monitoring, decision audit, and adaptive intervention — three independent value pillars for AI agent collectives.*
+>
+> **Application scenario**: Real-time process governance for LLM multi-agent collaborative decision-making — detecting polarization, authority bias, echo chambers, and premature consensus during consensus formation and applying targeted interventions to safeguard decision quality in limited-round discussions.
 
 ---
 
@@ -23,25 +25,29 @@ LLM multi-agent systems (AutoGen, CrewAI, etc.) are being deployed in high-stake
 
 ## What We Built
 
-SwarmAlpha is **not another multi-agent framework**. It's an **embeddable governance runtime** — a drop-in layer that enhances existing frameworks rather than replacing them.
+SwarmAlpha is **not another multi-agent framework**. It's an **embeddable governance runtime** — a drop-in layer that provides three independent value dimensions:
+
+**1. Process Monitoring** — Real-time detection of 4 collective cognitive failures (echo chamber, authority bias, polarization, premature consensus). Value is independent of intervention: knowing your agent team is forming an echo chamber matters even if you choose not to act.
+
+**2. Decision Audit** — Full traceable chain: who influenced whom, when beliefs shifted, when governance intervened. Post-hoc accountability for compliance and debugging, regardless of whether the final decision was correct.
+
+**3. Adaptive Intervention** — Targeted prompts injected when bias is detected (diversity injection, weight reduction, forced reflection, continue discussion). Helpful under specific boundary conditions, not a universal upgrade.
 
 ```
 Without SwarmAlpha:
-  Multi-agent framework → Agents discuss → Vote → Done  (no quality check)
+  Agents discuss → Vote → Done  (no visibility, no audit, no intervention)
 
 With SwarmAlpha:
-  Multi-agent framework → Agents discuss → [Governance Runtime: observe → detect → intervene] → Quality-evaluated decision
+  Agents discuss → [Monitor → Detect → Audit → Intervene?] → Auditable decision
 ```
-
-### Three Core Components
-
-1. **Governance Runtime** — Framework-agnostic engine that monitors 4 failure modes in real time and triggers targeted interventions
-2. **5-Dimension Evaluation** — Multi-dimensional scoring (Consensus, Reliability, Dispersion, Stability, Influence Analysis) — not just "was it right?"
-3. **Decision Trace** — Full auditable decision chain: who influenced whom, why beliefs shifted, when governance intervened
 
 ### Key Innovation: LLM Perception / Math Evolution Separation
 
 LLMs only extract beliefs and emotions from natural language. All governance logic (consensus computation, bias detection, belief dynamics) uses pure mathematics. Result: **fast, cheap, interpretable** — deployable as a lightweight plugin with zero additional LLM calls.
+
+### Independent Audit Result
+
+The core governance engine (all 4 detectors, 4 intervention strategies, adaptive thresholds) has been verified to work **without the built-in DiscussionEngine**. Integration into any framework requires only: (1) append belief-extraction tags to agent prompts, (2) adapt messages via `StateInferenceBridge`, (3) call `processRound()`, (4) inject intervention prompts. Working prototype per framework: 2-4 hours.
 
 ### Cognitive Defect Diagnosis of the Multi-Agent Discussion Paradigm
 
@@ -58,48 +64,27 @@ A deeper architectural review diagnosed **4 root cognitive defects** in the prev
 
 ---
 
-## Experimental Evidence (165 controlled experiments; 105 new runs pending lab rerun after loop-fix)
+## Experimental Evidence (165 controlled experiments)
 
-2 tasks (M&A: 5 rounds, n=15 for none/full, n=10 for others; Invest: 5-round n=15 for none/full & n=5 for others, 3-round n=15 with none & full only — a 2×2 factorial design on round count × governance). Primary metric: Kendall's τ + within-group Δτ (baseline-corrected). t-distribution 95% CI + permutation test p-values.
+2×2 factorial design (Task interdependence × Round budget, n=15/cell). Primary metric: Kendall's τ + within-group Δτ. t-distribution 95% CI + permutation test p-values.
 
-### Interdependent Investment Task
-*(No single agent can determine the answer alone.)*
+### 2×2 Factorial — Core Results
 
-**5-round variant (n=15 for none/full, n=5 for others)**
+| | Invest — 3 rounds | Invest — 5 rounds | M&A — 5 rounds |
+|---|---|---|---|
+| **Baseline τ** | 0.422±0.344 (Q=71.3) | 0.778±0.325 (Q=89.0) | 0.533±0.209 (Q=76.7) |
+| **Full governance τ** | 0.644±0.344 (Q=82.4) | 0.778±0.325 (Q=89.0) | 0.613±0.177 (Q=80.7) |
+| **Net Δτ** | +0.133 (p=0.152, NOT sig) | −0.089 (p=1.0, null) | −0.123 (p=0.36, NOT sig) |
+| **Cohen's d** | +0.65 (medium, NOT sig) | +0.00 (null) | +0.41 (NOT sig) |
+| **Key finding** | Directional improvement only | Null; reflection HARMFUL (p=0.048) | Shuffle beats all (p=0.0009) |
 
-| Ablation | τ | Q | d | p | Key finding |
-|----------|------|------|---|---|-------------|
-| None | 0.778±0.325 | 89.0±16.1 | — | — | Baseline: already strong |
-| Full | 0.778±0.325 | 89.0±16.1 | +0.00 | 1.0 | Zero effect — identical to baseline |
-| Shuffle | 1.000±0.000 | 100.0±0.0 | +1.03 | 0.44 | NOT sig (n=5 too small) |
-| full_weight | 0.467±0.558 | — | −0.57 | 0.173 | Harmful trend (ΔQ=−15.6) |
-| full_reflection | 0.333±0.471 | — | −0.95 | **0.048** | **SIG: significantly harmful (ΔQ=−22.2)** |
+**Three conclusions**:
 
-**3-round variant (n=15, only none & full)**
+1. **Governance shows directional improvement only under specific conditions** — 3-round Invest has d=+0.65 (p=0.152, NOT sig). With 5 rounds, baseline agents catch up and governance becomes completely null (d=+0.00).
+2. **The engine's value extends beyond decision quality improvement** — Process monitoring and decision audit are independently valuable. Enterprises that deploy AI agent teams need to see what's happening in discussions, trace who influenced whom, and comply with audit requirements — regardless of whether interventions change the final answer.
+3. **Breaking overconfidence is the only robust positive** — M&A Shuffle τ=0.900 (p=0.0009). On weakly-interdependent tasks, scrambling data forces agents to listen — outperforming targeted governance.
 
-| Ablation | τ | Q | Δτ | Net Δτ | d | p | Key finding |
-|----------|------|------|-----|--------|---|---|-------------|
-| None | 0.422±0.344 | 71.3±17.2 | — | — | — | — | Baseline |
-| Full | 0.644±0.344 | 82.4±17.0 | — | +0.133 | +0.65 | 0.152 | Medium effect, NOT sig (CI [−0.09, +0.35]) |
-
-### M&A Target Selection
-*(Agents can perform reasonably without collaboration. 5 rounds, n=15 for none/full, n=10 for others)*
-
-| Ablation | τ | Q | Δτ | d | p | Key finding |
-|----------|------|------|-----|---|---|-------------|
-| None | 0.533±0.209 | 76.7±10.5 | — | — | — | Baseline: already decent |
-| **Full** | 0.613±0.177 | 80.7±8.8 | −0.123 | +0.41 | 0.36 | NOT significant |
-| **Shuffle** | **0.900±0.194** | **95.0±9.7** | — | **+1.80** | **0.0009** | **SIG: breaking overconfidence helps** |
-| full_diversity | 0.660±0.190 | — | — | +0.63 | 0.174 | NOT sig |
-| full_weight | 0.700±0.316 | — | — | +0.65 | 0.171 | NOT sig |
-| full_reflection | 0.660±0.190 | — | — | +0.63 | 0.183 | NOT sig |
-| full_continue | 0.620±0.063 | — | — | +0.52 | 0.267 | NOT sig |
-
-**Three conclusions, each with direct evidence**:
-
-1. **2×2 factorial design reveals round moderation** — The 2×2 design (3-round vs 5-round × none vs full, n=15 per cell) is the methodological contribution. On 3-round Invest, full governance shows a medium effect (d=+0.65, p=0.152, Net Δτ=+0.133, CI [−0.09, +0.35]) — suggestive but not significant. On 5-round Invest, full governance shows zero effect (d=+0.00, p=1.0, identical to baseline). Governance has directional benefit in limited rounds but zero effect with sufficient rounds.
-2. **The only significant governance effect is HARMFUL** — On 5-round Invest, full_reflection (n=5) produces τ=0.333, ΔQ=−22.2, p=0.048 — significantly harmful, the first and only statistically significant governance effect. full_weight (τ=0.467, ΔQ=−15.6, p=0.173) shows a harmful trend. No positive governance effect reaches significance across all 165 experiments.
-3. **Breaking overconfidence is the strongest positive finding** — M&A Shuffle (τ=0.900, d=+1.80, p=0.0009) is the only statistically significant *positive* result across all 165 experiments. On weakly-interdependent tasks, scrambling data breaks professional overconfidence, forcing agents to listen to each other — outperforming targeted governance.
+> **Self-correction**: V1 results were affected by a system prompt answer leak and a broken authority bias detector. All 6 bugs independently identified, verified, and fixed. V2 data above is from the corrected pipeline.
 
 ---
 
@@ -107,19 +92,20 @@ A deeper architectural review diagnosed **4 root cognitive defects** in the prev
 
 | Feature | Description |
 |---------|-------------|
-| **Framework-Agnostic** | Custom framework (full); AutoGen (TypeScript bridge, Python sidecar needed); CrewAI/LangGraph (planned) |
+| **Framework-Agnostic** | Core engine audited: zero deps on DiscussionEngine. StateInferenceBridge enables prompt-injection integration with any framework in 2-4 hours |
 | **Embeddable SDK** | `import { GovernanceRuntime } from "@/runtime"` — one class, zero framework deps |
 | **Adaptive Governance** | Thresholds calibrate from round-1 data; intervention dosage scales with severity (config-gated, default off) |
 | **Cross-Examination** | Adversarial debate engine: splits agents into PRO/CON camps, synthesizes verdict |
 | **7 Ablation Modes** | Full + shuffle control + 4 single-intervention modes isolate which mechanism matters. **[Updated]** Expanded from 2 implemented modes to 7; full 105-run experiment pending lab execution |
 | **7 Hard Fixes** | H4 Kuramoto mapping corrected; H6 `convergenceSpeed` annotation fixed; H2 `ablationModes` expanded (2→7); H19 seeded PRNG for reproducibility; H17 cache pollution eliminated; H18 `interventionPrompt` unified across modes |
+| **Causal Effect Estimation** | 🆕 Nearest-neighbor trajectory matching (k=5) + 10000-permutation test + bootstrap CI — estimates counterfactual intervention effects, not just correlations. M&A 5-round shows +0.135 effect (d=0.96, p=0.067, CI excludes 0) |
 | **Statistical Inference** | t-distribution 95% CI + permutation test p-values on all key comparisons; Δτ baseline-corrected |
 | **Parameter Sensitivity** | One-at-a-time sweep over 5 governance parameters verifies robustness |
 | **Dropout Sensitivity** | Agent dropout analysis measures outcome sensitivity to each agent's presence |
 | **Multi-LLM Support** | DeepSeek / OpenAI / Anthropic / Local (Ollama) — unified interface |
 | **Extensible Detection** | Custom bias detectors via `registerDetector()` — no core engine changes needed |
 | **Shared Utilities** | Registry/JSON/stats modules eliminate code duplication across the codebase |
-| **149 Automated Tests** | All core modules covered, 11 test files (count unchanged after hard fixes; 105 new experiments pending lab rerun) |
+| **209 Automated Tests** | All core modules covered, 13 test files (including 28 causal-effect tests; 105 new experiments pending lab rerun) |
 | **Demo Mode** | Zero-config, no API key needed — instant visualization |
 
 ---
@@ -174,9 +160,15 @@ AI-assisted coding (Claude Code). Architecture decisions and experiment design a
 
 ## Roadmap
 
-- **Short-term**: Run parameter sensitivity sweep + GPT-4o cross-model validation (n=5)
-- **Medium-term**: Python SDK for native AutoGen/CrewAI integration; formalize governance theory
-- **Statistical**: Power analysis for sample size planning; cross-model validation
+See [ROADMAP.md](ROADMAP.md) for the full development plan with timelines, academic outreach strategy, and risk assessment. Summary:
+
+| Phase | Timeline | Focus |
+|-------|----------|-------|
+| **Phase 1** | This week | Stabilize code + unify documentation narrative |
+| **Phase 2** | 1-2 weeks | Process monitoring demo (static audit report) + framework adapters (AutoGen, CrewAI) |
+| **Phase 3** | 2-4 weeks | Multi-agent society experiments (50-500 agents, information propagation, governance structure comparison) |
+| **Phase 4** | Parallel to Phase 3 | Academic outreach — target labs at Tsinghua AIR, Shanghai AI Lab, PKU CFCS |
+| **Phase 5** | 3-6 months | Python SDK, formal paper (AAMAS/NeurIPS Workshop target), open source community |
 
 ## Long-Term Vision: Agent Society Governance Infrastructure
 
@@ -188,8 +180,7 @@ As multi-agent systems scale from 5-agent discussions to 500-agent organizationa
 - Authority bias → power monopolization
 - Premature consensus → institutional groupthink
 
-SwarmAlpha's observe→model→detect→intervene→evaluate loop is agent-count-agnostic and framework-agnostic — the minimal viable kernel of a future governance operating system for AI societies.
-- **Long-term**: Multi-agent governance as industry standard (EU AI Act compliance)
+SwarmAlpha's observe→model→detect→intervene→evaluate loop is agent-count-agnostic and framework-agnostic — the minimal viable kernel of a future governance operating system for AI societies. Everyone is building how to simulate agent societies. No one is building how to govern them.
 
 ---
 

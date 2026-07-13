@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DiscussionEngine, RuleBasedBeliefUpdate, RuleBasedInfluence, DecisionTraceBuilder } from "@/lib/discussion";
+import { DiscussionEngine, RuleBasedInfluence, DecisionTraceBuilder } from "@/lib/discussion";
 
 class MockAgent {
   constructor(
@@ -35,28 +35,6 @@ class MockAgent {
 }
 
 describe("Discussion Engine - Phase 1 Fixes", () => {
-  describe("D-1: roundNumber 传递修复", () => {
-    it("should pass correct roundNumber to belief update context", () => {
-      const beliefUpdate = new RuleBasedBeliefUpdate();
-      const context = {
-        agentId: "agent1",
-        currentBelief: 0.5,
-        currentConfidence: 70,
-        roundNumber: 2,
-        allOpinions: [
-          { agentId: "agent1", reasoning: "", evidence: [], belief: 0.5, confidence: 70, nextOpinion: "", referencedAgents: [] },
-          { agentId: "agent2", reasoning: "", evidence: [], belief: 0.6, confidence: 80, nextOpinion: "", referencedAgents: [] },
-        ],
-        memory: [],
-        interactionGraph: { nodes: [], edges: [] },
-        influenceWeights: [],
-      };
-
-      const result = beliefUpdate.update(context);
-      expect(result).toBeDefined();
-    });
-  });
-
   describe("D-2: Agent 状态同步", () => {
     it("should sync agent state after belief update", async () => {
       const agent1 = new MockAgent("agent1", "Agent 1", "Expert", "custom", 0.3, 60);
@@ -115,35 +93,6 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       const trace = engine.getDecisionTrace();
       expect(trace.length).toBeGreaterThan(0);
-    });
-
-    it("influence should affect belief change", () => {
-      const beliefUpdate = new RuleBasedBeliefUpdate();
-      const contextWithInfluence = {
-        agentId: "agent1",
-        currentBelief: 0.3,
-        currentConfidence: 50,
-        roundNumber: 1,
-        allOpinions: [
-          { agentId: "agent1", reasoning: "", evidence: [], belief: 0.3, confidence: 50, nextOpinion: "", referencedAgents: [] },
-          { agentId: "agent2", reasoning: "", evidence: [], belief: 0.7, confidence: 90, nextOpinion: "", referencedAgents: [] },
-        ],
-        memory: [],
-        interactionGraph: { nodes: [], edges: [] },
-        influenceWeights: [
-          { sourceAgentId: "agent2", weight: 0.8, type: "agreement" },
-        ],
-      };
-
-      const contextWithoutInfluence = {
-        ...contextWithInfluence,
-        influenceWeights: [],
-      };
-
-      const resultWith = beliefUpdate.update(contextWithInfluence);
-      const resultWithout = beliefUpdate.update(contextWithoutInfluence);
-
-      expect(resultWith.belief).not.toBe(resultWithout.belief);
     });
   });
 

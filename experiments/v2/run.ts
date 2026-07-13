@@ -676,7 +676,8 @@ async function main() {
     const tStd = stdDev(ts);
     const totalIntv = group.reduce((s, r) => s + r.totalInterventions, 0);
     const totalEff = group.reduce((s, r) => s + r.interventionEffects.filter(e => e.effective).length, 0);
-    const d = ablation === "none" ? 0 : cohensD(baseline.map(r => r.decisionQuality), qs);
+    // Cohen's d: ablation - baseline（与 analyze.ts 方向一致，正值=干预优于基线）
+    const d = ablation === "none" ? 0 : cohensD(qs, baseline.map(r => r.decisionQuality));
 
     const qStr = `${qMean.toFixed(1)}±${qStd.toFixed(1)}`;
     const tStr = `${tMean.toFixed(3)}±${tStd.toFixed(3)}`;

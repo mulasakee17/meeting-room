@@ -45,6 +45,8 @@
 import type { GovernanceBridge, BridgeOptions } from "./types";
 import type { DiscussionMessage, FrameworkMessage } from "../types";
 import type { Intervention } from "../../lib/governance/types";
+import type { LLMConfig } from "../../lib/llm/providers";
+import { callLLM } from "../../lib/llm/providers";
 import {
   extractGovTag,
   stripGovTag,
@@ -62,11 +64,16 @@ export class StateInferenceBridge implements GovernanceBridge {
   private options: BridgeOptions;
   /** 讨论选项名称（用于构建 itemBeliefs 提示） */
   private itemNames?: string[];
+  /** LLM 配置——用于 Level 3 推断（agent 不输出 [GOV] 标签时用 LLM 推断信念） */
+  private llmConfig?: LLMConfig;
+  /** 标记 adaptMessages 中用了默认值的消息索引，供 inferMissingBeliefs 使用 */
+  private pendingInference: number[] = [];
   /** 统计：提取成功/失败次数，用于监控 [GOV] 标签的遵从率 */
   private stats = {
     explicitField: 0,
     govTagExtracted: 0,
     fallback: 0,
+    llmInferred: 0,
     interventionsTranslated: 0,
     interventionsFailed: 0,
   };
@@ -77,6 +84,15 @@ export class StateInferenceBridge implements GovernanceBridge {
       ...options,
     };
     this.itemNames = this.options.custom?.itemNames as string[] | undefined;
+    // 从 BridgeOptions.llmConfig 构造 LLMConfig（补充 apiKey 等运行时字段）
+    if (this.options.llmConfig) {
+      this.llmConfig = {
+        provider: this.options.llmConfig.provider as LLMConfig["provider"],
+        model: this.options.llmConfig.model,
+        temperature: this.options.llmConfig.temperature ?? 0.3,
+        apiKey: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY,
+      };
+    }
   }
 
   /**
@@ -88,7 +104,8 @@ export class StateInferenceBridge implements GovernanceBridge {
     rawMessages: FrameworkMessage[],
     roundNumber: number
   ): DiscussionMessage[] {
-    return rawMessages.map((msg) => {
+    this.pendingInference = [];
+    return rawMessages.map((msg, idx) => {
       const agentId = msg.agentId || (msg.metadata?.name as string) || "unknown";
       const content = msg.content;
       const cleanContent = stripGovTag(content);
@@ -115,12 +132,13 @@ export class StateInferenceBridge implements GovernanceBridge {
           reasoning = cleanContent;
           this.stats.govTagExtracted++;
         }
-        // Level 3: 默认值
+        // Level 3: 默认值（标记待 LLM 推断）
         else {
           belief = (msg.metadata?.belief as number) ?? 0;
           confidence = (msg.metadata?.confidence as number) ?? 50;
           reasoning = (msg.metadata?.reasoning as string) || cleanContent;
           this.stats.fallback++;
+          this.pendingInference.push(idx);
         }
       }
 
@@ -137,6 +155,56 @@ export class StateInferenceBridge implements GovernanceBridge {
         roundNumber,
       };
     });
+  }
+
+  /**
+   * 用 LLM 推断那些用了默认值（Level 3 fallback）的消息的 belief/confidence。
+   *
+   * 调用方在 adaptMessages 后可选调用此方法，以获得更准确的信念估计。
+   * 需要 BridgeOptions.llmConfig 配置；未配置时直接返回原消息。
+   *
+   * @param messages adaptMessages 返回的消息数组
+   * @returns 更新后的消息数组（原数组会被原地修改）
+   */
+  async inferMissingBeliefs(messages: DiscussionMessage[]): Promise<DiscussionMessage[]> {
+    if (!this.llmConfig || this.pendingInference.length === 0) {
+      return messages;
+    }
+
+    const systemPrompt = `你是一个信念推断器。根据 agent 的发言内容，推断其信念强度（belief）和置信度（confidence）。
+- belief: -1 到 1（-1=强烈反对，0=中立，1=强烈支持）
+- confidence: 0 到 100（0=完全不确定，100=完全确定）
+只返回 JSON，不要其他内容：{"belief": <number>, "confidence": <number>}`;
+
+    for (const idx of this.pendingInference) {
+      const msg = messages[idx];
+      if (!msg) continue;
+      try {
+        const response = await callLLM(
+          systemPrompt,
+          `Agent ${msg.agentName} 的发言：\n${msg.content.slice(0, 500)}`,
+          this.llmConfig
+        );
+        // 从 LLM 输出解析 JSON
+        const jsonMatch = response.rawContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (typeof parsed.belief === "number") {
+            msg.belief = Math.max(-1, Math.min(1, parsed.belief));
+          }
+          if (typeof parsed.confidence === "number") {
+            msg.confidence = Math.max(0, Math.min(100, parsed.confidence));
+          }
+          this.stats.llmInferred++;
+        }
+      } catch {
+        // LLM 推断失败，保持默认值
+        console.warn(`[StateInferenceBridge] LLM inference failed for agent ${msg.agentId}`);
+      }
+    }
+
+    this.pendingInference = [];
+    return messages;
   }
 
   /**
@@ -241,8 +309,10 @@ export class StateInferenceBridge implements GovernanceBridge {
       explicitField: 0,
       govTagExtracted: 0,
       fallback: 0,
+      llmInferred: 0,
       interventionsTranslated: 0,
       interventionsFailed: 0,
     };
+    this.pendingInference = [];
   }
 }

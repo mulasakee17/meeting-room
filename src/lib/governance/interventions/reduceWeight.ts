@@ -34,7 +34,10 @@ export class ReduceWeightIntervention implements InterventionStrategy {
       .filter(e => e.source === targetAgentId).reduce((sum, e) => sum + e.weight, 0);
     const newWeightSum = updatedEdges
       .filter(e => e.source === targetAgentId).reduce((sum, e) => sum + e.weight, 0);
-    const weightReductionPercent = ((originalWeightSum - newWeightSum) / originalWeightSum) * 100;
+    // 防止 targetAgent 无出边时除零
+    const weightReductionPercent = originalWeightSum > 0
+      ? ((originalWeightSum - newWeightSum) / originalWeightSum) * 100
+      : 0;
 
     const prompt = formatInterventionPrompt(
       `⚠️ CRITICAL: ${targetAgentId} is dominating the discussion.\n` +

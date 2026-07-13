@@ -159,18 +159,19 @@ export class FinancialBenchmark {
 
         // Determine direction from the final decision text
         const decisionLower = result.finalDecision.toLowerCase();
+        // up/down 用词边界匹配，避免误匹配 update/supply/download 等
         const isUp =
           decisionLower.includes("bullish") ||
           decisionLower.includes("上涨") ||
           decisionLower.includes("涨") ||
           decisionLower.includes("positive") ||
-          decisionLower.includes("up");
+          /\bup\b/.test(decisionLower);
         const isDown =
           decisionLower.includes("bearish") ||
           decisionLower.includes("下跌") ||
           decisionLower.includes("跌") ||
           decisionLower.includes("negative") ||
-          decisionLower.includes("down");
+          /\bdown\b/.test(decisionLower);
 
         let agentDecision: string;
         if (isUp && !isDown) agentDecision = "up";

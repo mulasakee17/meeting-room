@@ -111,7 +111,7 @@ export class GovernanceRuntime {
         false,
     };
 
-    this.governanceEngine = new GovernanceEngine(this.config.governanceConfig);
+    this.governanceEngine = new GovernanceEngine(this.config.governanceConfig, this.config.seed);
     this.evaluationEngine = new EvaluationEngine();
 
     this.state = {

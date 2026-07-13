@@ -294,9 +294,7 @@ export class GovernanceEngine {
     const redundantAgents = Array.from(new Set(redundantPairs.flat()));
 
     const intervention = (detected && config.interventionLevel !== "none")
-      ? (config.interventionLevel === "light"
-        ? { type: "introduce_diversity" as InterventionType, applied: true, effect: `Introduced diverse information to ${redundantAgents.length} agents` }
-        : { type: "break_connections" as InterventionType, applied: true, effect: `Broken connections between ${redundantPairs.length} redundant agent pairs` })
+      ? { type: "introduce_diversity" as InterventionType, applied: true, effect: `Introduced diverse information to ${redundantAgents.length} agents` }
       : this.noIntervention();
 
     return {
@@ -363,9 +361,7 @@ export class GovernanceEngine {
     const severity = this.getSeverity(influenceRatio, GOVERNANCE_SEVERITY_AUTHORITY_BIAS);
 
     const intervention = (detected && config.interventionLevel !== "none" && dominantAgent)
-      ? (config.interventionLevel === "light"
-        ? { type: "introduce_dissent" as InterventionType, applied: true, effect: `Introduced dissenting agent to counter ${dominantAgent}'s influence` }
-        : { type: "reduce_weight" as InterventionType, applied: true, effect: `Reduced ${dominantAgent}'s influence weight by ${(influenceRatio * 30).toFixed(0)}%` })
+      ? { type: "reduce_weight" as InterventionType, applied: true, effect: `Reduced ${dominantAgent}'s influence weight by ${(influenceRatio * 30).toFixed(0)}%` }
       : this.noIntervention();
 
     return {
@@ -408,9 +404,7 @@ export class GovernanceEngine {
     const groups = this.clusterAgentsByBelief(agentBeliefs);
 
     const intervention = (detected && config.interventionLevel !== "none")
-      ? (config.interventionLevel === "light"
-        ? { type: "pair_opposites" as InterventionType, applied: true, effect: `Paired ${groups.length} opposing groups for discussion` }
-        : { type: "force_reflection" as InterventionType, applied: true, effect: `Forced ${agentBeliefs.length} agents to reflect on opposing viewpoints` })
+      ? { type: "force_reflection" as InterventionType, applied: true, effect: `Forced ${agentBeliefs.length} agents to reflect on opposing viewpoints` }
       : this.noIntervention();
 
     return {

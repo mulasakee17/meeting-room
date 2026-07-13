@@ -15,13 +15,11 @@ import {
 } from "./types";
 
 import { MemoryManager, InMemoryStrategy } from "./memory";
-import { BeliefUpdateManager, RuleBasedBeliefUpdate } from "./beliefUpdate";
 import { InfluenceManager, RuleBasedInfluence } from "./influence";
 import { InteractionGraphBuilder } from "./interactionGraph";
 import { DecisionTraceBuilder } from "./decisionTrace";
 import { GovernanceEngine, AgentBelief, MessageInfo, GovernanceIssue, Intervention } from "../governance";
 import type { GovernanceConfig } from "../governance/types";
-import { StrategyRegistry } from "./strategyRegistry";
 import { EventTracker } from "./eventTracker";
 import { ObservationLayer, DefaultOpinionParser } from "../observation";
 import { InferenceLayer } from "../inference";
@@ -62,7 +60,6 @@ export interface DiscussionAgent {
 
 export class DiscussionEngine {
   private memoryManager: MemoryManager;
-  private beliefUpdateManager: BeliefUpdateManager;
   private influenceManager: InfluenceManager;
   private graphBuilder: InteractionGraphBuilder;
   private traceBuilder: DecisionTraceBuilder;
@@ -73,7 +70,6 @@ export class DiscussionEngine {
   /** Accumulated governance prompts for next-round injection. Cleared after each round. */
   private governancePrompts: Map<string, string[]> = new Map();
   private eventTracker: EventTracker;
-  private strategyRegistry: StrategyRegistry<any>;
   private config: DiscussionConfig;
   private roundDataArray: RoundData[] = [];
   private observationLayer: ObservationLayer;
@@ -99,21 +95,15 @@ export class DiscussionEngine {
     };
 
     this.memoryManager = new MemoryManager(new InMemoryStrategy());
-    this.beliefUpdateManager = new BeliefUpdateManager(new RuleBasedBeliefUpdate());
     this.influenceManager = new InfluenceManager(new RuleBasedInfluence());
     this.graphBuilder = new InteractionGraphBuilder();
     this.traceBuilder = new DecisionTraceBuilder();
     this.governanceEngine = new GovernanceEngine(this.config.governanceConfig, this.config.seed);
     this.externalRuntime = governanceRuntime;
     this.eventTracker = new EventTracker();
-    this.strategyRegistry = new StrategyRegistry();
     this.observationLayer = new ObservationLayer();
     this.inferenceLayer = new InferenceLayer();
     this.opinionParser = new DefaultOpinionParser();
-
-    this.strategyRegistry.register(new RuleBasedBeliefUpdate());
-    this.strategyRegistry.register(new RuleBasedInfluence());
-    this.strategyRegistry.register(new InMemoryStrategy());
   }
 
   // ==========================================================================
@@ -210,29 +200,34 @@ export class DiscussionEngine {
       }
 
       // Record dropout observations for sensitivity analysis
+      // 反事实设计：dropped agent 本轮真正不发言，其"在场"对照从上一轮历史读取
       if (dropoutAgentId && this.config.enableDropoutAnalysis) {
         const droppedState = agentStates.get(dropoutAgentId);
         if (droppedState) {
+          // sourcePresent=false: dropped agent 不在场时其他 agent 的 belief
           for (const opinion of opinions) {
             this.dropoutObservations.push({
               round, sourceAgentId: dropoutAgentId, targetAgentId: opinion.agentId,
               sourcePresent: false, sourceBelief: droppedState.belief, targetBelief: opinion.belief,
             });
           }
-          // Also record the "with" state for the dropped agent's last known opinion
-          const droppedAgent = agents.find(a => a.id === dropoutAgentId);
-          if (droppedAgent) {
-            const droppedOpinion = await this.runRound([droppedAgent], task, round, agentStates);
-            for (const o of droppedOpinion) {
-              for (const otherOpinion of opinions) {
-                this.dropoutObservations.push({
-                  round, sourceAgentId: dropoutAgentId, targetAgentId: otherOpinion.agentId,
-                  sourcePresent: true, sourceBelief: o.belief, targetBelief: otherOpinion.belief,
-                });
+          // sourcePresent=true: 从上一轮历史读取 dropped agent 在场时其他 agent 的 belief
+          // 第一轮无历史时跳过（无法同时观测在场/不在场两种状态）
+          if (round > 1) {
+            const prevRoundData = this.roundDataArray.find(r => r.roundNumber === round - 1);
+            if (prevRoundData) {
+              const droppedPrevOpinion = prevRoundData.opinions.find(o => o.agentId === dropoutAgentId);
+              if (droppedPrevOpinion) {
+                for (const otherOpinion of prevRoundData.opinions) {
+                  if (otherOpinion.agentId !== dropoutAgentId) {
+                    this.dropoutObservations.push({
+                      round, sourceAgentId: dropoutAgentId, targetAgentId: otherOpinion.agentId,
+                      sourcePresent: true, sourceBelief: droppedPrevOpinion.belief, targetBelief: otherOpinion.belief,
+                    });
+                  }
+                }
               }
             }
-            // Merge the dropped agent's opinion into the round
-            opinions.push(...droppedOpinion);
           }
         }
       }
@@ -472,10 +467,6 @@ export class DiscussionEngine {
 
   getEventTracker(): EventTracker {
     return this.eventTracker;
-  }
-
-  getStrategyRegistry(): StrategyRegistry<any> {
-    return this.strategyRegistry;
   }
 
   async runRoundWithArtifacts(
@@ -887,6 +878,9 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
         interactionGraph,
       };
       const results = this.governanceEngine.applyInterventions(randomInterventions, state, this.agentKnowledge);
+
+      // 清空上一轮遗留的治理 prompt，防止跨轮累积污染（与 full 模式一致）
+      this.governancePrompts.clear();
 
       // Apply intervention effects to graph and agent states
       this.applyInterventionEffects(results, graph, agentStates, agents);
@@ -1377,17 +1371,21 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
 
   reset(): void {
     this.memoryManager = new MemoryManager(new InMemoryStrategy());
-    this.beliefUpdateManager = new BeliefUpdateManager(new RuleBasedBeliefUpdate());
     this.influenceManager = new InfluenceManager(new RuleBasedInfluence());
     this.graphBuilder = new InteractionGraphBuilder();
     this.traceBuilder = new DecisionTraceBuilder();
     this.crossExaminationResult = null;
+    // 补齐此前遗漏的重置项，防止跨实验状态泄漏
+    this.governancePrompts.clear();
+    this.agentKnowledge?.clear();
+    this.eventTracker.clear();
+    this.roundDataArray = [];
+    this.dropoutObservations = [];
   }
 }
 
 export * from "./types";
 export * from "./memory";
-export * from "./beliefUpdate";
 export * from "./influence";
 export * from "./interactionGraph";
 export * from "./decisionTrace";
