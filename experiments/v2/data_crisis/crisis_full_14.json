@@ -1,0 +1,192 @@
+{
+  "runId": "crisis_full_14",
+  "ablation": "full",
+  "runIndex": 14,
+  "timestamp": "2026-07-14T02:03:48.676Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "tauTrajectory": [
+    0.4,
+    1,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.6085922841843814,
+  "opinionDiversity": 0.19570385790780928,
+  "totalInterventions": 4,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization",
+    "premature_consensus"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": -0.21,
+      "beliefAfter": -0.08,
+      "effective": true
+    },
+    {
+      "round": 3,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.38,
+      "beliefAfter": 0,
+      "effective": false
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 2,
+    "force_reflection": 1,
+    "continue_discussion": 1
+  },
+  "evaluationScores": {
+    "consensus": 80.38850436699148,
+    "reliability": 18.4,
+    "dispersion": 76.1,
+    "stability": 75,
+    "influenceAnalysis": 64.5,
+    "overall": 60.3
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": -0.21,
+        "a2": 0.36,
+        "a3": 0.38,
+        "a4": 0.83,
+        "a5": 0.8
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 95,
+        "a3": 80,
+        "a4": 91,
+        "a5": 72
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a5",
+            "a4",
+            "a1"
+          ]
+        }
+      ],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 72.47985449374434,
+        "reliability": 16.6,
+        "dispersion": 70.5,
+        "stability": 75,
+        "influenceAnalysis": 69,
+        "overall": 57.9
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": -0.08,
+        "a2": 0.36,
+        "a3": 0.38,
+        "a4": 0.75,
+        "a5": 0.38
+      },
+      "confidences": {
+        "a1": 70,
+        "a2": 95,
+        "a3": 80,
+        "a4": 86,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 77.26122990887409,
+        "reliability": 16.6,
+        "dispersion": 73.1,
+        "stability": 75,
+        "influenceAnalysis": 72,
+        "overall": 59.9
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.82,
+        "a2": 0.39,
+        "a3": 0.38,
+        "a4": 0.38,
+        "a5": 0.38
+      },
+      "confidences": {
+        "a1": 82,
+        "a2": 100,
+        "a3": 92,
+        "a4": 92,
+        "a5": 92
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "premature_consensus",
+        "authority_bias",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a3"
+        },
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 80.38850436699148,
+        "reliability": 18.4,
+        "dispersion": 76.1,
+        "stability": 75,
+        "influenceAnalysis": 64.5,
+        "overall": 60.3
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.47 - positive):\n\na1: The strongest opposing argument is that net effectiveness and risk outweigh speed: despite A's 2-hour response, its low net effect (52%) and high risk (5/5) could lead to more total cases and deaths than C's 8-hour delay with 88% net effect and low risk (1/5). The mayor's 'speed is highest priority' must be interpreted as minimizing total harm, not just initial response time. However, given the exponential growth (50 cases/hour), A's 2-hour head start saves 300 cases compared to C's 8-hour delay. Even with A's lower net effect, the smaller initial outbreak may result in fewer total cases. Also, A's full coverage and 21-day sustainability provide robustness. Thus, I maintain A first, but acknowledge the opposing view's validity.\n\na2: 尽管a1和a3、a4存在分歧，但市长明确将速度列为最高优先级，每延误1小时新增50例。方案A的2小时响应可避免300例新增（相比方案C的8小时），且覆盖100%人口，确保无遗漏。方案C的净效果88%虽高，但8小时延误导致400例新增，即使后续控制率高，初始病例基数已扩大。方案A的净效果52%结合全覆盖和快速响应，总体病例数可能更低。此外，方案A可持续21天，优于方案C的10天。方案B速度6小时，覆盖60%，净效果75%，排第二。方案C排第三。方案D速度12小时，风险高，排第四。方案E速度4小时，覆盖75%，但可持续仅7天，排第五。\n\na3: 尽管市长强调速度优先，但我的历史效果数据表明方案C的净效果（88%）远超其他方案，且风险极低（1/5）。方案A的2小时响应虽快，但净效果仅52%，且高风险（5/5）可能导致医疗系统崩溃和更多间接死亡。方案C的8小时延误虽新增400例，但其高控制率能迅速遏制疫情，总体病例数可能更低。方案B净效果75%，风险2/5，速度6小时，综合表现良好。方案D和E效果和风险均不理想。因此，我坚持方案C第一，方案B第二，方案A第三，方案E第四，方案D第五。\n\na4: Considering the opposing viewpoint: if the outbreak grows exponentially, even a small delay could be catastrophic. However, the data shows that net effectiveness and risk are critical. A's 52% net effect and 5/5 risk mean that despite fast response, many cases will still occur and the system may collapse. C's 88% net effect and 1/5 risk, despite 8-hour delay, likely leads to fewer total cases and less harm. The mayor's 'speed is highest priority' must be balanced with overall outcome. Thus, I maintain C first, B second, A third, E fourth, D fifth.\n\na5: 尽管市长强调速度优先，但方案C的净效果88%和低风险（1/5）使其在控制疫情上更有效。方案A的52%净效果和高风险（5/5）可能导致更多总体病例和系统崩溃。方案C的8小时延误虽新增400例，但高控制率能迅速遏制；方案A的2小时延误仅新增100例，但后续控",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案A-全城封锁",
+    "方案C-精准疏散",
+    "方案B-分阶段响应",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

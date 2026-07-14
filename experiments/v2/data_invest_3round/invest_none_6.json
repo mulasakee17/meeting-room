@@ -2,46 +2,46 @@
   "runId": "invest_none_6",
   "ablation": "none",
   "runIndex": 6,
-  "timestamp": "2026-07-12T04:08:36.097Z",
-  "kendallTau": 0.3333333333333333,
-  "decisionQuality": 67,
+  "timestamp": "2026-07-13T13:18:28.243Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
   "tauTrajectory": [
     0.3333333333333333,
-    0.3333333333333333,
-    0.3333333333333333
+    1,
+    1
   ],
   "totalRounds": 3,
   "converged": false,
-  "consensusLevel": 0.6152923187665731,
-  "opinionDiversity": 0.19235384061671343,
+  "consensusLevel": 1,
+  "opinionDiversity": 0,
   "totalInterventions": 0,
   "issuesDetected": [],
   "interventionEffects": [],
   "interventionBreakdown": {},
   "evaluationScores": {
-    "consensus": 77.46220649173122,
-    "reliability": 14.9,
-    "dispersion": 77.2,
+    "consensus": 85,
+    "reliability": 19.4,
+    "dispersion": 80.7,
     "stability": 75,
-    "influenceAnalysis": 70,
-    "overall": 60
+    "influenceAnalysis": 90,
+    "overall": 66.9
   },
   "rounds": [
     {
       "roundNumber": 1,
       "beliefs": {
-        "a1": 0.6,
-        "a2": 0.3,
-        "a3": 0.2,
-        "a4": 0.1,
-        "a5": 0.1
+        "a1": -0.93,
+        "a2": 0.95,
+        "a3": -0.11,
+        "a4": -0.67,
+        "a5": -0.2
       },
       "confidences": {
         "a1": 75,
-        "a2": 70,
-        "a3": 70,
-        "a4": 70,
-        "a5": 70
+        "a2": 93,
+        "a3": 83,
+        "a4": 74,
+        "a5": 78
       },
       "converged": false,
       "issues": [],
@@ -49,84 +49,84 @@
       "tau": 0.3333333333333333,
       "decisionQuality": 67,
       "evalScores": {
-        "consensus": 76.55903922980934,
-        "reliability": 14.3,
-        "dispersion": 77.8,
+        "consensus": 59.76162264112778,
+        "reliability": 16.2,
+        "dispersion": 66.1,
         "stability": 75,
-        "influenceAnalysis": 70,
-        "overall": 59.8
+        "influenceAnalysis": 75,
+        "overall": 55.5
       }
     },
     {
       "roundNumber": 2,
       "beliefs": {
-        "a1": 0.6,
-        "a2": 0.3,
-        "a3": 0.2,
-        "a4": 0.1,
-        "a5": 0.1
+        "a1": -0.41,
+        "a2": -0.41,
+        "a3": -0.41,
+        "a4": -0.41,
+        "a5": -0.41
       },
       "confidences": {
-        "a1": 80,
-        "a2": 70,
-        "a3": 70,
-        "a4": 70,
-        "a5": 60
+        "a1": 73,
+        "a2": 73,
+        "a3": 89,
+        "a4": 89,
+        "a5": 90
       },
       "converged": false,
       "issues": [],
       "interventions": [],
-      "tau": 0.3333333333333333,
-      "decisionQuality": 67,
+      "tau": 1,
+      "decisionQuality": 100,
       "evalScores": {
-        "consensus": 76.55903922980934,
-        "reliability": 14.1,
-        "dispersion": 75.6,
+        "consensus": 85,
+        "reliability": 16.7,
+        "dispersion": 78.5,
         "stability": 75,
-        "influenceAnalysis": 70,
-        "overall": 59.3
+        "influenceAnalysis": 73.5,
+        "overall": 62.9
       }
     },
     {
       "roundNumber": 3,
       "beliefs": {
-        "a1": 0.6,
-        "a2": 0.3,
-        "a3": 0.2,
-        "a4": 0.1,
-        "a5": 0.2
+        "a1": -0.41,
+        "a2": -0.41,
+        "a3": -0.41,
+        "a4": -0.41,
+        "a5": -0.41
       },
       "confidences": {
-        "a1": 80,
-        "a2": 75,
-        "a3": 70,
-        "a4": 70,
-        "a5": 75
+        "a1": 90,
+        "a2": 95,
+        "a3": 99,
+        "a4": 99,
+        "a5": 99
       },
       "converged": false,
       "issues": [],
       "interventions": [],
-      "tau": 0.3333333333333333,
-      "decisionQuality": 67,
+      "tau": 1,
+      "decisionQuality": 100,
       "evalScores": {
-        "consensus": 77.46220649173122,
-        "reliability": 14.9,
-        "dispersion": 77.2,
+        "consensus": 85,
+        "reliability": 19.4,
+        "dispersion": 80.7,
         "stability": 75,
-        "influenceAnalysis": 70,
-        "overall": 60
+        "influenceAnalysis": 90,
+        "overall": 66.9
       }
     }
   ],
-  "finalDecision": "Final decision after 3 rounds (overall belief: 0.28 - neutral):\n\na1: 综合所有数据，AlphaTech增速35%稳定，技术壁垒高（4/5），利润率28%尚可，TAM $12B但NVIDIA主导，监管风险中等。GammaEdge增速45%但减速，利润率低（12%），护城河3/5，监管风险高（4/5），TAM下调至$6B。BetaCore增速平缓，护城河2/5但客户锁定强，监管风险极低（1/5），财务稳健。CEO强调AI和边缘计算为核心赛道，但GammaEdge风险过高，AlphaTech虽面临竞争和专利到期，但仍是AI芯片龙头，符合高增长和高技术壁垒。BetaCore增长平缓，不符合高增长策略。因此排名：AlphaTech第一，GammaEdge第二，BetaCore第三。\n\na2: 综合所有数据，AlphaTech在AI芯片赛道技术壁垒高、增速稳定（35%）、利润率尚可（28%），但面临NVIDIA竞争、专利到期和监管风险。GammaEdge增速最高（45%）但放缓，利润率低（12%）且监管风险高。BetaCore增长平缓但财务稳健、客户锁定强、监管风险极低，且企业SaaS市场可能较大。CEO强调AI和边缘计算为核心赛道，但这两个赛道均有明显问题。BetaCore虽增长平缓，但结合基金策略需高增长和高技术壁垒，其客户迁移成本高形成持久锁定，且风险最低，可能提供稳定回报。因此排名：AlphaTech第一（赛道符合、技术壁垒高），BetaCore第二（稳健、风险低），GammaEdge第三（风险过高、利润率低）。\n\na3: 综合所有数据，AlphaTech增速稳定（35%）、利润率尚可（28%）、技术壁垒高（4/5）但专利即将到期且面临NVIDIA竞争；GammaEdge增速最高（45%）但放缓、利润率低（12%）、监管风险高（4/5）、TAM下调；BetaCore增长平缓但财务稳健、客户锁定强、监管风险极低（1/5），且企业SaaS市场可能更大。CEO强调AI和边缘计算为核心赛道，但AlphaTech和GammaEdge均有明显风险，而BetaCore的客户锁定型护城河更持久，且财务数据未知但行业通常高利润率。结合基金策略需高增长和高技术壁垒，但BetaCore的稳健性和低风险可能更优。我倾向于BetaCore第一，AlphaTech第二，GammaEdge第三。\n\na4: 作为风控合规官，我优先关注监管风险。BetaCore监管风险极低（1/5），财务稳健，但增长平缓，不符合高增长策略。GammaEdge涉及欧盟GDPR调查，风险高（4/5），可能影响其增长。AlphaTech虽技术壁垒高，但中美芯片管制升级带来不确定性，且我缺乏其具体风险数据。综合各方数据：AlphaTech增速35%稳定，利润率28%，护城河4/5但专利到期风险，TAM $12B但NVIDIA主导；GammaEdge增速45%但下降，利润率12%，护城河3/5，TAM下调至$6B，监管风险高；BetaCore增速平缓，利润率未知但行业高，护城河2/5但客户锁定强，监管风险极低。CEO强调AI和边缘计算为核心赛道，但AlphaTech和GammaEdge均有明显风险。BetaCore虽增长平缓，但风险最低，且客户锁定提供稳定现金流。考虑到基金策略要求高增长和高技术壁垒，AlphaTech更符合但风险未知，GammaEdge风险过高。我倾向于AlphaTech第一（需进一步验证风险），BetaCore第二，GammaEdge第三。\n\na5: 综合所有讨论数据，AlphaTech增速稳定（35%）、利润率尚可（28%）、技术壁垒高但专利即将到期且NVIDIA主导市场；GammaEdge增速最高（45%）但放缓、利润率低（12%）、监管风险高、TAM萎缩；BetaCore增长平缓但财务稳健、客户锁定强、监管风险极低，且企业SaaS市场可能很大。CEO强调AI和边缘计算为核心赛道，但这两个赛道均有明显问题：AlphaTech面临NVIDIA竞争和专利风险，GammaEdge赛道萎缩且风险高。BetaCore虽增长平缓，但符合高壁垒（客户迁移成本高）和稳健性，且市场空间可能更大。因此排名：BetaCore第一，AlphaTech第二，GammaEdge第三。",
+  "finalDecision": "Final decision after 3 rounds (overall belief: -0.41 - negative):\n\na1: 本轮所有其他agent（a2, a3, a4, a5）均一致支持BetaCore第一，AlphaTech第二，GammaEdge第三。我之前的独有数据（AlphaTech营收增速35%稳定，GammaEdge增速从65%降至45%且TAM下调）已揭示风险，而BetaCore虽增长平缓但财务稳健、客户切换成本高、监管风险极低。CEO强调高增长和高技术壁垒，但AlphaTech和GammaEdge均有明显风险（专利到期、芯片管制、GDPR调查、TAM萎缩），BetaCore的持久壁垒和低风险更符合当前风险偏好。因此维持BetaCore最优的排名，信念保持-0.41，置信度提升至90%。\n\na2: 本轮所有其他agent（a1, a2, a3, a4, a5）均一致支持BetaCore第一，AlphaTech第二，GammaEdge第三。我之前的独有数据（AlphaTech EBITDA利润率28%，GammaEdge 12%）已揭示AlphaTech利润率尚可但GammaEdge利润率低。结合其他agent提供的风险信息（AlphaTech专利到期、芯片管制；GammaEdge增速放缓、GDPR调查、TAM下调），以及BetaCore的客户切换成本高、监管风险极低、财务稳健，我认为BetaCore虽增长平缓但壁垒持久且风险最低，更符合当前风险偏好。CEO强调高增长和高技术壁垒，但AlphaTech和GammaEdge均有明显风险，BetaCore的稳健性更优。因此维持BetaCore最优的排名，信念保持-0.41，置信度提升至95%。\n\na3: 本轮所有其他agent（a1, a2, a4, a5）均一致支持BetaCore第一，AlphaTech第二，GammaEdge第三，与我的判断完全一致。我掌握的技术护城河数据进一步强化了BetaCore的客户锁定壁垒（切换成本高，续约率95%），而AlphaTech的专利即将到期，GammaEdge面临开源追赶。CEO强调高增长和高技术壁垒，但AlphaTech和GammaEdge均有明显风险（专利到期、芯片管制、GDPR调查、TAM萎缩），BetaCore虽增长平缓但财务稳健、壁垒持久、风险最低，更符合当前风险偏好。因此维持BetaCore最优，AlphaTech次之，GammaEdge最差的排名。信念从-0.41调整至-0.41（一致），置信度提升至99%。\n\na4: 本轮所有其他agent（a1, a2, a3, a4, a5）均一致支持BetaCore第一，AlphaTech第二，GammaEdge第三，与我的判断完全一致。我掌握的风险数据进一步强化：BetaCore监管风险极低（1/5），GammaEdge有GDPR调查（4/5），AlphaTech风险未知但中美芯片管制升级。CEO强调高增长和高技术壁垒，但AlphaTech和GammaEdge均有明显风险（专利到期、芯片管制、GDPR调查、TAM萎缩），BetaCore虽增长平缓但财务稳健、客户切换成本高、监管风险极低，更符合当前风险偏好。因此维持BetaCore最优，AlphaTech次之，GammaEdge最差的排名。信念保持-0.41，置信度提升至99%。\n\na5: 本轮所有其他agent（a1, a2, a3, a4）均一致支持BetaCore第一，AlphaTech第二，GammaEdge第三，与我的判断完全一致。我掌握的独有数据（AlphaTech TAM $12B但NVIDIA占80%，GammaEdge TAM从$10B下调至$6B）进一步强化了这两个赛道的风险，而BetaCore的企业SaaS市场巨大且增长稳健。CEO强调高增长和高技术壁垒，但AlphaTech和GammaEdge均有明显风险（专利到期、芯片管制、GDPR调查、TAM萎缩），BetaCore虽增长平缓但客户切换成本高、监管风险极低，更符合稳健投资。因此维持BetaCore最优的排名，信念保持-0.41，置信度提升至99%。",
   "groundTruth": {
     "BetaCore (企业服务)": 1,
     "AlphaTech (AI芯片)": 2,
     "GammaEdge (边缘计算)": 3
   },
   "extractedRanking": [
-    "AlphaTech (AI芯片)",
     "BetaCore (企业服务)",
+    "AlphaTech (AI芯片)",
     "GammaEdge (边缘计算)"
   ]
 }

@@ -27,6 +27,7 @@ import { GovernanceRuntime } from "../../src/runtime/GovernanceRuntime";
 import type { LLMConfig } from "../../src/lib/llm/providers";
 import { TASK_MA, type TaskConfig } from "../lunar_survival/config";
 import { TASK_INVEST } from "./task_invest";
+import { TASK_CRISIS } from "./task_crisis";
 
 // ============================================================================
 // Types
@@ -111,13 +112,14 @@ interface ExperimentResult {
 // ============================================================================
 
 const PARAMS = {
-  maxRounds: 5,
+  maxRounds: 3,
   convergenceThreshold: 0.06,
   temperature: 0.2,
   model: "deepseek-chat",
   provider: "deepseek" as const,
   runsPerCondition: 15,
-  ablationModes: ["none", "full", "shuffle", "full_diversity", "full_weight", "full_reflection", "full_continue"] as Ablation[],
+  // 断裂环路修复后重跑：仅 none/full/shuffle 三组即可回答核心研究问题
+  ablationModes: ["none", "full", "shuffle"] as Ablation[],
 };
 
 const LLM_CONFIG: LLMConfig = {
@@ -438,12 +440,16 @@ async function runSingle(
         interventionBreakdown[intv.type] = (interventionBreakdown[intv.type] || 0) + 1;
 
         // Record intervention effect for later validation
-        if (intv.targetAgentId) {
+        // Handle both single target (reduce_weight) and multi-target (force_reflection, etc.)
+        const targets = intv.targetAgentId
+          ? [intv.targetAgentId]
+          : intv.targetAgents || [];
+        for (const targetId of targets) {
           interventionEffects.push({
             round: rr.roundNumber,
             interventionType: intv.type,
-            targetAgentId: intv.targetAgentId,
-            beliefBefore: beliefs[intv.targetAgentId] ?? 0,
+            targetAgentId: targetId,
+            beliefBefore: beliefs[targetId] ?? 0,
             beliefAfter: 0, // filled after all rounds
             effective: false,
           });
@@ -579,11 +585,9 @@ function cohensD(a: number[], b: number[]): number {
 // ============================================================================
 
 async function main() {
-  const task = TASK_INVEST;
-  // 根据 maxRounds 选择数据目录：3轮→data_invest_3round，5轮→data_invest
-  const dataDirName = task.id === "ma" ? "data"
-    : PARAMS.maxRounds === 3 ? "data_invest_3round"
-    : "data_invest";
+  const task = TASK_CRISIS;
+  // crisis 任务使用独立数据目录
+  const dataDirName = "data_crisis";
   const DATA_DIR = path.resolve(__dirname, dataDirName);
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   const allResults: ExperimentResult[] = [];

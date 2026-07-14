@@ -1,0 +1,195 @@
+{
+  "runId": "crisis_shuffle_0",
+  "ablation": "shuffle",
+  "runIndex": 0,
+  "timestamp": "2026-07-14T02:04:55.284Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
+  "tauTrajectory": [
+    1,
+    1,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": true,
+  "consensusLevel": 0.9999999999999999,
+  "opinionDiversity": 6.206335383118183e-17,
+  "totalInterventions": 4,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": -0.87,
+      "beliefAfter": -0.5,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.22,
+      "beliefAfter": 0.49,
+      "effective": true
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 2,
+    "force_reflection": 2
+  },
+  "evaluationScores": {
+    "consensus": 88,
+    "reliability": 16.9,
+    "dispersion": 79.1,
+    "stability": 75,
+    "influenceAnalysis": 82.5,
+    "overall": 65.2
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": -0.87,
+        "a2": 0.22,
+        "a3": 0.6,
+        "a4": 0.21,
+        "a5": 0.21
+      },
+      "confidences": {
+        "a1": 88,
+        "a2": 89,
+        "a3": 91,
+        "a4": 99,
+        "a5": 85
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a1"
+          ]
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 67.3826542201027,
+        "reliability": 18.2,
+        "dispersion": 70.2,
+        "stability": 75,
+        "influenceAnalysis": 69,
+        "overall": 57.2
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": -0.5,
+        "a2": 0.22,
+        "a3": 0.49,
+        "a4": 0.49,
+        "a5": 0.49
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 89,
+        "a3": 86,
+        "a4": 86,
+        "a5": 86
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a4",
+            "a5",
+            "a1"
+          ]
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 72.3675914735275,
+        "reliability": 17,
+        "dispersion": 72.4,
+        "stability": 75,
+        "influenceAnalysis": 66,
+        "overall": 57.8
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.49,
+        "a2": 0.49,
+        "a3": 0.49,
+        "a4": 0.49,
+        "a5": 0.49
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 89,
+        "a3": 75,
+        "a4": 89,
+        "a5": 89
+      },
+      "converged": true,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 88,
+        "reliability": 16.9,
+        "dispersion": 79.1,
+        "stability": 75,
+        "influenceAnalysis": 82.5,
+        "overall": 65.2
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.49 - positive):\n\na1: Despite the governance intervention urging independence, I must consider the strongest opposing argument: speed is paramount, and even a 6-hour delay for C could cause 300 additional infections, potentially overwhelming the system. However, my data shows C's net effect (88%) is far superior to A's (52%), and A's high risk (5/5) with 18% mortality increase from delayed care could cause more deaths than the infections prevented. The group consensus (a2, a3, a4) strongly favors C, and I agree. B is a compromise but less effective. Therefore, I maintain C first, B second, A third, E fourth, D fifth.\n\na2: 尽管市长强调速度优先，但方案C净效果最高（88%）、风险最低（1/5），且可持续10天。方案A虽启动快（2小时），但净效果仅52%、风险最高（5/5），且延误就医导致死亡率上升18%，可能造成更多死亡。方案B是折中，但净效果75%低于C。延误6小时新增300例感染，但方案C的88%净效果可避免更多感染，且可通过提前准备缩短启动时间。a1、a3、a4、a5均支持C第一，我坚持此立场。\n\na3: Despite the governance intervention urging independence, I must consider the strongest opposing argument: speed is paramount, and even a 6-hour delay for C could cause 300 additional infections, potentially overwhelming the system. However, my data shows C's net effect (88%) is far superior to A's (52%), and A's high risk (5/5) with 18% mortality increase from delayed care could cause more deaths than the infections prevented. The group consensus (a2, a3, a4) strongly favors C, and I agree. B is a compromise but less effective. Therefore, I maintain C first, B second, A third, E fourth, D fifth.\n\na4: 尽管市长强调速度优先，但方案C（精准疏散）净效果88%最高，风险最低（1/5），且可持续10天。方案A（全城封锁）虽启动最快（2小时），但净效果仅52%，风险最高（5/5），且延误就医导致死亡率上升18%，可能造成更多死亡。方案B（分阶段响应）是折中，但净效果75%低于C。延误6小时新增300例感染，但方案C的88%净效果可避免更多感染，且可通过提前准备缩短启动时间。a1、a3、a4、a5均支持C第一，我坚持此立场。反对观点认为速度优先，但方案C的高效和低风险足以弥补启动延迟。\n\na5: 尽管市长强调速度优先，但方案C（精准疏散）净效果88%最高，风险最低（1/5），且可持续10天，足以覆盖关键期。方案A虽启动快（2小时），但净效果仅52%，风险最高（5/5），且全城封锁可能导致医疗过载和长期经济损害。方案B是折中，但净效果75%低于C。延误6小时新增300例感染，但方案C的88%净效果可避免更多感染，且可通过提前准备缩短启动时间。a1、a3、a4均支持C第一，我坚持此立场。反对观点认为速度优先，但方案C的高效和低风险足以弥补启动延迟。",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案C-精准疏散",
+    "方案B-分阶段响应",
+    "方案A-全城封锁",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

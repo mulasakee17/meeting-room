@@ -1,0 +1,208 @@
+{
+  "runId": "crisis_shuffle_2",
+  "ablation": "shuffle",
+  "runIndex": 2,
+  "timestamp": "2026-07-14T02:07:11.236Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "tauTrajectory": [
+    0.2,
+    0.6,
+    0.6
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 1,
+  "opinionDiversity": 0,
+  "totalInterventions": 5,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization",
+    "echo_chamber",
+    "premature_consensus"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.6,
+      "beliefAfter": 0.33,
+      "effective": true
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 1,
+    "force_reflection": 2,
+    "introduce_diversity": 1,
+    "continue_discussion": 1
+  },
+  "evaluationScores": {
+    "consensus": 94,
+    "reliability": 15.2,
+    "dispersion": 82.5,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 64.5
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.6,
+        "a3": -0.66,
+        "a4": 0.33,
+        "a5": -0.93
+      },
+      "confidences": {
+        "a1": 91,
+        "a2": 90,
+        "a3": 77,
+        "a4": 90,
+        "a5": 75
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a4",
+            "a1",
+            "a2",
+            "a5",
+            "a3"
+          ]
+        }
+      ],
+      "tau": 0.2,
+      "decisionQuality": 60,
+      "evalScores": {
+        "consensus": 58.00344750440347,
+        "reliability": 17,
+        "dispersion": 65.9,
+        "stability": 75,
+        "influenceAnalysis": 64.5,
+        "overall": 53.4
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.33,
+        "a2": 0.48,
+        "a3": -0.53,
+        "a4": 0.33,
+        "a5": -0.53
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 85,
+        "a3": 72,
+        "a4": 85,
+        "a5": 72
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a4",
+            "a2",
+            "a3",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 68.92062911162013,
+        "reliability": 15.9,
+        "dispersion": 70.6,
+        "stability": 75,
+        "influenceAnalysis": 75,
+        "overall": 58.1
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.33,
+        "a2": 0.33,
+        "a3": 0.33,
+        "a4": 0.33,
+        "a5": 0.33
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 75,
+        "a3": 75,
+        "a4": 75,
+        "a5": 75
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "premature_consensus",
+        "echo_chamber",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4",
+            "a5"
+          ]
+        },
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 94,
+        "reliability": 15.2,
+        "dispersion": 82.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 64.5
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.33 - positive):\n\na1: Governance intervention requires me to consider the strongest opposing viewpoint. The opposing position is that speed alone is insufficient; net effectiveness and coverage are critical. Scenario: If the outbreak is highly contagious and the water source is widespread, a slow but highly effective response (like C) might fail because delays cause exponential growth. However, the data shows each hour delay adds 50 cases, so even a 6-hour delay (B) adds 300 cases, while C's 8-hour delay adds 400 cases. C's net effect of 88% vs B's 75% means C saves 13% more of the infected, but the extra 100 cases from delay could offset that. For example, with 1000 initial cases, B saves 750, C saves 880, but C has 100 more cases due to delay, net 780 vs 750, still better. But if delay causes more than 13% increase, B wins. Given the urgency, I maintain that B is best balanced. I rank B first, A second, C third, E fourth, D fifth.\n\na2: Governance intervention requires me to consider the strongest opposing viewpoint. The opposing position is that speed alone is insufficient; net effectiveness and coverage are critical. Scenario: If the outbreak is highly contagious and the water source is widespread, a slow but highly effective response (like C) might fail because delays cause exponential growth. However, the data shows each hour delay adds 50 cases, so even a 6-hour delay (B) adds 300 cases, while C's 8-hour delay adds 400 cases. C's net effect of 88% vs B's 75% means C saves 13% more of the infected, but the extra 100 cases from delay could offset that. For example, with 1000 initial cases, B saves 750, C saves 880, but C has 100 more cases due to delay, net 780 vs 750, still better. But if delay causes more than 13% increase, B wins. Given the urgency, I maintain that B is best balanced. I rank B first, A second, C third, E fourth, D fifth.\n\na3: Governance intervention requires me to consider the strongest opposing",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案B-分阶段响应",
+    "方案A-全城封锁",
+    "方案C-精准疏散",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

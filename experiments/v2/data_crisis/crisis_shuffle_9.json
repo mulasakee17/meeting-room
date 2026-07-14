@@ -1,0 +1,229 @@
+{
+  "runId": "crisis_shuffle_9",
+  "ablation": "shuffle",
+  "runIndex": 9,
+  "timestamp": "2026-07-14T02:15:15.026Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
+  "tauTrajectory": [
+    0.8,
+    0.8,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.8926687370800102,
+  "opinionDiversity": 0.05366563145999495,
+  "totalInterventions": 7,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization",
+    "echo_chamber",
+    "premature_consensus"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": -0.67,
+      "beliefAfter": -0.5,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.4,
+      "beliefAfter": 0.35,
+      "effective": true
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 2,
+    "force_reflection": 2,
+    "introduce_diversity": 2,
+    "continue_discussion": 1
+  },
+  "evaluationScores": {
+    "consensus": 83.95485798411656,
+    "reliability": 14.9,
+    "dispersion": 80.5,
+    "stability": 75,
+    "influenceAnalysis": 61.5,
+    "overall": 60.4
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": -0.67,
+        "a2": 0.54,
+        "a3": 0.54,
+        "a4": 0.44,
+        "a5": 0.03
+      },
+      "confidences": {
+        "a1": 74,
+        "a2": 76,
+        "a3": 81,
+        "a4": 94,
+        "a5": 81
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a4",
+            "a2",
+            "a3",
+            "a1"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 68.66825620654335,
+        "reliability": 16.3,
+        "dispersion": 69.8,
+        "stability": 75,
+        "influenceAnalysis": 63,
+        "overall": 55.9
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": -0.5,
+        "a2": 0.4,
+        "a3": 0.47,
+        "a4": 0.47,
+        "a5": 0.03
+      },
+      "confidences": {
+        "a1": 69,
+        "a2": 72,
+        "a3": 76,
+        "a4": 76,
+        "a5": 81
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "authority_bias",
+        "polarization",
+        "echo_chamber",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        },
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a2",
+            "a3",
+            "a4"
+          ]
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a2",
+            "a3",
+            "a4",
+            "a1"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 75.66447186880387,
+        "reliability": 15.1,
+        "dispersion": 73,
+        "stability": 75,
+        "influenceAnalysis": 69,
+        "overall": 58.7
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.47,
+        "a2": 0.35,
+        "a3": 0.47,
+        "a4": 0.47,
+        "a5": 0.47
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 70,
+        "a3": 75,
+        "a4": 75,
+        "a5": 75
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "premature_consensus",
+        "echo_chamber",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a1",
+            "a3",
+            "a4",
+            "a5"
+          ]
+        },
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 83.95485798411656,
+        "reliability": 14.9,
+        "dispersion": 80.5,
+        "stability": 75,
+        "influenceAnalysis": 61.5,
+        "overall": 60.4
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.45 - positive):\n\na1: Despite the mayor's emphasis on speed, the strongest opposing argument is that net effectiveness and risk must be prioritized. In a scenario where the outbreak has a longer incubation period or where rapid lockdown causes severe secondary deaths (e.g., from delayed medical care), a slower but more effective and less risky option like C could save more lives overall. For example, if the disease has a 24-hour incubation period, the 8-hour delay for C might not cause 400 new cases, and the higher net effect (88% vs 52%) would outweigh speed. Additionally, a2's risk data shows A has the highest risk (5/5), while C has the lowest (1/5). Given that the outbreak is waterborne and may not spread as fast as airborne, the speed advantage of A is less critical. Therefore, I rank C first, B second, A third, E fourth, D fifth.\n\na2: Governance intervention requires me to consider the strongest opposing viewpoint. The opposing argument is that net effectiveness and risk should outweigh speed, especially if the outbreak has a longer incubation period or if rapid lockdown causes severe secondary deaths. In such a scenario, option C (精准疏散) with 88% net effect and lowest risk (1/5) could save more lives overall despite its 8-hour delay. However, the mayor explicitly stated speed is the highest priority, and each hour adds 50 cases. Option A (全城封锁) starts in 2 hours, preventing 300 more cases than C's 8-hour delay. While A has high risk (5/5), its speed is unmatched. Given the urgency and the mayor's directive, I maintain A first, but acknowledge the opposing view's validity. My belief shifts slightly from 0.40 to 0.35 as I incorporate risk concerns.\n\na3: 尽管市长强调速度优先，但方案C的净效果88%远超其他方案，且风险最低（1/5），可持续10天足以控制水源传播。若疾病潜伏期较长（如24小时），8小时启动延迟不会导致400例新增，而方案A的高风险（5/5）可能导致更多间接死亡。方案B平衡但净效果75%仍低于C。因此，我坚持方案C最优，方案B次之，方案A第三，方案E第四，方案D最差。\n\na4: 尽管市长强调速度优先，但方案C的净效果88%远超其他方案，且风险最低（1/5），可持续10天。若疾病潜伏期较长（如24小时），8小时启动延迟不会导致400例新增，而方案A的高风险（5/5）",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案C-精准疏散",
+    "方案B-分阶段响应",
+    "方案A-全城封锁",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

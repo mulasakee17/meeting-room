@@ -430,15 +430,14 @@ function analyze(label: string, dir: string) {
 
   if (fullDeltas.length > 0) {
     const deltaCI = bootstrapCI(fullDeltas);
-    // 净 Δτ = Full Δτ - Baseline Δτ（扣除讨论机制自然改善）
-    const netDeltas = fullDeltas.map(d => d - baselineDeltaMean);
-    const netDeltaCI = bootstrapCI(netDeltas);
+    // 净 Δτ = Full Δτ - Baseline Δτ，使用 bootstrapMeanDiff 正确处理两组方差
+    const netDeltaResult = bootstrapMeanDiff(fullDeltas, baselineDeltas);
     console.log(`\n  Full within-group Δτ:        ${deltaCI.mean >= 0 ? "+" : ""}${deltaCI.mean.toFixed(3)}, 95% CI ${fmtCI(deltaCI.ci95_t)}`);
     console.log(`  Baseline within-group Δτ:    ${baselineDeltaMean >= 0 ? "+" : ""}${baselineDeltaMean.toFixed(3)} (讨论机制自然改善)`);
-    console.log(`  Net Δτ (Full - Baseline):    ${netDeltaCI.mean >= 0 ? "+" : ""}${netDeltaCI.mean.toFixed(3)}, 95% CI ${fmtCI(netDeltaCI.ci95_t)}`);
-    if (netDeltaCI.ci95_t[0] > 0) {
+    console.log(`  Net Δτ (Full - Baseline):    ${netDeltaResult.meanDiff >= 0 ? "+" : ""}${netDeltaResult.meanDiff.toFixed(3)}, 95% CI ${fmtCI(netDeltaResult.ci95_t)}`);
+    if (netDeltaResult.ci95_t[0] > 0) {
       console.log(`  ✓ 净 Δτ 显著为正（扣除基线后治理仍有改善）`);
-    } else if (netDeltaCI.ci95_t[1] < 0) {
+    } else if (netDeltaResult.ci95_t[1] < 0) {
       console.log(`  ✗ 净 Δτ 显著为负（治理造成退化）`);
     } else {
       console.log(`  ⚠ 净 Δτ 不显著（治理的边际贡献无法与讨论机制区分）`);

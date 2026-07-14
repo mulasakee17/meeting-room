@@ -8,7 +8,9 @@
 
 LLM multi-agent systems (AutoGen, CrewAI, LangGraph) are being deployed in high-stakes domains — finance, healthcare, law. When five AI agents discuss a decision, they commit the **same systematic failures as human groups**: premature consensus (agreement before critical information surfaces), authority bias (one overconfident agent dominates), echo chambers (similar-minded agents confirm each other), and group polarization (divergence hardens into deadlock).
 
-**No existing framework detects or intervenes on these failures.** Current research focuses on making agent debates more accurate — not on whether the debate process itself is healthy.
+**Independent academic evidence confirms this is real.** Li et al. (SJTU, 2026) demonstrated that multi-agent workflows act as echo chambers, amplifying minor stochastic biases into systemic polarization — and that standard bias detection methods (questionnaires, binary benchmarks) systematically miss these conversational biases [*Aligned Agents, Biased Swarm*, arXiv:2604.08963](https://arxiv.org/abs/2604.08963). Coppolillo et al. (2025) observed significant stance shifts in LLM echo chambers that went undetected by state-of-the-art bias detection [*Unmasking Conversational Bias in AI Multiagent Systems*, arXiv:2501.14844](https://arxiv.org/abs/2501.14844). Yang (2026) showed that emergent consensus in LLM agent societies may be a model artifact rather than genuine agreement, requiring careful diagnostic separation [*When Is Emergent Consensus Real?*, arXiv:2606.22203](https://arxiv.org/abs/2606.22203).
+
+**No existing framework detects or intervenes on these failures.** The agent governance tools that emerged in 2026 — Microsoft Agent Governance Toolkit, Agent Control Standard (ACS), NVIDIA OpenShell, ValidMind Atryum — all target the **security layer**: preventing unauthorized tool calls, budget overruns, data leaks. They do not address **cognitive governance**: detecting when agent discussions form echo chambers, defer to authority, polarize, or converge prematurely. SwarmAlpha fills this gap as the first open-source cognitive governance runtime.
 
 ---
 
@@ -16,7 +18,9 @@ LLM multi-agent systems (AutoGen, CrewAI, LangGraph) are being deployed in high-
 
 SwarmAlpha is an **embeddable governance runtime** — a drop-in layer that plugs into any multi-agent framework to observe, detect, and intervene on collective decision failures.
 
-**Core architecture**: LLMs only perform perception (extracting beliefs and emotions from natural language). All governance logic — consensus computation, bias detection, belief dynamics — uses pure mathematics (Kuramoto synchronization, Gini coefficient, bimodality coefficient, Cronbach's α). This means the runtime operates as a **lightweight plugin** with zero additional LLM calls.
+**Core architecture**: LLMs only perform perception (extracting beliefs and emotions from natural language). All governance logic — consensus computation, bias detection, belief dynamics — uses pure mathematics (Kuramoto synchronization, Gini coefficient, bimodality coefficient, Cronbach's α). This means the runtime operates as a **lightweight plugin** with zero additional LLM calls. Unlike security-focused governance tools (Microsoft Agent Governance Toolkit, ACS) that use deterministic policy engines (OPA Rego, Cedar), SwarmAlpha uses a hybrid architecture: LLM for perception, mathematics for reasoning — the first such architecture for cognitive agent governance.
+
+**Standards compatibility**: SwarmAlpha's `StateInferenceBridge` is designed to interoperate with [Agent Control Standard (ACS)](https://agentcontrolstandard.ai) middleware hooks at the state checkpoint. Cognitive governance (SwarmAlpha) and security governance (ACS-compliant tools) are complementary layers — both are needed for a complete agent governance stack.
 
 **Seven ablation modes**: none (baseline), full, shuffle (placebo test / identification strategy — scrambles agent knowledge to rule out regression-to-mean), and four single-intervention modes isolating individual governance mechanisms. t-distribution 95% CI + permutation test p-values on all key comparisons.
 

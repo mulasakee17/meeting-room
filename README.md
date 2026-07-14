@@ -15,6 +15,21 @@
 
 ---
 
+## Where SwarmAlpha Fits
+
+The agent governance landscape is splitting into two layers:
+
+| Layer | Concern | Tools | Status |
+|-------|---------|-------|--------|
+| **Security governance** | Prevent agents from *doing* harm — unauthorized tool calls, budget overruns, data leaks | Microsoft Agent Governance Toolkit, Agent Control Standard (ACS), NVIDIA OpenShell | Crowded (2026) |
+| **Cognitive governance** | Prevent agents from *thinking* wrong — echo chambers, authority bias, polarization, premature consensus | **SwarmAlpha** | Open |
+
+SwarmAlpha targets the cognitive layer. It does not compete with Microsoft's toolkit or the ACS standard — it complements them. A complete agent governance stack needs both: security governance at the tool-execution boundary, and cognitive governance inside the discussion loop. SwarmAlpha's `StateInferenceBridge` is designed to interoperate with ACS-standard middleware hooks at the state checkpoint.
+
+**Academic validation**: Li et al. (SJTU, 2026) independently confirmed that multi-agent workflows act as echo chambers, amplifying minor stochastic biases into systemic polarization — and that standard bias detection methods miss these effects. [*Aligned Agents, Biased Swarm: Measuring Bias Amplification in Multi-Agent Systems*, arXiv:2604.08963](https://arxiv.org/abs/2604.08963). Yang (2026) introduced a "coupling gain γ" diagnostic to distinguish genuine emergent consensus from model artifacts. [*When Is Emergent Consensus Real?*, arXiv:2606.22203](https://arxiv.org/abs/2606.22203). These papers validate the problem SwarmAlpha solves and inform its detection methodology.
+
+---
+
 ## Core Finding
 
 **The governance engine has independent value beyond "improving decision accuracy."** A 2×2 factorial design (Task interdependence × Round budget, n=15/cell) shows that no positive governance effect on final decision quality is statistically significant. But the engine's value is not solely in improving outcomes — it is in providing **observability, auditability, and targeted intervention** for multi-agent decision processes. These three capabilities are independently valuable regardless of whether they change the final answer.

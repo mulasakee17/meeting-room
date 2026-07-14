@@ -1,0 +1,136 @@
+{
+  "runId": "crisis_none_13",
+  "ablation": "none",
+  "runIndex": 13,
+  "timestamp": "2026-07-14T01:43:06.454Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "tauTrajectory": [
+    0.4,
+    0.6,
+    0.4
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.5413934147877943,
+  "opinionDiversity": 0.2293032926061028,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "evaluationScores": {
+    "consensus": 79.35703125123706,
+    "reliability": 19.5,
+    "dispersion": 76.4,
+    "stability": 75,
+    "influenceAnalysis": 64.5,
+    "overall": 60.4
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.9,
+        "a2": -0.21,
+        "a3": 0.36,
+        "a4": 0.38,
+        "a5": 0.83
+      },
+      "confidences": {
+        "a1": 95,
+        "a2": 75,
+        "a3": 95,
+        "a4": 80,
+        "a5": 91
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 71.51308097344948,
+        "reliability": 17.5,
+        "dispersion": 70.4,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 58.1
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": -0.15,
+        "a2": 0.36,
+        "a3": 0.43,
+        "a4": 0.42,
+        "a5": 0.83
+      },
+      "confidences": {
+        "a1": 81,
+        "a2": 76,
+        "a3": 100,
+        "a4": 89,
+        "a5": 100
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 75.32004489937425,
+        "reliability": 18,
+        "dispersion": 71.4,
+        "stability": 75,
+        "influenceAnalysis": 67.5,
+        "overall": 58.7
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.85,
+        "a2": 0.85,
+        "a3": 0.43,
+        "a4": 0.42,
+        "a5": 0.83
+      },
+      "confidences": {
+        "a1": 92,
+        "a2": 92,
+        "a3": 100,
+        "a4": 100,
+        "a5": 100
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 79.35703125123706,
+        "reliability": 19.5,
+        "dispersion": 76.4,
+        "stability": 75,
+        "influenceAnalysis": 64.5,
+        "overall": 60.4
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.68 - positive):\n\na1: 市长明确速度是最高优先级，每延误1小时新增50例感染。方案A响应最快（2小时），覆盖100%，可持续21天，净效果52%虽非最高但可接受，风险高但可通过措施缓解。方案B响应6小时，净效果75%，风险2/5，可持续14天，平衡性好但速度不如A。方案C净效果88%但响应8小时，延误6小时新增300例，且覆盖45%，可持续仅10天，可能不足。方案E响应4小时但净效果51%，可持续7天太短。方案D响应12小时，延误10小时新增500例，净效果29%，风险5/5，最差。综合速度优先原则，A第一，B第二，C第三，E第四，D第五。\n\na2: 市长明确速度第一，方案A响应最快（2h）且覆盖100%，可持续21天，净效果52%虽非最高但可接受，风险高但可通过措施缓解。方案B响应6h，净效果75%，风险2/5，可持续14天，平衡性好但速度不如A。方案C净效果88%但响应8h，延误6h新增300例，覆盖45%，可持续仅10天，可能不足。方案E响应4h但净效果51%，可持续7天太短。方案D响应12h，延误10h新增500例，净效果29%，风险5/5，最差。综合速度优先原则，A第一，B第二，C第三，E第四，D第五。\n\na3: 市长明确速度第一，但净效果和风险同样关键。方案C净效果88%最高，风险最低，尽管响应8小时延误6小时新增300例，但总感染数仍可能低于其他方案，且可持续10天可能足够。方案A速度最快但净效果仅52%，风险最高，延误就医导致死亡率上升，实际效果更差。方案B平衡性好但速度不如A。方案E和D更差。综合权衡，C最优，B次之，A第三，E第四，D第五。\n\na4: 市长明确速度第一，但我的风险数据表明方案A风险5/5，经济停摆日损失2.3亿，医疗过载，恐慌抢购，长期心理创伤，国际形象受损。这些风险可能抵消速度优势，甚至导致更大损失。方案C风险1/5，净效果88%最高，尽管响应8小时延误300例，但总感染数可能更低，且可持续10天可能足够。方案B风险2/5，净效果75%，响应6小时，平衡性好。a1和a2支持A，但忽略高风险；a3支持C。我坚持认为高风险不可接受，排序应为C > B > A > E > D。\n\na5: 市长明确速度第一，但可持续性同样关键。方案A响应最快（2h）且可持续21天，足以覆盖疫情周期，净效果52%虽非最高但可接受，风险高但可通过措施缓解。方案B响应6h，净效果75%，可持续14天，平衡性好。方案C净效果88%但响应8h，延误6h新增300例，可持续仅10天，若疫情持续可能不足。方案E响应4h但可持续7天太短。方案D响应12h，延误10h新增500例，净效果29%，风险5/5，最差。综合速度、可持续性和其他维度，A第一，B第二，C第三，E第四，D第五。我坚持A第一，但需注意高风险。",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案A-全城封锁",
+    "方案B-分阶段响应",
+    "方案C-精准疏散",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

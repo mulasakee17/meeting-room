@@ -1,0 +1,187 @@
+{
+  "runId": "crisis_full_10",
+  "ablation": "full",
+  "runIndex": 10,
+  "timestamp": "2026-07-14T01:57:59.962Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "tauTrajectory": [
+    0.6,
+    1,
+    0.4
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.6697273853314507,
+  "opinionDiversity": 0.16513630733427462,
+  "totalInterventions": 4,
+  "issuesDetected": [
+    "authority_bias",
+    "premature_consensus"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.54,
+      "beliefAfter": 0.38,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.41,
+      "beliefAfter": 0.76,
+      "effective": true
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 2,
+    "continue_discussion": 2
+  },
+  "evaluationScores": {
+    "consensus": 81.24404693824542,
+    "reliability": 18.7,
+    "dispersion": 78.6,
+    "stability": 75,
+    "influenceAnalysis": 63,
+    "overall": 60.7
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.54,
+        "a2": 0.38,
+        "a3": 0.44,
+        "a4": 0.3,
+        "a5": -0.21
+      },
+      "confidences": {
+        "a1": 76,
+        "a2": 81,
+        "a3": 94,
+        "a4": 85,
+        "a5": 75
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "authority_bias"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        }
+      ],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 77.3225049553376,
+        "reliability": 16.6,
+        "dispersion": 73.8,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59.7
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.38,
+        "a2": 0.41,
+        "a3": 0.38,
+        "a4": 0.38,
+        "a5": 0.76
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 87,
+        "a3": 100,
+        "a4": 85,
+        "a5": 86
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "premature_consensus",
+        "authority_bias",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        },
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 81.19656123567917,
+        "reliability": 17.7,
+        "dispersion": 76.2,
+        "stability": 75,
+        "influenceAnalysis": 67.5,
+        "overall": 60.8
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.53,
+        "a2": 0.76,
+        "a3": 0.53,
+        "a4": 0.38,
+        "a5": 0.76
+      },
+      "confidences": {
+        "a1": 91,
+        "a2": 95,
+        "a3": 91,
+        "a4": 91,
+        "a5": 95
+      },
+      "converged": false,
+      "issues": [
+        "premature_consensus",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 81.24404693824542,
+        "reliability": 18.7,
+        "dispersion": 78.6,
+        "stability": 75,
+        "influenceAnalysis": 63,
+        "overall": 60.7
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.59 - positive):\n\na1: 综合所有维度数据，市长明确速度是最高优先级，每延误1小时新增50例。方案A启动最快（2小时），覆盖100%，净效果52%，风险5/5，可持续21天。方案C净效果最高（88%），风险最低（1/5），但启动需8小时，延误6小时新增300例，且可持续仅10天。方案B启动6小时，净效果75%，风险2/5，可持续14天，是速度与效果的折中。方案E启动4小时，净效果51%，风险3/5，可持续7天。方案D最慢且风险高。考虑到方案A的2小时启动可立即遏制传播，避免延误新增100例（2小时对比方案B的6小时），且全覆盖可防止水源传播遗漏，尽管高风险和低净效果，但速度优先原则下，方案A仍应排第一。方案B作为折中排第二，方案C虽净效果高但延误损失大排第三，方案E排第四，方案D排第五。\n\na2: 市长明确速度是最高优先级，每延误1小时新增50例。方案A启动仅2小时，覆盖100%人口，可立即遏制水源传播，避免延误新增100例（对比方案B的6小时）。尽管方案A净效果仅52%、风险5/5，但速度优势显著，且全覆盖防止遗漏。方案B启动6小时，净效果75%，风险2/5，可持续14天，是折中但速度不如A。方案C净效果88%但启动8小时，延误6小时新增300例，即使高效控制也难以弥补初期损失，且可持续仅10天。方案E启动4小时但净效果低、可持续短。方案D最慢且风险高。综合速度、覆盖和可持续性，方案A第一，方案B第二，方案C第三，方案E第四，方案D第五。\n\na3: 综合所有维度数据，市长明确速度是最高优先级，每延误1小时新增50例。方案A启动最快（2小时），覆盖100%，净效果52%，风险5/5，可持续21天。方案C净效果最高（88%），风险最低（1/5），但启动需8小时，延误6小时新增300例，且可持续仅10天。方案B启动6小时，净效果75%，风险2/5，可持续14天，是速度与效果的折中。方案E启动4小时，净效果51%，风险3/5，可持续7天。方案D最慢且风险高。考虑到方案A的2小时启动可立即遏制传播，避免延误新增100例（对比方案B的6小时），且全覆盖可防止水源传播遗漏，尽管高风险和低净效果，但速度优先原则下，方案A仍应排第一。方案B作为折中排第二，方案C虽净效果高但延误损失大排第三，方案E排第四，方案D排第五。\n\na4: 尽管a1和a2强调速度优先，但方案A的高风险（医疗过载、经济停摆）和低净效果（52%）不可接受，且延误新增病例可通过方案C的高净效果弥补。方案C净效果88%，风险最低，虽启动慢8小时（新增400例），但后续高效控制可减少更多感染。方案B是折中，净效果75%，风险2/5，启动6小时。方案E速度较快但净效果低。方案D最差。综合风险、效果和速度，方案C最优，方案B次之，方案A第三，方案E第四，方案D第五。\n\na5: 市长明确速度是最高优先级，每延误1小时新增50例。方案A启动最快（2小时），覆盖100%，可持续21天，虽净效果52%且风险5/5，但速度优势可立即遏制传播，避免延误新增100例（对比方案B的6小时）。方案B启动6小时，净效果75%，风险2/5，可持续14天，是折中但速度不如A。方案C净效果88%但启动8小时，延误6小时新增300例，可持续仅10天，无法弥补初期损失。方案E启动4小时但净效果低、可持续短。方案D最慢且风险高。综合速度、覆盖和可持续性，方案A第一，方案B第二，方案C第三，方案E第四，方案D第五。",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案A-全城封锁",
+    "方案B-分阶段响应",
+    "方案C-精准疏散",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

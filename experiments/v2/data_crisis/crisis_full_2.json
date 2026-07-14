@@ -1,0 +1,221 @@
+{
+  "runId": "crisis_full_2",
+  "ablation": "full",
+  "runIndex": 2,
+  "timestamp": "2026-07-14T01:48:26.783Z",
+  "kendallTau": 0.2,
+  "decisionQuality": 60,
+  "tauTrajectory": [
+    0.4,
+    0.8,
+    0
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.9999999999999999,
+  "opinionDiversity": 6.206335383118183e-17,
+  "totalInterventions": 6,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization",
+    "echo_chamber",
+    "premature_consensus"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.6,
+      "beliefAfter": 0.44,
+      "effective": true
+    },
+    {
+      "round": 3,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.44,
+      "beliefAfter": 0,
+      "effective": false
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 2,
+    "force_reflection": 2,
+    "introduce_diversity": 1,
+    "continue_discussion": 1
+  },
+  "evaluationScores": {
+    "consensus": 91,
+    "reliability": 16.4,
+    "dispersion": 82.5,
+    "stability": 75,
+    "influenceAnalysis": 63,
+    "overall": 62.9
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.6,
+        "a2": 0.21,
+        "a3": -0.66,
+        "a4": -0.2,
+        "a5": -0.93
+      },
+      "confidences": {
+        "a1": 91,
+        "a2": 99,
+        "a3": 77,
+        "a4": 85,
+        "a5": 75
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a2",
+            "a1",
+            "a5",
+            "a3"
+          ]
+        }
+      ],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 63.47779910957371,
+        "reliability": 17.2,
+        "dispersion": 66.9,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 55.7
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.44,
+        "a2": 0.44,
+        "a3": -0.57,
+        "a4": -0.57,
+        "a5": -0.57
+      },
+      "confidences": {
+        "a1": 86,
+        "a2": 86,
+        "a3": 72,
+        "a4": 72,
+        "a5": 72
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 66.57996512028876,
+        "reliability": 15.6,
+        "dispersion": 69.2,
+        "stability": 75,
+        "influenceAnalysis": 67.5,
+        "overall": 56
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.44,
+        "a2": 0.44,
+        "a3": 0.44,
+        "a4": 0.44,
+        "a5": 0.44
+      },
+      "confidences": {
+        "a1": 81,
+        "a2": 81,
+        "a3": 81,
+        "a4": 81,
+        "a5": 81
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "authority_bias",
+        "premature_consensus",
+        "echo_chamber",
+        "authority_bias",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        },
+        {
+          "type": "introduce_diversity",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4",
+            "a5"
+          ]
+        },
+        {
+          "type": "continue_discussion"
+        }
+      ],
+      "tau": 0,
+      "decisionQuality": 50,
+      "evalScores": {
+        "consensus": 91,
+        "reliability": 16.4,
+        "dispersion": 82.5,
+        "stability": 75,
+        "influenceAnalysis": 63,
+        "overall": 62.9
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.44 - positive):\n\na1: Governance intervention requires me to consider the strongest opposing argument. The opposing view (a3, a4) argues that net effect and risk outweigh speed: even though speed is paramount, a fast but ineffective or high-risk response could cause more harm. For example, if a fast lockdown (A) leads to medical overload and increased mortality, while a slower but precise evacuation (C) with high control rate and low risk ultimately saves more lives, then speed alone is insufficient. However, the mayor explicitly stated 'speed is the highest priority' and each hour delay adds 50 infections. With 127 cases and 3 deaths already, the outbreak is accelerating. A 2-hour response (A) can immediately cut transmission, while an 8-hour delay (C) would add 400 cases, overwhelming the system. Even if C has higher net effect, the delay cost is catastrophic. A's 21-day sustainability is adequate for initial containment. Thus, I maintain A first, E second, B third, C fourth, D fifth.\n\na2: I acknowledge the opposing argument that net effect and risk are crucial. In a scenario where a fast but high-risk response causes medical overload and increased mortality, a slower but precise and low-risk response could save more lives. However, the mayor explicitly prioritized speed, and each hour delay adds 50 infections. With 127 cases and 3 deaths, the outbreak is accelerating. A 2-hour response (A) can immediately cut transmission, while an 8-hour delay (C) would add 400 cases, overwhelming the system. Even if C has higher net effect, the delay cost is catastrophic. A's 21-day sustainability is adequate for initial containment. Thus, I maintain A first, E second, B third, C fourth, D fifth.\n\na3: The strongest opposing argument is that speed alone is insufficient if the response is ineffective or high-risk. A fast lockdown (A) with net effect 52% and risk 5/5 could cause medical overload and increased mortality, while a slowe",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案A-全城封锁",
+    "方案B-分阶段响应",
+    "方案E-社区自治",
+    "方案C-精准疏散",
+    "方案D-军事管制"
+  ]
+}

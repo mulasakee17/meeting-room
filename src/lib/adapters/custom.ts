@@ -8,9 +8,38 @@ import {
   AgentState,
 } from "./types";
 
-import { callLLM, LLMConfig, LLMResponse } from "@/lib/llm/providers";
+import { callLLM, LLMConfig, LLMResponse, TokenUsage } from "@/lib/llm/providers";
 import { DiscussionEngine, DiscussionAgent, DiscussionConfig } from "@/lib/discussion";
 import { GovernanceRuntime } from "@/runtime/GovernanceRuntime";
+
+export interface AgentUsageStats {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  totalLatencyMs: number;
+  callCount: number;
+  /** Per-call latency records (ms each) */
+  latencies: number[];
+}
+
+/** 确定性 PRNG (mulberry32)，保证 agent 初始信念可复现 */
+function mulberry32(seed: number): () => number {
+  return () => {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/** 从 agent ID 派生确定性偏移量，确保同一 seed 下各 agent 初始信念不同 */
+function hashAgentId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = ((h << 5) - h + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
 
 export class CustomAgent implements Agent {
   private llmConfig: LLMConfig;
@@ -20,6 +49,13 @@ export class CustomAgent implements Agent {
   private lastEmotion: number = 0;
   private currentBelief: number = 0;
   private currentConfidence: number = 0;
+
+  // Token/latency tracking
+  private promptTokens: number = 0;
+  private completionTokens: number = 0;
+  private totalLatencyMs: number = 0;
+  private callCount: number = 0;
+  private latencies: number[] = [];
 
   constructor(
     public id: string,
@@ -31,8 +67,11 @@ export class CustomAgent implements Agent {
   ) {
     this.llmConfig = llmConfig;
     this.systemPrompt = customPrompt || this.buildSystemPrompt();
-    this.currentBelief = (Math.random() - 0.5) * 2;
-    this.currentConfidence = 70 + Math.random() * 30;
+    // 使用 seed 驱动的 PRNG 初始化信念，保证实验可复现
+    const seed = llmConfig.seed ?? Date.now();
+    const rng = mulberry32(seed + hashAgentId(this.id));
+    this.currentBelief = (rng() - 0.5) * 2;
+    this.currentConfidence = 70 + rng() * 30;
   }
 
   private buildSystemPrompt(): string {
@@ -63,29 +102,52 @@ No other fields. No other text. Just the JSON.`;
         message,
         this.llmConfig
       );
-      
+
       this.lastReasoning = response.reasoning;
       this.lastEmotion = response.emotion;
+
+      // Accumulate token usage and latency
+      if (response.usage) {
+        this.promptTokens += response.usage.promptTokens;
+        this.completionTokens += response.usage.completionTokens;
+      }
+      if (response.latencyMs !== undefined) {
+        this.totalLatencyMs += response.latencyMs;
+        this.latencies.push(response.latencyMs);
+      }
+      this.callCount++;
 
       // V2: pass through raw LLM output so downstream parsers get itemBeliefs etc.
       this.lastMessageContent = response.rawContent;
       return response.rawContent;
     } catch (error) {
       console.error(`Agent ${this.id} LLM call failed:`, error);
-      this.lastReasoning = `分析失败，使用默认推理。问题：${message.substring(0, 50)}...`;
-      this.lastEmotion = 0;
-      
-      const result = JSON.stringify({
-        reasoning: this.lastReasoning,
-        evidence: [],
-        belief: 0,
-        confidence: 50,
-        nextOpinion: "",
-        referencedAgents: [],
-      });
-      
-      this.lastMessageContent = result;
-      return result;
+      // 重试一次，等待 2 秒
+      await new Promise(r => setTimeout(r, 2000));
+      try {
+        const retryResponse: LLMResponse = await callLLM(
+          this.systemPrompt,
+          message,
+          this.llmConfig
+        );
+        this.lastReasoning = retryResponse.reasoning;
+        this.lastEmotion = retryResponse.emotion;
+        if (retryResponse.usage) {
+          this.promptTokens += retryResponse.usage.promptTokens;
+          this.completionTokens += retryResponse.usage.completionTokens;
+        }
+        if (retryResponse.latencyMs !== undefined) {
+          this.totalLatencyMs += retryResponse.latencyMs;
+          this.latencies.push(retryResponse.latencyMs);
+        }
+        this.callCount++;
+        this.lastMessageContent = retryResponse.rawContent;
+        return retryResponse.rawContent;
+      } catch (retryError) {
+        console.error(`Agent ${this.id} retry also failed:`, retryError);
+        // 抛出异常而非返回默认 belief=0，避免被误判为收敛
+        throw new Error(`Agent ${this.id} LLM call failed after retry: ${retryError}`);
+      }
     }
   }
 
@@ -102,6 +164,17 @@ No other fields. No other text. Just the JSON.`;
   setState(state: { belief: number; confidence: number }): void {
     this.currentBelief = state.belief;
     this.currentConfidence = state.confidence;
+  }
+
+  getUsageStats(): AgentUsageStats {
+    return {
+      promptTokens: this.promptTokens,
+      completionTokens: this.completionTokens,
+      totalTokens: this.promptTokens + this.completionTokens,
+      totalLatencyMs: this.totalLatencyMs,
+      callCount: this.callCount,
+      latencies: [...this.latencies],
+    };
   }
 }
 

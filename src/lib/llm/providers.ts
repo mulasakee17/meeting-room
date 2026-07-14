@@ -40,11 +40,21 @@ export interface LLMConfig {
   seed?: number;       // 随机种子（DeepSeek/OpenAI 支持，用于可复现性）
 }
 
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
 export interface LLMResponse {
   emotion: number;
   reasoning: string;
   /** Full LLM output text — preserved for downstream parsers (V2 itemBeliefs). */
   rawContent: string;
+  /** Token usage from the API response (if available) */
+  usage?: TokenUsage;
+  /** LLM call latency in milliseconds */
+  latencyMs?: number;
 }
 
 // 带超时的 fetch
@@ -186,6 +196,7 @@ async function callOpenAI(
     );
   }
   
+  const startTime = Date.now();
   try {
     const response = await fetchWithTimeout(
       "https://api.openai.com/v1/chat/completions",
@@ -222,7 +233,7 @@ async function callOpenAI(
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-    
+
     if (!content) {
       throw new LLMError(
         'OpenAI 返回内容为空',
@@ -231,8 +242,17 @@ async function callOpenAI(
         false
       );
     }
-    
-    return parseLLMResponse(content, 'OpenAI');
+
+    const result = parseLLMResponse(content, 'OpenAI');
+    result.latencyMs = Date.now() - startTime;
+    if (data.usage) {
+      result.usage = {
+        promptTokens: data.usage.prompt_tokens ?? 0,
+        completionTokens: data.usage.completion_tokens ?? 0,
+        totalTokens: data.usage.total_tokens ?? 0,
+      };
+    }
+    return result;
   } catch (error) {
     if (error instanceof LLMError) {
       throw error;
@@ -291,6 +311,7 @@ async function callAnthropic(
     "x-api-key": apiKey,
   };
 
+  const startTime = Date.now();
   try {
     const response = await fetchWithTimeout(
       "https://api.anthropic.com/v1/messages",
@@ -321,7 +342,7 @@ async function callAnthropic(
 
     const data = await response.json();
     const content = data.content?.[0]?.text;
-    
+
     if (!content) {
       throw new LLMError(
         'Anthropic 返回内容为空',
@@ -330,8 +351,19 @@ async function callAnthropic(
         false
       );
     }
-    
-    return parseLLMResponse(content, 'Anthropic');
+
+    const result = parseLLMResponse(content, 'Anthropic');
+    result.latencyMs = Date.now() - startTime;
+    if (data.usage) {
+      const promptTokens = data.usage.input_tokens ?? 0;
+      const completionTokens = data.usage.output_tokens ?? 0;
+      result.usage = {
+        promptTokens,
+        completionTokens,
+        totalTokens: promptTokens + completionTokens,
+      };
+    }
+    return result;
   } catch (error) {
     if (error instanceof LLMError) {
       throw error;
@@ -385,6 +417,7 @@ async function callDeepSeek(
     );
   }
 
+  const startTime = Date.now();
   try {
     const response = await fetchWithTimeout(
       "https://api.deepseek.com/v1/chat/completions",
@@ -431,7 +464,16 @@ async function callDeepSeek(
       );
     }
 
-    return parseLLMResponse(content, 'DeepSeek');
+    const result = parseLLMResponse(content, 'DeepSeek');
+    result.latencyMs = Date.now() - startTime;
+    if (data.usage) {
+      result.usage = {
+        promptTokens: data.usage.prompt_tokens ?? 0,
+        completionTokens: data.usage.completion_tokens ?? 0,
+        totalTokens: data.usage.total_tokens ?? 0,
+      };
+    }
+    return result;
   } catch (error) {
     if (error instanceof LLMError) {
       throw error;
@@ -475,6 +517,7 @@ async function callLocalLLM(
   const model = config?.model || "llama3";
   const timeout = config?.timeout || DEFAULT_TIMEOUT * 2; // 本地模型可能更慢
   
+  const startTime = Date.now();
   try {
     const response = await fetchWithTimeout(
       `${baseUrl}/api/chat`,
@@ -506,7 +549,7 @@ async function callLocalLLM(
 
     const data = await response.json();
     const content = data.message?.content;
-    
+
     if (!content) {
       throw new LLMError(
         '本地 LLM 返回内容为空',
@@ -515,8 +558,20 @@ async function callLocalLLM(
         false
       );
     }
-    
-    return parseLLMResponse(content, 'Local LLM');
+
+    const result = parseLLMResponse(content, 'Local LLM');
+    result.latencyMs = Date.now() - startTime;
+    // Ollama 返回 prompt_eval_count / eval_count
+    if (data.prompt_eval_count !== undefined || data.eval_count !== undefined) {
+      const promptTokens = data.prompt_eval_count ?? 0;
+      const completionTokens = data.eval_count ?? 0;
+      result.usage = {
+        promptTokens,
+        completionTokens,
+        totalTokens: promptTokens + completionTokens,
+      };
+    }
+    return result;
   } catch (error) {
     if (error instanceof LLMError) {
       throw error;

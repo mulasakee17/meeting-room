@@ -1,10 +1,10 @@
 # SwarmAlpha — One-Page Summary
 
-> **An Embeddable Governance Runtime for Multi-Agent Systems**
+> **The first open-source cognitive governance runtime for multi-agent systems.**
 >
-> *Process monitoring, decision audit, and adaptive intervention — three independent value pillars for AI agent collectives.*
+> *Security governance prevents agents from doing harm. Cognitive governance prevents agents from thinking wrong. The agent governance stack needs both.*
 >
-> **Application scenario**: Real-time process governance for LLM multi-agent collaborative decision-making — detecting polarization, authority bias, echo chambers, and premature consensus during consensus formation and applying targeted interventions to safeguard decision quality in limited-round discussions.
+> **Positioning**: Complementary to Microsoft Agent Governance Toolkit / Agent Control Standard (ACS). They handle tool-execution safety; SwarmAlpha handles discussion-process health — detecting echo chambers, authority bias, polarization, and premature consensus during LLM agent collaboration. Validated by independent academic evidence: Li et al. (SJTU, 2026) confirmed MAS echo chambers amplify bias undetected by standard methods [arXiv:2604.08963](https://arxiv.org/abs/2604.08963). ACS-compatible via `StateInferenceBridge` at the state checkpoint.
 
 ---
 

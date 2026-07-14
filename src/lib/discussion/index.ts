@@ -577,44 +577,49 @@ export class DiscussionEngine {
     const currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number }> = [];
 
     for (const agent of agents) {
-      const state = agent.getState();
-      // 个性化 memory：agent 自己说过的 + 别人 @ 它的
-      const ownEntries = allMemory.filter(e => e.agentId === agent.id);
-      const mentionsMe = allMemory.filter(e =>
-        e.agentId !== agent.id && e.referencedAgents?.includes(agent.id)
-      );
-      const personalMemory = [...ownEntries, ...mentionsMe]
-        .sort((a, b) => a.roundNumber - b.roundNumber);
-      const prompt = this.buildPrompt(
-        { name: agent.name, role: agent.role, id: agent.id },
-        typeof task.content === "string" ? task.content : JSON.stringify(task.content),
-        personalMemory, roundNumber, state, currentRoundOpinions
-      );
-      const response = await agent.sendMessage(prompt);
-      // Use the shared parser instead of a private duplicate
-      const parsedOpinion = this.opinionParser.parseOpinion(
-        response,
-        agent.id,
-        state.belief,
-        state.confidence,
-        roundNumber
-      );
+      try {
+        const state = agent.getState();
+        // 个性化 memory：agent 自己说过的 + 别人 @ 它的
+        const ownEntries = allMemory.filter(e => e.agentId === agent.id);
+        const mentionsMe = allMemory.filter(e =>
+          e.agentId !== agent.id && e.referencedAgents?.includes(agent.id)
+        );
+        const personalMemory = [...ownEntries, ...mentionsMe]
+          .sort((a, b) => a.roundNumber - b.roundNumber);
+        const prompt = this.buildPrompt(
+          { name: agent.name, role: agent.role, id: agent.id },
+          typeof task.content === "string" ? task.content : JSON.stringify(task.content),
+          personalMemory, roundNumber, state, currentRoundOpinions
+        );
+        const response = await agent.sendMessage(prompt);
+        // Use the shared parser instead of a private duplicate
+        const parsedOpinion = this.opinionParser.parseOpinion(
+          response,
+          agent.id,
+          state.belief,
+          state.confidence,
+          roundNumber
+        );
 
-      const observation: RawObservation = {
-        agentId: agent.id,
-        roundNumber,
-        timestamp: new Date().toISOString(),
-        rawResponse: response,
-        parsedOpinion,
-      };
-      observations.push(observation);
-      // 累积到本轮已发言列表，供后续 agent 参考
-      currentRoundOpinions.push({
-        agentId: agent.id,
-        reasoning: parsedOpinion.reasoning,
-        belief: parsedOpinion.belief,
-        confidence: parsedOpinion.confidence,
-      });
+        const observation: RawObservation = {
+          agentId: agent.id,
+          roundNumber,
+          timestamp: new Date().toISOString(),
+          rawResponse: response,
+          parsedOpinion,
+        };
+        observations.push(observation);
+        // 累积到本轮已发言列表，供后续 agent 参考
+        currentRoundOpinions.push({
+          agentId: agent.id,
+          reasoning: parsedOpinion.reasoning,
+          belief: parsedOpinion.belief,
+          confidence: parsedOpinion.confidence,
+        });
+      } catch (err) {
+        // API 失败：跳过该 agent，不参与本轮讨论
+        console.warn(`Agent ${agent.id} skipped in round ${roundNumber}: ${err instanceof Error ? err.message : err}`);
+      }
     }
 
     return observations;
