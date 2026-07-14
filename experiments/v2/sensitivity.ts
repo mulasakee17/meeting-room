@@ -135,19 +135,24 @@ function kendallTau(groundTruth: Record<string, number>, extracted: string[]): n
     x.push(gt);
     y.push(extIdx >= 0 ? extIdx + 1 : n + 1);
   }
-  let concordant = 0, discordant = 0, tiesX = 0, tiesY = 0;
+  let concordant = 0, discordant = 0;
+  const tieGroupsX = new Map<number, number>();
+  const tieGroupsY = new Map<number, number>();
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       const dx = x[i] - x[j], dy = y[i] - y[j];
-      if (dx === 0) tiesX++;
-      if (dy === 0) tiesY++;
+      if (dx === 0) tieGroupsX.set(x[i], (tieGroupsX.get(x[i]) || 0) + 1);
+      if (dy === 0) tieGroupsY.set(y[i], (tieGroupsY.get(y[i]) || 0) + 1);
       if (dx * dy > 0) concordant++;
       else if (dx * dy < 0) discordant++;
     }
   }
   const n0 = n * (n - 1) / 2;
-  const n1 = tiesX * (tiesX - 1) / 2;
-  const n2 = tiesY * (tiesY - 1) / 2;
+  // Per-group tie correction: Σ t*(t-1)/2 for each tie group of size t
+  let n1 = 0;
+  for (const count of tieGroupsX.values()) n1 += count * (count + 1) / 2;
+  let n2 = 0;
+  for (const count of tieGroupsY.values()) n2 += count * (count + 1) / 2;
   const denom = Math.sqrt((n0 - n1) * (n0 - n2));
   return denom === 0 ? 0 : (concordant - discordant) / denom;
 }

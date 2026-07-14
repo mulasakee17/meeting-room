@@ -21,6 +21,10 @@ export interface ConsensusMetric {
   kuramotoOrder: number;
   beliefStd: number;
   agreementRate: number;
+  /** 信息熵 H ∈ [0,1]：信念分布的均匀度。H 低=集中（共识或双峰），H 高=分散 */
+  entropy?: number;
+  /** 社会自由能 F：总无序度量，F 低=有序。F = (1-R) + σ·H */
+  freeEnergy?: number;
   trajectory: ConsensusTrajectory;
   details: string;
 }

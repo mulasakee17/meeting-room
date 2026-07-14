@@ -1,4 +1,5 @@
 import { LLM_DEFAULT_TIMEOUT_MS } from "../constants";
+import { safeJsonParse } from "../utils/jsonUtils";
 
 export type LLMProvider = "openai" | "anthropic" | "deepseek" | "local";
 
@@ -122,16 +123,10 @@ function mapStatusToErrorType(status: number): { type: LLMErrorType; isRetryable
 
 // 解析 LLM 响应
 function parseLLMResponse(content: string, provider: string): LLMResponse {
-  // 1. Strip markdown code fences that some models add despite instructions
-  let cleaned = content.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "").trim();
-  }
+  // 1. Use safeJsonParse (handles code fences + regex extraction)
+  const parsed = safeJsonParse<{ emotion?: number; belief?: number; reasoning?: string; analysis?: string }>(content);
 
-  // 2. Try JSON parse
-  try {
-    const parsed = JSON.parse(cleaned);
-
+  if (parsed) {
     // Accept either {emotion, reasoning} OR {belief, reasoning} as fallback
     const emotion = typeof parsed.emotion === "number"
       ? parsed.emotion
@@ -148,11 +143,10 @@ function parseLLMResponse(content: string, provider: string): LLMResponse {
           : JSON.stringify(parsed);
 
     return { emotion, reasoning, rawContent: content };
-  } catch (err) {
-    console.warn(`[parseLLMResponse] ${provider} JSON parse failed:`, err instanceof Error ? err.message : err);
   }
 
-  // 3. Regex extraction from malformed JSON or plain text
+  // 2. Regex extraction from malformed JSON or plain text
+  const cleaned = content.trim();
   const emotionMatch = cleaned.match(/emotion["\s:]*(-?\d+(?:\.\d+)?)/);
   const reasoningMatch = cleaned.match(/reasoning["\s:]*["']([^"']{5,})["']/i);
 

@@ -28,6 +28,12 @@ import type { LLMConfig } from "../../src/lib/llm/providers";
 import { TASK_MA, type TaskConfig } from "../lunar_survival/config";
 import { TASK_INVEST } from "./task_invest";
 import { TASK_CRISIS } from "./task_crisis";
+import { TASK_SUPPLIER } from "./task_supplier";
+
+const TASKS: Record<string, { task: TaskConfig; dataDir: string }> = {
+  crisis: { task: TASK_CRISIS, dataDir: "data_crisis" },
+  supplier: { task: TASK_SUPPLIER, dataDir: "data_supplier" },
+};
 
 // ============================================================================
 // Types
@@ -67,6 +73,15 @@ interface InterventionEffect {
   effective: boolean;
 }
 
+/** Token usage stats for a single agent */
+interface AgentTokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  totalLatencyMs: number;
+  callCount: number;
+}
+
 interface ExperimentResult {
   runId: string;
   ablation: Ablation;
@@ -90,6 +105,12 @@ interface ExperimentResult {
   interventionEffects: InterventionEffect[];
   /** Per-intervention-type counts: { reduce_weight: 3, continue_discussion: 5, ... } */
   interventionBreakdown: Record<string, number>;
+
+  // Token usage (real measurements from LLM API)
+  tokenUsage?: {
+    byAgent: Record<string, AgentTokenUsage>;
+    total: { promptTokens: number; completionTokens: number; totalTokens: number; totalLatencyMs: number };
+  };
 
   // Evaluation
   evaluationScores: Record<string, number>;
@@ -534,6 +555,30 @@ async function runSingle(
     Object.assign(evaluationScores, (lastRoundWithEval as any).evalScores);
   }
 
+  // ── Collect token usage from agents ─────────────────────────────────────
+  const tokenUsageByAgent: Record<string, AgentTokenUsage> = {};
+  let totalPromptTokens = 0;
+  let totalCompletionTokens = 0;
+  let totalLatencyMs = 0;
+
+  for (const agent of agents) {
+    // Cast back to CustomAgent to access getUsageStats()
+    const customAgent = agent as unknown as CustomAgent;
+    if (customAgent.getUsageStats) {
+      const stats = customAgent.getUsageStats();
+      tokenUsageByAgent[agent.id] = {
+        promptTokens: stats.promptTokens,
+        completionTokens: stats.completionTokens,
+        totalTokens: stats.totalTokens,
+        totalLatencyMs: stats.totalLatencyMs,
+        callCount: stats.callCount,
+      };
+      totalPromptTokens += stats.promptTokens;
+      totalCompletionTokens += stats.completionTokens;
+      totalLatencyMs += stats.totalLatencyMs;
+    }
+  }
+
   return {
     runId, ablation, runIndex,
     timestamp: new Date().toISOString(),
@@ -549,6 +594,15 @@ async function runSingle(
     issuesDetected: [...new Set(allIssues)],
     interventionEffects,
     interventionBreakdown,
+    tokenUsage: {
+      byAgent: tokenUsageByAgent,
+      total: {
+        promptTokens: totalPromptTokens,
+        completionTokens: totalCompletionTokens,
+        totalTokens: totalPromptTokens + totalCompletionTokens,
+        totalLatencyMs,
+      },
+    },
     evaluationScores,
     rounds,
     finalDecision: finalDecision.substring(0, 2000),
@@ -573,6 +627,7 @@ function mean(values: number[]): number {
 }
 
 function cohensD(a: number[], b: number[]): number {
+  if (a.length < 2 || b.length < 2) return 0;
   const ma = mean(a), mb = mean(b);
   const va = a.reduce((s, v) => s + (v - ma) ** 2, 0) / (a.length - 1);
   const vb = b.reduce((s, v) => s + (v - mb) ** 2, 0) / (b.length - 1);
@@ -585,16 +640,21 @@ function cohensD(a: number[], b: number[]): number {
 // ============================================================================
 
 async function main() {
-  const task = TASK_CRISIS;
-  // crisis 任务使用独立数据目录
-  const dataDirName = "data_crisis";
+  const taskKey = process.argv[2] || "crisis";
+  if (!TASKS[taskKey]) {
+    console.error(`Unknown task: ${taskKey}`);
+    console.error(`Available tasks: ${Object.keys(TASKS).join(", ")}`);
+    process.exit(1);
+  }
+  const { task, dataDir: dataDirName } = TASKS[taskKey];
   const DATA_DIR = path.resolve(__dirname, dataDirName);
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   const allResults: ExperimentResult[] = [];
 
   console.log("=".repeat(70));
   console.log("  SwarmAlpha V2 — Experiment Runner");
-  console.log(`  Task: ${task.title}`);
+  console.log(`  Task: ${task.title} (${taskKey})`);
+  console.log(`  Data dir: ${dataDirName}`);
   console.log(`  Modes: ${PARAMS.ablationModes.join(", ")}`);
   console.log(`  Runs per condition: ${PARAMS.runsPerCondition}`);
   console.log(`  Total: ${PARAMS.runsPerCondition * PARAMS.ablationModes.length} experiments`);

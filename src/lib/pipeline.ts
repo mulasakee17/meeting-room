@@ -9,7 +9,7 @@ import { adapterRegistry } from "@/lib/adapters";
 import { EvaluationEngine } from "@/lib/evaluation";
 import { GovernanceEngine } from "@/lib/governance";
 import type { FrameworkAdapter } from "@/lib/adapters/types";
-import type { Agent, TaskInput, InteractionResult } from "@/lib/adapters/types";
+import { safeJsonParse } from "@/lib/utils/jsonUtils";
 
 // ---- 输入类型 ----------------------------------------------------------------
 
@@ -111,12 +111,11 @@ function parseAgentStates(
     let parsedReasoning = state.reasoning || "";
     let parsedEmotion = 0;
     if (state.lastMessage) {
-      try {
-        const parsed = JSON.parse(state.lastMessage);
+      const parsed = safeJsonParse<{ reasoning?: string; emotion?: number }>(state.lastMessage);
+      if (parsed) {
         parsedReasoning = parsed.reasoning || parsedReasoning;
         parsedEmotion = typeof parsed.emotion === "number" ? parsed.emotion : parsedEmotion;
-      } catch (err) {
-        console.warn(`[pipeline] Agent ${state.agentId} lastMessage parse failed:`, err instanceof Error ? err.message : err);
+      } else {
         parsedReasoning = state.lastMessage;
       }
     }

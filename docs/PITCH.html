@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SwarmAlpha — Cognitive Governance Runtime for LLM Multi-Agent Systems</title>
+<style>
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  html, body {
+    width: 210mm;
+    height: 297mm;
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
+    color: #1a1a1a;
+    background: #ffffff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page {
+    width: 210mm;
+    height: 297mm;
+    padding: 12mm 14mm;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Header */
+  .header {
+    border-bottom: 3px solid #0f172a;
+    padding-bottom: 6mm;
+    margin-bottom: 6mm;
+  }
+  .title {
+    font-size: 24pt;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+  .title .accent {
+    color: #2563eb;
+  }
+  .tagline {
+    font-size: 10.5pt;
+    color: #475569;
+    margin-top: 2mm;
+    line-height: 1.4;
+    font-style: italic;
+  }
+  .pitch {
+    font-size: 11pt;
+    color: #0f172a;
+    margin-top: 3mm;
+    line-height: 1.45;
+  }
+  .pitch strong {
+    color: #2563eb;
+  }
+  /* Sections */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5mm;
+    margin-top: 5mm;
+  }
+  .section {
+    background: #f8fafc;
+    border-left: 3px solid #2563eb;
+    padding: 4mm 5mm;
+    border-radius: 2px;
+  }
+  .section.alt {
+    border-left-color: #dc2626;
+  }
+  .section-title {
+    font-size: 10pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #2563eb;
+    margin-bottom: 2mm;
+  }
+  .section.alt .section-title {
+    color: #dc2626;
+  }
+  .section ul {
+    list-style: none;
+    font-size: 9.5pt;
+    line-height: 1.5;
+  }
+  .section li {
+    padding-left: 4mm;
+    position: relative;
+    margin-bottom: 1mm;
+  }
+  .section li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: #2563eb;
+    font-weight: 700;
+  }
+  .section.alt li::before {
+    color: #dc2626;
+  }
+  /* Evidence table */
+  .evidence {
+    margin-top: 5mm;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 5mm 6mm;
+    border-radius: 3px;
+  }
+  .evidence-title {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #fbbf24;
+    margin-bottom: 3mm;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .evidence-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+  .evidence-table th {
+    text-align: left;
+    color: #94a3b8;
+    font-weight: 600;
+    padding: 1.5mm 2mm;
+    border-bottom: 1px solid #334155;
+    font-size: 8.5pt;
+  }
+  .evidence-table td {
+    padding: 1.5mm 2mm;
+    border-bottom: 1px solid #1e293b;
+  }
+  .evidence-table .num {
+    color: #fbbf24;
+    font-weight: 700;
+    font-family: "SF Mono", Consolas, monospace;
+  }
+  .evidence-table .task {
+    color: #ffffff;
+    font-weight: 600;
+  }
+  .findings {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3mm;
+    margin-top: 3mm;
+    font-size: 8.5pt;
+  }
+  .finding {
+    background: #1e293b;
+    padding: 2mm 3mm;
+    border-radius: 2px;
+    color: #e2e8f0;
+    line-height: 1.4;
+  }
+  .finding strong {
+    color: #fbbf24;
+  }
+  /* Innovation callout */
+  .innovation {
+    margin-top: 4mm;
+    padding: 3mm 4mm;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #93c5fd;
+    border-radius: 3px;
+  }
+  .innovation-title {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 1.5mm;
+  }
+  .innovation-text {
+    font-size: 9pt;
+    color: #1e3a8a;
+    line-height: 1.45;
+  }
+  /* Footer */
+  .footer {
+    margin-top: auto;
+    border-top: 2px solid #0f172a;
+    padding-top: 4mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 8.5pt;
+  }
+  .author {
+    color: #0f172a;
+  }
+  .author strong {
+    font-size: 9.5pt;
+  }
+  .links {
+    text-align: right;
+    color: #475569;
+  }
+  .links strong {
+    color: #2563eb;
+  }
+  .stack {
+    font-size: 8pt;
+    color: #64748b;
+    margin-top: 1mm;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="title">SwarmAlpha<span class="accent">.</span></div>
+    <div class="tagline">The first open-source <strong>cognitive governance runtime</strong> for LLM multi-agent systems.</div>
+    <div class="pitch">
+      Security governance prevents agents from <strong>doing harm</strong>. Cognitive governance prevents agents from <strong>thinking wrong</strong>.
+      The agent governance stack needs both. SwarmAlpha handles the second — detecting echo chambers, authority bias, polarization, and premature consensus
+      during LLM agent collaboration.
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="section">
+      <div class="section-title">The Problem</div>
+      <ul>
+        <li><strong>Premature consensus</strong> — agreement in round 1; critical info never discussed.</li>
+        <li><strong>Authority bias</strong> — one overconfident agent dominates the rest.</li>
+        <li><strong>Echo chamber</strong> — similar agents confirm each other's blind spots.</li>
+        <li><strong>Group polarization</strong> — divergence hardens into deadlock.</li>
+        <li><strong>No existing framework</strong> detects or intervenes on these failures.</li>
+      </ul>
+    </div>
+    <div class="section alt">
+      <div class="section-title">What We Built</div>
+      <ul>
+        <li><strong>Embeddable governance runtime</strong>, not a framework — drop-in layer for any MAS.</li>
+        <li><strong>3 value dimensions</strong>: process monitoring, decision audit, adaptive intervention.</li>
+        <li><strong>LLM perception / Math evolution</strong> separation — agents extract beliefs, math does the rest.</li>
+        <li><strong>Framework-agnostic SDK</strong> — ~2-4h integration into AutoGen / CrewAI / LangGraph.</li>
+        <li><strong>13,000+ lines</strong> of TypeScript, 219 automated tests, full open source.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="innovation">
+    <div class="innovation-title">Key Research Contribution — Diagnosing the Governance Loop</div>
+    <div class="innovation-text">
+      We identified <strong>4 root cognitive defects (D1–D4)</strong> in the prevailing MAS discussion paradigm — missing state awareness,
+      no per-agent history, synchronous scripted turns, and fabricated influence networks. All 4 were fixed on 2026-07-12, and the
+      experiments were re-run on Crisis (2026-07-14) with the loop closed — confirming governance effectiveness (d=0.84, τ +48%)
+      that prior "governance is ineffective" conclusions had masked.
+    </div>
+  </div>
+
+  <div class="evidence">
+    <div class="evidence-title">Experimental Evidence — 89 runs across 2 tasks (Crisis 45 + Supplier 44)</div>
+    <table class="evidence-table">
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Baseline τ</th>
+          <th>Full Governance τ</th>
+          <th>Shuffle Control τ</th>
+          <th>Cohen's d (full vs none)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="task">Crisis (3 rounds, n=15/cell)</td>
+          <td>0.387 ± 0.160</td>
+          <td><span class="num">0.573 ± 0.271</span></td>
+          <td><span class="num">0.760 ± 0.241</span></td>
+          <td><span class="num">+0.84</span></td>
+        </tr>
+        <tr>
+          <td class="task">Supplier (3 rounds, n=15/15/14)</td>
+          <td>0.680 ± 0.211</td>
+          <td><span class="num">0.787 ± 0.177</span></td>
+          <td>0.671 ± 0.202</td>
+          <td><span class="num">+0.55</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="findings">
+      <div class="finding">✅ <strong>Governance direction consistent</strong> across both tasks — full > none replicates.</div>
+      <div class="finding">✅ <strong>"False consensus" replicates</strong> — consensus-quality r ≈ 0 in both tasks.</div>
+      <div class="finding">⚠️ <strong>Shuffle has boundary conditions</strong> — effective on hard tasks, noise on easy ones.</div>
+      <div class="finding">🧪 <strong>Bayesian reanalysis</strong>: P(d &gt; 0) = 96.7%, 95% HDI [−0.04, 1.13].</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="author">
+      <strong>贺孟元 (Mengyuan He)</strong> — Grade 10, independent architecture &amp; implementation<br>
+      <span class="stack">TypeScript · Next.js · DeepSeek API · Vitest · 219 tests · 89 experiments · 2 tasks validated</span>
+    </div>
+    <div class="links">
+      <strong>github.com/mulasakee17/swarmalpha</strong><br>
+      AI-assisted coding · architecture &amp; experiments autonomous
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,181 @@
+{
+  "runId": "supplier_none_3",
+  "ablation": "none",
+  "runIndex": 3,
+  "timestamp": "2026-07-14T05:31:20.721Z",
+  "kendallTau": 0.8,
+  "decisionQuality": 90,
+  "tauTrajectory": [
+    0.8,
+    0.8,
+    0.8
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0,
+  "opinionDiversity": 0.5302640851500316,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 5542,
+        "completionTokens": 1101,
+        "totalTokens": 6643,
+        "totalLatencyMs": 8466,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 5710,
+        "completionTokens": 1133,
+        "totalTokens": 6843,
+        "totalLatencyMs": 9253,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 5759,
+        "completionTokens": 1364,
+        "totalTokens": 7123,
+        "totalLatencyMs": 10084,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 5751,
+        "completionTokens": 1404,
+        "totalTokens": 7155,
+        "totalLatencyMs": 10320,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6040,
+        "completionTokens": 1299,
+        "totalTokens": 7339,
+        "totalLatencyMs": 9810,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 28802,
+      "completionTokens": 6301,
+      "totalTokens": 35103,
+      "totalLatencyMs": 47933
+    }
+  },
+  "evaluationScores": {
+    "consensus": 71.49522698410213,
+    "reliability": 19,
+    "dispersion": 69.4,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 58.3
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.21,
+        "a2": 0.8,
+        "a3": 0.33,
+        "a4": -0.93,
+        "a5": 0.95
+      },
+      "confidences": {
+        "a1": 99,
+        "a2": 90,
+        "a3": 90,
+        "a4": 85,
+        "a5": 93
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 59.24471230013596,
+        "reliability": 18.3,
+        "dispersion": 67,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 55.2
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.22,
+        "a2": 0.22,
+        "a3": 0.34,
+        "a4": -0.93,
+        "a5": 0.22
+      },
+      "confidences": {
+        "a1": 99,
+        "a2": 99,
+        "a3": 93,
+        "a4": 85,
+        "a5": 99
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 71.49522698410213,
+        "reliability": 19.1,
+        "dispersion": 70.3,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 58.5
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.22,
+        "a2": 0.22,
+        "a3": 0.34,
+        "a4": -0.93,
+        "a5": 0.22
+      },
+      "confidences": {
+        "a1": 100,
+        "a2": 82,
+        "a3": 100,
+        "a4": 91,
+        "a5": 100
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 71.49522698410213,
+        "reliability": 19,
+        "dispersion": 69.4,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 58.3
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.01 - neutral):\n\na1: 尽管质量和技术专家强烈反对供应商A，但CEO明确成本优先，且A在成本（1.0）和交付（0.90）上领先，财务稳健（0.85）。其他供应商如C和E成本极高（0.5和0.35），不符合成本年战略。质量和技术问题可通过合同约束和过程管控缓解，但成本优势无法替代。因此仍坚持A排第一。\n\na2: 尽管质量和技术专家强烈反对供应商A，但CEO明确成本优先，且A在成本（1.0）和交付（0.90）上领先，财务稳健（0.85）。其他供应商如C和E成本极高（0.5和0.35），不符合成本年战略。质量和技术问题可通过合同约束和过程管控缓解，但成本优势无法替代。因此仍坚持A排第一。\n\na3: 尽管成本分析师和交付专家坚持供应商A排第一，但作为质量工程师，我掌握的质量数据明确显示A的质量评分仅为0.20，是所有供应商中最低的，存在品控松懈问题。该零部件直接影响产品质量，若选择A，可能因质量问题导致返工、退货甚至客户流失，长期成本反而更高。CEO强调成本优先，但质量是底线，不能为了短期降本牺牲质量。供应商C和E的质量评分分别为0.95和0.90，远超其他家，且技术能力也领先。虽然成本较高，但综合价值更高。因此，我坚持质量优先，推荐C和E，并建议进一步获取C和E的成本数据以综合评估。\n\na4: 尽管成本分析师和交付专家坚持供应商A排第一，但质量工程师的数据显示A质量评分仅0.20，我掌握的技术数据也显示A技术能力极弱（0.15），缺乏研发投入，无法支撑产品升级。CEO强调成本优先，但该零部件直接影响产品质量，质量和技术问题可能导致长期成本更高。供应商C和E在技术（0.90和0.85）和质量（0.95和0.90）上均领先，综合价值更高。财务顾问指出C财务一般（0.65）、E偏弱（0.45），但可通过合同管控风险。因此，我仍反对A排第一，建议优先考虑C和E，并进一步获取C和E的成本数据以全面评估。\n\na5: 尽管质量和技术专家强烈反对A，但CEO明确成本优先，且A在成本（1.0）和交付（0.90）上领先，财务稳健（0.85）。其他供应商如C和E成本极高（0.5和0.35），不符合成本年战略。质量和技术问题可通过合同约束和过程管控缓解，但成本优势无法替代。D和E财务风险高，可能影响长期合作。因此仍坚持A排第一，但需关注质量和技术问题。",
+  "groundTruth": {
+    "供应商C-精研科技": 1,
+    "供应商B-稳达制造": 2,
+    "供应商E-锐新科技": 3,
+    "供应商A-宏远工业": 4,
+    "供应商D-利通集团": 5
+  },
+  "extractedRanking": [
+    "供应商C-精研科技",
+    "供应商B-稳达制造",
+    "供应商A-宏远工业",
+    "供应商E-锐新科技",
+    "供应商D-利通集团"
+  ]
+}

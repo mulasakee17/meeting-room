@@ -150,6 +150,9 @@ export interface GovernanceConfig {
   enableAdaptiveThresholds?: boolean;
   /** 启用自适应剂量——干预强度根据严重度和历史效果动态调整（默认 false） */
   enableAdaptiveDosage?: boolean;
+  /** 禁用的干预类型列表。检测器仍运行，但不触发被禁用的干预。
+   * 默认禁用: ["introduce_diversity", "continue_discussion"]（实验证明无效/有害） */
+  disabledInterventions?: InterventionType[];
 }
 
 export interface AgentBelief {

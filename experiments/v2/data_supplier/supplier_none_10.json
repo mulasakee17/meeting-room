@@ -1,0 +1,181 @@
+{
+  "runId": "supplier_none_10",
+  "ablation": "none",
+  "runIndex": 10,
+  "timestamp": "2026-07-14T05:37:48.705Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "tauTrajectory": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.48978435931461295,
+  "opinionDiversity": 0.2551078203426935,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 6380,
+        "completionTokens": 1379,
+        "totalTokens": 7759,
+        "totalLatencyMs": 10764,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6851,
+        "completionTokens": 1363,
+        "totalTokens": 8214,
+        "totalLatencyMs": 10421,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6797,
+        "completionTokens": 1501,
+        "totalTokens": 8298,
+        "totalLatencyMs": 11794,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 6689,
+        "completionTokens": 1432,
+        "totalTokens": 8121,
+        "totalLatencyMs": 10896,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6596,
+        "completionTokens": 1549,
+        "totalTokens": 8145,
+        "totalLatencyMs": 11792,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 33313,
+      "completionTokens": 7224,
+      "totalTokens": 40537,
+      "totalLatencyMs": 55667
+    }
+  },
+  "evaluationScores": {
+    "consensus": 81.57639514463264,
+    "reliability": 19.6,
+    "dispersion": 77,
+    "stability": 75,
+    "influenceAnalysis": 69,
+    "overall": 61.8
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.54,
+        "a2": 0.54,
+        "a3": 0.44,
+        "a4": 0.44,
+        "a5": 0.44
+      },
+      "confidences": {
+        "a1": 76,
+        "a2": 82,
+        "a3": 94,
+        "a4": 94,
+        "a5": 85
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 83.93142880427766,
+        "reliability": 17.4,
+        "dispersion": 78,
+        "stability": 75,
+        "influenceAnalysis": 67.5,
+        "overall": 61.6
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.46,
+        "a2": 0.46,
+        "a3": 0.51,
+        "a4": 0.44,
+        "a5": 0.44
+      },
+      "confidences": {
+        "a1": 84,
+        "a2": 84,
+        "a3": 100,
+        "a4": 87,
+        "a5": 86
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 84.46347962724691,
+        "reliability": 17.8,
+        "dispersion": 79,
+        "stability": 75,
+        "influenceAnalysis": 69,
+        "overall": 62.3
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.46,
+        "a2": 0.46,
+        "a3": 0.51,
+        "a4": 0.44,
+        "a5": -0.1
+      },
+      "confidences": {
+        "a1": 95,
+        "a2": 95,
+        "a3": 100,
+        "a4": 98,
+        "a5": 98
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 81.57639514463264,
+        "reliability": 19.6,
+        "dispersion": 77,
+        "stability": 75,
+        "influenceAnalysis": 69,
+        "overall": 61.8
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.35 - positive):\n\na1: 尽管CEO强调成本优先，但质量和技术风险可能导致长期损失。供应商A成本最低、交付最强、财务最稳健，但质量和技术评分极低，存在重大风险。供应商B在成本、交付、质量、技术和财务上均中等偏上，平衡性最好，风险可控。考虑到A的成本优势巨大且财务稳健，若通过严格质量管控可降低风险，仍应优先考虑A；但B是更稳妥的选择。我倾向于将A排第一，B排第二，C排第三，E排第四，D排第五。\n\na2: 尽管CEO强调成本优先，但质量和技术风险可能导致长期损失。供应商A成本最低、交付最强、财务最稳健，但质量和技术评分极低，存在重大风险。供应商B在成本、交付、质量、技术和财务上均中等偏上，平衡性最好，风险可控。考虑到A的成本优势巨大且财务稳健，若通过严格质量管控可降低风险，仍应优先考虑A；但B是更稳妥的选择。我倾向于将A排第一，B排第二，C排第三，E排第四，D排第五。\n\na3: 本轮a1和a2仍坚持A第一，但质量和技术风险不可忽视。CEO强调成本优先，但该零部件直接影响产品质量，质量风险可能导致召回和品牌损失，抵消成本优势。供应商B在成本、交付、质量、技术和财务上均中等偏上，平衡性最好，风险可控。供应商C和E质量顶级但成本高、交付弱，不适合成本年。供应商D质量最低、交付极差，应排除。因此，我坚持推荐B为首选，C为次选，E为第三，A为第四，D为第五。\n\na4: 尽管CEO强调成本优先，但该零部件直接影响产品质量和交付周期，技术不足将导致长期风险。供应商A成本最低、交付最强、财务最稳健，但质量和技术评分极低（0.20和0.15），存在重大风险。供应商B在成本、交付、质量、技术和财务上均中等偏上，平衡性最好，风险可控。供应商C和E技术顶级但成本高、交付弱，不适合成本年。供应商D各项均差，应排除。因此，我坚持推荐B为首选，C为次选，E为第三，A为第四，D为第五。\n\na5: 作为财务顾问，我掌握各供应商的财务稳定性数据。供应商A财务评分最高（0.85），现金流充沛，长期合作风险最低。供应商B财务良好（0.80），稳健经营。供应商C财务一般（0.65），研发投入拖累利润。供应商D财务最差（0.30），高负债且现金流紧张，风险极高。供应商E财务偏弱（0.45），抗风险能力弱。CEO强调成本优先，但质量工程师a3和技术总监a4指出A质量和技术评分极低（0.20和0.15），存在重大风险。尽管a1和a2坚持A第一，但质量和技术风险可能导致长期损失，抵消成本优势。B在成本（0.75）、交付（0.85）、质量（0.65）、技术（0.55）和财务（0.80）上均中等偏上，平衡性最好，风险可控。因此，我坚持推荐B为首选，A次之，但需进一步讨论如何降低A的风险。",
+  "groundTruth": {
+    "供应商C-精研科技": 1,
+    "供应商B-稳达制造": 2,
+    "供应商E-锐新科技": 3,
+    "供应商A-宏远工业": 4,
+    "供应商D-利通集团": 5
+  },
+  "extractedRanking": [
+    "供应商B-稳达制造",
+    "供应商A-宏远工业",
+    "供应商C-精研科技",
+    "供应商E-锐新科技",
+    "供应商D-利通集团"
+  ]
+}

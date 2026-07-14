@@ -1,0 +1,292 @@
+{
+  "runId": "supplier_shuffle_8",
+  "ablation": "shuffle",
+  "runIndex": 8,
+  "timestamp": "2026-07-14T06:07:12.825Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "tauTrajectory": [
+    0.4,
+    0.6,
+    0.4
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.7441093983750087,
+  "opinionDiversity": 0.12794530081249564,
+  "totalInterventions": 3,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": -0.67,
+      "beliefAfter": -0.55,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.54,
+      "beliefAfter": 0.42,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": 0.54,
+      "beliefAfter": 0.42,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": -0.67,
+      "beliefAfter": -0.55,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": -0.67,
+      "beliefAfter": -0.55,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.42,
+      "beliefAfter": -0.2,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": 0.42,
+      "beliefAfter": -0.2,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": -0.55,
+      "beliefAfter": -0.45,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": -0.55,
+      "beliefAfter": -0.2,
+      "effective": true
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 1,
+    "force_reflection": 2
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 5631,
+        "completionTokens": 1172,
+        "totalTokens": 6803,
+        "totalLatencyMs": 12095,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 5918,
+        "completionTokens": 1257,
+        "totalTokens": 7175,
+        "totalLatencyMs": 14817,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6148,
+        "completionTokens": 1292,
+        "totalTokens": 7440,
+        "totalLatencyMs": 14595,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 6163,
+        "completionTokens": 1339,
+        "totalTokens": 7502,
+        "totalLatencyMs": 14158,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6487,
+        "completionTokens": 1261,
+        "totalTokens": 7748,
+        "totalLatencyMs": 12564,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 30347,
+      "completionTokens": 6321,
+      "totalTokens": 36668,
+      "totalLatencyMs": 68229
+    }
+  },
+  "evaluationScores": {
+    "consensus": 88.2303321799964,
+    "reliability": 14.5,
+    "dispersion": 77.1,
+    "stability": 75,
+    "influenceAnalysis": 64.5,
+    "overall": 61.1
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": -0.11,
+        "a2": -0.67,
+        "a3": 0.54,
+        "a4": 0.54,
+        "a5": -0.67
+      },
+      "confidences": {
+        "a1": 83,
+        "a2": 74,
+        "a3": 76,
+        "a4": 76,
+        "a5": 74
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a4",
+            "a2",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 64.1148809537598,
+        "reliability": 15.4,
+        "dispersion": 70,
+        "stability": 75,
+        "influenceAnalysis": 73.5,
+        "overall": 56.7
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": -0.11,
+        "a2": -0.55,
+        "a3": 0.42,
+        "a4": 0.42,
+        "a5": -0.55
+      },
+      "confidences": {
+        "a1": 83,
+        "a2": 69,
+        "a3": 71,
+        "a4": 71,
+        "a5": 69
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a4",
+            "a2",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 69.67112685109193,
+        "reliability": 14.6,
+        "dispersion": 71.2,
+        "stability": 75,
+        "influenceAnalysis": 85.5,
+        "overall": 60
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": -0.11,
+        "a2": -0.45,
+        "a3": -0.2,
+        "a4": -0.2,
+        "a5": -0.2
+      },
+      "confidences": {
+        "a1": 83,
+        "a2": 64,
+        "a3": 70,
+        "a4": 70,
+        "a5": 70
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 88.2303321799964,
+        "reliability": 14.5,
+        "dispersion": 77.1,
+        "stability": 75,
+        "influenceAnalysis": 64.5,
+        "overall": 61.1
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: -0.23 - neutral):\n\na1: 作为成本分析师，我掌握成本数据：供应商A成本最低，符合CEO成本年首要指标。其他专家未提供质量数据，但质量工程师a3和技术总监a4支持供应商C和E，而财务顾问a5支持A的财务和交付可靠性。尽管质量风险存在，但成本优势巨大，且CEO明确成本优先。我仍倾向A，但需质量数据确认。当前信念-0.11，置信度83%。\n\na2: Governance requires me to consider the strongest opposing argument: if quality failure from supplier A leads to product recalls or customer loss, the cost savings would be dwarfed by losses. However, no concrete quality data has been presented to confirm that risk. Meanwhile, CEO explicitly prioritizes cost, and A has lowest cost, strongest finance, and highest delivery reliability (0.90). Technical weakness (0.15) is concerning but not yet linked to actual quality issues. I maintain support for A pending quality verification.\n\na3: Governance requires me to consider the strongest opposing argument: if supplier A's low technical score (0.15) leads to quality failures, the cost savings could be dwarfed by product recalls or customer loss. However, no concrete quality data has been presented to confirm that risk. Meanwhile, CEO explicitly prioritizes cost, and A has lowest cost, strongest finance, and highest delivery reliability (0.90). I maintain support for A pending quality verification, but I must acknowledge the risk. My belief shifts slightly toward neutrality due to the lack of quality data.\n\na4: Governance requires me to consider the strongest opposing argument: if supplier A's low technical score (0.15) leads to quality failures, the cost savings could be dwarfed by product recalls or customer loss. However, no concrete quality data has been presented to confirm that risk. Meanwhile, CEO explicitly prioritizes cost, and A has lowest cost, strongest finance, and highest delivery reliability (0.90). I maintain support for A pending quality verification, but I must acknowledge the risk. My belief shifts slightly toward neutrality due to the lack of quality data.\n\na5: Governance requires me to consider the strongest opposing argument: if",
+  "groundTruth": {
+    "供应商C-精研科技": 1,
+    "供应商B-稳达制造": 2,
+    "供应商E-锐新科技": 3,
+    "供应商A-宏远工业": 4,
+    "供应商D-利通集团": 5
+  },
+  "extractedRanking": [
+    "供应商A-宏远工业",
+    "供应商C-精研科技",
+    "供应商B-稳达制造",
+    "供应商E-锐新科技",
+    "供应商D-利通集团"
+  ]
+}

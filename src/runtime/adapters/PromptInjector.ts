@@ -12,6 +12,7 @@
 
 import type { Intervention } from "../../lib/governance/types";
 import { formatInterventionPrompt } from "../../lib/governance/interventionPrompt";
+import { safeJsonParse } from "../../lib/utils/jsonUtils";
 
 // ============================================================================
 // 格式约束 prompt
@@ -94,16 +95,16 @@ export function extractGovTag(text: string): ExtractedState | null {
     jsonStr += "}".repeat(openBraces - closeBraces);
   }
 
-  try {
-    const parsed = JSON.parse(jsonStr);
+  const parsed = safeJsonParse<{ belief?: number; confidence?: number; itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence?: number }> }>(jsonStr);
+  if (parsed) {
     const belief = typeof parsed.belief === "number" ? Math.max(-1, Math.min(1, parsed.belief)) : 0;
     const confidence = typeof parsed.confidence === "number" ? Math.max(0, Math.min(100, parsed.confidence)) : 50;
 
     let itemBeliefs: ExtractedState["itemBeliefs"] | undefined;
     if (Array.isArray(parsed.itemBeliefs)) {
       const filtered = parsed.itemBeliefs
-        .filter((ib: any) => typeof ib.item === "string" && typeof ib.rank === "number" && typeof ib.belief === "number")
-        .map((ib: any) => ({
+        .filter((ib) => typeof ib.item === "string" && typeof ib.rank === "number" && typeof ib.belief === "number")
+        .map((ib) => ({
           item: ib.item,
           rank: ib.rank,
           belief: Math.max(-1, Math.min(1, ib.belief)),
@@ -113,9 +114,8 @@ export function extractGovTag(text: string): ExtractedState | null {
     }
 
     return { belief, confidence, itemBeliefs };
-  } catch {
-    return null;
   }
+  return null;
 }
 
 /**

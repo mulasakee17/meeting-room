@@ -184,6 +184,8 @@ export class GovernanceEngine {
     prematureConsensusThreshold: GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD,
     maxRounds: 3,
     currentRound: 1,
+    // 实验证明 introduce_diversity 和 continue_discussion 无效/有害，默认禁用
+    disabledInterventions: ["introduce_diversity", "continue_discussion"],
   };
 
   diagnose(
@@ -276,6 +278,11 @@ export class GovernanceEngine {
     return { type: "none", applied: false };
   }
 
+  /** Check if an intervention type is disabled in config */
+  private isInterventionDisabled(config: GovernanceConfig, type: InterventionType): boolean {
+    return (config.disabledInterventions || []).includes(type);
+  }
+
   /** Early-exit when detection is disabled or too few agents */
   private shouldSkipDetection(
     enabled: boolean | undefined,
@@ -313,7 +320,7 @@ export class GovernanceEngine {
     const redundantAgents = Array.from(new Set(redundantPairs.flat()));
 
     const intervention = (detected && config.interventionLevel !== "none")
-      ? { type: "introduce_diversity" as InterventionType, applied: true, effect: `Introduced diverse information to ${redundantAgents.length} agents` }
+      ? { type: "introduce_diversity" as InterventionType, applied: !this.isInterventionDisabled(config, "introduce_diversity"), effect: this.isInterventionDisabled(config, "introduce_diversity") ? "Detected but intervention disabled" : `Introduced diverse information to ${redundantAgents.length} agents` }
       : this.noIntervention();
 
     return {
@@ -380,7 +387,7 @@ export class GovernanceEngine {
     const severity = this.getSeverity(influenceRatio, GOVERNANCE_SEVERITY_AUTHORITY_BIAS);
 
     const intervention = (detected && config.interventionLevel !== "none" && dominantAgent)
-      ? { type: "reduce_weight" as InterventionType, applied: true, effect: `Reduced ${dominantAgent}'s influence weight by ${(influenceRatio * 30).toFixed(0)}%` }
+      ? { type: "reduce_weight" as InterventionType, applied: !this.isInterventionDisabled(config, "reduce_weight"), effect: this.isInterventionDisabled(config, "reduce_weight") ? "Detected but intervention disabled" : `Reduced ${dominantAgent}'s influence weight by ${(influenceRatio * 30).toFixed(0)}%` }
       : this.noIntervention();
 
     return {
@@ -423,7 +430,7 @@ export class GovernanceEngine {
     const groups = this.clusterAgentsByBelief(agentBeliefs);
 
     const intervention = (detected && config.interventionLevel !== "none")
-      ? { type: "force_reflection" as InterventionType, applied: true, effect: `Forced ${agentBeliefs.length} agents to reflect on opposing viewpoints` }
+      ? { type: "force_reflection" as InterventionType, applied: !this.isInterventionDisabled(config, "force_reflection"), effect: this.isInterventionDisabled(config, "force_reflection") ? "Detected but intervention disabled" : `Forced ${agentBeliefs.length} agents to reflect on opposing viewpoints` }
       : this.noIntervention();
 
     return {
@@ -497,8 +504,8 @@ export class GovernanceEngine {
     const intervention = (detected && config.interventionLevel !== "none")
       ? {
           type: "continue_discussion" as InterventionType,
-          applied: true,
-          effect: `Added ${Math.ceil(maxRounds * (threshold - roundProgress))} additional rounds to prevent premature consensus`,
+          applied: !this.isInterventionDisabled(config, "continue_discussion"),
+          effect: this.isInterventionDisabled(config, "continue_discussion") ? "Detected but intervention disabled" : `Added ${Math.ceil(maxRounds * (threshold - roundProgress))} additional rounds to prevent premature consensus`,
         }
       : this.noIntervention();
 
@@ -674,16 +681,29 @@ export class GovernanceEngine {
     const result = this.diagnose(agentBeliefs, messages, agentIds, mergedConfig);
     const interventions: Intervention[] = [];
 
-    // 自适应剂量计算（如果启用）
-    const useAdaptiveDosage = mergedConfig.enableAdaptiveDosage === true;
     const currentRound = mergedConfig.currentRound || 1;
     const maxRounds = mergedConfig.maxRounds || 5;
+    const disabledSet = new Set(mergedConfig.disabledInterventions || []);
+
+    // 最后一轮不触发任何干预（无法验证效果）
+    const isLastRound = currentRound >= maxRounds;
+    if (isLastRound) {
+      return { result, interventions: [] };
+    }
+
+    // Helper: should we trigger this intervention type?
+    const shouldTrigger = (type: InterventionType): boolean => {
+      return !disabledSet.has(type);
+    };
+
+    // 自适应剂量计算（如果启用）
+    const useAdaptiveDosage = mergedConfig.enableAdaptiveDosage === true;
     const roundProgress = currentRound / maxRounds;
 
     // 信息覆盖率估算（从 messages 中提取）
     const informationCoverage = this.estimateInformationCoverage(messages, agentIds);
 
-    if (result.authorityBias.detected && result.authorityBias.dominantAgent) {
+    if (result.authorityBias.detected && result.authorityBias.dominantAgent && shouldTrigger("reduce_weight")) {
       let reductionFactor = mergedConfig.reduceWeightFactor ?? INTERVENTION_REDUCE_WEIGHT_FACTOR;
       if (useAdaptiveDosage) {
         const dosage = computeAdaptiveDosage({
@@ -705,7 +725,7 @@ export class GovernanceEngine {
       });
     }
 
-    if (result.echoChamber.detected && result.echoChamber.redundantAgents.length > 0) {
+    if (result.echoChamber.detected && result.echoChamber.redundantAgents.length > 0 && shouldTrigger("introduce_diversity")) {
       let perturbationAmount = mergedConfig.diversityPerturbation ?? INTERVENTION_DIVERSITY_PERTURBATION;
       if (useAdaptiveDosage) {
         const dosage = computeAdaptiveDosage({
@@ -728,7 +748,7 @@ export class GovernanceEngine {
       });
     }
 
-    if (result.polarization.detected && result.polarization.groups.length > 0) {
+    if (result.polarization.detected && result.polarization.groups.length > 0 && shouldTrigger("force_reflection")) {
       const extremeAgents = result.polarization.groups
         .filter(g => g.label === "positive" || g.label === "negative")
         .flatMap(g => g.agentIds);
@@ -756,7 +776,7 @@ export class GovernanceEngine {
       }
     }
 
-    if (result.prematureConsensus.detected) {
+    if (result.prematureConsensus.detected && shouldTrigger("continue_discussion")) {
       const pcRound = result.prematureConsensus.roundNumber;
       const pcMaxRounds = result.prematureConsensus.maxRounds;
       const threshold = mergedConfig.prematureConsensusThreshold ?? 0.5;

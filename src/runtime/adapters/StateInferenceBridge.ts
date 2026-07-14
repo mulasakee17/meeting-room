@@ -47,6 +47,7 @@ import type { DiscussionMessage, FrameworkMessage } from "../types";
 import type { Intervention } from "../../lib/governance/types";
 import type { LLMConfig } from "../../lib/llm/providers";
 import { callLLM } from "../../lib/llm/providers";
+import { safeJsonParse } from "../../lib/utils/jsonUtils";
 import {
   extractGovTag,
   stripGovTag,
@@ -186,9 +187,8 @@ export class StateInferenceBridge implements GovernanceBridge {
           this.llmConfig
         );
         // 从 LLM 输出解析 JSON
-        const jsonMatch = response.rawContent.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
+        const parsed = safeJsonParse<{ belief?: number; confidence?: number }>(response.rawContent);
+        if (parsed) {
           if (typeof parsed.belief === "number") {
             msg.belief = Math.max(-1, Math.min(1, parsed.belief));
           }

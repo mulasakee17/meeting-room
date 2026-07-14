@@ -30,12 +30,16 @@ for (const r of runs) {
 }
 
 // ── Bootstrap CI ──────────────────────────────────────────────────────
+function mulberry32(seed: number): () => number {
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
 function bootstrapCI(samples: number[], nBoot = 10000, alpha = 0.05) {
   const n = samples.length;
+  const rng = mulberry32(42);
   const means: number[] = [];
   for (let i = 0; i < nBoot; i++) {
     let sum = 0;
-    for (let j = 0; j < n; j++) sum += samples[Math.floor(Math.random() * n)];
+    for (let j = 0; j < n; j++) sum += samples[Math.floor(rng() * n)];
     means.push(sum / n);
   }
   means.sort((a, b) => a - b);
@@ -47,6 +51,7 @@ function bootstrapCI(samples: number[], nBoot = 10000, alpha = 0.05) {
 
 // ── Cohen's d ─────────────────────────────────────────────────────────
 function cohensD(a: number[], b: number[]) {
+  if (a.length < 2 || b.length < 2) return 0;
   const ma = a.reduce((s, v) => s + v, 0) / a.length;
   const mb = b.reduce((s, v) => s + v, 0) / b.length;
   const va = a.reduce((s, v) => s + (v - ma) ** 2, 0) / (a.length - 1);
@@ -114,10 +119,11 @@ const maNone = groups.get("ma|none")!.accuracies;
 const maFull = groups.get("ma|full")!.accuracies;
 
 // Bootstrap the DIFFERENCE in means
+const rng2 = mulberry32(42 + 0x5EED);
 const diffs: number[] = [];
 for (let i = 0; i < 10000; i++) {
-  let sNone = 0; for (let j = 0; j < maNone.length; j++) sNone += maNone[Math.floor(Math.random() * maNone.length)];
-  let sFull = 0; for (let j = 0; j < maFull.length; j++) sFull += maFull[Math.floor(Math.random() * maFull.length)];
+  let sNone = 0; for (let j = 0; j < maNone.length; j++) sNone += maNone[Math.floor(rng2() * maNone.length)];
+  let sFull = 0; for (let j = 0; j < maFull.length; j++) sFull += maFull[Math.floor(rng2() * maFull.length)];
   diffs.push((sFull / maFull.length) - (sNone / maNone.length));
 }
 diffs.sort((a, b) => a - b);

@@ -22,6 +22,7 @@ import { GovernanceEngine, AgentBelief, MessageInfo, GovernanceIssue, Interventi
 import type { GovernanceConfig } from "../governance/types";
 import { EventTracker } from "./eventTracker";
 import { ObservationLayer, DefaultOpinionParser } from "../observation";
+import { safeJsonParse } from "../utils/jsonUtils";
 import { InferenceLayer } from "../inference";
 import type { RawObservation, ObserverAgent, OpinionParser } from "../observation";
 import type { StateDelta } from "../inference";
@@ -1376,14 +1377,12 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
 
   /** Parse reasoning from an agent's cross-examination response (JSON or plain text) */
   private extractReasoning(response: string): string {
-    try {
-      const cleaned = response.trim().replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "");
-      const parsed = JSON.parse(cleaned);
+    const parsed = safeJsonParse<{ reasoning?: string; analysis?: string }>(response);
+    if (parsed) {
       return parsed.reasoning || parsed.analysis || response.slice(0, 500);
-    } catch (err) {
-      console.warn("[DiscussionEngine] response parse failed, using truncated raw text:", err instanceof Error ? err.message : err);
-      return response.slice(0, 500);
     }
+    console.warn("[DiscussionEngine] response parse failed, using truncated raw text");
+    return response.slice(0, 500);
   }
 
   reset(): void {
