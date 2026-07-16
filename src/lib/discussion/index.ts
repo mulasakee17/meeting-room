@@ -71,22 +71,22 @@ export interface DiscussionAgent {
 }
 
 export class DiscussionEngine {
-  private memoryManager: MemoryManager;
+  protected memoryManager: MemoryManager;
   private influenceManager: InfluenceManager;
-  private graphBuilder: InteractionGraphBuilder;
-  private traceBuilder: DecisionTraceBuilder;
-  private governanceEngine: GovernanceEngine;
+  protected graphBuilder: InteractionGraphBuilder;
+  protected traceBuilder: DecisionTraceBuilder;
+  protected governanceEngine: GovernanceEngine;
   private externalRuntime?: GovernanceRuntimeType;
   /** agentId → unique knowledge items for information-layer intervention prompts */
-  private agentKnowledge?: Map<string, string[]>;
+  protected agentKnowledge?: Map<string, string[]>;
   /** Accumulated governance prompts for next-round injection. Cleared after each round. */
-  private governancePrompts: Map<string, string[]> = new Map();
-  private eventTracker: EventTracker;
-  private config: DiscussionConfig;
-  private roundDataArray: RoundData[] = [];
+  protected governancePrompts: Map<string, string[]> = new Map();
+  protected eventTracker: EventTracker;
+  protected config: DiscussionConfig;
+  protected roundDataArray: RoundData[] = [];
   private observationLayer: ObservationLayer;
   private inferenceLayer: InferenceLayer;
-  private opinionParser: OpinionParser;
+  protected opinionParser: OpinionParser;
   private dropoutObservations: Array<{
     round: number; sourceAgentId: string; targetAgentId: string;
     sourcePresent: boolean; sourceBelief: number; targetBelief: number;
@@ -152,7 +152,7 @@ export class DiscussionEngine {
   // ==========================================================================
 
   /** Phase 1: snapshot initial agent states and populate graph nodes. */
-  private initializeAgentStates(
+  protected initializeAgentStates(
     agents: DiscussionAgent[]
   ): Map<string, { belief: number; confidence: number }> {
     const agentStates = new Map<string, { belief: number; confidence: number }>();
@@ -369,7 +369,7 @@ export class DiscussionEngine {
   }
 
   /** Phase 3: assemble the final DiscussionResult. */
-  private buildDiscussionResult(
+  protected buildDiscussionResult(
     roundResults: RoundResult[],
     agentStates: Map<string, { belief: number; confidence: number }>
   ): DiscussionResult {
@@ -567,7 +567,7 @@ export class DiscussionEngine {
    * Delegates to the shared DefaultOpinionParser to avoid duplicating
    * the parseOpinion logic that also lives in ObservationLayer.
    */
-  private async observeAgents(
+  protected async observeAgents(
     agents: ObserverAgent[],
     task: DiscussionTask,
     roundNumber: number
@@ -626,7 +626,7 @@ export class DiscussionEngine {
     return observations;
   }
 
-  private buildPrompt(
+  protected buildPrompt(
     agent: { name: string; role: string; id: string },
     task: string,
     memory: DiscussionMemoryEntry[],
@@ -704,7 +704,7 @@ Respond in JSON format:
 itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
   }
 
-  private checkConvergence(opinions: AgentOpinion[]): boolean {
+  protected checkConvergence(opinions: AgentOpinion[]): boolean {
     if (opinions.length < 2) return true;
 
     // V2: per-item convergence — all items must be converged
@@ -730,7 +730,7 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     return beliefStd < this.config.convergenceThreshold;
   }
 
-  private updateBeliefs(
+  protected updateBeliefs(
     opinions: AgentOpinion[],
     agentStates: Map<string, { belief: number; confidence: number }>,
     roundNumber: number
@@ -817,7 +817,7 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     return this.traceBuilder.summarize();
   }
 
-  private applyGovernance(
+  protected applyGovernance(
     round: number,
     opinions: AgentOpinion[],
     agentStates: Map<string, { belief: number; confidence: number }>,

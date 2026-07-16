@@ -67,9 +67,11 @@ const ALPHA = 0.05;
 const T_TABLE_005: Record<number, number> = {
   1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
   6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
-  12: 2.179, 14: 2.145, 15: 2.131, 19: 2.093, 20: 2.086,
-  24: 2.064, 25: 2.060, 29: 2.045, 30: 2.042, 40: 2.021,
-  60: 2.000, 120: 1.980,
+  11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131,
+  16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086,
+  21: 2.080, 22: 2.074, 23: 2.069, 24: 2.064, 25: 2.060,
+  26: 2.056, 27: 2.052, 28: 2.048, 29: 2.045, 30: 2.042,
+  40: 2.021, 60: 2.000, 120: 1.980,
 };
 function tCritical(df: number): number {
   if (df <= 0) return 12.706;
@@ -461,8 +463,26 @@ function analyze(label: string, dir: string) {
     const nTests = pValues.length;
     const bonferroniAlpha = 0.05 / nTests;
 
-    // Benjamini-Hochberg FDR 校正
+    // Benjamini-Hochberg FDR 校正（标准 step-down 过程）
+    // 标准 BH：从最大 p 值向上找第一个 p(i) <= (i/m)*q，拒绝所有 j<=i 的假设
     const sortedP = [...pValues].sort((a, b) => a.pValue - b.pValue);
+    const bhRejected = new Set<string>();
+    // 从最大 rank 向下找第一个满足 p(i) <= (i/m)*q 的
+    let firstRejectRank = -1;
+    for (let i = sortedP.length - 1; i >= 0; i--) {
+      const rank = i + 1;
+      const threshold = (0.05 * rank) / nTests;
+      if (sortedP[i].pValue <= threshold) {
+        firstRejectRank = rank;
+        break;
+      }
+    }
+    // 拒绝所有 rank <= firstRejectRank 的假设
+    if (firstRejectRank > 0) {
+      for (let i = 0; i < firstRejectRank; i++) {
+        bhRejected.add(sortedP[i].mode);
+      }
+    }
     const bhCritical: Record<string, number> = {};
     for (let i = 0; i < sortedP.length; i++) {
       const rank = i + 1;
@@ -475,7 +495,7 @@ function analyze(label: string, dir: string) {
     for (const { mode, pValue, meanDiff, ci95 } of pValues) {
       const sig = ci95[0] > 0 ? "✓ sig" : ci95[1] < 0 ? "✗ sig(neg)" : "— n.s.";
       const bonfSig = pValue < bonferroniAlpha ? "✓" : "—";
-      const bhSig = pValue < bhCritical[mode] ? "✓" : "—";
+      const bhSig = bhRejected.has(mode) ? "✓" : "—";
       console.log(
         `    ${mode.padEnd(16)} ΔQ = ${meanDiff >= 0 ? "+" : ""}${meanDiff.toFixed(1)} ${fmtCI(ci95).padStart(14)} p=${pValue.toFixed(3)} ${sig} | bonf${bonfSig} bh${bhSig}`
       );

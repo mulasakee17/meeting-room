@@ -15,7 +15,7 @@ import {
   InfluencePath,
 } from "./types";
 import { EVALUATION_DEFAULT_WEIGHTS } from "../constants";
-import { shannonEntropy, socialFreeEnergy } from "../utils/statsUtils";
+import { shannonEntropy, socialFreeEnergy, normalizeTemperature } from "../utils/statsUtils";
 
 export class EvaluationEngine {
   private defaultWeights = EVALUATION_DEFAULT_WEIGHTS;
@@ -101,7 +101,7 @@ export class EvaluationEngine {
 
     // 社会热力学指标：信息熵 H + 自由能 F
     const entropy = shannonEntropy(beliefs);
-    const freeEnergy = socialFreeEnergy(kuramotoOrder, beliefStd, entropy);
+    const freeEnergy = socialFreeEnergy(kuramotoOrder, normalizeTemperature(beliefStd), entropy);
 
     // Composite score: Kuramoto (30%) + inverse-std (40%) + agreement (30%)
     const score = (kuramotoOrder * 30) + ((1 - beliefStd / 2) * 40) + (agreementRate / 100 * 30);

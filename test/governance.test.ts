@@ -217,10 +217,80 @@ describe("GovernanceEngine", () => {
   it("should handle small agent counts gracefully", () => {
     const beliefs = createMockBeliefs(2, 0.5);
     const messages = createMockMessages(2);
-    
+
     const result = engine.diagnose(beliefs, messages, ["agent_0", "agent_1"]);
-    
+
     expect(result.echoChamber.detected).toBe(false);
     expect(result.polarization.detected).toBe(false);
+  });
+
+  // ==========================================================================
+  // 社会热力学 F 分解驱动的干预优先级排序
+  // ==========================================================================
+
+  it("F 分解排序：极化（结构性主导）时 reduce_weight 排在 force_reflection 前（回测证伪后修正）", () => {
+    // 极化双峰信念：structural(1-R)=0.786 > thermal(T·H)=0.390，结构性无序主导（极化）。
+    // 经数学验证：R≈0.214, T≈0.932, H≈0.418, F≈1.175。
+    // 回测证伪原假设后修正：force_reflection 在极化时有害（Δτ=-0.033），
+    // 故修正后 force_reflection 评分 = thermal*(1-structural) = 0.390*0.214 = 0.083（极化时降权），
+    // reduce_weight 评分 = thermal = 0.390 → reduce_weight 应排在前面。
+    const beliefs: AgentBelief[] = [
+      { agentId: "a1", belief: -1.0, confidence: 80, timestamp: new Date().toISOString() },
+      { agentId: "a2", belief: -0.9, confidence: 80, timestamp: new Date().toISOString() },
+      { agentId: "a3", belief:  0.9, confidence: 80, timestamp: new Date().toISOString() },
+      { agentId: "a4", belief:  1.0, confidence: 80, timestamp: new Date().toISOString() },
+      { agentId: "a5", belief: -0.95, confidence: 80, timestamp: new Date().toISOString() },
+    ];
+    const messages = createMockMessagesWithRefs(15, "a3");
+    const config: GovernanceConfig = {
+      enableEchoChamberDetection: true,
+      enableAuthorityBiasDetection: true,
+      enablePolarizationDetection: true,
+      enablePrematureConsensusDetection: true,
+      interventionLevel: "medium",
+      currentRound: 2,
+      maxRounds: 5,
+    };
+
+    const { interventions } = engine.diagnoseAndIntervene(beliefs, messages, agentIds, config);
+
+    // 非守卫断言：必须同时触发两种干预，否则测试失败（避免空过）
+    const types = interventions.map(i => i.type);
+    expect(types).toContain("force_reflection");
+    expect(types).toContain("reduce_weight");
+    const rwIdx = types.indexOf("reduce_weight");
+    const frIdx = types.indexOf("force_reflection");
+    // 极化时 force_reflection 降权 → reduce_weight 应排在前面
+    expect(rwIdx).toBeLessThan(frIdx);
+  });
+
+  it("F 分解排序：单一干预触发时排序为 no-op（安全性）", () => {
+    // 虚假共识信念 [0.8,0.82,0.79,0.81,0.8]：R≈1.0, H≈0, F≈0。
+    // mock 消息内容相似度不足以触发 echo chamber（需内容 Jaccard > 阈值），
+    // 故 introduce_diversity 不会触发——此测试只验证 no-op 安全性，
+    // 不验证 introduce_diversity 优先级（该验证需真实 LLM 消息，留实验室）。
+    const beliefs: AgentBelief[] = [
+      { agentId: "a1", belief: 0.8, confidence: 90, timestamp: new Date().toISOString() },
+      { agentId: "a2", belief: 0.82, confidence: 90, timestamp: new Date().toISOString() },
+      { agentId: "a3", belief: 0.79, confidence: 90, timestamp: new Date().toISOString() },
+      { agentId: "a4", belief: 0.81, confidence: 90, timestamp: new Date().toISOString() },
+      { agentId: "a5", belief: 0.8, confidence: 90, timestamp: new Date().toISOString() },
+    ];
+    const messages = createMockMessages(10, "a1");
+    const config: GovernanceConfig = {
+      enableEchoChamberDetection: true,
+      enableAuthorityBiasDetection: true,
+      enablePolarizationDetection: true,
+      enablePrematureConsensusDetection: true,
+      interventionLevel: "medium",
+      currentRound: 2,
+      maxRounds: 5,
+      disabledInterventions: [],
+    };
+
+    const { interventions } = engine.diagnoseAndIntervene(beliefs, messages, agentIds, config);
+
+    // 单一干预时排序应不改变结果（返回原数组）
+    expect(interventions.length).toBeLessThanOrEqual(1);
   });
 });

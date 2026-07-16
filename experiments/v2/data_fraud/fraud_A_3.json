@@ -1,0 +1,20 @@
+{
+  "runId": "fraud_A_3",
+  "group": "A",
+  "runIndex": 3,
+  "timestamp": "2026-07-15T13:56:43.772Z",
+  "kendallTau": 0.8,
+  "decisionQuality": 90,
+  "totalRounds": 5,
+  "totalUtterances": 25,
+  "converged": false,
+  "terminationReason": "fixed_5_rounds",
+  "thermoHistory": [],
+  "finalBeliefs": {
+    "a1": 0.777136296,
+    "a2": 0.6273504821437501,
+    "a3": 0.77743677646875,
+    "a4": 0.68743677646875,
+    "a5": 0.07663677646874999
+  }
+}

@@ -20,71 +20,44 @@ SwarmAlpha is an **embeddable governance runtime** — a drop-in layer that plug
 
 **Core architecture**: LLMs only perform perception (extracting beliefs and emotions from natural language). All governance logic — consensus computation, bias detection, belief dynamics — uses pure mathematics (Kuramoto synchronization, Gini coefficient, bimodality coefficient, Cronbach's α). This means the runtime operates as a **lightweight plugin** with zero additional LLM calls. Unlike security-focused governance tools (Microsoft Agent Governance Toolkit, ACS) that use deterministic policy engines (OPA Rego, Cedar), SwarmAlpha uses a hybrid architecture: LLM for perception, mathematics for reasoning — the first such architecture for cognitive agent governance.
 
-**Standards compatibility**: SwarmAlpha's `StateInferenceBridge` is designed to interoperate with [Agent Control Standard (ACS)](https://agentcontrolstandard.ai) middleware hooks at the state checkpoint. Cognitive governance (SwarmAlpha) and security governance (ACS-compliant tools) are complementary layers — both are needed for a complete agent governance stack.
+**Standards compatibility**: `StateInferenceBridge` interoperates with [ACS](https://agentcontrolstandard.ai) middleware hooks. Cognitive governance (SwarmAlpha) and security governance (ACS-compliant tools) are complementary layers.
 
-**Seven ablation modes**: none (baseline), full, shuffle (placebo test / identification strategy — scrambles agent knowledge to rule out regression-to-mean), and four single-intervention modes isolating individual governance mechanisms. t-distribution 95% CI + permutation test p-values on all key comparisons.
-
-**Five-dimension evaluation**: Consensus, Reliability, Dispersion, Stability, and Influence Analysis — all with statistical grounding (Cronbach's α, Cohen's d, t-distribution confidence intervals, parameter sensitivity analysis).
+**Experimental design**: 7 ablation modes (none/full/shuffle + 4 single-intervention), 5-dimension evaluation (Consensus/Reliability/Dispersion/Stability/Influence), t-distribution 95% CI + permutation test p-values. Full architectural details in [README.md](README.md).
 
 ---
 
 ## Results
 
-165 controlled experiments across 2 tasks (M&A: 5 rounds, n=15 for none/full, n=10 for others; Invest: 5-round n=15 for none/full & n=5 for others, 3-round n=15 with none & full only — a 2×2 factorial design on round count × governance), with Kendall's τ, within-group τ trajectory (Δτ), shuffle control, and single-intervention ablation. Statistical inference via t-distribution 95% CI + permutation test p-values.
+**161 experiments across 2 tasks** (Crisis 72 + Supplier 89), with governance loop closed (post D1–D4 fix). Additionally, 165 historical experiments (broken loop) retained as controls.
 
-### 2026-07-14 Re-validation (Loop Closed — Primary Evidence)
+### Primary Evidence (Loop Closed, Expanded)
 
-After fixing D1–D4 (2026-07-12), 45 new experiments were run on a Crisis task (crisis-response priority ranking, 3 rounds, n=15/cell, none/full/shuffle). This is the **first experiment with the governance loop actually closed** and is now the primary evidence for governance effectiveness:
+| Mode | Crisis τ (n=24) | Supplier τ (n=30) | Crisis d/p | Supplier d/p |
+|------|----------|------------|------------|--------------|
+| none | 0.408 ± 0.182 | 0.680 ± 0.186 | — | — |
+| full | 0.617 ± 0.263 | 0.767 ± 0.183 | **0.92 / 0.005** | 0.47 / 0.089 |
+| shuffle | 0.717 ± 0.243 | 0.697 ± 0.204 | **1.44 / <0.001** | 0.09 / 0.78 |
+| Power | 88% ✅ | 43% ⚠️ | | |
 
-| Mode | τ (μ±σ) | Q (μ±σ) | Cohen's d vs none |
-|------|---------|---------|-------------------|
-| none | 0.387 ± 0.160 | 69.3 ± 8.0 | — |
-| full | 0.573 ± 0.271 | 78.7 ± 13.6 | **0.84** |
-| shuffle | 0.760 ± 0.241 | 88.0 ± 12.1 | **1.82** |
+**Four cross-task findings** (detailed data in [README.md](README.md#core-finding)):
+1. **Governance statistically confirmed effective** — Crisis d=0.92, p=0.005, power=88%
+2. **"False consensus" replicates** — consensus-quality r ≈ 0 in both tasks (agreement ≠ correctness)
+3. **Shuffle has boundary conditions** — effective on hard tasks (Crisis), null on easy tasks (Supplier, ceiling effect)
+4. **Mechanism ablation direction-consistent** — reduce_weight (d=1.51) and force_reflection (d=0.73) drive the effect
 
-- **Governance is effective (post-fix)**: full vs none d=0.84, τ +48%. The prior "governance is ineffective" conclusion was an artifact of the broken loop, not intrinsic to governance.
-- **Shuffle remains strongest**: d=1.82. shuffle represents the theoretical ceiling of *information exchange* (all agents access all expertise), not the ceiling of agent collaboration (real collaboration also involves trust, contest, consensus negotiation).
-- **Intervention cost-benefit** (Crisis task only, n=15): 68 interventions analyzed — 31 effective (45.6%). Effective interventions raised τ by +0.265; ineffective ones did not lower τ (+0.060). `force_reflection` most reliable (81.8%), `reduce_weight` best cost-efficiency; `introduce_diversity` (9.1%) and `continue_discussion` (0%, harmful) now disabled by default.
+### Historical Controls (Broken Loop — 165 experiments)
 
-### 2026-07-14 Cross-Task Validation (Supplier Task — 44 runs)
+> ⚠️ These 165 experiments were run while the governance loop was severed (D1–D4 unfixed). Retained only as historical controls.
 
-To address the single-task limitation, a second task was added: **Supplier Selection** (5 suppliers × 5 hidden dimensions, same structure as Crisis but different domain). 44 experiments (n=15 none, n=15 full, n=14 shuffle) provide cross-task validation:
+- 2×2 factorial design (3-round vs 5-round × none vs full): 3-round Invest d=+0.65 (not sig); 5-round Invest d=+0.00 (null)
+- Only significant governance effect was **harmful**: full_reflection on 5-round Invest (p=0.048)
+- Shuffle on M&A: d=+1.80, p=0.0009 (the only significant positive result under broken loop)
 
-| Mode | Crisis τ | Supplier τ | Cross-Task Δ |
-|------|----------|------------|--------------|
-| none | 0.387 ± 0.160 | 0.680 ± 0.211 | — |
-| full | 0.573 ± 0.271 | 0.787 ± 0.177 | ✅ Both > none |
-| shuffle | 0.760 ± 0.241 | 0.671 ± 0.202 | ⚠️ Task-dependent |
-| Governance d | 0.84 | 0.55 | ✅ Both positive |
-| Consensus-Quality r | 0.009 | -0.208 | ✅ Both ≈ 0 |
+### Methodological Contribution: Cognitive Defect Diagnosis
 
-**Key cross-task findings**:
-- **Governance direction is consistent across tasks** (both full > none), confirming the effect is not Crisis-task-specific.
-- **"False consensus" replicates across tasks** (r ≈ 0 in both), proving this is a general LLM multi-agent property.
-- **Shuffle control has boundary conditions**: effective on hard tasks (Crisis), ineffective on easier tasks (Supplier) where shuffling introduces noise.
-- **Intervention-type hierarchy is consistent**: `force_reflection` and `reduce_weight` outperform `introduce_diversity` in both tasks.
+The 2×2 factorial design isolates round-count moderation that between-group comparisons missed. The shuffle control — designed to rule out regression-to-mean — became the strongest positive finding. The honest null-to-harmful result on governance (under broken loop) is itself a contribution: it clarifies boundary conditions.
 
-These 89 experiments (Crisis 45 + Supplier 44) elevate the findings from "single-task phenomenon" to "cross-task pattern".
-
-### Primary Findings (Historical — Broken Loop)
-
-- **2×2 factorial design reveals round moderation**: The 2×2 design (3-round vs 5-round × none vs full, n=15 per cell) is the key methodological contribution. On 3-round Invest, full governance shows a medium effect (d=+0.65, p=0.152, Net Δτ=+0.133, 95% CI [−0.09, +0.35]) — suggestive but not significant. On 5-round Invest, full governance shows zero effect (τ=0.778 vs 0.778, d=+0.00, p=1.0 — identical to baseline). The pattern: governance has directional benefit in limited rounds but zero effect with sufficient rounds. No positive governance effect reaches significance across all 165 experiments.
-
-- **The only significant governance effect is HARMFUL**: On 5-round Invest, full_reflection (n=5) produces τ=0.333, ΔQ=−22.2, p=0.048 — significantly harmful, the first and only statistically significant governance effect. full_weight (τ=0.467, ΔQ=−15.6, p=0.173) shows a harmful trend. This honest negative finding clarifies the boundary conditions under which governance adds value: not all interventions help, and some actively harm.
-
-- **Shuffle control is the strongest positive finding**: On M&A, shuffle (scrambled agent knowledge) produces τ=0.900±0.194, d=+1.80, p=0.0009 — the only statistically significant *positive* result across all 165 experiments. Agents already know all 5 companies; unfamiliar data breaks their professional overconfidence, forcing them to listen to each other. On weakly-interdependent tasks, breaking overconfidence outperforms targeted governance intervention. Single-intervention ablations on M&A (full_diversity p=0.174, full_weight p=0.171, full_reflection p=0.183, full_continue p=0.267) none reach significance — no single governance mechanism drives the effect.
-
-> **⚠️ Critical caveat — broken governance loop now fixed and re-validated (2026-07-14)**: The 4 cognitive defects diagnosed above (D1 missing state awareness, D2 no conversation history, D3 synchronous scripted turns, D4 fabricated influence network) were present during *all* 165 prior experiments. **These defects have since been fixed (2026-07-12), and the experiments were re-run on a new Crisis task (2026-07-14, 45 runs, n=15/cell) with the loop closed.** The re-validation shows full governance vs none produces a medium-to-large positive effect (d=0.84, τ rising from 0.387 to 0.573), confirming that the prior "governance is ineffective" conclusions were artifacts of the broken loop, not intrinsic to governance itself. The 165 prior experiments (3-round Invest d=+0.65, 5-round Invest d=+0.00, full_reflection p=0.048) are now retained only as historical controls under the broken-loop condition. This is *not* an experimental failure — it is the discovery of a deeper architectural defect, which is itself the research value: identifying *why* governance appeared ineffective is more important than any single p-value.
-
-### Methodological Contribution
-
-The 2×2 factorial design (3-round vs 5-round × none vs full, n=15 per cell) is the key methodological contribution — it isolates the round-count moderation effect that between-group comparisons alone missed. Standard Cohen's d showed 3-round Invest with a medium effect (d=+0.65, p=0.152) while 5-round Invest showed zero effect (d=+0.00, p=1.0), confirming that governance's marginal value diminishes with sufficient discussion rounds. The shuffle control — designed to rule out regression-to-mean — instead became the strongest positive finding (M&A p=0.0009). Critically, the only statistically significant governance effect was HARMFUL: full_reflection on 5-round Invest (p=0.048). This combination — 2×2 factorial design + Δτ + shuffle + single-intervention ablation + permutation test — provides a template for rigorous evaluation even when the primary hypothesis is not supported. The honest null-to-harmful result on governance is itself a contribution: it clarifies the boundary conditions under which governance adds value.
-
-### Methodological Contribution: Cognitive Defect Diagnosis of the Multi-Agent Collaboration Paradigm
-
-Beyond the experimental design, a second and arguably deeper methodological contribution is the **diagnosis of 4 root cognitive defects** in the prevailing multi-agent discussion paradigm. This contribution is methodological in nature because it answers the question that prior work could not: *why does governance appear ineffective?* The answer is not that governance is useless, but that the discussion loop itself was broken — agents could not perceive their own state (D1: `buildPrompt` did not inject belief/confidence), could not remember prior exchanges (D2: only a global summary, no personalized memory), could not respond to each other (D3: `Promise.all` synchronous scripted turns), and could not truly influence one another (D4: influence edges inferred from numerical differences rather than explicit citations).
-
-Fixing all 4 defects is what **closes the governance loop** — observe → detect → intervene can only function when agents actually perceive, remember, and respond. The diagnosis report (`PROJECT_DEEP_ANALYSIS.md`) provides a complete hard-defect inventory and repair roadmap (7 hard fixes: H4 Kuramoto mapping, H6 `convergenceSpeed` annotation, H2 `ablationModes` expansion 2→7, H19 seeded PRNG, H17 cache pollution, H18 `interventionPrompt` unification). Being able to see through *why governance was ineffective* — and to articulate it as a falsifiable architectural diagnosis rather than a hand-wavy excuse — is itself a research contribution.
+A second methodological contribution is the **diagnosis of 4 root cognitive defects** in the multi-agent discussion paradigm, answering *why governance appeared ineffective*: agents could not perceive their own state (D1), remember prior exchanges (D2), respond to each other (D3), or truly influence one another (D4). Fixing all 4 defects **closes the governance loop**. The diagnosis report (`docs/archive/PROJECT_DEEP_ANALYSIS.md`) provides a complete hard-defect inventory (7 hard fixes: H4 Kuramoto mapping, H6 convergenceSpeed, H2 ablationModes, H19 seeded PRNG, H17 cache pollution, H18 interventionPrompt unification). Articulating *why governance was ineffective* as a falsifiable architectural diagnosis — rather than a hand-wavy excuse — is itself a research contribution.
 
 ---
 
@@ -92,12 +65,13 @@ Fixing all 4 defects is what **closes the governance loop** — observe → dete
 
 | | |
 |---|---|
-| **Code** | ~13,000 lines TypeScript, 209 automated tests |
+| **Code** | ~13,000 lines TypeScript, 229 automated tests |
 | **Architecture** | Strategy pattern + Adapter pattern + Dependency Injection + Event Bus |
 | **Math** | Full formal framework: 13 sections, complete LaTeX |
 | **Models** | DeepSeek-V3 (primary), OpenAI, Anthropic, Local (Ollama) |
 | **Integrations** | Framework-agnostic adapter layer; Custom (full), AutoGen (TypeScript bridge, Python sidecar needed), CrewAI/LangGraph (planned) |
 | **Stack** | Next.js 14, TypeScript 5.5, Vitest, Tailwind CSS |
+| **Free-Energy Ranking** | Social thermodynamics F=(1-R)+T·H decomposition drives intervention priority (91.7% of Crisis runs have multiple detectors triggering). Backtest falsified original force_reflection↔structural mapping (p=0.041), corrected to thermal·(1-structural) |
 
 ---
 
@@ -114,9 +88,10 @@ Fixing all 4 defects is what **closes the governance loop** — observe → dete
 
 ## Future Work
 
-- **Full 7-mode ablation experiment (105 runs)**: `ablationModes` has been expanded from 2 implemented modes to 7 (none, full, shuffle, full_diversity, full_weight, full_reflection, full_continue). The complete 105-run factorial experiment (7 modes × 2 tasks × multiple round-counts × n≥5) is pending lab execution. The 2026-07-14 Crisis re-validation (45 runs, none/full/shuffle × 15) is a first step toward this — single-intervention modes remain pending under the closed loop.
-- **Cross-model validation**: All 165 prior experiments and the 45 Crisis experiments used DeepSeek-V3 only. Re-running the core 2×2 factorial design on GPT-4o / Claude / local models (n=5 minimum) to test generalization. The loop-fix makes this especially important — the 4 cognitive defects may have masked model-dependent governance effects.
-- **Remaining 4 of 8 intervention types**: Of the 8 designed intervention types, 4 remain unimplemented — `break_connections`, `introduce_dissent`, `pair_opposites`, and `none` (pure observation). Implementing and ablating these completes the intervention design space and enables testing whether *structural* interventions (breaking connections, pairing opposites) outperform *content* interventions (reflection, reweighting). Note: `introduce_diversity` and `continue_discussion` are now disabled by default based on the Crisis cost-benefit analysis (9.1% and 0% effective respectively).
+- **Supplier expansion to n=72**: Supplier is currently at n=30/cell (power=43%). Expanding to n=72/cell would achieve 80% power and potentially confirm p<0.05. This is the highest-priority next experiment.
+- **Full 7-mode ablation experiment (105 runs)**: `ablationModes` has been expanded from 2 implemented modes to 7 (none, full, shuffle, full_diversity, full_weight, full_reflection, full_continue). The complete 105-run factorial experiment (7 modes × 2 tasks × multiple round-counts × n≥5) is pending lab execution. The 2026-07-14 Crisis re-validation (72 runs, none/full/shuffle × 24) is a first step toward this — single-intervention modes remain pending under the closed loop.
+- **Cross-model validation**: All 326 experiments (165 historical + 161 expanded) used DeepSeek-V3 only. Re-running the core 2×2 factorial design on GPT-4o / Claude / local models (n=5 minimum) to test generalization. The loop-fix makes this especially important — the 4 cognitive defects may have masked model-dependent governance effects.
+- **Remaining aspirational intervention types**: The codebase currently implements 4 intervention types (`reduce_weight`, `force_reflection`, `introduce_diversity`, `continue_discussion`) plus `none` (observation mode) in a closed `InterventionType` union. Three additional types (`break_connections`, `introduce_dissent`, `pair_opposites`) were designed but never implemented — they exist only as aspirational notes. Implementing and ablating these would complete the intervention design space and test whether *structural* interventions (breaking connections, pairing opposites) outperform *content* interventions (reflection, reweighting). Note: `introduce_diversity` and `continue_discussion` are now disabled by default based on the Crisis cost-benefit analysis (9.1% and 0% effective respectively).
 
 ---
 

@@ -60,43 +60,44 @@ A deeper architectural review diagnosed **4 root cognitive defects** in the prev
 | **D3: Synchronous scripted turns** | `Promise.all` made agents speak simultaneously, reading from pre-written scripts rather than responding to each other | Replaced with sequential speaking order (agents hear prior turns) |
 | **D4: Fabricated influence network** | Influence edges were inferred from numerical differences rather than explicit citations | Influence graph now built only from explicit references |
 
-**Critical implication (updated 2026-07-14)**: These 4 defects meant the governance loop was *broken* during all 165 prior experiments — agents could not actually perceive, remember, respond to, or influence one another. **The defects have since been fixed (2026-07-12), and the experiments were re-run on a Crisis task (2026-07-14, 45 runs) with the loop closed** — confirming full vs none d=0.84, τ +48%. The prior "governance is ineffective" conclusions were artifacts of the broken loop, not intrinsic to governance. Diagnosing *why* governance appeared ineffective is itself the research value.
+**Critical implication (updated 2026-07-14, expanded)**: These 4 defects meant the governance loop was *broken* during all 165 prior experiments — agents could not actually perceive, remember, respond to, or influence one another. **The defects have since been fixed (2026-07-12), and the experiments were re-run on a Crisis task (2026-07-14, expanded to n=24/cell, 72 runs) with the loop closed** — statistically confirming full vs none d=0.92, p=0.005, power=88%, τ +51%. The prior "governance is ineffective" conclusions were artifacts of the broken loop, not intrinsic to governance. Diagnosing *why* governance appeared ineffective is itself the research value.
 
 ---
 
 ## Experimental Evidence
 
-**89 experiments across 2 tasks (Crisis 45 + Supplier 44), 3 conditions (none/full/shuffle).** Primary metric: Kendall's τ + within-group Δτ. t-distribution 95% CI + permutation test p-values.
+**161 experiments across 2 tasks (Crisis 72 + Supplier 89), 3 conditions (none/full/shuffle).** Primary metric: Kendall's τ + within-group Δτ. t-distribution 95% CI + permutation test p-values.
 
-### 2026-07-14 Cross-Task Validation (Primary Evidence)
+### 2026-07-14 Cross-Task Validation (Primary Evidence, Expanded)
 
-After fixing 4 cognitive defects (D1–D4), **89 experiments across 2 independent tasks** were run with the governance loop closed:
+After fixing 4 cognitive defects (D1–D4), **161 experiments across 2 independent tasks** were run with the governance loop closed:
 
-| | Crisis — 3 rounds (n=15/cell) | Supplier — 3 rounds (n=15/15/14*) |
+| | Crisis — 3 rounds (n=24/cell) | Supplier — 3 rounds (n=30/30/29*) |
 |---|---|---|
-| **Baseline τ** | 0.387 ± 0.160 (Q=69.3) | 0.680 ± 0.211 (Q=82.0) |
-| **Full governance τ** | **0.573 ± 0.271** (Q=78.7) | **0.787 ± 0.177** (Q=91.0) |
-| **Shuffle τ** | **0.760 ± 0.241** (Q=88.0) | 0.671 ± 0.202 (Q=84.0) |
-| **d vs none** | **+0.84** (full) / **+1.82** (shuffle) | **+0.55** (full) / -0.04 (shuffle) |
+| **Baseline τ** | 0.408 ± 0.182 (Q=72.2) | 0.680 ± 0.186 (Q=82.0) |
+| **Full governance τ** | **0.617 ± 0.263** (Q=81.1) | **0.767 ± 0.183** (Q=91.0) |
+| **Shuffle τ** | **0.717 ± 0.243** (Q=85.6) | 0.697 ± 0.204 (Q=84.0) |
+| **d vs none** | **+0.92** (p=0.005) / **+1.44** (p<0.001) | **+0.47** (p=0.089) / +0.09 (ns) |
+| **Power** | 88% ✅ | 43% ⚠️ |
 
-> *\*Supplier shuffle n=14 (1 run crashed due to API error; 44/45 experiments completed).*
+> *\*Supplier shuffle n=29 (1 run crashed due to API error; 89/90 experiments completed).*
 
 **Four cross-task conclusions**:
 
-1. **Governance direction is consistent across tasks** — both tasks show full > none, confirming the effect is not Crisis-task-specific.
-2. **"False consensus" replicates across tasks** — consensus-quality r ≈ 0 in both tasks (0.01 / -0.21), proving this is a general LLM multi-agent property.
-3. **Shuffle control has boundary conditions** — effective on hard tasks (Crisis), ineffective on easier tasks (Supplier) where shuffling introduces noise.
-4. **Intervention-type hierarchy is consistent** — `force_reflection` and `reduce_weight` outperform `introduce_diversity` in both tasks.
+1. **Governance is statistically confirmed effective** — Crisis d=0.92, p=0.005, power=88%. Supplier directionally consistent (d=0.47) but underpowered (43%, needs n=72 for 80%).
+2. **"False consensus" replicates across tasks** — consensus-quality r ≈ 0 in both tasks (-0.14 / -0.11), proving this is a general LLM multi-agent property.
+3. **Shuffle control has boundary conditions** — effective on hard tasks (Crisis d=1.44, p<0.001), ineffective on easier tasks (Supplier d=0.09, p=0.78) due to ceiling effect (baseline already near full level).
+4. **Mechanism ablation is direction-consistent** — reduce_weight (Crisis d=1.51, p=0.0001) and force_reflection (Crisis d=0.73, p=0.001) drive the effect; both d>0 in Supplier.
 
-**Three primary results (Crisis, loop-closed)**:
+**Three primary results (Crisis, loop-closed, expanded)**:
 
-1. **Governance is effective** — full vs none d=0.84, τ +48%. The prior "governance is ineffective" finding was an artifact of the broken loop, not intrinsic to governance.
-2. **Shuffle is strongest on hard tasks** — d=1.82 on Crisis. shuffle represents the theoretical ceiling of *information exchange* (all agents access all expertise), not the ceiling of agent collaboration.
-3. **Intervention cost-benefit analyzed** (Crisis task only, n=15) — 68 interventions, 31 effective (45.6%). `force_reflection` most reliable (81.8%), `reduce_weight` best cost-efficiency; `introduce_diversity` (9.1%) and `continue_discussion` (0%, harmful) now disabled by default.
+1. **Governance is statistically confirmed effective** — full vs none d=0.92, p=0.005, power=88%, τ +51%. The prior "governance is ineffective" finding was an artifact of the broken loop, not intrinsic to governance.
+2. **Shuffle is strongest on hard tasks** — d=1.44 on Crisis. shuffle represents the theoretical ceiling of *information exchange* (all agents access all expertise), not the ceiling of agent collaboration.
+3. **Intervention cost-benefit analyzed** (Crisis task, n=24) — 89 interventions, 47 effective (52.8%). `force_reflection` most reliable (79.4%), `reduce_weight` best cost-efficiency (+0.389 τ); `introduce_diversity` (9.1%) and `continue_discussion` (0%, harmful) now disabled by default.
 
 ### Historical 2×2 Factorial (Broken Loop — Controls Only)
 
-> **⚠️ These 165 experiments were run while the governance loop was severed (D1–D4 unfixed). Conclusions are provisional and retained only as historical controls.**
+> **⚠️ These 165 experiments were run while the governance loop was severed (D1–D4 unfixed). Conclusions are provisional and retained only as historical controls. The 161 expanded experiments (Crisis 72 + Supplier 89) above are the primary evidence.**
 
 | | Invest — 3 rounds | Invest — 5 rounds | M&A — 5 rounds |
 |---|---|---|---|
@@ -121,7 +122,7 @@ The loop-fix (D1–D4) is itself a research contribution: identifying *why* gove
 | **Adaptive Governance** | Thresholds calibrate from round-1 data; intervention dosage scales with severity (config-gated, default off) |
 | **Cross-Examination** | Adversarial debate engine: splits agents into PRO/CON camps, synthesizes verdict |
 | **7 Ablation Modes** | Full + shuffle control + 4 single-intervention modes isolate which mechanism matters. **[Updated]** Expanded from 2 implemented modes to 7; full 105-run experiment pending lab execution |
-| **6 Hard Fixes (H-series)** | H4 Kuramoto mapping corrected; H6 `convergenceSpeed` annotation fixed; H2 `ablationModes` expanded (2→7); H19 seeded PRNG for reproducibility; H17 cache pollution eliminated; H18 `interventionPrompt` unified across modes. H23-H39 fixed in 2026-07-13 audit pass. |
+| **6 Hard Fixes (H-series)** | H4 Kuramoto mapping corrected; H6 `convergenceSpeed` annotation fixed; H2 `ablationModes` expanded (2→7); H19 seeded PRNG for reproducibility; H17 cache pollution eliminated; H18 `interventionPrompt` unified across modes. Additional fixes in 2026-07-13/14 audit (see LIMITATIONS.md §19). |
 | **Causal Effect Estimation** | 🆕 Nearest-neighbor trajectory matching (k=5) + 10000-permutation test + bootstrap CI — estimates counterfactual intervention effects, not just correlations. M&A 5-round shows +0.135 effect (d=0.96, p=0.067, CI excludes 0) |
 | **Statistical Inference** | t-distribution 95% CI + permutation test p-values on all key comparisons; Δτ baseline-corrected |
 | **Parameter Sensitivity** | One-at-a-time sweep over 5 governance parameters verifies robustness |
@@ -129,7 +130,10 @@ The loop-fix (D1–D4) is itself a research contribution: identifying *why* gove
 | **Multi-LLM Support** | DeepSeek / OpenAI / Anthropic / Local (Ollama) — unified interface |
 | **Extensible Detection** | Custom bias detectors via `registerDetector()` — no core engine changes needed |
 | **Shared Utilities** | Registry/JSON/stats modules eliminate code duplication across the codebase |
-| **209 Automated Tests** | All core modules covered, 13 test files (including 28 causal-effect tests; 219 tests after 2026-07-14 cross-task validation) |
+| **229 Automated Tests** | All core modules covered, 16 test files (including 28 causal-effect tests) |
+| **Mechanism Ablation** | 🆕 Per-intervention-type statistical analysis: reduce_weight d=1.51 (p=0.0001), force_reflection d=0.73 (p=0.001) — identifies which interventions drive governance effectiveness |
+| **Power Analysis** | 🆕 Non-central t-distribution power analysis: Crisis 88% ✅, Supplier 43% ⚠️ (needs n=72 for 80%) |
+| **Free-Energy Ranking** | 🆕 Social free energy F=(1-R)+T·H decomposition drives intervention priority when multiple detectors trigger (91.7% of Crisis runs). Backtest falsified original force_reflection↔structural mapping (p=0.041), corrected to thermal·(1-structural) |
 | **Demo Mode** | Zero-config, no API key needed — instant visualization |
 
 ---
@@ -163,10 +167,12 @@ const evaluation = runtime.getSessionResult(finalDecision);
 | Area | Status | Detail |
 |------|--------|--------|
 | **Parameter calibration** | ⚠️ Hand-tuned | 16 belief-update constants not empirically calibrated; sensitivity sweep infrastructure exists but not systematically run |
-| **Adaptive modules** | 🔧 Unvalidated | Adaptive thresholds & dosage implemented + unit-tested, but not used in 165 experiments |
+| **Adaptive modules** | 🔧 Unvalidated | Adaptive thresholds & dosage implemented + unit-tested, but not used in 326 experiments |
 | **Topology** | 🔧 Unvalidated | Only FlatTopology (5 agents) tested; Grouped/Committee implemented but untested |
 | **Evaluation weights** | ⚠️ Heuristic | 5-dimension weights (0.20/0.25/0.20/0.17/0.18) not data-driven; equal-weight robustness check planned |
 | **Single model** | ⚠️ DeepSeek only | Cross-model generalization untested |
+| **Supplier underpowered** | ⚠️ 43% power | Supplier d=0.47, p=0.089 — directionally consistent but needs n=72 for 80% power |
+| **Shuffle boundary** | ⚠️ Task-dependent | Shuffle effective on hard tasks (Crisis d=1.44), ineffective on easy tasks (Supplier d=0.09) due to ceiling effect |
 | **Sensitivity ≠ causality** | ✅ Honest | Dropout analysis explicitly labeled as sensitivity diagnostic, not causal identification |
 
 ---

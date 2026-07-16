@@ -24,20 +24,21 @@
 - 构建了一个可嵌入多智能体框架的认知治理运行时（~13,000行 TypeScript），
   检测 4 种群决策偏差（回声室/权威偏差/极化/过早共识），在检测到偏差时
   靶向干预
-- 全部 209 个自动化测试通过，代码开源，实验可复现（种子化 PRNG）
-- 在 DeepSeek-V3 上完成了 89 次对照实验（2 个独立 Hidden Profile 任务 ×
-  3 种条件 × 15 次运行），含完整的统计推断（置换检验 + Bootstrap CI +
+- 全部 229 个自动化测试通过，代码开源，实验可复现（种子化 PRNG）
+- 在 DeepSeek-V3 上完成了 161 次对照实验（2 个独立 Hidden Profile 任务 ×
+  3 种条件 × n=24-30），含完整的统计推断（置换检验 + t分布 CI +
   多重比较校正）
 
 实验中观察到两个可能有点价值的发现：
-1. 打乱 agent 角色标签与私有信息的对应关系后，决策质量显著且大幅度提升
-   （一个任务 ΔQ=+18.3, p=0.001；另一个独立任务复现了方向一致的效应）。
-   而自适应治理干预对决策质量的提升在两个任务上均不显著（p=0.36, p=0.06）。
-2. 在这两个任务的实验数据中，共识水平与决策正确性的相关性都趋近于零
-   （r≈0；r≈-0.2），即 agent 们高度一致 ≠ 答案正确。
-
-另：在实验过程中发现并修复了 4 个导致治理环路断裂的认知缺陷（状态感知缺失、
-对话历史缺失、顺序发言断裂、影响力网络断裂），修复前后对比数据均完整保留。
+1. 修复 4 个导致治理环路断裂的认知缺陷后，治理干预统计确认有效：
+   Crisis 任务 full vs none d=0.92, p=0.005, 功效 88%；Supplier 任务
+   方向一致（d=0.47, p=0.089，功效不足）。此前的"治理无效"结论是
+   环路断裂的伪影，而非治理本身无效。
+2. 打乱 agent 角色与私有信息的对应关系（shuffle 对照），在困难任务上
+   效应最强（Crisis d=1.44, p<0.001），但在简单任务上因天花板效应无效
+   （Supplier d=0.09, p=0.78）——边界条件由基线难度决定。
+3. 在这两个任务的实验数据中，共识水平与决策正确性的相关性都趋近于零
+   （r≈-0.1），即 agent 们高度一致 ≠ 答案正确。
 
 我读过您的 [具体论文标题或方向，比如："大规模智能体社会模拟"或"多智能体
 强化学习中的协调机制"]，感觉您在 [具体方向] 的框架可能能解释我观察到的
@@ -77,21 +78,25 @@ would be grateful for your perspective on whether this direction has merit.
 
 What I built (15 days, solo):
 - An embeddable governance runtime for multi-agent LLM systems (~13K lines
-  TypeScript, 209 passing tests). It detects 4 collective decision failures
+  TypeScript, 229 passing tests). It detects 4 collective decision failures
   (echo chamber, authority bias, polarization, premature consensus) and applies
   targeted interventions.
-- 89 controlled experiments across 2 independent hidden-profile tasks
-  (3 conditions × 15 runs each), using DeepSeek-V3. Statistical inference:
-  permutation tests, bootstrap CIs, multiple comparison correction.
+- 161 controlled experiments across 2 independent hidden-profile tasks
+  (3 conditions × n=24-30 each), using DeepSeek-V3. Statistical inference:
+  permutation tests, t-distribution CIs, multiple comparison correction.
 
 What the data shows:
-1. Breaking the coherence between agent role labels and their private
-   information ("shuffle" condition) significantly improves decision quality
-   (ΔQ=+18.3, p=0.001 on Task 1; directionally consistent on Task 2).
-   Meanwhile, targeted governance interventions do not significantly
-   outperform baseline on either task (p=0.36, p=0.06).
-2. Consensus level and decision correctness are uncorrelated in both tasks
-   (r≈0; r≈-0.2). Agreement is not a valid proxy for accuracy.
+1. After fixing 4 cognitive defects that broke the governance loop,
+   governance IS statistically confirmed effective: Crisis task full vs none
+   d=0.92, p=0.005, power 88%; Supplier task directionally consistent
+   (d=0.47, p=0.089, underpowered). The prior "governance doesn't work"
+   result was an artifact of the broken loop, not governance itself.
+2. The shuffle control (breaking role-information coherence) is strongest
+   on hard tasks (Crisis d=1.44, p<0.001) but null on easy tasks
+   (Supplier d=0.09, p=0.78) — boundary conditions depend on baseline
+   difficulty (ceiling effect).
+3. Consensus level and decision correctness are uncorrelated in both tasks
+   (r≈-0.1). Agreement is not a valid proxy for accuracy.
 
 I read your paper "[specific paper title]" and your framework for [specific
 concept] seems like it could explain the "role-coherence overconfidence"
@@ -132,19 +137,19 @@ He Mengyuan
 │                                                          │
 │   WHAT I DID                                              │
 │   Built an embeddable governance runtime for multi-agent  │
-│   LLM systems. 209 tests. 89 experiments across 2 tasks.  │
+│   LLM systems. 229 tests. 161 experiments across 2 tasks. │
 │                                                          │
 │   CORE FINDING                                            │
-│   Breaking the coherence between agent roles and their    │
-│   private information (shuffle) produces a large,         │
-│   significant improvement in decision quality:            │
+│   After fixing 4 cognitive defects that broke the         │
+│   governance loop, governance IS effective:               │
 │                                                          │
-│   Task 1 (Crisis):  ΔQ=+18.7, p<0.001, d=+1.82           │
-│   Task 2 (Supplier): ΔQ=+18.3, p=0.001                   │
+│   Crisis (n=24):   full vs none  d=+0.92, p=0.005, power 88%│
+│   Supplier (n=30): full vs none  d=+0.47, p=0.089 (directional)│
+│   Shuffle control: d=+1.44 (Crisis, p<0.001) — strongest  │
+│   on hard tasks; null on easy tasks (ceiling effect).     │
 │                                                          │
-│   Meanwhile, targeted governance interventions (detect    │
-│   bias → intervene) do NOT significantly outperform       │
-│   baseline: p=0.36 (Task 1), p=0.06 (Task 2).            │
+│   The prior "governance doesn't work" result was an       │
+│   artifact of a broken loop, not governance itself.       │
 │                                                          │
 │   BONUS FINDING: Consensus ≠ Correctness                  │
 │   r(consensus, accuracy) ≈ 0 in both tasks.               │
@@ -155,7 +160,7 @@ He Mengyuan
 │   I can execute experiments; I need guidance on theory.   │
 │                                                          │
 │   Experiment design: 2 hidden-profile tasks × 3 cond.     │
-│   × 15 runs. Permutation test + bootstrap CI.             │
+│   × n=24-30. Permutation test + t-dist CI.                │
 │   All code/data open-source. Seeded PRNG for repro.       │
 │                                                          │
 └──────────────────────────────────────────────────────────┘

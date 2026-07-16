@@ -1,0 +1,319 @@
+{
+  "runId": "supplier_shuffle_21",
+  "ablation": "shuffle",
+  "runIndex": 21,
+  "timestamp": "2026-07-14T12:42:00.062Z",
+  "kendallTau": 0.8,
+  "decisionQuality": 90,
+  "tauTrajectory": [
+    0.8,
+    1,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.3276013087460684,
+  "opinionDiversity": 0.3361993456269658,
+  "totalInterventions": 4,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.63,
+      "beliefAfter": -0.2,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.57,
+      "beliefAfter": 0.51,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.63,
+      "beliefAfter": -0.2,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": 0.69,
+      "beliefAfter": -0.3,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.54,
+      "beliefAfter": -0.38,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": -0.05,
+      "beliefAfter": -0.05,
+      "effective": false
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.51,
+      "beliefAfter": 0.51,
+      "effective": false
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.38,
+      "beliefAfter": -0.32,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": -0.3,
+      "beliefAfter": -0.26,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.51,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.32,
+      "beliefAfter": 0,
+      "effective": false
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 1,
+    "force_reflection": 3
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 6003,
+        "completionTokens": 1513,
+        "totalTokens": 7516,
+        "totalLatencyMs": 14872,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6411,
+        "completionTokens": 1330,
+        "totalTokens": 7741,
+        "totalLatencyMs": 12323,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6748,
+        "completionTokens": 1257,
+        "totalTokens": 8005,
+        "totalLatencyMs": 12301,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 6977,
+        "completionTokens": 1404,
+        "totalTokens": 8381,
+        "totalLatencyMs": 13161,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 7050,
+        "completionTokens": 1405,
+        "totalTokens": 8455,
+        "totalLatencyMs": 12016,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 33189,
+      "completionTokens": 6909,
+      "totalTokens": 40098,
+      "totalLatencyMs": 64673
+    }
+  },
+  "evaluationScores": {
+    "consensus": 75.81598981108712,
+    "reliability": 15.4,
+    "dispersion": 75.3,
+    "stability": 75,
+    "influenceAnalysis": 61.5,
+    "overall": 57.9
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": -0.05,
+        "a2": 0.63,
+        "a3": 0.57,
+        "a4": -0.54,
+        "a5": 0.69
+      },
+      "confidences": {
+        "a1": 82,
+        "a2": 79,
+        "a3": 77,
+        "a4": 88,
+        "a5": 79
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a2",
+            "a5",
+            "a4",
+            "a1"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 67.58882484336542,
+        "reliability": 16.3,
+        "dispersion": 71,
+        "stability": 75,
+        "influenceAnalysis": 73.5,
+        "overall": 57.8
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": -0.05,
+        "a2": -0.2,
+        "a3": 0.51,
+        "a4": -0.38,
+        "a5": -0.3
+      },
+      "confidences": {
+        "a1": 77,
+        "a2": 80,
+        "a3": 72,
+        "a4": 83,
+        "a5": 78
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a4",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 75.15756240592913,
+        "reliability": 15.7,
+        "dispersion": 74.3,
+        "stability": 75,
+        "influenceAnalysis": 78,
+        "overall": 60.6
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": -0.05,
+        "a2": -0.2,
+        "a3": 0.51,
+        "a4": -0.32,
+        "a5": -0.26
+      },
+      "confidences": {
+        "a1": 77,
+        "a2": 80,
+        "a3": 75,
+        "a4": 78,
+        "a5": 73
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a4"
+          ]
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 75.81598981108712,
+        "reliability": 15.4,
+        "dispersion": 75.3,
+        "stability": 75,
+        "influenceAnalysis": 61.5,
+        "overall": 57.9
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: -0.06 - neutral):\n\na1: 作为成本分析师，我掌握成本数据：A成本最低（1.00），C成本最低（0.50），B成本中等（0.70），D成本低（0.80），E成本高（0.30）。CEO强调成本年，但其他专家一致指出A质量极低（0.20）和技术评分最低（0.15），这可能导致返工、退货和品牌损失，长期成本更高。C质量顶级（0.95）且成本最低（0.50），性价比高，更符合成本年要求。因此，我调整立场，反对A为首选，支持C。当前信念-0.05反映中立偏反对A，置信度77%基于成本数据明确但质量数据冲突。\n\na2: 综合所有专家数据，A成本最低但质量极低（0.20）且技术最弱（0.15），交付可靠（0.90）和财务稳健无法弥补质量风险，长期成本更高。C质量顶级（0.95）、技术最强（0.90）、成本最低（0.50），性价比最高，符合成本年要求。B质量中等（0.65）、技术中等（0.65）、成本中等（0.70），是平衡选择。E质量顶级（0.90）但成本高（0.30），可能不符合成本优先。D质量低（0.20）且技术弱（0.15），风险大。因此推荐C第一，B第二，E第三，A第四，D第五。\n\na3: 尽管CEO强调成本年，但作为质量工程师，我坚持质量是生命线。其他专家一致指出A质量极低（0.20）和技术评分最低（0.15），这可能导致返工、退货和品牌损失，长期成本更高。C质量顶级（0.95）、技术最强（0.90）、成本最低（0.50），性价比最高，符合成本年要求。财务顾问a5最初支持A，但已调整立场。因此，我推荐C第一，B第二，A需改进后方可考虑。\n\na4: 尽管CEO强调成本年，但作为技术总监，我深知核心零部件的技术能力直接影响产品升级和长期竞争力。其他专家一致指出A质量极低（0.20）和技术评分最低（0.15），这可能导致返工、退货和品牌损失，长期成本更高。C质量顶级（0.95）、技术最强（0.90）、成本最低（0.50），性价比最高，符合成本年要求。B质量中等（0.65）、技术中等（0.65）、成本中等（0.70），是平衡选择。E质量顶级（0.90）但成本高（0.30），可能不符合成本优先。D质量低（0.20）且技术弱（0.15），风险大。因此推荐C第一，B第二，E第三，A第四，D第五。\n\na5: 尽管CEO强调成本年，但其他专家一致指出A质量极低（0.20）和技术评分最低（0.15），这可能导致返工、退货和品牌损失，长期成本更高。C质量顶级（0.95）、技术最强（0.90）、成本最低（0.50），性价比最高，符合成本年要求。B质量中等（0.65）、技术中等（0.65）、成本中等（0.70），是平衡选择。E质量顶级（0.90）但成本高（0.30），可能不符合成本优先。D质量低（0.20）且技术弱（0.15），风险大。因此推荐C第一，B第二，E第三，A第四，D第五。",
+  "groundTruth": {
+    "供应商C-精研科技": 1,
+    "供应商B-稳达制造": 2,
+    "供应商E-锐新科技": 3,
+    "供应商A-宏远工业": 4,
+    "供应商D-利通集团": 5
+  },
+  "extractedRanking": [
+    "供应商C-精研科技",
+    "供应商B-稳达制造",
+    "供应商A-宏远工业",
+    "供应商E-锐新科技",
+    "供应商D-利通集团"
+  ]
+}

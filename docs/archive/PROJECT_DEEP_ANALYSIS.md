@@ -310,9 +310,9 @@ BH FDR: 第 i 小 p 值的临界值 = (α × i) / nTests
 - **问题**：`stripGovTag` 用非贪婪 `[\s\S]*?`，而 `extractGovTag` 用贪婪 `[\s\S]*`。当 [GOV] 标签含 `itemBeliefs` 数组时，`stripGovTag` 会匹配到第一个 `}`（数组元素的闭合括号），清理后 content 残留 `}]}`。
 - **影响**：所有使用 StateInferenceBridge 且 agent 输出 itemBeliefs 的场景，传给运行时的 content 字段包含 JSON 残片。
 
-#### H8. 8 种干预类型仅 4 种实现
-- **位置**：`governance/types.ts` 定义 8 种 `InterventionType`，`interventions/` 仅实现 4 种
-- **问题**：`break_connections`、`introduce_dissent`、`pair_opposites`、`none` 无策略实现。但 `detectEchoChamber`（medium/heavy → break_connections）、`detectAuthorityBias`（light → introduce_dissent）、`detectPolarization`（light → pair_opposites）会推荐这些未实现类型。
+#### H8. InterventionType 闭联合型仅 5 成员
+- **位置**：`governance/types.ts` 定义 5 成员闭联合型 `InterventionType`（4 干预 + `none`），`interventions/` 实现 4 种
+- **问题**：`break_connections`、`introduce_dissent`、`pair_opposites` 为文档设想类型但从未加入联合型，无策略实现。但 `detectEchoChamber`（medium/heavy → break_connections）、`detectAuthorityBias`（light → introduce_dissent）、`detectPolarization`（light → pair_opposites）会推荐这些不存在的类型。
 - **影响**：`applyInterventions` 遇到未注册类型返回 `success: false`，形成"检测到但无法干预"的断层。
 
 #### H9. 交叉质证让步检测无法区分否定语境

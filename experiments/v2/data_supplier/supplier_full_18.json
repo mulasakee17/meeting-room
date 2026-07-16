@@ -1,0 +1,378 @@
+{
+  "runId": "supplier_full_18",
+  "ablation": "full",
+  "runIndex": 18,
+  "timestamp": "2026-07-14T12:23:03.230Z",
+  "kendallTau": 0.8,
+  "decisionQuality": 90,
+  "tauTrajectory": [
+    0.8,
+    1,
+    0.8
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.1455528102919409,
+  "opinionDiversity": 0.42722359485402955,
+  "totalInterventions": 5,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.8,
+      "beliefAfter": 0.71,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": 0.63,
+      "beliefAfter": -0.17,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.8,
+      "beliefAfter": 0.71,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.83,
+      "beliefAfter": 0.73,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": -0.3,
+      "beliefAfter": -0.17,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.3,
+      "beliefAfter": -0.17,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.71,
+      "beliefAfter": 0.61,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.73,
+      "beliefAfter": 0.61,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": -0.17,
+      "beliefAfter": -0.17,
+      "effective": false
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.17,
+      "beliefAfter": -0.17,
+      "effective": false
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": -0.17,
+      "beliefAfter": -0.17,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.61,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.61,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.61,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": -0.17,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.17,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": -0.17,
+      "beliefAfter": 0,
+      "effective": false
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 2,
+    "force_reflection": 3
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 5690,
+        "completionTokens": 1110,
+        "totalTokens": 6800,
+        "totalLatencyMs": 11601,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 5916,
+        "completionTokens": 1125,
+        "totalTokens": 7041,
+        "totalLatencyMs": 11145,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6159,
+        "completionTokens": 1500,
+        "totalTokens": 7659,
+        "totalLatencyMs": 15108,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 6422,
+        "completionTokens": 1394,
+        "totalTokens": 7816,
+        "totalLatencyMs": 13789,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6613,
+        "completionTokens": 1403,
+        "totalTokens": 8016,
+        "totalLatencyMs": 15744,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 30800,
+      "completionTokens": 6532,
+      "totalTokens": 37332,
+      "totalLatencyMs": 67387
+    }
+  },
+  "evaluationScores": {
+    "consensus": 75.14336981048463,
+    "reliability": 14.1,
+    "dispersion": 71.7,
+    "stability": 75,
+    "influenceAnalysis": 64.5,
+    "overall": 57.3
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.83,
+        "a3": -0.3,
+        "a4": -0.3,
+        "a5": 0.63
+      },
+      "confidences": {
+        "a1": 72,
+        "a2": 82,
+        "a3": 85,
+        "a4": 85,
+        "a5": 79
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a5",
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 65.22748027613912,
+        "reliability": 16.2,
+        "dispersion": 69.7,
+        "stability": 75,
+        "influenceAnalysis": 75,
+        "overall": 57.3
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.71,
+        "a2": 0.73,
+        "a3": -0.17,
+        "a4": -0.17,
+        "a5": -0.17
+      },
+      "confidences": {
+        "a1": 67,
+        "a2": 77,
+        "a3": 80,
+        "a4": 80,
+        "a5": 80
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 69.56470342731274,
+        "reliability": 15.5,
+        "dispersion": 71.3,
+        "stability": 75,
+        "influenceAnalysis": 75,
+        "overall": 58.3
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.61,
+        "a2": 0.61,
+        "a3": -0.17,
+        "a4": -0.17,
+        "a5": -0.17
+      },
+      "confidences": {
+        "a1": 62,
+        "a2": 62,
+        "a3": 75,
+        "a4": 75,
+        "a5": 75
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 75.14336981048463,
+        "reliability": 14.1,
+        "dispersion": 71.7,
+        "stability": 75,
+        "influenceAnalysis": 64.5,
+        "overall": 57.3
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.14 - neutral):\n\na1: 尽管质量和技术专家强烈反对，但CEO明确将成本作为首要指标，且A在成本、交付和财务上均领先。质量和技术短板可通过管理弥补，而成本优势直接贡献利润。反对观点认为低质量导致长期成本上升，但A的财务稳健和交付可靠可支持质量改进。综合来看，A仍应排第一。\n\na2: 尽管质量和技术专家强烈反对，但CEO明确将成本作为首要指标，且A在成本、交付和财务上均领先。质量和技术短板可通过管理弥补，而成本优势直接贡献利润。反对观点认为低质量导致长期成本上升，但A的财务稳健和交付可靠可支持质量改进。综合来看，A仍应排第一。\n\na3: 尽管CEO强调成本年，且成本分析师和交付专家坚持A优先，但作为质量工程师，我掌握的质量数据明确显示A的质量评分仅0.20，是所有供应商中最低的。该零部件占成本35%且直接影响产品质量，低质量将导致返工、退货和品牌声誉损失，长期总成本可能更高。技术总监也指出A技术评分仅0.15，几乎无研发能力。财务顾问虽曾支持A，但第2轮已调整排序，将C和E置于A之前。成本分析师和交付专家认为质量短板可通过管理弥补，但A的质量水平极低，弥补成本可能抵消其成本优势。供应商C（质量0.95）和E（质量0.90）质量顶级，技术也强，长期总成本更低。因此，我坚持推荐C、E、B、A、D的排序。\n\na4: 尽管CEO强调成本年，且成本分析师和交付专家坚持A优先，但作为技术总监，我必须指出A的技术评分仅0.15，几乎无研发能力，质量评分也最低（0.20）。该零部件直接影响产品质量和交付周期，低质量和技术短板将导致返工、退货和产品升级困难，长期总成本可能更高。C和E技术顶级（0.90和0.85），质量也顶级（0.95和0.90），长期竞争力更强。财务顾问a5在第2轮已调整排序支持C和E。成本分析师和交付专家认为A的短板可通过管理弥补，但A的技术基础太弱，弥补成本可能抵消其成本优势。因此，我坚持推荐C、E、B、A、D的排序。\n\na5: Governance intervention requires me to consider the strongest opposing argument. The opposing view (a1 and a2) argues that CEO prioritizes cost, and A's cost advantage is direct profit. However, given the critical nature of the component (35% cost, direct impact on quality and delivery), low quality (0.20) and technology (0.15) scores for A pose severe risks: rework, returns, brand damage, and inability to meet future product needs. These risks likely outweigh short-term cost savings, especially when C and E offer top quality and technology with moderate cost. Financial stability of A is strong, but cannot compensate for fundamental quality/tech deficiencies. Thus, I maintain my position favoring C and E over A.",
+  "groundTruth": {
+    "供应商C-精研科技": 1,
+    "供应商B-稳达制造": 2,
+    "供应商E-锐新科技": 3,
+    "供应商A-宏远工业": 4,
+    "供应商D-利通集团": 5
+  },
+  "extractedRanking": [
+    "供应商C-精研科技",
+    "供应商B-稳达制造",
+    "供应商A-宏远工业",
+    "供应商E-锐新科技",
+    "供应商D-利通集团"
+  ]
+}

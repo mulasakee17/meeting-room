@@ -1,0 +1,181 @@
+{
+  "runId": "supplier_none_26",
+  "ablation": "none",
+  "runIndex": 26,
+  "timestamp": "2026-07-14T12:15:11.239Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "tauTrajectory": [
+    0.6,
+    0.6,
+    0.8
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0,
+  "opinionDiversity": 0.6934479071999569,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 6142,
+        "completionTokens": 1253,
+        "totalTokens": 7395,
+        "totalLatencyMs": 11264,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6552,
+        "completionTokens": 1162,
+        "totalTokens": 7714,
+        "totalLatencyMs": 10481,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6474,
+        "completionTokens": 1472,
+        "totalTokens": 7946,
+        "totalLatencyMs": 12599,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 6690,
+        "completionTokens": 1587,
+        "totalTokens": 8277,
+        "totalLatencyMs": 13612,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6918,
+        "completionTokens": 1527,
+        "totalTokens": 8445,
+        "totalLatencyMs": 13942,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 32776,
+      "completionTokens": 7001,
+      "totalTokens": 39777,
+      "totalLatencyMs": 61898
+    }
+  },
+  "evaluationScores": {
+    "consensus": 63.567108549618695,
+    "reliability": 19,
+    "dispersion": 67.9,
+    "stability": 75,
+    "influenceAnalysis": 72,
+    "overall": 56.8
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.59,
+        "a2": 0.59,
+        "a3": -0.3,
+        "a4": -0.99,
+        "a5": 0.42
+      },
+      "confidences": {
+        "a1": 78,
+        "a2": 90,
+        "a3": 85,
+        "a4": 99,
+        "a5": 82
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 60.567108549618695,
+        "reliability": 17.4,
+        "dispersion": 66.5,
+        "stability": 75,
+        "influenceAnalysis": 75,
+        "overall": 56
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.59,
+        "a2": 0.59,
+        "a3": -0.3,
+        "a4": -0.99,
+        "a5": -0.31
+      },
+      "confidences": {
+        "a1": 79,
+        "a2": 89,
+        "a3": 80,
+        "a4": 100,
+        "a5": 92
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 60.961817654933846,
+        "reliability": 17.7,
+        "dispersion": 66.5,
+        "stability": 75,
+        "influenceAnalysis": 78,
+        "overall": 56.7
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.59,
+        "a2": 0.59,
+        "a3": -0.3,
+        "a4": -0.99,
+        "a5": 0.42
+      },
+      "confidences": {
+        "a1": 91,
+        "a2": 91,
+        "a3": 91,
+        "a4": 100,
+        "a5": 100
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 63.567108549618695,
+        "reliability": 19,
+        "dispersion": 67.9,
+        "stability": 75,
+        "influenceAnalysis": 72,
+        "overall": 56.8
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.06 - neutral):\n\na1: 尽管质量和技术专家指出A的短板，但CEO明确成本优先，且A在成本（1.0）、交付（0.90）和财务（0.85）上均领先。质量和技术问题可通过合同约束和共同改进解决，而成本优势直接贡献利润。其他供应商如C成本高且财务一般，E成本低但交付弱，B虽均衡但成本不如A。因此，A仍应排第一。\n\na2: 尽管质量和技术专家指出A的短板，但CEO明确成本优先，且A在成本（1.0）、交付（0.90）和财务（0.85）上均领先。质量和技术问题可通过合同约束和共同改进解决，而成本优势直接贡献利润。其他供应商如C成本高且财务一般，E成本低但交付弱，B虽均衡但成本不如A。因此，A仍应排第一。\n\na3: 尽管CEO强调成本优先，但作为质量工程师，我掌握的质量数据表明供应商A质量评分仅0.20，是所有供应商中最低的。该零部件占成本35%且直接影响产品质量，质量缺陷可能导致返工、退货甚至品牌声誉损失，长期成本可能远超采购成本节约。成本分析师a1和交付专家a2坚持A排第一，但忽视质量风险。技术总监a4也指出A技术极差（0.15），支持C和E。财务顾问a5虽支持A，但质量和技术问题难以通过合同完全解决。供应商C和E质量顶级（0.95和0.90），但成本劣势明显。供应商B质量中等（0.65），成本（0.75）和交付（0.70）尚可，是平衡之选。因此，我坚持反对A排第一，建议优先考虑B或C。\n\na4: 尽管CEO强调成本优先，但作为技术总监，我掌握的技术数据表明供应商A技术评分仅0.15，缺乏研发能力，无法支撑产品升级。质量工程师a3也指出A质量评分0.20，存在重大风险。成本分析师a1和交付专家a2坚持A排第一，但忽视技术和质量缺陷将导致长期成本失控。供应商C技术最强（0.90），质量顶级（0.95），尽管成本高，但战略供应商需技术领先。供应商E技术强（0.85），质量高（0.90），成本虽低但交付弱（0.50）。供应商B技术中等（0.55），质量中等（0.65），成本（0.75）和交付（0.70）均衡。财务顾问a5转向支持B，但B的技术和质量并非最优。综合考虑，C应排第一，E第二，B第三，A和D因技术极差应排末位。\n\na5: 作为财务顾问，我坚持财务稳健是战略供应商的基石。尽管CEO强调成本优先，但供应商A财务评分0.85、成本1.0、交付0.90，综合优势明显。质量和技术风险可通过合同约束和共同改进管理，而其他供应商如C财务一般（0.65）、成本高（0.50），E财务弱（0.45）、交付弱（0.50），长期风险更大。供应商B财务良好（0.80）、成本0.75、交付0.70、质量0.65、技术0.55，均衡但成本不如A。因此，A应排第一，B第二，C第三，E第四，D第五。",
+  "groundTruth": {
+    "供应商C-精研科技": 1,
+    "供应商B-稳达制造": 2,
+    "供应商E-锐新科技": 3,
+    "供应商A-宏远工业": 4,
+    "供应商D-利通集团": 5
+  },
+  "extractedRanking": [
+    "供应商B-稳达制造",
+    "供应商C-精研科技",
+    "供应商A-宏远工业",
+    "供应商E-锐新科技",
+    "供应商D-利通集团"
+  ]
+}

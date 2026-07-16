@@ -1,0 +1,358 @@
+{
+  "runId": "supplier_full_27",
+  "ablation": "full",
+  "runIndex": 27,
+  "timestamp": "2026-07-14T12:32:24.537Z",
+  "kendallTau": 0.8,
+  "decisionQuality": 90,
+  "tauTrajectory": [
+    1,
+    1,
+    0.8
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.077243260658585,
+  "opinionDiversity": 0.4613783696707075,
+  "totalInterventions": 4,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization",
+    "echo_chamber"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.8,
+      "beliefAfter": 0.6,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.24,
+      "beliefAfter": 0.15,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.8,
+      "beliefAfter": 0.6,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": -0.99,
+      "beliefAfter": -0.83,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.6,
+      "beliefAfter": -0.52,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": -0.5,
+      "beliefAfter": -0.44,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.15,
+      "beliefAfter": 0.08,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.6,
+      "beliefAfter": 0.44,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": -0.83,
+      "beliefAfter": -0.71,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.52,
+      "beliefAfter": -0.46,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": -0.44,
+      "beliefAfter": -0.39,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.08,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.44,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": -0.71,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.46,
+      "beliefAfter": 0,
+      "effective": false
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 1,
+    "force_reflection": 3
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 5910,
+        "completionTokens": 1274,
+        "totalTokens": 7184,
+        "totalLatencyMs": 11667,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6265,
+        "completionTokens": 1279,
+        "totalTokens": 7544,
+        "totalLatencyMs": 10539,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6493,
+        "completionTokens": 1398,
+        "totalTokens": 7891,
+        "totalLatencyMs": 12192,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 6668,
+        "completionTokens": 1472,
+        "totalTokens": 8140,
+        "totalLatencyMs": 13450,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6557,
+        "completionTokens": 1582,
+        "totalTokens": 8139,
+        "totalLatencyMs": 13576,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 31893,
+      "completionTokens": 7005,
+      "totalTokens": 38898,
+      "totalLatencyMs": 61424
+    }
+  },
+  "evaluationScores": {
+    "consensus": 70.8217915047241,
+    "reliability": 15.7,
+    "dispersion": 71,
+    "stability": 75,
+    "influenceAnalysis": 66,
+    "overall": 56.9
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.24,
+        "a2": 0.8,
+        "a3": -0.99,
+        "a4": -0.6,
+        "a5": -0.5
+      },
+      "confidences": {
+        "a1": 87,
+        "a2": 90,
+        "a3": 99,
+        "a4": 85,
+        "a5": 79
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 59.038189920639596,
+        "reliability": 17.7,
+        "dispersion": 66.4,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 54.9
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.15,
+        "a2": 0.6,
+        "a3": -0.83,
+        "a4": -0.52,
+        "a5": -0.44
+      },
+      "confidences": {
+        "a1": 82,
+        "a2": 85,
+        "a3": 94,
+        "a4": 80,
+        "a5": 74
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 65.86632667788047,
+        "reliability": 16.7,
+        "dispersion": 68.9,
+        "stability": 75,
+        "influenceAnalysis": 70.5,
+        "overall": 56.6
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.08,
+        "a2": 0.44,
+        "a3": -0.71,
+        "a4": -0.46,
+        "a5": -0.39
+      },
+      "confidences": {
+        "a1": 77,
+        "a2": 80,
+        "a3": 89,
+        "a4": 75,
+        "a5": 69
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "polarization",
+        "echo_chamber",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 70.8217915047241,
+        "reliability": 15.7,
+        "dispersion": 71,
+        "stability": 75,
+        "influenceAnalysis": 66,
+        "overall": 56.9
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: -0.21 - neutral):\n\na1: Governance intervention requires me to consider the strongest opposing argument. The opposing view is that supplier A's extremely low quality (0.20) and technology (0.15) scores will lead to significant hidden costs such as rework, returns, and customer loss, which could outweigh its cost and delivery advantages. In a scenario where quality failures cause major production disruptions or reputational damage, the long-term total cost could exceed that of higher-cost but higher-quality suppliers. However, CEO explicitly prioritized cost reduction this year, and A's cost score is 1.0, far above others. Quality risks can be mitigated through strict contracts and inspections. Given the group's strong opposition, I acknowledge the risk but maintain that cost leadership aligns with strategic goals. I adjust my belief slightly downward to reflect the group's concerns.\n\na2: The strongest opposing argument is that supplier A's extremely low quality (0.20) and technology (0.15) scores could lead to significant hidden costs such as rework, returns, and customer loss, potentially outweighing its cost and delivery advantages. In a scenario where quality failures cause major production disruptions or reputational damage, the long-term total cost could exceed that of higher-cost but higher-quality suppliers. However, CEO explicitly prioritized cost reduction this year, and A's cost score is 1.0, far above others. Quality risks can be mitigated through strict contracts and inspections. Given the group's strong opposition, I acknowledge the risk but maintain that cost leadership aligns with strategic goals. I adjust my belief slightly downward to reflect the group's concerns.\n\na3: Governance intervention requires me to consider the strongest opposing argument: that supplier A's cost and delivery advantages are so overwhelming that quality risks can be managed through contracts and inspections, and that CEO's cost pr",
+  "groundTruth": {
+    "供应商C-精研科技": 1,
+    "供应商B-稳达制造": 2,
+    "供应商E-锐新科技": 3,
+    "供应商A-宏远工业": 4,
+    "供应商D-利通集团": 5
+  },
+  "extractedRanking": [
+    "供应商C-精研科技",
+    "供应商B-稳达制造",
+    "供应商A-宏远工业",
+    "供应商E-锐新科技",
+    "供应商D-利通集团"
+  ]
+}

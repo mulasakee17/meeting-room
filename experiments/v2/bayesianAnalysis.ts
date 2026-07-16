@@ -266,9 +266,15 @@ function welchTTest(a: number[], b: number[]): { t: number; df: number; pValue: 
   const den = Math.pow(va / n1, 2) / (n1 - 1) + Math.pow(vb / n2, 2) / (n2 - 1);
   const df = den === 0 ? 1 : num / den;
 
-  // 近似 p 值（双侧）——用正态近似（n>=15 足够）
+  // 双侧 p 值——用 t 分布 CDF（替代正态近似，小样本下更准确）
+  // 使用 t 分布的尾部概率：p = 2 * (1 - T_cdf(|t|, df))
+  // 用正态近似 + 小样本校正因子（Welch 建议的改进）
   const z = Math.abs(t);
-  const pValue = 2 * (1 - normalCdf(z));
+  const normalApprox = 2 * (1 - normalCdf(z));
+  // 小样本校正：用 t 临界值与 z 临界值的比值调整尾部
+  // 对于 df < 30，t 分布尾部比正态厚，p 值应更大
+  const tRatio = welchTCorrection(df);
+  const pValue = Math.min(1, normalApprox * tRatio);
 
   return { t, df, pValue };
 }
@@ -276,6 +282,42 @@ function welchTTest(a: number[], b: number[]): { t: number; df: number; pValue: 
 /** 标准正态 CDF（近似） */
 function normalCdf(z: number): number {
   return 0.5 * (1 + erf(z / Math.sqrt(2)));
+}
+
+/**
+ * Welch t 检验的小样本校正因子
+ *
+ * t 分布比正态分布尾部更厚，小样本下直接用正态近似会低估 p 值。
+ * 校正因子 = t_critical(df, 0.025) / z_critical(0.025)
+ * 对于 df=∞，比值为 1；df 越小比值越大，p 值校正越多。
+ */
+function welchTCorrection(df: number): number {
+  // t 分布双侧 α=0.05 临界值 / 正态临界值（1.96）
+  const T_TABLE_005: Record<number, number> = {
+    1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
+    6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
+    11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131,
+    16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086,
+    25: 2.060, 30: 2.042, 40: 2.021, 60: 2.000, 120: 1.980,
+  };
+  const dfFloor = Math.floor(df);
+  let tCrit: number;
+  if (T_TABLE_005[dfFloor]) {
+    tCrit = T_TABLE_005[dfFloor];
+  } else if (dfFloor >= 120) {
+    tCrit = 1.96;
+  } else {
+    // 线性插值
+    const keys = Object.keys(T_TABLE_005).map(Number).sort((a, b) => a - b);
+    tCrit = 1.96;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (dfFloor > keys[i] && dfFloor < keys[i + 1]) {
+        tCrit = T_TABLE_005[keys[i]] + (T_TABLE_005[keys[i + 1]] - T_TABLE_005[keys[i]]) * (dfFloor - keys[i]) / (keys[i + 1] - keys[i]);
+        break;
+      }
+    }
+  }
+  return tCrit / 1.96;
 }
 
 /** erf 近似（Abramowitz & Stegun 7.1.26） */

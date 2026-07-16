@@ -1,0 +1,310 @@
+{
+  "runId": "crisis_full_22",
+  "ablation": "full",
+  "runIndex": 22,
+  "timestamp": "2026-07-14T13:21:52.297Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "tauTrajectory": [
+    0.4,
+    0.6,
+    0.2
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.9999999999999999,
+  "opinionDiversity": 6.206335383118183e-17,
+  "totalInterventions": 3,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.63,
+      "beliefAfter": 0.55,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.57,
+      "beliefAfter": 0.55,
+      "effective": false
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": 0.59,
+      "beliefAfter": 0.55,
+      "effective": false
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.63,
+      "beliefAfter": 0.55,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": -0.54,
+      "beliefAfter": -0.39,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.2,
+      "beliefAfter": -0.39,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.55,
+      "beliefAfter": 0.47,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.55,
+      "beliefAfter": 0.47,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": 0.55,
+      "beliefAfter": 0.47,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": -0.39,
+      "beliefAfter": 0.47,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.39,
+      "beliefAfter": 0.47,
+      "effective": true
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 1,
+    "force_reflection": 2
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 6103,
+        "completionTokens": 1410,
+        "totalTokens": 7513,
+        "totalLatencyMs": 15038,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6396,
+        "completionTokens": 1272,
+        "totalTokens": 7668,
+        "totalLatencyMs": 13361,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6725,
+        "completionTokens": 1463,
+        "totalTokens": 8188,
+        "totalLatencyMs": 14141,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 6980,
+        "completionTokens": 1517,
+        "totalTokens": 8497,
+        "totalLatencyMs": 13672,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6944,
+        "completionTokens": 1521,
+        "totalTokens": 8465,
+        "totalLatencyMs": 14369,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 33148,
+      "completionTokens": 7183,
+      "totalTokens": 40331,
+      "totalLatencyMs": 70581
+    }
+  },
+  "evaluationScores": {
+    "consensus": 91,
+    "reliability": 14,
+    "dispersion": 82.5,
+    "stability": 75,
+    "influenceAnalysis": 63,
+    "overall": 62.3
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.63,
+        "a2": 0.57,
+        "a3": -0.54,
+        "a4": -0.2,
+        "a5": 0.59
+      },
+      "confidences": {
+        "a1": 79,
+        "a2": 77,
+        "a3": 88,
+        "a4": 85,
+        "a5": 78
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a2",
+            "a5",
+            "a1",
+            "a3",
+            "a4"
+          ]
+        }
+      ],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 67.17212970295932,
+        "reliability": 16.4,
+        "dispersion": 70.6,
+        "stability": 75,
+        "influenceAnalysis": 75,
+        "overall": 57.9
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.55,
+        "a2": 0.55,
+        "a3": -0.39,
+        "a4": -0.39,
+        "a5": 0.55
+      },
+      "confidences": {
+        "a1": 74,
+        "a2": 74,
+        "a3": 83,
+        "a4": 83,
+        "a5": 74
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a5",
+            "a3",
+            "a4"
+          ]
+        }
+      ],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 68.34329506276441,
+        "reliability": 15.6,
+        "dispersion": 71.1,
+        "stability": 75,
+        "influenceAnalysis": 73.5,
+        "overall": 57.8
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.47,
+        "a2": 0.47,
+        "a3": 0.47,
+        "a4": 0.47,
+        "a5": 0.47
+      },
+      "confidences": {
+        "a1": 69,
+        "a2": 69,
+        "a3": 69,
+        "a4": 69,
+        "a5": 69
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.2,
+      "decisionQuality": 60,
+      "evalScores": {
+        "consensus": 91,
+        "reliability": 14,
+        "dispersion": 82.5,
+        "stability": 75,
+        "influenceAnalysis": 63,
+        "overall": 62.3
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.47 - positive):\n\na1: Governance intervention requires me to consider the strongest opposing argument. The opposing view (from a3 and a4) is that speed alone is insufficient; effectiveness and risk are critical. In a scenario where the pathogen is highly lethal and lockdown causes severe collateral damage (e.g., medical system collapse, economic devastation), a slower but more precise and lower-risk response like C could save more lives overall. However, the mayor explicitly prioritized speed, and every hour delay adds 50 infections. With 127 cases already, rapid containment is paramount. A's 2-hour start and 100% coverage minimize new cases, and its 21-day sustainability supports full containment. While risks exist, they can be mitigated with strict management. Thus, I maintain A first, but adjust rankings based on other dimensions: B second (good balance), E third (fast but limited coverage), C fourth (slow despite high effect), D last (slowest and high risk).\n\na2: I acknowledge the opposing argument that speed alone may be insufficient if the response is ineffective or causes severe collateral damage. In a scenario where the pathogen is highly lethal and lockdown leads to medical system collapse and economic devastation, a slower but more precise and lower-risk response like C could save more lives overall. However, the mayor explicitly prioritized speed, and every hour delay adds 50 infections. With 127 cases already, rapid containment is paramount. A's 2-hour start and 100% coverage minimize new cases, and its 21-day sustainability supports full containment. While risks exist, they can be mitigated with strict management. Thus, I maintain A first, but adjust rankings based on other dimensions: B second (good balance), E third (fast but limited coverage), C fourth (slow despite high effect), D last (slowest and high risk).\n\na3: The strongest opposing argument is that in a scenario where the pathogen is highly letha",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案A-全城封锁",
+    "方案B-分阶段响应",
+    "方案C-精准疏散",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

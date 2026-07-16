@@ -242,11 +242,13 @@ export class StateInferenceBridge implements GovernanceBridge {
         await ctx.injectPrompt(agentId, translated.prompt);
       }
     } else {
-      // 无回调时，仅记录日志
-      console.log(
-        `[StateInferenceBridge] Intervention: ${intervention.type} → ${targetIds.length} agents\n` +
-        `Prompt: ${translated.prompt.substring(0, 100)}...`
+      // 无 injectPrompt 回调时，干预无法实际应用到 agent——返回 false 而非静默成功
+      console.warn(
+        `[StateInferenceBridge] Intervention ${intervention.type} translated but NOT applied: ` +
+        `no injectPrompt callback provided. Intervention is lost.`
       );
+      this.stats.interventionsFailed++;
+      return false;
     }
 
     this.stats.interventionsTranslated++;

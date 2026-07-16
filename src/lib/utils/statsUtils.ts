@@ -52,30 +52,9 @@ export function round(value: number, decimals: number = 2): number {
 
 // ============================================================================
 // 社会热力学指标 — Social Thermodynamics Metrics
-//
-// 将 agent 信念系统映射为统计物理量：
-//   - 信息熵 H: 信念分布的均匀度（Shannon 熵，归一化到 [0,1]）
-//   - 社会温度 T: 信念标准差 σ（粒子运动剧烈度的类比）
-//   - 自由能 F:  F = (1-R) + T·H （总无序度量，F 低=有序）
-//
-// F 的设计依据：结构性无序 (1-R) + 热性无序 (T·H)。
-// 在标准热力学中 F = U - TS，但社会系统中温度本身由系统状态决定，
-// 故采用正则化形式 F = U + TS 以保证 "F 低=有序" 的直觉成立。
-// 详见 MATHEMATICAL_FRAMEWORK.md §14。
 // ============================================================================
 
-/**
- * Shannon 信息熵（归一化到 [0,1]）
- *
- * 将值域 [min, max] 等分为 bins 个箱，统计每箱的频率，
- * 计算 H = -Σ pᵢ log₂ pᵢ，再除以最大熵 log₂(bins)。
- *
- * - H = 0: 所有值集中在同一箱（完全共识或双峰聚集）
- * - H = 1: 值均匀分布在所有箱（最大分散）
- *
- * 用于区分 Kuramoto R 无法区分的状态：
- *   均匀分歧 (R低, H高) vs 双峰极化 (R低, H低)
- */
+/** Shannon 信息熵（归一化到 [0,1]） */
 export function shannonEntropy(
   values: number[],
   bins: number = 5,
@@ -109,26 +88,32 @@ export function shannonEntropy(
 }
 
 /**
- * 社会自由能 F = (1-R) + T·H
+ * 温度 T 的显式归一化。
  *
- * @param orderParam R — Kuramoto 序参量 ∈ [0,1]（0=完全无序，1=完全同步）
- * @param temperature T — 社会温度（信念标准差 σ）∈ [0, ∞)
- * @param entropy    H — 信息熵 ∈ [0,1]
- * @returns F ∈ [0, ∞)，F 低=有序，F 高=无序
+ * 对 beliefs ∈ [min, max]，总体标准差的理论上界为 (max-min)/2
+ * （双峰分布在端点等概率时取得）。除以此上界将 T 归一化到 [0,1]，
+ * 与 R、H 量纲一致。
  *
- * 四种状态的区分：
- *   真共识:     R≈1, T≈0, H≈0 → F≈0（最低，最有序）
- *   中度共识:   R≈0.9, T≈0.14, H≈0.5 → F≈0.17
- *   双峰极化:   R≈0, T≈0.8, H≈0.5 → F≈1.4
- *   均匀分歧:   R≈0, T≈0.6, H≈1.0 → F≈1.6（最高，最无序）
+ * 注：当前 beliefs ∈ [-1,1] 时上界 = 1.0，故 raw std 本就在 [0,1]，
+ * 此函数主要是把"隐式归一化"显式化，并防御未来 belief 范围扩展。
  */
+export function normalizeTemperature(
+  std: number,
+  beliefRange: [number, number] = [-1, 1]
+): number {
+  const maxStd = (beliefRange[1] - beliefRange[0]) / 2;
+  if (maxStd <= 0) return 0;
+  return Math.min(1, Math.max(0, std / maxStd));
+}
+
+/** 社会自由能 F = (1-R) + T·H */
 export function socialFreeEnergy(
   orderParam: number,
   temperature: number,
   entropy: number
 ): number {
-  const U = 1 - orderParam;       // 结构性无序
-  const TS = temperature * entropy; // 热性无序
+  const U = 1 - orderParam;
+  const TS = temperature * entropy;
   return U + TS;
 }
 

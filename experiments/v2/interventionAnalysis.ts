@@ -174,6 +174,31 @@ function loadData(dataDir: string, prefix: string): ExperimentResult[] {
 // 构建干预级别记录
 // ============================================================================
 
+/**
+ * 从实验数据自动推断 agent ID 列表（替代硬编码 ["a1".."a5"]）
+ * 优先从 interventionEffects.targetAgentId 和 tokenUsage.byAgent 提取
+ */
+function extractAgentIds(results: ExperimentResult[]): string[] {
+  const idSet = new Set<string>();
+  for (const r of results) {
+    // 从干预效果记录提取
+    if (r.interventionEffects) {
+      for (const eff of r.interventionEffects) {
+        if (eff.targetAgentId) idSet.add(eff.targetAgentId);
+      }
+    }
+    // 从 tokenUsage.byAgent 提取
+    if (r.tokenUsage?.byAgent) {
+      for (const id of Object.keys(r.tokenUsage.byAgent)) {
+        idSet.add(id);
+      }
+    }
+  }
+  // 如果没提取到，回退到默认 5 agent
+  const ids = Array.from(idSet).sort();
+  return ids.length > 0 ? ids : ["a1", "a2", "a3", "a4", "a5"];
+}
+
 function buildInterventionRecords(results: ExperimentResult[], allAgentIds: string[]): InterventionRecord[] {
   const records: InterventionRecord[] = [];
 
@@ -227,7 +252,8 @@ function buildInterventionRecords(results: ExperimentResult[], allAgentIds: stri
 // ============================================================================
 
 function analyze(results: ExperimentResult[], noneResults: ExperimentResult[]) {
-  const allAgentIds = ["a1", "a2", "a3", "a4", "a5"];
+  // 从实验数据自动推断 agent ID 列表（替代硬编码）
+  const allAgentIds = extractAgentIds(results);
   const records = buildInterventionRecords(results, allAgentIds);
 
   const effective = records.filter(r => r.effective);

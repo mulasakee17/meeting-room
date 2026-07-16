@@ -6,7 +6,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
-[![Tests](https://img.shields.io/badge/tests-209%20passed-green)](./test/)
+[![Tests](https://img.shields.io/badge/tests-229%20passed-green)](./test/)
 [![Framework-Agnostic](https://img.shields.io/badge/framework-agnostic-purple)]()
 [![Embeddable](https://img.shields.io/badge/embeddable-SDK-orange)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
@@ -32,7 +32,7 @@ SwarmAlpha targets the cognitive layer. It does not compete with Microsoft's too
 
 ## Core Finding
 
-**The governance engine has independent value beyond "improving decision accuracy."** A 2×2 factorial design (Task interdependence × Round budget, n=15/cell) shows that no positive governance effect on final decision quality is statistically significant. But the engine's value is not solely in improving outcomes — it is in providing **observability, auditability, and targeted intervention** for multi-agent decision processes. These three capabilities are independently valuable regardless of whether they change the final answer.
+**After fixing 4 cognitive defects (D1–D4) that broke the governance loop, governance is now statistically confirmed effective.** Crisis task (n=24/cell, expanded): full vs none d=0.92, p=0.005, power=88%, τ +51%. Cross-task validation (Supplier n=30): directionally consistent (d=0.47, p=0.089, power=43%). The governance engine also provides **observability, auditability, and targeted intervention** — three capabilities independently valuable regardless of whether they change the final answer.
 
 ### Three Independent Value Pillars
 
@@ -161,39 +161,39 @@ When 5 AI agents discuss a problem, they fall into the same traps as human group
 
 ---
 
-## Cross-Task Validation (2026-07-14)
+## Cross-Task Validation (2026-07-14, Expanded)
 
-To verify that the core findings are **not Crisis-task-specific**, a second task was added: **Supplier Selection** (5 suppliers × 5 hidden dimensions). This task shares the same structure (5 options × 5 hidden dimensions) as Crisis but uses a completely different domain, providing a perfect control.
+To verify that the core findings are **not Crisis-task-specific**, a second task was added: **Supplier Selection** (5 suppliers × 5 hidden dimensions). This task shares the same structure (5 options × 5 hidden dimensions) as Crisis but uses a completely different domain, providing a perfect control. Both tasks have been expanded (Crisis n=24, Supplier n=30).
 
 ### Dual-Task Comparison
 
-| Metric | Crisis (Public Health) | Supplier (Procurement) | Cross-Task Consistency |
+| Metric | Crisis (n=24/cell) | Supplier (n=30/cell) | Cross-Task Consistency |
 |--------|------------------------|------------------------|------------------------|
-| **none τ** | 0.387 ± 0.160 | 0.680 ± 0.211 | — |
-| **full τ** | 0.573 ± 0.271 | 0.787 ± 0.177 | — |
-| **shuffle τ** | 0.760 ± 0.241 | 0.671 ± 0.202 | ⚠️ |
-| **Governance Δτ** | **+0.186** | **+0.107** | ✅ Direction consistent |
-| **Governance d** | 0.84 | 0.55 | ✅ Direction consistent |
-| **Consensus-Quality r** | 0.009 | -0.208 | ✅ Both ≈ 0 |
+| **none τ** | 0.408 ± 0.182 | 0.680 ± 0.186 | — |
+| **full τ** | 0.617 ± 0.263 | 0.767 ± 0.183 | — |
+| **shuffle τ** | 0.717 ± 0.243 | 0.697 ± 0.204 | ⚠️ Task-dependent |
+| **Governance Δτ** | **+0.209** | **+0.087** | ✅ Direction consistent |
+| **Governance d** | 0.92 (p=0.005) | 0.47 (p=0.089) | ✅ Direction consistent |
+| **Power** | 88% ✅ | 43% ⚠️ | — |
+| **Consensus-Quality r** | -0.137 | -0.107 | ✅ Both ≈ 0 |
 
 ### Findings Validated Across Tasks
 
-**1. Governance effectiveness is direction-consistent across tasks**: Both tasks show full > none, confirming that governance effects are not Crisis-task-specific.
+**1. Governance is statistically confirmed effective (Crisis) and direction-consistent (Supplier)**: Crisis reaches statistical confirmation (d=0.92, p=0.005, power=88%). Supplier is directionally consistent (d=0.47) but underpowered (43%, needs n=72 for 80% power).
 
-**2. "False consensus" is a cross-task universal phenomenon**: Both tasks show consensus-quality correlation near zero (r=0.01 vs r=-0.21), proving that "high consensus ≠ high quality" is a general feature of LLM multi-agent systems.
+**2. "False consensus" is a cross-task universal phenomenon**: Both tasks show consensus-quality correlation near zero (r=-0.14 vs r=-0.11), proving that "high consensus ≠ high quality" is a general feature of LLM multi-agent systems.
 
-**3. Boundary conditions for shuffle controls** (unexpected discovery): When the task is already relatively easy (Supplier none τ=0.68), shuffling information introduces noise (shuffle τ=0.67 < none τ=0.68). This shows that the shuffle control's effectiveness depends on task difficulty — significant for hard tasks, inapplicable for easy ones.
+**3. Boundary conditions for shuffle controls** (unexpected discovery): Crisis shuffle d=1.44 (p<0.001) — effective on hard tasks (none τ=0.41). Supplier shuffle d=0.09 (p=0.78) — ineffective on easier tasks (none τ=0.68) due to ceiling effect (baseline already near full level).
 
-**4. Intervention-type differences are direction-consistent**: Both tasks show "reduce authority weight + force reflection" as effective, "introduce diversity" as nearly ineffective.
+**4. Mechanism ablation is direction-consistent**: reduce_weight (Crisis d=1.51, p=0.0001) and force_reflection (Crisis d=0.73, p=0.001) drive the effect; both d>0 in Supplier.
 
 ### Academic Significance
 
-Across 2 independent tasks, 89 experiments, 3 conditions, the core findings are **direction-consistent**:
-- ✅ Governance works (directionally, d>0)
+Across 2 independent tasks, **161 experiments**, 3 conditions, the core findings are **direction-consistent**:
+- ✅ Governance works (Crisis statistically confirmed d=0.92 p=0.005, Supplier directionally consistent d=0.47)
 - ✅ False consensus exists (r≈0 replicated across tasks)
-- ✅ Reflection > diversity (intervention-type differences consistent)
-
-These findings have been elevated from "single-task phenomenon" to "general pattern of LLM multi-agent systems".
+- ✅ Reflection + weight reduction > diversity (mechanism ablation consistent)
+- ⚠️ Shuffle control has boundary conditions (task-difficulty dependent)
 
 ---
 
@@ -240,7 +240,7 @@ npm run analyze             # t-distribution CI + permutation test + statistical
 npm run sensitivity         # 5 params × 5 values sweep
 
 # Run tests (no API key needed)
-npm test                    # 209 tests
+npm test                    # 229 tests
 ```
 
 **Causal effect analysis** (no API key needed, uses existing experiment data):
@@ -281,7 +281,7 @@ console.log(`Decision quality: ${evaluation.overallScore}/100`);
 | Anthropic | claude-3-haiku | `ANTHROPIC_API_KEY` in `.env.local` |
 | Local (Ollama) | llama3, mistral | `LOCAL_LLM_URL=http://localhost:11434` |
 
-Switch provider in `experiments/v2/run.ts` line 112: change `provider: "deepseek"` to `"openai"` or `"anthropic"`.
+Switch provider in `experiments/v2/run.ts` line 140: change `provider: "deepseek"` to `"openai"` or `"anthropic"`.
 
 ---
 
@@ -308,6 +308,7 @@ Thresholds and intervention strength adapt to task context:
 
 - **Adaptive Thresholds** 🔧 *implemented, not yet experimentally validated*: Run a calibration discussion → measure convergence speed, base redundancy, influence concentration → auto-scale detection thresholds per task
 - **Adaptive Dosage** 🔧 *implemented, not yet experimentally validated*: Intervention strength scales with deviation severity, information coverage, and historical intervention effectiveness
+- **Free-Energy-Driven Intervention Ranking** ✅ *implemented + backtested + hypothesis falsified*: When multiple detectors trigger simultaneously (91.7% of Crisis experiments), interventions are ranked by social free energy F = (1-R) + T·H decomposition. Backtesting (97 force_reflection events, p=0.041) **falsified** the original `force_reflection↔structural` mapping — force_reflection is a *noise-reduction* intervention (effective in thermal-dominant states, harmful in polarized states), now mapped to `thermal·(1-structural)`. `reduce_weight↔thermal` directionally supported but not significant (p=0.100). See [THERMODYNAMICS_INTEGRATION.md §5.4](./THERMODYNAMICS_INTEGRATION.md)
 - **Cross-Examination Engine** ✅ *implemented + unit-tested*: When agents disagree, automatically split into PRO/CON camps, run adversarial debate, synthesize verdict with minority report
 
 > **Honest scope note**: The 165 experiments on this page use fixed thresholds and fixed dosage. Adaptive threshold/dosage code exists but has not been experimentally compared against fixed parameters. The 5-dimension evaluation weights (0.20/0.25/0.20/0.17/0.18) are heuristic, not empirically calibrated — an equal-weight robustness check is planned.
@@ -368,7 +369,7 @@ Shared utility modules (`src/lib/utils/`) eliminate duplicated code across the c
 
 ## Experimental Evidence
 
-**165 controlled experiments** (M&A: 80, Invest 5-round: 55, Invest 3-round: 30; 2 tasks × up to 9 ablation modes × n=5-15, 2×2 factorial design on Invest with n=15 per cell). Primary metric: Kendall's τ + **within-group τ trajectory (Δτ)** — tracking the *same* agents across rounds.
+**165 controlled experiments** (M&A: 80, Invest 5-round: 55, Invest 3-round: 30; 2 tasks × up to 9 ablation modes × n=5-15, 2×2 factorial design on Invest with n=15 per cell). Primary metric: Kendall's τ + **within-group τ trajectory (Δτ)** — tracking the *same* agents across rounds. Additionally, **161 expanded experiments** (Crisis 72 + Supplier 89) were run with the governance loop closed (post D1–D4 fix).
 
 > **Ablation design update (H2)**: `ablationModes` has been expanded from `["none","full"]` to 7 complete modes (`none / full / shuffle / full_diversity / full_weight / full_reflection / full_continue`). The complete 7-mode experiment matrix (105 runs, 7 × 15) is pending lab execution; the 165-experiment numbers below were generated before this expansion and are preserved as-is for provenance.
 
@@ -483,7 +484,7 @@ SwarmAlpha provides three layers of value:
 
 2. **Decision Audit (independent of intervention)** — Full traceable decision chains answer "why did the agent team decide this?" Post-hoc accountability is valuable for compliance (EU AI Act), debugging, and trust — regardless of whether the decision was correct.
 
-3. **Targeted Intervention (with clear boundary conditions)** — Governance does NOT unconditionally improve decision quality. Our fractional factorial design shows: directional improvement only on interdependent tasks with limited rounds (d=+0.65, p=0.152, NOT sig); completely null with sufficient rounds (p=1.0); directionally harmful when forcing reflection on tasks agents already handle well (p=0.048 uncorrected, does NOT survive Bonferroni correction). The implication: **governance is a tool for specific conditions, not a universal upgrade**.
+3. **Targeted Intervention (now statistically confirmed)** — After fixing D1–D4 governance loop defects, Crisis task (n=24/cell) shows full vs none d=0.92, p=0.005, power=88%. Cross-task validation (Supplier n=30) is directionally consistent (d=0.47, p=0.089). Mechanism ablation reveals reduce_weight (d=1.51, p=0.0001) and force_reflection (d=0.73, p=0.001) as core drivers. **Governance is now confirmed effective under the closed loop.**
 
 **The engine has been self-verified for framework independence** — all 4 bias detectors, 4 intervention strategies, and the StateInferenceBridge work without the built-in DiscussionEngine, making them genuinely embeddable. Integrating into any framework takes 2-4 hours for a working prototype.
 
@@ -499,11 +500,11 @@ SwarmAlpha's discussion topology layer enables the same governance engine to ope
 |-------|----------|----------|------------|
 | **5 agents** | `FlatTopology` | Round-table discussion — all agents see all opinions | ✅ 165 experiments |
 | **40 agents** | `GroupedTopology(8)` | 5 groups × 8 agents, reshuffled each round — cross-pollination | 🔧 Implemented, not yet tested |
-| **500 agents** | `CommitteeTopology` | Groups → representatives → plenary — federated governance | 🔧 Implemented, not yet tested |
+| **500 agents** | `CommitteeTopology` | Groups → representatives → plenary — federated governance | 🔧 Placeholder (phase 1 only, phase 2-3 stubbed) |
 
 The governance engine itself is **unchanged at every scale**. Only the discussion structure changes. Bias detectors and intervention strategies operate on the global belief state — they don't care whether beliefs were formed in flat or grouped discussions.
 
-> **Honest scope note**: All 165 experiments use `FlatTopology` (5 agents). `GroupedTopology` and `CommitteeTopology` are implemented and unit-tested but have not been experimentally validated.
+> **Honest scope note**: All 165 experiments use `FlatTopology` (5 agents). `GroupedTopology` is implemented and unit-tested but not experimentally validated. `CommitteeTopology` is a placeholder (phase 1 only, phase 2-3 stubbed).
 
 ```typescript
 // Scale to 40 agents with one config line:
@@ -543,7 +544,7 @@ src/
 │   ├── page.tsx                  # Demo/Live comparison view
 │   └── api/v3/                   # API endpoints
 experiments/                      # Hidden Profile experiment framework
-└── test/                         # 209 automated tests
+└── test/                         # 229 automated tests
 ```
 
 ---
@@ -551,7 +552,7 @@ experiments/                      # Hidden Profile experiment framework
 ## Running Tests
 
 ```bash
-npm test              # 209 tests across 13 files
+npm test              # 229 tests across 16 files
 npm run test:watch    # watch mode
 ```
 
@@ -561,8 +562,7 @@ npm run test:watch    # watch mode
 
 | Document | Content |
 |----------|---------|
-| [ONEPAGER.md](ONEPAGER.md) | One-page executive summary |
-| [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) | 600-word Chinese project summary |
+| [ONEPAGER.md](ONEPAGER.md) | One-page executive summary (project overview) |
 | [ROADMAP.md](ROADMAP.md) | Development roadmap & academic outreach plan |
 | [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) | Deep technical architecture |
 | [API_CONTRACT.md](API_CONTRACT.md) | REST API + SDK API specification |
@@ -578,6 +578,57 @@ npm run test:watch    # watch mode
 ## Tech Stack
 
 TypeScript · Next.js 14 · React 18 · Tailwind CSS · Vitest · DeepSeek API
+
+---
+
+## Async Adaptive Discussion Engine (2026-07-16)
+
+The async discussion engine (`AsyncDiscussionEngine`) extends the synchronous `DiscussionEngine` with two core innovations:
+
+### Content-Driven Speaking (v2)
+
+Instead of random probability-based speaking (v1, "pseudo-async"), agents compute a **willingness score** based on internal state:
+
+| Factor | Weight | Rationale |
+|--------|--------|-----------|
+| Info exposure (×0.6) | 0.6 | Unexposed unique info → duty to share |
+| Belief shift (+0.4/+0.2) | 0.4/0.2 | Belief changed after hearing → new perspective |
+| Consensus deviation (+0.4/+0.2) | 0.4/0.2 | Disagreement → want to rebut |
+| Dependency triggered (+0.3) | 0.3 | Required info appeared → can speak now |
+| Recently spoke (−0.5) | -0.5 | Avoid domination |
+
+Scores are normalized via `tanh` to [0,1]. Thresholds: ≥0.82 must speak, [0.40, 0.82) weighted random, <0.40 silent.
+
+### Thermodynamic Adaptive Termination
+
+Discussion termination is decided by social thermodynamics state (R, T, H) instead of fixed rounds:
+
+- **Strong crystallization** (H<0.10, T<0.10): Immediate termination — irreversible convergence
+- **Crystallization** (R>0.85, T<0.20, H<0.35): Terminate after 2 consecutive occurrences
+- **Hard cap** (40 utterances): Forced termination if no convergence
+- **Quenched state** (R high + T sudden drop + H not low): Inject diversity intervention
+- **Chaotic state** (R<0.40, T>0.50, H>0.60): Inject structure guidance
+
+### Passive Listening Belief Update
+
+Non-speaking agents update beliefs via DeGroot-style weighted averaging:
+```
+delta = learning_rate × Σ(w_ij × (belief_j - belief_i)) / Σ(w_ij)
+```
+Confidence also updates: agreement → slight increase, disagreement → slight decrease (LR=0.03).
+
+### Experiment Design (A/B/C/D)
+
+| Group | Speaking | Termination | Hypothesis |
+|-------|----------|-------------|------------|
+| A | Synchronous | Fixed 5 rounds | Baseline |
+| B | Async | Fixed 5 rounds | Does async affect quality? |
+| C | Async | Thermodynamic | H_thermo: adaptive > fixed |
+| D | Async | Random (matched) | H_diag: thermodynamic > random |
+
+C/D groups run both v1 (random_prob) and v2 (content_driven) speaking modes. D group samples termination points from C group's actual distribution (matched by speakMode).
+
+See [THERMODYNAMICS_INTEGRATION.md](THERMODYNAMICS_INTEGRATION.md) §10 for full details and [LIMITATIONS.md](LIMITATIONS.md) §22 for known limitations.
 
 ---
 

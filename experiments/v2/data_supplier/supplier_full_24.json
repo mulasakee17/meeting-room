@@ -1,0 +1,306 @@
+{
+  "runId": "supplier_full_24",
+  "ablation": "full",
+  "runIndex": 24,
+  "timestamp": "2026-07-14T12:29:24.975Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "tauTrajectory": [
+    0.8,
+    0.6,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.5264179057438931,
+  "opinionDiversity": 0.2367910471280534,
+  "totalInterventions": 4,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": -0.54,
+      "beliefAfter": -0.36,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.59,
+      "beliefAfter": 0.55,
+      "effective": false
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": 0.59,
+      "beliefAfter": 0.55,
+      "effective": false
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.69,
+      "beliefAfter": 0.1,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": -0.54,
+      "beliefAfter": -0.36,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.1,
+      "beliefAfter": 0.1,
+      "effective": false
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": 0.54,
+      "beliefAfter": 0.49,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.55,
+      "beliefAfter": 0.55,
+      "effective": false
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": 0.55,
+      "beliefAfter": 0.55,
+      "effective": false
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": -0.36,
+      "beliefAfter": 0.1,
+      "effective": true
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 2,
+    "force_reflection": 2
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 6283,
+        "completionTokens": 1216,
+        "totalTokens": 7499,
+        "totalLatencyMs": 16376,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6401,
+        "completionTokens": 1502,
+        "totalTokens": 7903,
+        "totalLatencyMs": 12558,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6811,
+        "completionTokens": 1555,
+        "totalTokens": 8366,
+        "totalLatencyMs": 14320,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 6831,
+        "completionTokens": 1549,
+        "totalTokens": 8380,
+        "totalLatencyMs": 14067,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6628,
+        "completionTokens": 1410,
+        "totalTokens": 8038,
+        "totalLatencyMs": 12189,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 32954,
+      "completionTokens": 7232,
+      "totalTokens": 40186,
+      "totalLatencyMs": 69510
+    }
+  },
+  "evaluationScores": {
+    "consensus": 79.12206898505625,
+    "reliability": 15.3,
+    "dispersion": 76.9,
+    "stability": 75,
+    "influenceAnalysis": 72,
+    "overall": 60.7
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": -0.54,
+        "a2": 0.69,
+        "a3": 0.59,
+        "a4": 0.59,
+        "a5": 0.54
+      },
+      "confidences": {
+        "a1": 88,
+        "a2": 79,
+        "a3": 78,
+        "a4": 87,
+        "a5": 76
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a4",
+            "a2",
+            "a1"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 69.13452100864863,
+        "reliability": 16.4,
+        "dispersion": 70.8,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 57.4
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": -0.36,
+        "a2": 0.1,
+        "a3": 0.55,
+        "a4": 0.55,
+        "a5": 0.54
+      },
+      "confidences": {
+        "a1": 83,
+        "a2": 75,
+        "a3": 73,
+        "a4": 82,
+        "a5": 76
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a5",
+            "a3",
+            "a4",
+            "a1"
+          ]
+        }
+      ],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 73.18617959976532,
+        "reliability": 15.7,
+        "dispersion": 73.3,
+        "stability": 75,
+        "influenceAnalysis": 72,
+        "overall": 58.9
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.1,
+        "a2": 0.1,
+        "a3": 0.55,
+        "a4": 0.55,
+        "a5": 0.49
+      },
+      "confidences": {
+        "a1": 78,
+        "a2": 78,
+        "a3": 75,
+        "a4": 77,
+        "a5": 71
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 79.12206898505625,
+        "reliability": 15.3,
+        "dispersion": 76.9,
+        "stability": 75,
+        "influenceAnalysis": 72,
+        "overall": 60.7
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.36 - positive):\n\na1: 尽管CEO强调成本优先，但质量工程师和技术总监的数据显示供应商A的质量和技术评分极低（0.20和0.15），可能导致严重的质量问题和长期竞争力下降。该零部件占成本35%且直接影响产品质量，低质量带来的返工、退货和品牌损失可能抵消成本优势。供应商C和E在质量和技术上顶级（0.95和0.90），虽然成本高，但长期来看更符合企业利益。供应商B在各方面表现均衡（质量0.65，技术0.55，交付0.85，成本中等，财务0.80），是风险最低的折中方案。因此，我调整排序：B第一，C第二，E第三，A第四，D第五。\n\na2: 尽管CEO强调成本优先，但质量和技术数据揭示供应商A存在致命缺陷。质量工程师和技术总监的数据显示A的质量和技术评分极低（0.20和0.15），可能导致严重的质量问题和长期竞争力下降。该零部件占成本35%且直接影响产品质量，低质量带来的返工、退货和品牌损失可能抵消成本优势。供应商C和E在质量和技术上顶级（0.95和0.90），虽然成本高，但长期来看更符合企业利益。供应商B在各方面表现均衡（质量0.65，技术0.55，交付0.85，成本中等，财务0.80），是风险最低的折中方案。因此，我坚持上一轮的排序：B第一，C第二，E第三，A第四，D第五。\n\na3: 尽管CEO强调成本优先，但作为质量工程师，我掌握的质量数据与a1和a5的成本导向观点存在根本冲突。供应商A和D的质量评分极低（0.20），而供应商C和E质量顶级（0.95和0.90）。该零部件占成本35%且直接影响产品质量，低质量可能导致返工、退货和品牌损失，长期成本更高。a2和a4也支持质量和技术的重要性，但a2的排序（B第一）过于保守，忽视了C和E的长期价值。我理解成本压力，但极端成本导向可能牺牲企业生命线。供应商C和E虽然成本高，但质量和技术顶级，符合高端制造定位，长期竞争力强。供应商B是折中方案，但质量和技术不如C和E。我坚持将C排第一，E排第二，B排第三，A排第四，D排第五。反对a2的B第一，因为C和E的长期收益可能超过短期成本。\n\na4: 尽管CEO强调成本优先，但作为技术总监，我掌握的技术数据表明供应商A和D技术评分极低（0.15），无法支撑产品升级，长期风险巨大。质量工程师的数据也显示A和D质量差（0.20），可能导致返工和品牌损失，抵消成本优势。供应商C和E技术顶级（0.90和0.85），质量顶级（0.95和0.90），虽然成本高，但符合高端制造定位，长期竞争力强。供应商B技术中等（0.55），质量中等（0.65），交付良好（0.85），财务稳健（0.80），是风险最低的折中方案。a2和a3支持B第一或C第一，与我的判断一致。我反对a1和a5的极端成本导向，认为技术是核心竞争力，忽视技术将导致企业失去未来。因此，我坚持排序：C第一，E第二，B第三，A第四，D第五。\n\na5: 尽管质量和技术专家强烈反对供应商A，但CEO明确将成本作为首要指标，且A在成本、交付和财务上均最优。质量风险可通过合同约束和过程控制缓解，而C和E成本过高，不符合成本年战略。B虽均衡，但成本不如A。因此，我仍坚持A第一，但需承认质量风险。",
+  "groundTruth": {
+    "供应商C-精研科技": 1,
+    "供应商B-稳达制造": 2,
+    "供应商E-锐新科技": 3,
+    "供应商A-宏远工业": 4,
+    "供应商D-利通集团": 5
+  },
+  "extractedRanking": [
+    "供应商B-稳达制造",
+    "供应商C-精研科技",
+    "供应商A-宏远工业",
+    "供应商E-锐新科技",
+    "供应商D-利通集团"
+  ]
+}

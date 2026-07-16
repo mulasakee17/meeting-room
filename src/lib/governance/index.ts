@@ -19,6 +19,7 @@ import {
 import { ReduceWeightIntervention, IntroduceDiversityIntervention, ForceReflectionIntervention, ContinueDiscussionIntervention } from "./interventions";
 import { computeAdaptiveThresholds, computeCalibrationMetrics, type CalibrationMetrics } from "./adaptiveThresholds";
 import { computeAdaptiveDosage, type DosageContext } from "./adaptiveDosage";
+import { shannonEntropy, socialFreeEnergy, normalizeTemperature } from "../utils/statsUtils";
 import {
   GOVERNANCE_ECHO_CHAMBER_THRESHOLD,
   GOVERNANCE_AUTHORITY_BIAS_THRESHOLD,
@@ -523,6 +524,93 @@ export class GovernanceEngine {
     return Math.sqrt(values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length);
   }
 
+  /**
+   * Kuramoto 序参量 R ∈ [0,1]（与 EvaluationEngine 保持一致）
+   * θ = b × (π/2): belief ∈ [-1,1] → angle ∈ [-π/2, π/2]
+   * R = |Σ e^(iθ_j)| / N
+   */
+  private computeKuramotoOrder(beliefs: number[]): number {
+    if (beliefs.length === 0) return 0;
+    const angles = beliefs.map(b => b * Math.PI / 2);
+    let sumReal = 0, sumImag = 0;
+    for (const angle of angles) {
+      sumReal += Math.cos(angle);
+      sumImag += Math.sin(angle);
+    }
+    return Math.sqrt(sumReal * sumReal + sumImag * sumImag) / beliefs.length;
+  }
+
+  /**
+   * 社会热力学 F 分解驱动的干预优先级排序
+   *
+   * F = (1-R) + T·H，其中：
+   *   - 结构性无序 (1-R)：agent 信念方向不同步 → force_reflection 优先
+   *   - 热性无序 T·H：分散且高熵 → reduce_weight 优先
+   *   - R 高 H 低（虚假共识/过早收敛）→ introduce_diversity / continue_discussion 优先
+   *
+   * 当多个检测器同时触发时，按当前系统状态与干预类型的匹配度排序，
+   * 使最契合当前"物理状态"的干预排在前面。
+   */
+  private rankInterventionsByFreeEnergy(
+    interventions: Intervention[],
+    beliefs: number[]
+  ): Intervention[] {
+    if (interventions.length <= 1) return interventions;
+
+    const R = this.computeKuramotoOrder(beliefs);
+    const T = normalizeTemperature(this.computeStd(beliefs));
+    const H = shannonEntropy(beliefs);
+    const structural = 1 - R;       // 结构性无序
+    const thermal = T * H;          // 热性无序
+
+    /** 干预类型与当前系统状态的匹配度 */
+    const alignmentScore = (type: InterventionType): number => {
+      switch (type) {
+        case "force_reflection":
+          // 回测证伪原假设（force_reflection↔structural）：实测结构性主导时 Δτ=-0.033（有害），
+          // 热性主导时 Δτ=+0.115（有益），p=0.041, d=-0.49。
+          // 修正：force_reflection 是降噪干预（帮噪声中的 agent 理清思路），非对齐方向干预。
+          // 极化时强制反思会强化对立立场，故对极化（structural 高）应降权。
+          return thermal * (1 - structural); // 热性主导且非极化时优先
+        case "reduce_weight":
+          // 回测支持：热性主导时 Δτ=+0.182 vs 结构性主导 +0.067（方向一致）
+          return thermal;
+        case "introduce_diversity":
+          // 虚假共识（R 高但 H 低，有序但可能一起错）—— 未回测（echo chamber 难触发）
+          return R * (1 - H);
+        case "continue_discussion":
+          // 过早收敛（R 高 H 低，且 F 低）—— 已被实验证伪（0% 有效率，已默认禁用）
+          return R * (1 - H) * (1 - socialFreeEnergy(R, T, H));
+        default:
+          return 0;
+      }
+    };
+
+    return [...interventions].sort(
+      (a, b) => alignmentScore(b.type) - alignmentScore(a.type)
+    );
+  }
+
+  /**
+   * 固定排序：保持检测器触发顺序（push 顺序），不按系统状态重排。
+   *
+   * 用于 A/B 对照实验的 B 组：
+   *   A 组（sortingMode='fdecomposition'）：F 分解按当前系统"物理状态"排序干预
+   *   B 组（sortingMode='fixed'）：保持检测器触发顺序不变
+   *
+   * 触发顺序 = diagnoseAndIntervene 中 push 进数组的顺序：
+   *   1. reduce_weight（authority bias 检测）
+   *   2. introduce_diversity（echo chamber 检测）
+   *   3. force_reflection（polarization 检测）
+   *   4. continue_discussion（premature consensus 检测）
+   *
+   * 这代表"未引入 F 分解前"的现实基线——多检测器并发时按代码固定顺序应用干预。
+   */
+  private rankInterventionsByFixedOrder(interventions: Intervention[]): Intervention[] {
+    // 保持原序：检测器触发顺序即为应用顺序，不重排
+    return interventions;
+  }
+
   private computeContentSimilarity(messages: MessageInfo[]): number {
     if (messages.length < 2) return 0;
     const contents = messages.map(m => m.content.toLowerCase().split(/\s+/).filter(w => w.length > GOVERNANCE_SIMILARITY_MIN_WORD_LENGTH));
@@ -806,7 +894,18 @@ export class GovernanceEngine {
       });
     }
 
-    return { result, interventions };
+    // 干预优先级排序：根据 sortingMode 选择 F 分解排序或固定排序
+    // - 'fdecomposition'（默认）：社会热力学 F 分解按当前系统"物理状态"排序
+    // - 'fixed'：保持检测器触发顺序（A/B 对照实验 B 组）
+    const sortingMode = mergedConfig.sortingMode ?? "fdecomposition";
+    const rankedInterventions = sortingMode === "fixed"
+      ? this.rankInterventionsByFixedOrder(interventions)
+      : this.rankInterventionsByFreeEnergy(
+          interventions,
+          agentBeliefs.map(b => b.belief)
+        );
+
+    return { result, interventions: rankedInterventions };
   }
 
   /** 估算信息覆盖率——从消息中提取唯一关键词的比例 */

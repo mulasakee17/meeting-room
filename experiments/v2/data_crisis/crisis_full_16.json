@@ -1,0 +1,247 @@
+{
+  "runId": "crisis_full_16",
+  "ablation": "full",
+  "runIndex": 16,
+  "timestamp": "2026-07-14T13:13:38.934Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
+  "tauTrajectory": [
+    0.4,
+    1,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.9731671842700025,
+  "opinionDiversity": 0.013416407864998748,
+  "totalInterventions": 2,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.38,
+      "beliefAfter": 0.2,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.8,
+      "beliefAfter": 0.75,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.83,
+      "beliefAfter": 0.78,
+      "effective": false
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": 0.83,
+      "beliefAfter": 0.78,
+      "effective": false
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": 0.02,
+      "beliefAfter": 0.75,
+      "effective": true
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 1,
+    "force_reflection": 1
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 6152,
+        "completionTokens": 1492,
+        "totalTokens": 7644,
+        "totalLatencyMs": 21688,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6760,
+        "completionTokens": 1348,
+        "totalTokens": 8108,
+        "totalLatencyMs": 15500,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 7220,
+        "completionTokens": 1400,
+        "totalTokens": 8620,
+        "totalLatencyMs": 16534,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 7480,
+        "completionTokens": 1562,
+        "totalTokens": 9042,
+        "totalLatencyMs": 19292,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 7580,
+        "completionTokens": 1520,
+        "totalTokens": 9100,
+        "totalLatencyMs": 21993,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 35192,
+      "completionTokens": 7322,
+      "totalTokens": 42514,
+      "totalLatencyMs": 95007
+    }
+  },
+  "evaluationScores": {
+    "consensus": 84.75467092650038,
+    "reliability": 17.4,
+    "dispersion": 81.1,
+    "stability": 75,
+    "influenceAnalysis": 76.5,
+    "overall": 64
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.38,
+        "a2": 0.83,
+        "a3": 0.8,
+        "a4": 0.83,
+        "a5": 0.02
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 91,
+        "a3": 72,
+        "a4": 82,
+        "a5": 83
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a2",
+            "a4",
+            "a5"
+          ]
+        }
+      ],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 74.77203434345648,
+        "reliability": 16.4,
+        "dispersion": 73,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 59
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.2,
+        "a2": 0.78,
+        "a3": 0.75,
+        "a4": 0.78,
+        "a5": 0.75
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 86,
+        "a3": 67,
+        "a4": 77,
+        "a5": 67
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 78.64045412031294,
+        "reliability": 15,
+        "dispersion": 74.4,
+        "stability": 75,
+        "influenceAnalysis": 82.5,
+        "overall": 62
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.78,
+        "a2": 0.75,
+        "a3": 0.75,
+        "a4": 0.75,
+        "a5": 0.75
+      },
+      "confidences": {
+        "a1": 91,
+        "a2": 85,
+        "a3": 85,
+        "a4": 85,
+        "a5": 85
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 84.75467092650038,
+        "reliability": 17.4,
+        "dispersion": 81.1,
+        "stability": 75,
+        "influenceAnalysis": 76.5,
+        "overall": 64
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.76 - positive):\n\na1: 综合各顾问数据，市长明确速度是最高优先级，每延误1小时新增50例感染。方案A启动仅2小时，覆盖100%人口，可持续21天，虽净效果52%且风险高，但快速响应可大幅减少新增感染。方案B启动6小时，净效果75%，风险可控，可持续14天，平衡性较好。方案C净效果88%但启动需8小时，延误6小时新增300例，且覆盖仅45%，可持续10天，高效果可能被延误抵消。方案E启动4小时，净效果51%，风险中等，可持续7天。方案D最慢且效果差。考虑到速度优先原则，方案A应排第一，方案B第二，方案C第三，方案E第四，方案D第五。\n\na2: 尽管市长强调速度优先，但方案A（全城封锁）净效果仅52%，且延误就医死亡率上升18%，风险最高（5/5），可能抵消速度优势。方案C（精准疏散）净效果88%，风险最低（1/5），虽启动需8小时（延误6小时新增300例），但高效果和低风险可更快控制疫情，减少总感染数。方案B（分阶段响应）平衡性较好，净效果75%，风险可控，启动6小时（延误4小时新增200例）。方案E（社区自治）净效果51%，风险中等，启动4小时。方案D（军事管制）最慢且效果差。考虑到a1主张方案A第一，但a3和a4的数据支持方案C，且a1的净效果数据较低，我坚持方案C第一，方案B第二，方案A第三，方案E第四，方案D第五。\n\na3: 尽管市长强调速度优先，但方案C（精准疏散）净效果88%远超其他方案，且风险最低（1/5）。方案A虽启动最快（2小时），但净效果仅52%，且延误就医死亡率上升18%，风险最高（5/5），可能抵消速度优势。方案B（分阶段响应）平衡性较好，净效果75%，风险可控，启动6小时。方案E（社区自治）净效果51%，风险中等。方案D（军事管制）最慢且效果差。考虑到延误1小时新增50例，方案C启动需8小时（延误6小时新增300例），但其高效果和低风险可更快控制疫情，减少总感染数。a1主张方案A第一，但a1的净效果数据较低，且a4和a5的风险评估支持方案C。因此，我坚持方案C第一，方案B第二，方案A第三，方案E第四，方案D第五。\n\na4: 尽管市长强调速度优先，但方案A（全城封锁）风险极高（5/5），净效果仅52%，且延误就医死亡率上升18%，可能抵消速度优势。方案C（精准疏散）净效果88%，风险最低（1/5），虽启动需8小时（延误6小时新增300例），但其高效果和低风险可更快控制疫情，减少总感染数。方案B（分阶段响应）平衡性较好，净效果75%，风险可控，启动6小时（延误4小时新增200例）。方案E（社区自治）净效果51%，风险中等，启动4小时。方案D（军事管制）最慢且效果差。考虑到a1主张方案A第一，但a1的净效果数据较低，且a3和a4的风险评估支持方案C，我坚持方案C第一，方案B第二，方案A第三，方案E第四，方案D第五。\n\na5: 尽管市长强调速度优先，但方案A（全城封锁）净效果仅52%，风险最高（5/5），且延误就医死亡率上升18%，可能抵消速度优势。方案C（精准疏散）净效果88%，风险最低（1/5），虽启动需8小时（延误6小时新增300例），但其高效果和低风险可更快控制疫情，减少总感染数。方案B（分阶段响应）平衡性较好，净效果75%，风险可控，启动6小时（延误4小时新增200例）。方案E（社区自治）净效果51%，风险中等，启动4小时。方案D（军事管制）最慢且效果差。a1主张方案A第一，但a1的净效果数据较低，且a3和a4的风险评估支持方案C。我坚持方案C第一，方案B第二，方案A第三，方案E第四，方案D第五。",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案C-精准疏散",
+    "方案B-分阶段响应",
+    "方案A-全城封锁",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

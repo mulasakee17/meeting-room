@@ -1,0 +1,283 @@
+{
+  "runId": "crisis_full_23",
+  "ablation": "full",
+  "runIndex": 23,
+  "timestamp": "2026-07-14T13:23:01.723Z",
+  "kendallTau": 0.8,
+  "decisionQuality": 90,
+  "tauTrajectory": [
+    0.4,
+    0.8,
+    1
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.1711453685959159,
+  "opinionDiversity": 0.41442731570204205,
+  "totalInterventions": 3,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.57,
+      "beliefAfter": 0.52,
+      "effective": false
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.57,
+      "beliefAfter": 0.52,
+      "effective": false
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": 0.59,
+      "beliefAfter": 0.53,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.69,
+      "beliefAfter": 0.61,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": -0.54,
+      "beliefAfter": 0.52,
+      "effective": true
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.61,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": 0.61,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": -0.34,
+      "beliefAfter": 0,
+      "effective": false
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 1,
+    "force_reflection": 2
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 6067,
+        "completionTokens": 1353,
+        "totalTokens": 7420,
+        "totalLatencyMs": 13399,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6500,
+        "completionTokens": 1329,
+        "totalTokens": 7829,
+        "totalLatencyMs": 14628,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6876,
+        "completionTokens": 1445,
+        "totalTokens": 8321,
+        "totalLatencyMs": 13821,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 7220,
+        "completionTokens": 1589,
+        "totalTokens": 8809,
+        "totalLatencyMs": 13880,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6994,
+        "completionTokens": 1482,
+        "totalTokens": 8476,
+        "totalLatencyMs": 13683,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 33657,
+      "completionTokens": 7198,
+      "totalTokens": 40855,
+      "totalLatencyMs": 69411
+    }
+  },
+  "evaluationScores": {
+    "consensus": 72.98210599910027,
+    "reliability": 17.1,
+    "dispersion": 73.8,
+    "stability": 75,
+    "influenceAnalysis": 72,
+    "overall": 59.3
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.57,
+        "a2": -0.54,
+        "a3": 0.69,
+        "a4": 0.59,
+        "a5": 0.24
+      },
+      "confidences": {
+        "a1": 77,
+        "a2": 88,
+        "a3": 79,
+        "a4": 78,
+        "a5": 87
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a4",
+            "a3",
+            "a2"
+          ]
+        }
+      ],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 69.30977470655128,
+        "reliability": 16.5,
+        "dispersion": 71.1,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 57.6
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.52,
+        "a2": 0.52,
+        "a3": 0.61,
+        "a4": 0.53,
+        "a5": 0.53
+      },
+      "confidences": {
+        "a1": 72,
+        "a2": 72,
+        "a3": 74,
+        "a4": 73,
+        "a5": 74
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 84.27065124424573,
+        "reliability": 14.7,
+        "dispersion": 81.4,
+        "stability": 75,
+        "influenceAnalysis": 70.5,
+        "overall": 62.2
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.56,
+        "a2": -0.34,
+        "a3": 0.61,
+        "a4": 0.56,
+        "a5": 0.61
+      },
+      "confidences": {
+        "a1": 83,
+        "a2": 90,
+        "a3": 84,
+        "a4": 83,
+        "a5": 84
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a5",
+            "a2"
+          ]
+        }
+      ],
+      "tau": 1,
+      "decisionQuality": 100,
+      "evalScores": {
+        "consensus": 72.98210599910027,
+        "reliability": 17.1,
+        "dispersion": 73.8,
+        "stability": 75,
+        "influenceAnalysis": 72,
+        "overall": 59.3
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.40 - positive):\n\na1: Governance intervention requires me to consider the strongest opposing argument. The opposing view (from a3 and a4) argues that speed alone is insufficient; effectiveness and risk matter. Scenario: if the outbreak is localized and can be contained with precision, a rapid but blunt lockdown might cause more harm (e.g., medical delays, economic collapse) than a slightly slower but targeted response. However, given the waterborne nature and rapid spread (50 new cases per hour), speed is critical. Even with risks, A's 2-hour start prevents 300 cases vs C's 8-hour start. Risks can be mitigated with support measures. Thus, I maintain A first, but acknowledge C's merits.\n\na2: 尽管a1强调速度，但a3和a4提供了有力反驳：方案C净效果88%远超方案A的52%，且风险最低（1/5）。市长虽指示速度优先，但快速无效的响应浪费资源，且方案C启动8小时仅新增400例，而方案A虽快但效果差、风险高，延误就医导致死亡率上升18%。方案A的100%覆盖在效果不佳和风险极高的情况下可能弊大于利。方案B净效果75%，风险2/5，可持续14天，是平衡之选。方案D启动最慢且风险高，应排最后。方案E可持续仅7天，效果51%，居中。因此，我支持方案C第一，方案B第二，方案A第三，方案E第四，方案D第五。\n\na3: 尽管市长强调速度优先，但我的历史效果数据表明方案C净效果88%远超其他方案，且风险最低（1/5）。方案A虽启动快（2小时），但净效果仅52%，延误就医导致死亡率上升18%，风险5/5。方案C启动8小时新增400例，但精准疏散仅影响高风险片区，可持续10天，可通过后续措施延长。方案B净效果75%，风险2/5，可持续14天，是平衡之选。方案D净效果29%，启动最慢，风险高。方案E净效果51%，可持续7天。综合效果、风险和可持续性，方案C最优。a1的反对观点认为速度压倒一切，但快速无效的响应浪费资源，且方案C的8小时延迟仅新增400例，而方案A的高风险可能导致更多间接死亡。因此，我坚持方案C第一，方案B第二，方案A第三，方案E第四，方案D第五。\n\na4: 尽管市长强调速度优先，但方案A（全城封锁）风险5/5，经济停摆日损失2.3亿，医疗过载，恐慌抢购，长期心理创伤，国际形象受损，这些代价不可接受。方案C（精准疏散）风险最低（1/5），净效果88%远超方案A的52%，且仅影响高风险片区，可持续10天，可通过后续措施延长。方案B（分阶段响应）风险2/5，净效果75%，可持续14天，是平衡之选。方案D（军事管制）风险5/5，启动最慢（12小时），新增500例，应排最后。方案E（社区自治）风险3/5，净效果51%，可持续7天，居中。a1的反对观点认为速度压倒一切，但快速无效的响应浪费资源，且方案C的8小时延迟仅新增400例，而方案A的高风险可能导致更多间接死亡。因此，我坚持方案C第一，方案B第二，方案A第三，方案E第四，方案D第五。\n\na5: 尽管市长强调速度优先，但方案A全城封锁风险极高（5/5），净效果仅52%，且延误就医导致死亡率上升18%。方案C精准疏散净效果88%，风险最低（1/5），启动8小时仅新增400例，可持续10天，可通过后续措施延长。方案B分阶段响应净效果75%，风险2/5，可持续14天，是平衡之选。方案E社区自治可持续仅7天，净效果51%。方案D军事管制启动最慢（12小时），净效果29%，风险高。综合效果、风险和可持续性，方案C最优，方案B次之，方案A第三，方案E第四，方案D第五。a1过度强调速度而忽视效果和风险，我坚持独立判断。",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案C-精准疏散",
+    "方案A-全城封锁",
+    "方案B-分阶段响应",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

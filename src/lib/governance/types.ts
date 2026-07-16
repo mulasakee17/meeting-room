@@ -153,6 +153,11 @@ export interface GovernanceConfig {
   /** 禁用的干预类型列表。检测器仍运行，但不触发被禁用的干预。
    * 默认禁用: ["introduce_diversity", "continue_discussion"]（实验证明无效/有害） */
   disabledInterventions?: InterventionType[];
+  /** 干预排序模式：
+   * - 'fdecomposition'（默认）：社会热力学 F 分解驱动优先级排序
+   * - 'fixed'：保持检测器触发顺序（reduce_weight → introduce_diversity → force_reflection → continue_discussion）
+   *   用于 A/B 对照实验，验证 F 分解排序相比固定排序是否有显著改善 */
+  sortingMode?: "fdecomposition" | "fixed";
 }
 
 export interface AgentBelief {

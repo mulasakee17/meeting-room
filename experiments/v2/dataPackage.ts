@@ -233,8 +233,17 @@ function kendallTau(groundTruth: Record<string, number>, extracted: string[]): n
       else if (dx * dy < 0) discordant++;
     }
   }
+  // τ-b 修正：含 tie 修正项（与 analyze.ts/extractRanking 保持一致）
   const n0 = n * (n - 1) / 2;
-  const denom = Math.sqrt(n0 * n0);
+  // 统计 x 和 y 中的 tie 组
+  const xGroups = new Map<number, number>();
+  const yGroups = new Map<number, number>();
+  for (const v of x) xGroups.set(v, (xGroups.get(v) || 0) + 1);
+  for (const v of y) yGroups.set(v, (yGroups.get(v) || 0) + 1);
+  let n1 = 0, n2 = 0;
+  for (const c of xGroups.values()) n1 += c * (c - 1) / 2;
+  for (const c of yGroups.values()) n2 += c * (c - 1) / 2;
+  const denom = Math.sqrt((n0 - n1) * (n0 - n2));
   if (denom === 0) return 0;
   return (concordant - discordant) / denom;
 }

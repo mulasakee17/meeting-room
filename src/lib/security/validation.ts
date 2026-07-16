@@ -49,7 +49,33 @@ const VALID_MODELS: Record<string, string[]> = {
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
-  sanitized?: any;
+  sanitized?: unknown;
+}
+
+/** LLM 配置结构（替代 any） */
+interface LLMConfigInput {
+  provider?: string;
+  model?: string;
+  apiKey?: string;
+  timeout?: number;
+}
+
+/** ML 选项结构（替代 any） */
+interface MLOptionsInput {
+  enableLSTM?: boolean;
+  enableTransformer?: boolean;
+  mlWeight?: number;
+}
+
+/** Swarm 请求体结构（替代 any） */
+interface SwarmRequestInput {
+  news?: string;
+  rounds?: number | string;
+  symbol?: string;
+  llmConfig?: LLMConfigInput;
+  mlOptions?: MLOptionsInput;
+  enableTechnicalAnalysis?: boolean;
+  enableML?: boolean;
 }
 
 /**
@@ -173,7 +199,7 @@ export function validateStockCode(symbol: string): ValidationResult {
 /**
  * 验证 LLM 配置
  */
-export function validateLLMConfig(config: any): ValidationResult {
+export function validateLLMConfig(config: LLMConfigInput | undefined): ValidationResult {
   const errors: string[] = [];
   
   if (!config) {
@@ -229,7 +255,7 @@ export function validateLLMConfig(config: any): ValidationResult {
 /**
  * 验证 ML 选项
  */
-export function validateMLOptions(options: any): ValidationResult {
+export function validateMLOptions(options: MLOptionsInput | undefined): ValidationResult {
   const errors: string[] = [];
   
   if (!options) {
@@ -273,9 +299,9 @@ export function validateMLOptions(options: any): ValidationResult {
 /**
  * 综合验证请求体
  */
-export function validateSwarmRequest(body: any): ValidationResult {
+export function validateSwarmRequest(body: SwarmRequestInput): ValidationResult {
   const errors: string[] = [];
-  const sanitized: any = {};
+  const sanitized: Record<string, unknown> = {};
   
   // 验证新闻
   const newsResult = validateNews(body.news);
@@ -344,7 +370,7 @@ export function validateSwarmRequest(body: any): ValidationResult {
 /**
  * 验证并抛出错误
  */
-export function validateOrThrow(body: any): any {
+export function validateOrThrow(body: SwarmRequestInput): unknown {
   const result = validateSwarmRequest(body);
   if (!result.valid) {
     throw new Error(`输入验证失败: ${result.errors.join('; ')}`);

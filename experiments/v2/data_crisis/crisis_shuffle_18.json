@@ -1,0 +1,276 @@
+{
+  "runId": "crisis_shuffle_18",
+  "ablation": "shuffle",
+  "runIndex": 18,
+  "timestamp": "2026-07-14T13:27:01.682Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "tauTrajectory": [
+    0.6,
+    0.4,
+    0.4
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.4741863447950405,
+  "opinionDiversity": 0.26290682760247974,
+  "totalInterventions": 4,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization",
+    "echo_chamber",
+    "premature_consensus"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.8,
+      "beliefAfter": 0.3,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.8,
+      "beliefAfter": 0.3,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.83,
+      "beliefAfter": 0.78,
+      "effective": false
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.05,
+      "beliefAfter": 0.78,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.78,
+      "beliefAfter": 0.78,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.78,
+      "beliefAfter": 0,
+      "effective": false
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 3,
+    "force_reflection": 1
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 6227,
+        "completionTokens": 1489,
+        "totalTokens": 7716,
+        "totalLatencyMs": 13137,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6725,
+        "completionTokens": 1354,
+        "totalTokens": 8079,
+        "totalLatencyMs": 11747,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6897,
+        "completionTokens": 1316,
+        "totalTokens": 8213,
+        "totalLatencyMs": 11474,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 6911,
+        "completionTokens": 1347,
+        "totalTokens": 8258,
+        "totalLatencyMs": 11865,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6824,
+        "completionTokens": 1561,
+        "totalTokens": 8385,
+        "totalLatencyMs": 12595,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 33584,
+      "completionTokens": 7067,
+      "totalTokens": 40651,
+      "totalLatencyMs": 60818
+    }
+  },
+  "evaluationScores": {
+    "consensus": 81.27758810479064,
+    "reliability": 16.9,
+    "dispersion": 75.5,
+    "stability": 75,
+    "influenceAnalysis": 79.5,
+    "overall": 62.6
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.8,
+        "a2": 0.83,
+        "a3": 0.6,
+        "a4": -0.05,
+        "a5": 0.63
+      },
+      "confidences": {
+        "a1": 72,
+        "a2": 82,
+        "a3": 85,
+        "a4": 82,
+        "a5": 79
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a2",
+            "a4"
+          ]
+        }
+      ],
+      "tau": 0.6,
+      "decisionQuality": 80,
+      "evalScores": {
+        "consensus": 75.07953205028204,
+        "reliability": 16.1,
+        "dispersion": 73.9,
+        "stability": 75,
+        "influenceAnalysis": 63,
+        "overall": 57.9
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.3,
+        "a2": 0.78,
+        "a3": 0.78,
+        "a4": 0.78,
+        "a5": 0.63
+      },
+      "confidences": {
+        "a1": 72,
+        "a2": 77,
+        "a3": 77,
+        "a4": 77,
+        "a5": 79
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "authority_bias",
+        "premature_consensus",
+        "echo_chamber",
+        "authority_bias",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        }
+      ],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 83.01494606887837,
+        "reliability": 15.4,
+        "dispersion": 77.6,
+        "stability": 75,
+        "influenceAnalysis": 70.5,
+        "overall": 61.4
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": 0.78,
+        "a2": 0.78,
+        "a3": 0.78,
+        "a4": 0.3,
+        "a5": 0.3
+      },
+      "confidences": {
+        "a1": 78,
+        "a2": 88,
+        "a3": 78,
+        "a4": 87,
+        "a5": 87
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "authority_bias"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a3"
+        }
+      ],
+      "tau": 0.4,
+      "decisionQuality": 70,
+      "evalScores": {
+        "consensus": 81.27758810479064,
+        "reliability": 16.9,
+        "dispersion": 75.5,
+        "stability": 75,
+        "influenceAnalysis": 79.5,
+        "overall": 62.6
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.59 - positive):\n\na1: 尽管a2强调速度优先，但市长指示速度是最高优先级，每延误1小时新增50例感染。方案A启动最快（2小时），覆盖100%人口，可持续21天，虽净效果仅52%且风险高，但快速启动可避免大量新增感染。方案C净效果88%最高，但启动慢（8小时），延误6小时新增300例，且可持续仅10天，可能无法应对长期疫情。方案B平衡但启动6小时，延误4小时新增200例。综合速度、覆盖和可持续性，方案A应排第一，方案B第二，方案C第三，方案E第四，方案D第五。反驳a3：方案C可持续仅10天，可能无法应对长期疫情；反驳a4：方案A虽风险高，但速度优先原则下可接受。\n\na2: 尽管a1和a3提出了净效果和可持续性的担忧，但市长明确指示速度是最高优先级，每延误1小时新增50例感染。方案A启动最快（2小时），覆盖100%人口，可持续21天，虽然净效果52%且风险高，但快速启动可避免大量新增感染。方案B启动6小时，净效果75%，但延误4小时将新增200例感染，累计可能超过A的净效果差距。方案C启动8小时，净效果88%，但延误6小时新增300例，且可持续仅10天，可能无法应对长期疫情。方案D和E更差。因此，在速度优先原则下，方案A应排第一，方案B第二，方案C第三，方案E第四，方案D第五。我坚持自己的判断，不因a1的反对而改变。\n\na3: 尽管a2强调速度优先，但市长指示速度是最高优先级，每延误1小时新增50例感染。方案A启动最快（2小时），覆盖100%人口，可持续21天，虽净效果仅52%且风险高，但快速启动可避免大量新增感染。方案C净效果88%最高，但启动慢（8小时），延误6小时新增300例，且可持续仅10天，可能无法应对长期疫情。方案B平衡但启动6小时，延误4小时新增200例。综合速度、覆盖和可持续性，方案A应排第一，方案B第二，方案C第三，方案E第四，方案D第五。反驳a3：方案C可持续仅10天，可能无法应对长期疫情；反驳a4：方案A虽风险高，但速度优先原则下可接受。\n\na4: 尽管a2和a1、a3都强调速度优先，但作为风险评估师，我必须独立判断。方案A启动最快（2小时），但净效果仅52%，且风险极高（日损失2.3亿、医疗过载），可能导致二次死亡。方案B启动6小时，净效果75%，风险较低，平衡性更好。方案C净效果88%最高，但启动慢（8小时），延误6小时新增300例，且可持续仅10天。市长明确速度优先，但净效果和风险同样重要。方案A的快速启动优势可能被其低净效果和高风险抵消。因此，我坚持方案B第一，方案A第二，方案C第三，方案E第四，方案D第五。\n\na5: 尽管a2和a1、a3都强调速度优先，但作为可持续性顾问，我必须考虑长期效果和风险。方案A净效果仅52%，且风险极高（日损失2.3亿、医疗过载），可能导致二次死亡。方案B启动6小时，净效果75%，风险较低，可持续14天，平衡性更好。方案C净效果88%最高，但启动慢（8小时），延误6小时新增300例，且可持续仅10天，可能无法应对长期疫情。市长明确速度优先，但净效果和风险同样重要。方案A的快速启动优势可能被其低净效果和高风险抵消。因此，我坚持方案B第一，方案A第二，方案C第三，方案E第四，方案D第五。",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案A-全城封锁",
+    "方案B-分阶段响应",
+    "方案C-精准疏散",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

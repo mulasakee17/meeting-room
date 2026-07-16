@@ -1,0 +1,331 @@
+{
+  "runId": "crisis_shuffle_23",
+  "ablation": "shuffle",
+  "runIndex": 23,
+  "timestamp": "2026-07-14T13:33:17.850Z",
+  "kendallTau": 0.8,
+  "decisionQuality": 90,
+  "tauTrajectory": [
+    0.8,
+    0.8,
+    0.8
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.20531767353237307,
+  "opinionDiversity": 0.39734116323381347,
+  "totalInterventions": 4,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization",
+    "echo_chamber"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.57,
+      "beliefAfter": 0.45,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": 0.57,
+      "beliefAfter": 0.45,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": 0.59,
+      "beliefAfter": 0.53,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.69,
+      "beliefAfter": 0.61,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": -0.54,
+      "beliefAfter": -0.37,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": 0.53,
+      "beliefAfter": 0.48,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.61,
+      "beliefAfter": 0.55,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": -0.37,
+      "beliefAfter": -0.24,
+      "effective": true
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": 0.48,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": 0.55,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": -0.3,
+      "beliefAfter": 0,
+      "effective": false
+    },
+    {
+      "round": 3,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": -0.24,
+      "beliefAfter": 0,
+      "effective": false
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 1,
+    "force_reflection": 3
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 6308,
+        "completionTokens": 1485,
+        "totalTokens": 7793,
+        "totalLatencyMs": 14943,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6847,
+        "completionTokens": 1456,
+        "totalTokens": 8303,
+        "totalLatencyMs": 12934,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 6865,
+        "completionTokens": 1386,
+        "totalTokens": 8251,
+        "totalLatencyMs": 12259,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 6747,
+        "completionTokens": 1641,
+        "totalTokens": 8388,
+        "totalLatencyMs": 13273,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 6544,
+        "completionTokens": 1454,
+        "totalTokens": 7998,
+        "totalLatencyMs": 13657,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 33311,
+      "completionTokens": 7422,
+      "totalTokens": 40733,
+      "totalLatencyMs": 67066
+    }
+  },
+  "evaluationScores": {
+    "consensus": 73.36951235441794,
+    "reliability": 15.2,
+    "dispersion": 71.9,
+    "stability": 75,
+    "influenceAnalysis": 66,
+    "overall": 57.5
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.57,
+        "a2": -0.54,
+        "a3": 0.69,
+        "a4": 0.59,
+        "a5": 0.24
+      },
+      "confidences": {
+        "a1": 77,
+        "a2": 88,
+        "a3": 79,
+        "a4": 78,
+        "a5": 87
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a1",
+            "a4",
+            "a3",
+            "a2"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 69.30977470655128,
+        "reliability": 16.5,
+        "dispersion": 71.1,
+        "stability": 75,
+        "influenceAnalysis": 73.5,
+        "overall": 58.2
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": 0.45,
+        "a2": -0.37,
+        "a3": 0.61,
+        "a4": 0.53,
+        "a5": 0.24
+      },
+      "confidences": {
+        "a1": 70,
+        "a2": 83,
+        "a3": 74,
+        "a4": 73,
+        "a5": 87
+      },
+      "converged": false,
+      "issues": [
+        "polarization",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a4",
+            "a3",
+            "a2"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 73.63794710146692,
+        "reliability": 15.6,
+        "dispersion": 72.2,
+        "stability": 75,
+        "influenceAnalysis": 66,
+        "overall": 57.7
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": -0.3,
+        "a2": -0.24,
+        "a3": 0.55,
+        "a4": 0.48,
+        "a5": 0.24
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 78,
+        "a3": 69,
+        "a4": 68,
+        "a5": 87
+      },
+      "converged": false,
+      "issues": [
+        "echo_chamber",
+        "polarization",
+        "echo_chamber",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a4",
+            "a3",
+            "a1",
+            "a2"
+          ]
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 73.36951235441794,
+        "reliability": 15.2,
+        "dispersion": 71.9,
+        "stability": 75,
+        "influenceAnalysis": 66,
+        "overall": 57.5
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: 0.15 - neutral):\n\na1: Despite the mayor's emphasis on speed, the data from all advisors consistently shows that Plan A's net effectiveness is only 52% due to increased mortality from delayed medical care, and it carries extreme risks (economic shutdown, panic). Plans B and C offer higher net effectiveness (75% and 88%) with moderate risks. Plan B starts in 6 hours, preventing 200 additional cases compared to Plan A's 2-hour start, but its higher effectiveness and lower risk likely save more lives overall. Plan C has the highest effectiveness but limited coverage and sustainability. Given the consensus among other advisors and the trade-off between speed and net effect, I now rank Plan B first, Plan C second, and Plan A third. My belief shifts slightly negative towards Plan A due to its hidden costs.\n\na2: The opposing viewpoint is that speed alone is paramount, and Plan A's 2-hour response could prevent 200 more cases than Plan B's 6-hour response, potentially saving lives despite its lower net effectiveness. However, the data from all advisors consistently shows Plan A's net effectiveness is only 52% due to delayed medical care, and its extreme risks (economic collapse, panic) could cause more harm than the outbreak itself. Plan B offers a balanced approach with 75% net effectiveness, low risk, and 14-day sustainability, making it the best overall choice. I maintain my position ranking Plan B first, Plan C second, and Plan A third.\n\na3: The strongest opposing argument is that speed is paramount: Plan A's 2-hour response prevents 200 more cases than Plan B's 6-hour, and given exponential growth, those early cases could be critical. However, my data shows Plan A's net effectiveness is only 52% due to delayed medical care, and its extreme risks (economic collapse, panic) could cause more deaths than the outbreak. Plan B offers 75% net effectiveness, low risk, and 14-day sustainability, balancing speed and effectiveness. Th",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案B-分阶段响应",
+    "方案C-精准疏散",
+    "方案A-全城封锁",
+    "方案E-社区自治",
+    "方案D-军事管制"
+  ]
+}

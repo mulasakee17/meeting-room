@@ -48,7 +48,7 @@ const TASKS: Record<string, { task: TaskConfig; dataDir: string }> = {
  *  - "full_reflection": only force_reflection intervention (polarization → reflect)
  *  - "full_continue":   only continue_discussion intervention (premature consensus → more rounds)
  */
-type Ablation = "none" | "full" | "shuffle" | "full_diversity" | "full_weight" | "full_reflection" | "full_continue";
+type Ablation = "none" | "full" | "shuffle" | "full_diversity" | "full_weight" | "full_reflection" | "full_continue" | "full_fixed";
 
 interface RoundRecord {
   roundNumber: number;
@@ -142,6 +142,23 @@ const PARAMS = {
   // 断裂环路修复后重跑：仅 none/full/shuffle 三组即可回答核心研究问题
   ablationModes: ["none", "full", "shuffle"] as Ablation[],
 };
+
+// CLI 扩样支持: npx tsx run.ts <task> --start=<N> --count=<M> --mode=<ablation>
+// --start: 起始 runIndex（默认 0）
+// --count: 本次运行的实验数/cell（默认 PARAMS.runsPerCondition）
+// --mode:  只跑指定 ablation mode（默认跑 PARAMS.ablationModes 全部）
+function parseCliArgs(): { start: number; count: number; mode: string | null } {
+  const args = process.argv.slice(3);
+  let start = 0;
+  let count = PARAMS.runsPerCondition;
+  let mode: string | null = null;
+  for (const arg of args) {
+    if (arg.startsWith("--start=")) start = parseInt(arg.split("=")[1], 10);
+    if (arg.startsWith("--count=")) count = parseInt(arg.split("=")[1], 10);
+    if (arg.startsWith("--mode=")) mode = arg.split("=")[1];
+  }
+  return { start, count, mode };
+}
 
 const LLM_CONFIG: LLMConfig = {
   provider: PARAMS.provider,
@@ -368,8 +385,8 @@ async function runSingle(
     full_continue:   "enablePrematureConsensusDetection",
   };
 
-  const isSingleMode = ablation.startsWith("full_") && ablation !== "full";
-  const govOverride: Record<string, boolean> = {};
+  const isSingleMode = ablation.startsWith("full_") && ablation !== "full" && ablation !== "full_fixed";
+  const govOverride: Record<string, unknown> = {};
   if (isSingleMode) {
     // Disable all detectors, then enable only the target one
     govOverride.enableEchoChamberDetection = false;
@@ -380,12 +397,17 @@ async function runSingle(
     if (targetKey) govOverride[targetKey] = true;
   }
 
+  // full_fixed: A/B 对照实验 B 组——与 full 相同但使用固定排序（无 F 分解）
+  if (ablation === "full_fixed") {
+    govOverride.sortingMode = "fixed" as const;
+  }
+
   const engine = new DiscussionEngine({
     maxRounds: PARAMS.maxRounds,
     convergenceThreshold: PARAMS.convergenceThreshold,
     governanceMode,
     seed: 42 + runIndex, // 与 LLM seed 一致，保证干预随机性可复现
-    ...(isSingleMode ? {
+    ...(Object.keys(govOverride).length > 0 ? {
       governanceConfig: govOverride,
     } : {}),
   });
@@ -646,33 +668,37 @@ async function main() {
     console.error(`Available tasks: ${Object.keys(TASKS).join(", ")}`);
     process.exit(1);
   }
+  const { start, count, mode } = parseCliArgs();
   const { task, dataDir: dataDirName } = TASKS[taskKey];
   const DATA_DIR = path.resolve(__dirname, dataDirName);
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   const allResults: ExperimentResult[] = [];
 
+  // --mode 覆盖：只跑指定 ablation mode（用于 pilot 或补跑特定组）
+  const modesToRun = mode ? [mode as Ablation] : PARAMS.ablationModes;
+
   console.log("=".repeat(70));
   console.log("  SwarmAlpha V2 — Experiment Runner");
   console.log(`  Task: ${task.title} (${taskKey})`);
   console.log(`  Data dir: ${dataDirName}`);
-  console.log(`  Modes: ${PARAMS.ablationModes.join(", ")}`);
-  console.log(`  Runs per condition: ${PARAMS.runsPerCondition}`);
-  console.log(`  Total: ${PARAMS.runsPerCondition * PARAMS.ablationModes.length} experiments`);
+  console.log(`  Modes: ${modesToRun.join(", ")}`);
+  console.log(`  Runs: ${count} per condition (runIndex ${start}..${start + count - 1})`);
+  console.log(`  Total: ${count * modesToRun.length} experiments`);
   console.log("=".repeat(70));
 
-  for (const ablation of PARAMS.ablationModes) {
+  for (const ablation of modesToRun) {
     console.log(`\n── ${ablation} ──`);
-    for (let i = 0; i < PARAMS.runsPerCondition; i++) {
+    for (let i = start; i < start + count; i++) {
       const filename = path.join(DATA_DIR, `${task.id}_${ablation}_${i}.json`);
       if (fs.existsSync(filename)) {
         const existing = JSON.parse(fs.readFileSync(filename, "utf-8")) as ExperimentResult;
         // 缓存污染修复：错误占位文件不视为有效缓存，删除后重跑
         if (existing.error) {
-          console.log(`  [${i + 1}/${PARAMS.runsPerCondition}] (cached error, retrying) ${existing.error}`);
+          console.log(`  [${i - start + 1}/${count}] (cached error, retrying) ${existing.error}`);
           fs.unlinkSync(filename);
         } else {
           allResults.push(existing);
-          console.log(`  [${i + 1}/${PARAMS.runsPerCondition}] (cached) τ=${existing.kendallTau.toFixed(3)} | Q=${existing.decisionQuality}`);
+          console.log(`  [${i - start + 1}/${count}] (cached) τ=${existing.kendallTau.toFixed(3)} | Q=${existing.decisionQuality}`);
           continue;
         }
       }
@@ -689,7 +715,7 @@ async function main() {
           const waitMs = Math.pow(2, attempt - 1) * 1000;
           const errMsg = err instanceof Error ? err.message : String(err);
           if (isLastAttempt) {
-            console.error(`  [${i + 1}/${PARAMS.runsPerCondition}] FAILED after ${maxRetries} attempts: ${errMsg}`);
+            console.error(`  [${i - start + 1}/${count}] FAILED after ${maxRetries} attempts: ${errMsg}`);
             // 写入错误占位文件，分析时可识别
             const errorResult: ExperimentResult = {
               task: task.id, ablation, runIndex: i,
@@ -704,7 +730,7 @@ async function main() {
             fs.writeFileSync(filename, JSON.stringify(errorResult, null, 2));
             allResults.push(errorResult);
           } else {
-            console.warn(`  [${i + 1}/${PARAMS.runsPerCondition}] attempt ${attempt}/${maxRetries} failed: ${errMsg}. Retrying in ${waitMs}ms...`);
+            console.warn(`  [${i - start + 1}/${count}] attempt ${attempt}/${maxRetries} failed: ${errMsg}. Retrying in ${waitMs}ms...`);
             await new Promise(r => setTimeout(r, waitMs));
           }
         }
@@ -715,7 +741,7 @@ async function main() {
         const intvStr = result.totalInterventions > 0
           ? ` | ${result.totalInterventions} interventions, ${result.interventionEffects.filter(e => e.effective).length} effective`
           : "";
-        console.log(`  [${i + 1}/${PARAMS.runsPerCondition}] τ=${result.kendallTau.toFixed(3)} | Q=${result.decisionQuality} | rounds=${result.totalRounds}${intvStr}`);
+        console.log(`  [${i - start + 1}/${count}] τ=${result.kendallTau.toFixed(3)} | Q=${result.decisionQuality} | rounds=${result.totalRounds}${intvStr}`);
       }
     }
   }
@@ -730,7 +756,7 @@ async function main() {
   console.log("\n| Ablation       | n  | Q μ±σ      | Kendall τ μ±σ  | Intv (eff) | d vs none |");
   console.log("|----------------|----|------------|----------------|------------|-----------|");
 
-  for (const ablation of PARAMS.ablationModes) {
+  for (const ablation of modesToRun) {
     const group = allResults.filter(r => r.ablation === ablation);
     const qs = group.map(r => r.decisionQuality);
     const ts = group.map(r => r.kendallTau);

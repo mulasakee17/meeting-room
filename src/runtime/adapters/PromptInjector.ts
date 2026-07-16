@@ -68,12 +68,25 @@ export interface ExtractedState {
   }>;
 }
 
+// 定位最后一个"行首" [GOV] 标记（[GOV] 后第一个字符的索引）。
+// 规范（见 buildGovernanceExtension）：agent 应在发言末尾 append 一行 [GOV]。
+// 只认行首 + 取最后一个，可防御正文中的 [GOV]（被引用或 prompt 注入伪造）操纵治理状态。
+function findLastLineStartGovTag(text: string): number {
+  const govLineRegex = /(^|\n)[ \t]*\[GOV\]/g;
+  let lastMatchEnd = -1;
+  let m: RegExpExecArray | null;
+  while ((m = govLineRegex.exec(text)) !== null) {
+    lastMatchEnd = m.index + m[0].length;
+  }
+  return lastMatchEnd;
+}
+
 export function extractGovTag(text: string): ExtractedState | null {
-  // 先找 [GOV] 标记位置，再提取其后内容（到行尾或文末），最后做括号匹配
-  const govIdx = text.indexOf("[GOV]");
+  // 安全修复：只提取最后一个行首 [GOV] 标签，忽略正文中被引用/伪造的 [GOV]。
+  const govIdx = findLastLineStartGovTag(text);
   if (govIdx === -1) return null;
 
-  let afterGov = text.slice(govIdx + 5).trimStart();
+  let afterGov = text.slice(govIdx).trimStart();
   if (!afterGov.startsWith("{")) return null;
 
   // 贪婪匹配到最后一个 } （处理嵌套对象），若无 } 则取到行尾/文末再做容错
@@ -119,11 +132,19 @@ export function extractGovTag(text: string): ExtractedState | null {
 }
 
 /**
- * 从 agent 发言文本中移除 [GOV] 行，返回干净的发言内容。
+ * 从 agent 发言文本中移除最后一个行首 [GOV] 行，返回干净的发言内容。
+ * 保留正文中可能被引用的 [GOV] 文本（它们不是治理状态，而是发言内容）。
  */
 export function stripGovTag(text: string): string {
-  // 贪婪匹配，与 extractGovTag 一致，避免嵌套对象时残留 ]}
-  return text.replace(/\[GOV\]\s*\{[\s\S]*\}/g, "").trimEnd();
+  const govLineRegex = /(^|\n)[ \t]*\[GOV\]/g;
+  let lastMatch: RegExpExecArray | null = null;
+  let m: RegExpExecArray | null;
+  while ((m = govLineRegex.exec(text)) !== null) {
+    lastMatch = m;
+  }
+  if (!lastMatch) return text.trimEnd();
+  // 移除前导换行 + [GOV] 行到文本末尾
+  return text.slice(0, lastMatch.index).trimEnd();
 }
 
 // ============================================================================

@@ -10,7 +10,7 @@
 
 ## Abstract
 
-Recent work has identified consensus phase transitions in LLM multi-agent systems — abrupt shifts from productive deliberation to collective bias — driven by sampling temperature (De Nobili et al., 2026) and conformity pressure (Okawa, 2026). We identify a **novel structural precursor** that governs proximity to the phase boundary: **role-information coherence** — the degree to which an agent's assigned professional identity aligns with the private data it holds. Across two hidden-profile tasks (Supplier Selection, Crisis Response; N=89 experimental runs), breaking role-information coherence via a "shuffle" intervention produces a discontinuous improvement in decision quality (ΔQ=+18.3, p=0.001, two-task replication), substantially larger than any effect of targeted governance interventions (ΔQ=+4.0, p=0.36). Furthermore, we demonstrate that consensus level (Kendall's τ) and decision quality are uncorrelated (r ≈ 0, both tasks), revealing consensus as an unreliable proxy for correctness — a phenomenon we term **false consensus**. Finally, we show that four targeted governance interventions (reduce_weight, force_reflection, introduce_diversity, continue_discussion) each fail to significantly outperform baseline, suggesting that post-hoc governance cannot substitute for structural coherence. These findings imply that the phase boundary of multi-agent consensus is not solely a function of interaction parameters (temperature, conformity) but is fundamentally shaped by the topology of role-information assignment — a dimension absent from current statistical-physics models of agent collectives.
+Recent work has identified consensus phase transitions in LLM multi-agent systems — abrupt shifts from productive deliberation to collective bias — driven by sampling temperature (De Nobili et al., 2026) and conformity pressure (Okawa, 2026). We identify a **novel structural precursor** that governs proximity to the phase boundary: **role-information coherence** — the degree to which an agent's assigned professional identity aligns with the private data it holds. Across two hidden-profile tasks (Supplier Selection, Crisis Response; N=161 experimental runs), breaking role-information coherence via a "shuffle" intervention produces a discontinuous improvement in decision quality on the hard task (Crisis: Δτ=+0.31, d=1.44, p<0.001) but not on the easy task (Supplier: d=0.09, p=0.78) — revealing a boundary condition. Governance interventions are statistically confirmed effective on the hard task (Crisis: d=0.92, p=0.005, power=88%) and directionally consistent on the easy task (Supplier: d=0.47, p=0.089, underpowered). Furthermore, we demonstrate that consensus level (Kendall's τ) and decision quality are uncorrelated (r ≈ -0.14, both tasks), revealing consensus as an unreliable proxy for correctness — a phenomenon we term **false consensus**. These findings imply that the phase boundary of multi-agent consensus is not solely a function of interaction parameters (temperature, conformity) but is fundamentally shaped by the topology of role-information assignment — a dimension absent from current statistical-physics models of agent collectives.
 
 ---
 
@@ -34,7 +34,7 @@ We identify a **structural property of the agent configuration** — role-inform
 
 > **Breaking the coherence between agent role identity and private information produces a larger improvement in decision quality than any form of within-discussion governance intervention.**
 
-This is demonstrated through a 89-experiment, two-task, three-condition design. We also report two auxiliary findings: (1) consensus and correctness are uncorrelated in LLM multi-agent systems ("false consensus"), and (2) four targeted governance interventions all fail to significantly outperform baseline, suggesting a ceiling effect for post-hoc cognitive correction.
+This is demonstrated through a 161-experiment, two-task, three-condition design. We also report two auxiliary findings: (1) consensus and correctness are uncorrelated in LLM multi-agent systems ("false consensus"), and (2) shuffle effectiveness exhibits a boundary condition — significant on hard tasks (ceiling room) but null on easy tasks (ceiling effect).
 
 ---
 
@@ -104,9 +104,9 @@ Both tasks follow a **hidden profile** design: each agent possesses private info
 |-----------|-------------|---------|
 | **none** | No detection, no intervention | Clean baseline |
 | **full** | All 4 detectors + 4 interventions active | Governance effect estimate |
-| **shuffle** | Agent role labels randomly reassigned, breaking role-information coherence | Structural placebo: isolates role-coherence effect |
+| **shuffle** | Agent private knowledge rotated by +2 positions (deterministic), keeping role labels fixed | Structural placebo: isolates role-coherence effect |
 
-The **shuffle** condition is the key methodological contribution. In the shuffle condition, each agent receives a role label (e.g., "Cost Analyst") that does *not* correspond to the private data they hold (e.g., they receive quality metrics instead of cost data). All agents still receive the same total information — the shuffle only changes the **coherence between identity and information**. This is not a placebo test for governance; it is a manipulation of the structural antecedent of overconfidence.
+The **shuffle** condition is the key methodological contribution. In the shuffle condition, each agent's `knownItems` (private professional knowledge) is rotated by +2 positions among the 5 agents — agent i receives agent (i+2)%5's knowledge. Role labels (e.g., "Cost Analyst") remain fixed, creating a mismatch between the agent's stated expertise and the data it actually holds. All agents still receive the same total information — the shuffle only changes the **coherence between identity and information**. This is not a placebo test for governance; it is a manipulation of the structural antecedent of overconfidence.
 
 ### 4.3 Statistical Methods
 
@@ -117,34 +117,35 @@ The **shuffle** condition is the key methodological contribution. In the shuffle
 
 ### 4.4 Model and Parameters
 
-All experiments use **DeepSeek-V3** (`deepseek-chat`, temperature=0.2). Agent count: 5. Rounds: 3. Convergence threshold: belief std < 0.06. Runs per condition: n=15 (Crisis), n=15 (Supplier).
+All experiments use **DeepSeek-V3** (`deepseek-chat`, temperature=0.2). Agent count: 5. Rounds: 3. Convergence threshold: belief std < 0.06. Runs per condition: n=24 (Crisis), n=30 (Supplier).
 
 ---
 
 ## 5. Results
 
-### 5.1 Primary Finding: Shuffle Dominates Governance
+### 5.1 Primary Finding: Governance Statistically Confirmed Effective (Crisis), Direction-Consistent (Supplier)
 
-**Crisis Task (Hard):**
+**Crisis Task (Hard, n=24/cell):**
 
-| Condition | τ (μ±σ) | Q (μ±σ) | ΔQ vs none | p-value | Cohen's d |
-|-----------|---------|---------|------------|---------|-----------|
-| none | 0.387 ± 0.160 | 69.3 ± 8.0 | — | — | — |
-| full | 0.573 ± 0.271 | 78.7 ± 13.6 | +9.3 | 0.06 | +0.84 |
-| shuffle | 0.760 ± 0.241 | 88.0 ± 12.1 | +18.7 | <0.001 | +1.82 |
+| Condition | τ (μ±σ) | Cohen's d vs none | p-value | Power |
+|-----------|---------|-------------------|---------|-------|
+| none | 0.408 ± 0.182 | — | — | — |
+| full | 0.617 ± 0.263 | **+0.92** | **0.005** | 88% ✅ |
+| shuffle | 0.717 ± 0.243 | **+1.44** | <0.001 | 100% |
 
-**Supplier Task (Moderate):**
+**Supplier Task (Moderate, n=30/cell):**
 
-| Condition | τ (μ±σ) | Q (μ±σ) | ΔQ vs none | p-value | Cohen's d |
-|-----------|---------|---------|------------|---------|-----------|
-| none | 0.680 ± 0.211 | 84.0 ± 10.6 | — | — | — |
-| full | 0.787 ± 0.177 | 89.3 ± 8.8 | +4.0 | 0.36 | +0.41 |
-| shuffle | 0.671 ± 0.202 | 83.6 ± 10.1 | +18.3 | 0.001 | — |
+| Condition | τ (μ±σ) | Cohen's d vs none | p-value | Power |
+|-----------|---------|-------------------|---------|-------|
+| none | 0.680 ± 0.186 | — | — | — |
+| full | 0.767 ± 0.183 | +0.47 | 0.089 | 43% ⚠️ |
+| shuffle | 0.697 ± 0.204 | +0.09 | 0.78 | 6% |
 
 **Cross-task summary:**
 
-- **Governance (full vs none)** is directionally positive in both tasks but statistically insignificant in both (Crisis p=0.06, Supplier p=0.36). Combined meta-analytic p-value via Fisher's method: p=0.07 — not significant.
-- **Shuffle vs none** is highly significant on the Crisis task (p<0.001) and significant on the Supplier task (p=0.001). The effect direction, however, differs: on Crisis (hard task), shuffle improves quality; on Supplier (moderate task), the between-group analysis was conducted differently in two separate analysis passes, with the Crisis comparison showing a large positive effect and Supplier using a different baseline structure. We report both sets of raw results transparently and discuss task-dependence in §6.3.
+- **Governance (full vs none)** is statistically confirmed effective on Crisis (d=0.92, p=0.005, power=88%) and directionally consistent on Supplier (d=0.47, p=0.089, power=43% — needs n=72 for 80% power).
+- **Shuffle vs none** is highly significant on Crisis (d=1.44, p<0.001) but null on Supplier (d=0.09, p=0.78). Boundary condition: shuffle effectiveness depends on task difficulty — Crisis none τ=0.41 (hard, room to improve); Supplier none τ=0.68 (easy, ceiling effect).
+- **Mechanism ablation**: reduce_weight (Crisis d=1.51, p=0.0001) and force_reflection (Crisis d=0.73, p=0.001) are core drivers; both d>0 in Supplier (direction-consistent).
 
 ### 5.2 Auxiliary Finding 1: False Consensus — Consensus ≠ Correctness
 
@@ -152,14 +153,14 @@ Across all conditions and both tasks, the correlation between consensus level (b
 
 | Task | r(consensus, τ) |
 |------|-------------------|
-| Crisis | r ≈ 0.01 |
-| Supplier | r ≈ -0.21 |
+| Crisis | r ≈ -0.14 |
+| Supplier | r ≈ -0.11 |
 
 This was independently verified in both tasks. Agents can reach near-perfect agreement (belief std < 0.05) while producing incorrect rankings. Conversely, high-quality rankings can emerge from low-consensus discussions. **Consensus is not a valid proxy for decision quality in LLM multi-agent systems.** This finding has implications for any framework that uses convergence as a stopping criterion.
 
-### 5.3 Auxiliary Finding 2: Targeted Governance Interventions Are Individually Ineffective
+### 5.3 Auxiliary Finding 2: Mechanism Ablation and Intervention Effectiveness
 
-Four single-intervention ablation modes were tested on the Supplier task:
+Four single-intervention ablation modes were tested on the M&A task (historical, broken-loop data — effects may be underestimated):
 
 | Intervention | ΔQ vs none | 95% CI | p-value | Bonferroni | FDR |
 |-------------|------------|--------|---------|------------|-----|
@@ -168,30 +169,29 @@ Four single-intervention ablation modes were tested on the Supplier task:
 | introduce_diversity | +6.3 | [-1.00, +14.33] | 0.174 | — | — |
 | continue_discussion | +4.3 | [-1.00, +10.00] | 0.267 | — | — |
 
-None of the four interventions pass either Bonferroni (corrected α=0.0125) or Benjamini-Hochberg correction. This is not a power issue — the effects are simply small relative to within-condition variance.
+None of the four interventions pass either Bonferroni (corrected α=0.0125) or Benjamini-Hochberg correction. Note: these ablations were conducted under the broken-loop regime (pre-2026-07-12), where state-modification interventions could not reach agent perception. Under the fixed-loop Crisis task, mechanism ablation shows reduce_weight (d=1.51, p=0.0001) and force_reflection (d=0.73, p=0.001) are statistically significant drivers.
 
-On the Crisis task, intervention cost-benefit analysis (n=15, full condition, 68 interventions total) revealed:
+On the Crisis task (n=24, full condition, 89 interventions total), per-intervention cost-benefit analysis revealed:
 
-| Intervention | Effective Rate | Δτ when effective |
-|-------------|----------------|-------------------|
-| force_reflection | 81.8% | +0.265 |
-| reduce_weight | 45.6% avg | — |
-| introduce_diversity | 9.1% | — |
-| continue_discussion | 0% | — |
+| Intervention | Effective Rate | Δτ when effective | Avg Token Cost |
+|-------------|----------------|-------------------|----------------|
+| force_reflection | 79.4% | +0.222 | 1,295 |
+| reduce_weight | 61.3% | +0.389 | 1,100 |
+| introduce_diversity | 9.1% | +0.000 | 880 |
+| continue_discussion | 0.0% | -0.400 | 1,025 |
 
-The two content-oriented interventions (introduce_diversity, continue_discussion) were subsequently disabled by default.
+The two content-oriented interventions (introduce_diversity, continue_discussion) were subsequently disabled by default due to low effectiveness and negative Δτ.
 
 ### 5.4 Within-Group τ Trajectory
 
-The within-group change in τ over discussion rounds reveals:
+The within-group change in τ over discussion rounds (historical M&A data, broken-loop):
 
 | Task | Condition | Δτ (within) | Interpretation |
 |------|-----------|-------------|----------------|
-| Supplier | full | -0.123 | τ *declines* under governance |
-| Supplier | none | +0.000 | τ stable |
-| Supplier | Net (full - none) | +0.000 | Zero marginal contribution |
+| M&A | full | -0.123 | τ *declines* under governance (broken loop) |
+| M&A | none | +0.000 | τ stable |
 
-This is a striking result: governance interventions, despite being frequently triggered (mean 3.8 interventions per full run), produce **no detectable within-group improvement in τ**. The between-group ΔQ=+4.0 on Supplier is driven entirely by initial-condition differences, not by governance improving trajectories during discussion.
+Note: This trajectory data is from the historical M&A task under the broken-loop regime. Under the fixed-loop Crisis task, governance produces a positive between-group effect (d=0.92, p=0.005). The Supplier task shows direction-consistent improvement (none τ=0.680 → full τ=0.767, d=0.47) but is underpowered (p=0.089, power=43%).
 
 ### 5.5 Intervention Effectiveness Diminishes Over Rounds
 
@@ -215,7 +215,7 @@ The key empirical pattern is:
 shuffle (break coherence) >> full governance > none (maintain coherence)
 ```
 
-On the Crisis task, the effect size of shuffle (d=+1.82) is more than double that of full governance (d=+0.84). On the Supplier task, shuffle achieves significance (p=0.001) where governance does not (p=0.36).
+On the Crisis task, the effect size of shuffle (d=+1.44) exceeds that of full governance (d=+0.92). On the Supplier task, shuffle has no effect (d=0.09, p=0.78) due to ceiling effect — the baseline τ=0.68 leaves no room for improvement.
 
 We propose **role-coherence overconfidence** as the mechanism:
 
@@ -236,7 +236,7 @@ This mechanism explains why post-hoc governance interventions fail: they attempt
 
 - **Task difficulty modulates the shuffle effect.** On the hard task (Crisis, baseline τ=0.39), shuffle improves quality — breaking overconfidence unlocks information sharing. On the moderate task (Supplier, baseline τ=0.68), shuffle effects are more nuanced depending on analysis specification. When agents already perform well without overconfidence, disrupting role coherence may add noise without benefit.
 - **Single model (DeepSeek-V3).** The role-coherence overconfidence mechanism may be model-dependent. Cross-model replication (GPT-4o, Claude) is necessary before claiming generality.
-- **Sample size (n=15 per condition).** Statistical power is sufficient for the large shuffle effect but marginal for the medium governance effect. Power analysis: detecting d=0.65 at 80% power requires n≈30 per group.
+- **Sample size (n=24 Crisis, n=30 Supplier per condition).** Crisis has 88% power for d=0.92 (sufficient); Supplier has 43% power for d=0.47 (underpowered — needs n=72 for 80% power).
 - **No pre-registration.** The shuffle effect was discovered during control-condition design, not hypothesized a priori. All future experiments should be pre-registered.
 
 ### 6.4 Relationship to Existing Phase Transition Models
@@ -251,13 +251,13 @@ This implies a natural extension to the 2D Ising framework: $\tilde{h}_i$ should
 
 We present evidence that **role-information coherence** is a structural precursor of consensus phase collapse in LLM multi-agent systems. Breaking this coherence (shuffle) produces larger and more statistically robust improvements in decision quality than any form of within-discussion governance intervention.
 
-Three empirical findings emerge from 89 experiments across two tasks:
+Three empirical findings emerge from 161 experiments across two tasks:
 
-1. **Shuffle dominates governance.** Breaking role-information coherence improves decision quality by +18.3 points (p=0.001, replicated across tasks), while full governance produces a non-significant +4.0 points (p=0.36).
+1. **Shuffle effectiveness has a boundary condition.** Breaking role-information coherence produces a large improvement on the hard task (Crisis: d=1.44, p<0.001) but no effect on the easy task (Supplier: d=0.09, p=0.78) due to ceiling effect — revealing that shuffle's power depends on task difficulty.
 
-2. **Consensus is a false signal.** Decision quality and consensus level are uncorrelated (r ≈ 0) across two tasks, invalidating convergence as a stopping criterion for LLM multi-agent systems.
+2. **Consensus is a false signal.** Decision quality and consensus level are uncorrelated (r ≈ -0.14) across two tasks, invalidating convergence as a stopping criterion for LLM multi-agent systems.
 
-3. **Post-hoc governance has a structural ceiling.** Four targeted interventions, individually and collectively, fail to significantly outperform baseline (all p > 0.17).
+3. **Governance is effective under closed-loop conditions.** Under the fixed-loop Crisis task, full governance produces a statistically significant improvement (d=0.92, p=0.005, power=88%), with reduce_weight (d=1.51, p=0.0001) and force_reflection (d=0.73, p=0.001) as the core drivers. The Supplier task shows direction-consistent improvement (d=0.47) but is underpowered (p=0.089).
 
 The practical implication is clear: **design multi-agent systems to suppress overconfidence structurally (by mismatching roles and information) rather than attempting to correct it procedurally.** The theoretical implication is that the phase boundary of multi-agent consensus is a function of role-information topology — a dimension that should be incorporated into statistical-physics models of agent collectives.
 
@@ -316,7 +316,7 @@ Each agent holds **private data** on their domain dimension plus partial data on
 
 ## Appendix C: Full Results Tables
 
-*[To be populated with complete tables from the 89-experiment dataset]*
+*[To be populated with complete tables from the 161-experiment dataset]*
 
 ## Appendix D: Reproducibility Checklist
 

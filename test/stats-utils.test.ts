@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mean, std, sampleStd, variance, range, normalize, round, shannonEntropy, socialFreeEnergy } from "@/lib/utils/statsUtils";
+import { mean, std, sampleStd, variance, range, normalize, round, shannonEntropy, socialFreeEnergy, normalizeTemperature } from "@/lib/utils/statsUtils";
 
 describe("statsUtils", () => {
   describe("mean", () => {
@@ -83,6 +83,27 @@ describe("statsUtils", () => {
       const clamped = shannonEntropy([1.5, -1.5, 0], 3, -1, 1);
       expect(clamped).toBeGreaterThanOrEqual(0);
       expect(clamped).toBeLessThanOrEqual(1);
+    });
+  });
+
+  describe("normalizeTemperature", () => {
+    it("std=0 → T=0", () => {
+      expect(normalizeTemperature(0)).toBe(0);
+    });
+    it("beliefs∈[-1,1] 时 std=1（双峰±1）→ T=1", () => {
+      expect(normalizeTemperature(1)).toBeCloseTo(1, 5);
+    });
+    it("std=0.5 → T=0.5", () => {
+      expect(normalizeTemperature(0.5)).toBeCloseTo(0.5, 5);
+    });
+    it("超出理论上界的 std 被 clamp 到 1", () => {
+      expect(normalizeTemperature(1.5)).toBe(1);
+    });
+    it("自定义 belief 范围 [-2,2] 时上界=2，std=1 → T=0.5", () => {
+      expect(normalizeTemperature(1, [-2, 2])).toBeCloseTo(0.5, 5);
+    });
+    it("负 std 返回 0（防御）", () => {
+      expect(normalizeTemperature(-0.3)).toBe(0);
     });
   });
 

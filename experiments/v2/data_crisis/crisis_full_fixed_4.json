@@ -1,0 +1,275 @@
+{
+  "runId": "crisis_full_fixed_4",
+  "ablation": "full_fixed",
+  "runIndex": 4,
+  "timestamp": "2026-07-15T11:55:43.166Z",
+  "kendallTau": 0.8,
+  "decisionQuality": 90,
+  "tauTrajectory": [
+    0.2,
+    0.8,
+    0.8
+  ],
+  "totalRounds": 3,
+  "converged": false,
+  "consensusLevel": 0.7415430403335983,
+  "opinionDiversity": 0.12922847983320082,
+  "totalInterventions": 3,
+  "issuesDetected": [
+    "authority_bias",
+    "polarization",
+    "premature_consensus"
+  ],
+  "interventionEffects": [
+    {
+      "round": 1,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a1",
+      "beliefBefore": -0.66,
+      "beliefAfter": -0.61,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a5",
+      "beliefBefore": -0.11,
+      "beliefAfter": -0.83,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a2",
+      "beliefBefore": 0.33,
+      "beliefAfter": -0.93,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a3",
+      "beliefBefore": -0.93,
+      "beliefAfter": -0.83,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a1",
+      "beliefBefore": -0.66,
+      "beliefAfter": -0.61,
+      "effective": true
+    },
+    {
+      "round": 1,
+      "interventionType": "force_reflection",
+      "targetAgentId": "a4",
+      "beliefBefore": -0.66,
+      "beliefAfter": -0.61,
+      "effective": true
+    },
+    {
+      "round": 2,
+      "interventionType": "reduce_weight",
+      "targetAgentId": "a2",
+      "beliefBefore": -0.93,
+      "beliefAfter": -0.83,
+      "effective": true
+    }
+  ],
+  "interventionBreakdown": {
+    "reduce_weight": 2,
+    "force_reflection": 1
+  },
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 5820,
+        "completionTokens": 1555,
+        "totalTokens": 7375,
+        "totalLatencyMs": 13933,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 6834,
+        "completionTokens": 1350,
+        "totalTokens": 8184,
+        "totalLatencyMs": 11344,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 7238,
+        "completionTokens": 1210,
+        "totalTokens": 8448,
+        "totalLatencyMs": 11261,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 7380,
+        "completionTokens": 1555,
+        "totalTokens": 8935,
+        "totalLatencyMs": 13021,
+        "callCount": 3
+      },
+      "a5": {
+        "promptTokens": 7186,
+        "completionTokens": 1375,
+        "totalTokens": 8561,
+        "totalLatencyMs": 11819,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 34458,
+      "completionTokens": 7045,
+      "totalTokens": 41503,
+      "totalLatencyMs": 61378
+    }
+  },
+  "evaluationScores": {
+    "consensus": 85.19818701051523,
+    "reliability": 17.4,
+    "dispersion": 77.4,
+    "stability": 75,
+    "influenceAnalysis": 73.5,
+    "overall": 62.8
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": -0.66,
+        "a2": 0.33,
+        "a3": -0.93,
+        "a4": -0.66,
+        "a5": -0.11
+      },
+      "confidences": {
+        "a1": 77,
+        "a2": 90,
+        "a3": 75,
+        "a4": 93,
+        "a5": 83
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "polarization",
+        "authority_bias",
+        "polarization"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1"
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a5",
+            "a2",
+            "a3",
+            "a1",
+            "a4"
+          ]
+        }
+      ],
+      "tau": 0.2,
+      "decisionQuality": 60,
+      "evalScores": {
+        "consensus": 68.84425893727548,
+        "reliability": 16.8,
+        "dispersion": 69.9,
+        "stability": 75,
+        "influenceAnalysis": 66,
+        "overall": 56.6
+      }
+    },
+    {
+      "roundNumber": 2,
+      "beliefs": {
+        "a1": -0.61,
+        "a2": -0.93,
+        "a3": -0.83,
+        "a4": -0.61,
+        "a5": -0.83
+      },
+      "confidences": {
+        "a1": 72,
+        "a2": 85,
+        "a3": 70,
+        "a4": 88,
+        "a5": 70
+      },
+      "converged": false,
+      "issues": [
+        "authority_bias",
+        "premature_consensus",
+        "authority_bias",
+        "premature_consensus"
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2"
+        }
+      ],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 81.7961269480176,
+        "reliability": 15.5,
+        "dispersion": 76,
+        "stability": 75,
+        "influenceAnalysis": 79.5,
+        "overall": 62.5
+      }
+    },
+    {
+      "roundNumber": 3,
+      "beliefs": {
+        "a1": -0.55,
+        "a2": -0.83,
+        "a3": -0.83,
+        "a4": -0.86,
+        "a5": -0.83
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 85,
+        "a3": 85,
+        "a4": 97,
+        "a5": 85
+      },
+      "converged": false,
+      "issues": [],
+      "interventions": [],
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 85.19818701051523,
+        "reliability": 17.4,
+        "dispersion": 77.4,
+        "stability": 75,
+        "influenceAnalysis": 73.5,
+        "overall": 62.8
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 3 rounds (overall belief: -0.78 - negative):\n\na1: Despite governance intervention warning against deferring to a2, my independent analysis based on speed data remains that speed is paramount. However, I must incorporate other dimensions. a3's effectiveness data shows C has 88% net effect vs A's 52%, and a4's risk data shows A has highest risk (5/5). Yet, the mayor explicitly stated speed is highest priority, and every hour delay adds 50 infections. A's 2-hour response can prevent 300 infections compared to C's 8-hour delay (6 hours difference * 50 = 300). Even with lower net effect, A's immediate containment may save more lives overall. a5's sustainability data shows A lasts 21 days, sufficient for initial response. a2's coverage data shows A covers 100%, but I should not overweigh a2. Considering all, I rank A first, E second (4h, 75% coverage, moderate risk), B third (6h, 60% coverage, low risk), C fourth (8h, 45% coverage, low risk but high effectiveness but slow), D fifth (12h, 95% coverage, high risk). My belief shifts slightly from -0.61 to -0.55 as I acknowledge risks but maintain speed priority.\n\na2: 尽管市长强调速度优先，但方案A的高风险（医疗过载、经济崩溃）可能导致更多间接死亡，且净效果仅52%，远低于方案C的88%。方案C虽启动慢8小时，但新增400例感染可通过其高控制率弥补，且风险最低。a5的可持续性数据（方案C仅10天）是弱点，但10天足够控制疫情，后续可调整。a1的论点忽略了风险，我坚持方案C最优。\n\na3: 尽管市长强调速度优先，但方案A的高风险（医疗过载、经济崩溃）可能导致更多间接死亡，且净效果仅52%，远低于方案C的88%。方案C虽启动慢8小时，但新增400例感染可通过其高控制率弥补，且风险最低。a5的可持续性数据（方案C仅10天）是弱点，但10天足够控制疫情，后续可调整。a1的论点忽略了风险，我坚持方案C最优。\n\na4: Despite the mayor's emphasis on speed, the high risk of Option A (5/5) including medical overload and economic collapse could cause more deaths than the disease itself. Option C has the lowest risk (1/5) and highest net effectiveness (88%), which can compensate for its 8-hour delay (400 additional infections) by preventing many more infections later. Option B offers a balanced approach with moderate speed and low risk. Option E has moderate risk but poor sustainability (7 days). Option D is the worst due to high risk and ",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案C-精准疏散",
+    "方案B-分阶段响应",
+    "方案E-社区自治",
+    "方案A-全城封锁",
+    "方案D-军事管制"
+  ]
+}
