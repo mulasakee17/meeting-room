@@ -90,22 +90,23 @@ export interface TerminationThresholds {
 /**
  * 默认阈值
  *
- * 标定依据：fraud_C_0 pilot 数据
- * - R 始终 >0.87 → crystallR 从 0.75 提高到 0.85
- * - eval3 (H=0, T=0.08) 是真正收敛点 → 新增强结晶快速终止
- * - eval2 (H=0.311) 被 0.30 挡住 → crystallH 从 0.30 放宽到 0.35
- * - T 骤降原用绝对值（bug）→ 改为只检测下降
+ * 标定依据：fraud_C v2 全 10 轮逐例分析 (2026-07-17)
+ * - Run 1 (τ=0.6) H 卡在 0.418 长达 7 eval → crystallH 从 0.35 放宽到 0.42
+ * - Run 4 (τ=0.2) T 最低 0.207 被 0.20 挡住 → crystallT 从 0.20 放宽到 0.22
+ * - Run 8 达到 1 次结晶后去结晶化 → consecutiveCrystallRequired 从 2 提高到 3
+ * - Run 1 T<0.07 但 H=0.418 被强结晶拒绝 → strongCrystallH 从 0.10 放宽到 0.20
+ * - K 从 3 降到 2（asyncEngine.ts）→ 更密集的热力学评估
  */
 export const DEFAULT_TERMINATION_THRESHOLDS: TerminationThresholds = {
   // 普通结晶态
-  crystallR: 0.85,        // R > 0.85（提高，避免 R 条件形同虚设）
-  crystallT: 0.20,        // T < 0.20（放宽，避免卡在 0.15 边缘）
-  crystallH: 0.35,        // H < 0.35（放宽，避免卡在 0.30 边缘）
-  consecutiveCrystallRequired: 2,
+  crystallR: 0.85,        // R > 0.85
+  crystallT: 0.22,        // T < 0.22（放宽：Run 4 T=0.207 被旧值 0.20 挡住）
+  crystallH: 0.42,        // H < 0.42（放宽：Run 1 τ=0.6 但 H=0.418 被旧值 0.35 挡住）
+  consecutiveCrystallRequired: 3,  // 提高：防止 Run 8 型去结晶化误判
 
   // 强结晶态（H 极低 + T 极低 → 立即终止）
   strongCrystallT: 0.10,  // T < 0.10
-  strongCrystallH: 0.10,  // H < 0.10
+  strongCrystallH: 0.20,  // H < 0.20（放宽：旧值 0.10 太严，Run 1 T<0.07 因 H=0.418 无法触发）
 
   // 淬火态
   suddenDropT: 0.05,      // T 下降 > 0.05 视为骤降

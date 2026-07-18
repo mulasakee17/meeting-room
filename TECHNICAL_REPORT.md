@@ -442,6 +442,5 @@ D1-D4 导致 165 个历史实验中，状态修改干预**从未到达 agent 感
 | [PAPER_DRAFT.md](./PAPER_DRAFT.md) | 学术论文投稿草稿 | 聚焦 shuffle 相变发现，本报告覆盖完整研究过程 |
 | [THERMODYNAMICS_INTEGRATION.md](./THERMODYNAMICS_INTEGRATION.md) | 社会热力学详细文档 | 本报告 §3-5 的展开版 |
 | [LIMITATIONS.md](./LIMITATIONS.md) | 局限性记录 | 本报告 §4-5 的细节来源 |
-| [RESEARCH_STATEMENT.md](./RESEARCH_STATEMENT.md) | 研究声明精简版 | 本报告的 1 页摘要 |
-| [SCIENTIFIC_CONTRIBUTIONS.md](./SCIENTIFIC_CONTRIBUTIONS.md) | 科学贡献清单 | 本报告的贡献展开 |
+| [PROJECT_EVALUATION.md](./PROJECT_EVALUATION.md) | 项目整体评价 | 本报告的贡献评估与风险分析 |
 | [ROADMAP.md](./ROADMAP.md) | 路线图 | 本报告 §7 的来源 |

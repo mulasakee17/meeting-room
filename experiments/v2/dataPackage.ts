@@ -181,31 +181,26 @@ function makeLLMConfig(runIndex: number): LLMConfig {
   return { ...LLM_CONFIG, seed: 42 + runIndex };
 }
 
+/** P0-1 修复：移除 V1 fallback，统一使用 itemBeliefs 聚合路径。 */
 function extractRanking(
-  decision: string,
+  _decision: string,
   itemNames: string[],
   itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>,
 ): string[] {
-  if (itemBeliefs && itemBeliefs.length > 0) {
-    const itemRanks = new Map<string, number[]>();
-    for (const ib of itemBeliefs) {
-      if (!itemRanks.has(ib.item)) itemRanks.set(ib.item, []);
-      itemRanks.get(ib.item)!.push(ib.rank);
-    }
-    const avgRanks = itemNames.map(name => {
-      const ranks = itemRanks.get(name);
-      return { name, avgRank: ranks && ranks.length > 0 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : Infinity };
-    });
-    avgRanks.sort((a, b) => a.avgRank - b.avgRank);
-    return avgRanks.map(r => r.name);
+  if (!itemBeliefs || itemBeliefs.length === 0) {
+    throw new Error("extractRanking: itemBeliefs 为空，无法提取排名。");
   }
-  const positions = itemNames.map(name => {
-    const shortName = name.split("(")[0]?.trim() || name;
-    const idx = decision.indexOf(shortName);
-    return { name, pos: idx >= 0 ? idx : Infinity };
+  const itemRanks = new Map<string, number[]>();
+  for (const ib of itemBeliefs) {
+    if (!itemRanks.has(ib.item)) itemRanks.set(ib.item, []);
+    itemRanks.get(ib.item)!.push(ib.rank);
+  }
+  const avgRanks = itemNames.map(name => {
+    const ranks = itemRanks.get(name);
+    return { name, avgRank: ranks && ranks.length > 0 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : Infinity };
   });
-  positions.sort((a, b) => a.pos - b.pos);
-  return positions.map(p => p.name);
+  avgRanks.sort((a, b) => a.avgRank - b.avgRank);
+  return avgRanks.map(r => r.name);
 }
 
 function kendallTau(groundTruth: Record<string, number>, extracted: string[]): number {

@@ -84,24 +84,43 @@ export async function callLLM(
   config?: LLMConfig
 ): Promise<LLMResponse> {
   const provider = config?.provider || "deepseek";
+  const maxRetries = 3;
+  const baseDelayMs = 2000;
 
-  switch (provider) {
-    case "openai":
-      return callOpenAI(systemPrompt, userPrompt, config);
-    case "anthropic":
-      return callAnthropic(systemPrompt, userPrompt, config);
-    case "deepseek":
-      return callDeepSeek(systemPrompt, userPrompt, config);
-    case "local":
-      return callLocalLLM(systemPrompt, userPrompt, config);
-    default:
-      throw new LLMError(
-        `不支持的 LLM 提供商: ${provider}`,
-        LLMErrorType.UNKNOWN,
-        undefined,
-        false
-      );
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      switch (provider) {
+        case "openai":
+          return await callOpenAI(systemPrompt, userPrompt, config);
+        case "anthropic":
+          return await callAnthropic(systemPrompt, userPrompt, config);
+        case "deepseek":
+          return await callDeepSeek(systemPrompt, userPrompt, config);
+        case "local":
+          return await callLocalLLM(systemPrompt, userPrompt, config);
+        default:
+          throw new LLMError(
+            `不支持的 LLM 提供商: ${provider}`,
+            LLMErrorType.UNKNOWN,
+            undefined,
+            false
+          );
+      }
+    } catch (error) {
+      if (attempt >= maxRetries) throw error;
+
+      if (error instanceof LLMError && error.isRetryable) {
+        const delay = baseDelayMs * attempt;
+        console.warn(
+          `[LLM retry] ${provider} attempt ${attempt}/${maxRetries} failed: ${error.type} — retrying in ${delay / 1000}s`
+        );
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw error;
+    }
   }
+  throw new Error("unreachable");
 }
 
 // 错误类型映射

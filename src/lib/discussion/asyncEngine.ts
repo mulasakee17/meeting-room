@@ -66,7 +66,7 @@ export interface AsyncDiscussionConfig {
 }
 
 export const DEFAULT_ASYNC_CONFIG: AsyncDiscussionConfig = {
-  evalEveryKUtterances: 3,
+  evalEveryKUtterances: 2,  // K=2（原 3：更密集评估 → 更早检测结晶/去结晶）
   baseSpeakProbability: 0.5,
   dependencyTriggeredProbability: 0.8,
   alreadyMentionedProbability: 0.3,
@@ -307,7 +307,9 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
       });
 
       // 更新 prevCycleBeliefs（用于下一轮的 beliefShift 计算）
-      agentStates.forEach((s, id) => this.prevCycleBeliefs.set(id, s.belief));
+      // 使用 prevStates（belief 更新前捕获）而非 agentStates（已更新），
+      // 否则下一周期 beliefShift 始终为 0（因为 prevCycleBeliefs == 当前 state.belief）
+      prevStates.forEach((s, id) => this.prevCycleBeliefs.set(id, s.belief));
 
       // ── 检查终止条件 ──
       if (this.asyncConfig.terminationMode === "fixed_rounds") {

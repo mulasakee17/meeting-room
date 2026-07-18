@@ -179,33 +179,32 @@ function makeLLMConfig(runIndex: number): LLMConfig {
  * Extract ranking from decision text by finding the first mention position
  * of each company name. Earlier mention = higher rank.
  */
+/**
+ * 从 itemBeliefs 聚合提取排名（唯一路径，不再有 fallback）。
+ *
+ * 修复 P0-1：旧版有 V1 fallback（首次提及位置启发式）——当 itemBeliefs
+ * 为空时静默降级，产生与 V2 路径不可直接对比的 τ 值。现统一为 itemBeliefs
+ * 聚合路径，itemBeliefs 为空时抛出错误（调用方已有 try-catch 隔离）。
+ */
 function extractRanking(
-  decision: string,
+  _decision: string,
   itemNames: string[],
   itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>
 ): string[] {
-  // V2: aggregate multiple agents' itemBeliefs into collective ranking
-  if (itemBeliefs && itemBeliefs.length > 0) {
-    const itemRanks = new Map<string, number[]>();
-    for (const ib of itemBeliefs) {
-      if (!itemRanks.has(ib.item)) itemRanks.set(ib.item, []);
-      itemRanks.get(ib.item)!.push(ib.rank);
-    }
-    const avgRanks = itemNames.map(name => {
-      const ranks = itemRanks.get(name);
-      return { name, avgRank: ranks && ranks.length > 0 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : Infinity };
-    });
-    avgRanks.sort((a, b) => a.avgRank - b.avgRank);
-    return avgRanks.map(r => r.name);
+  if (!itemBeliefs || itemBeliefs.length === 0) {
+    throw new Error("extractRanking: itemBeliefs 为空，无法提取排名。请检查 LLM 输出格式。");
   }
-  // V1 fallback: first-mention-position heuristic
-  const positions = itemNames.map(name => {
-    const shortName = name.split("(")[0]?.trim() || name;
-    const idx = decision.indexOf(shortName);
-    return { name, pos: idx >= 0 ? idx : Infinity };
+  const itemRanks = new Map<string, number[]>();
+  for (const ib of itemBeliefs) {
+    if (!itemRanks.has(ib.item)) itemRanks.set(ib.item, []);
+    itemRanks.get(ib.item)!.push(ib.rank);
+  }
+  const avgRanks = itemNames.map(name => {
+    const ranks = itemRanks.get(name);
+    return { name, avgRank: ranks && ranks.length > 0 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : Infinity };
   });
-  positions.sort((a, b) => a.pos - b.pos);
-  return positions.map(p => p.name);
+  avgRanks.sort((a, b) => a.avgRank - b.avgRank);
+  return avgRanks.map(r => r.name);
 }
 
 /**
@@ -295,8 +294,8 @@ function createAgents(task: TaskConfig, llmConfig: LLMConfig): DiscussionAgent[]
       + `  "nextOpinion": "下一步讨论方向",\n`
       + `  "referencedAgents": ["a2"],\n`
       + `  "itemBeliefs": [\n`
-      + `    {"item": "CompanyX (行业A)", "rank": 3, "belief": -0.5, "confidence": 85},\n`
-      + `    {"item": "CompanyY (行业B)", "rank": 1, "belief": 0.7, "confidence": 90},\n`
+      + `    {"item": "方案A-全城封锁", "rank": 3, "belief": -0.5, "confidence": 85},\n`
+      + `    {"item": "方案B-分阶段响应", "rank": 1, "belief": 0.7, "confidence": 90},\n`
       + `    {"item": "CompanyZ (行业C)", "rank": 2, "belief": 0.1, "confidence": 65}\n`
       + `  ]\n`
       + `}\n`
@@ -317,15 +316,20 @@ function createAgents(task: TaskConfig, llmConfig: LLMConfig): DiscussionAgent[]
  * If governance does NOT improve τ in "shuffle" while "full" does →
  * improvement genuinely requires coherent unique knowledge integration.
  */
-function shuffleTask(task: TaskConfig): TaskConfig {
+/**
+ * P1-3 修复：shuffle 旋转随机化，不再固定 +2 偏移。
+ * 每次实验使用 mulberry32(runIndex) 确定旋转偏移量，
+ * 消除"特定固定旋转效应"的混淆。
+ */
+function shuffleTask(task: TaskConfig, runIndex: number): TaskConfig {
   const n = task.agents.length;
   if (n < 2) return task;
+  // 随机偏移 ∈ [1, n-1]（偏移 0 等于没打乱）
+  const rng = mulberry32(42 + runIndex);
+  const offset = 1 + Math.floor(rng() * (n - 1));
   const rotatedAgents = task.agents.map((agent, i) => ({
     ...agent,
-    knownItems: task.agents[(i + 2) % n].knownItems,
-    // Keep original bias text so agents still have an initial stance,
-    // but it now contradicts their (scrambled) data — creating the
-    // same "confusion" level as baseline while destroying coherence
+    knownItems: task.agents[(i + offset) % n].knownItems,
   }));
   return { ...task, agents: rotatedAgents };
 }
@@ -369,7 +373,7 @@ async function runSingle(
   runIndex: number,
 ): Promise<ExperimentResult> {
   // ── Shuffle control: scramble agent knowledge to break coherence ────
-  const effectiveTask = ablation === "shuffle" ? shuffleTask(task) : task;
+  const effectiveTask = ablation === "shuffle" ? shuffleTask(task, runIndex) : task;
   const agents = createAgents(effectiveTask, makeLLMConfig(runIndex));
   const runId = `${task.id}_${ablation}_${runIndex}`;
 
@@ -529,7 +533,7 @@ async function runSingle(
   const lastRound = result.roundResults[result.roundResults.length - 1];
   const lastBeliefs = lastRound?.opinions.map(o => o.belief) || [];
   const consensusLevel = lastBeliefs.length > 0
-    ? 1 - (stdDev(lastBeliefs) * 2) // Kuramoto-like consensus level
+    ? kuramotoR(lastBeliefs)
     : 0;
   const opinionDiversity = lastBeliefs.length > 0 ? stdDev(lastBeliefs) : 0;
 
@@ -610,7 +614,7 @@ async function runSingle(
     tauTrajectory: rounds.map(r => (r as any).tau as number),
     totalRounds: result.totalRounds,
     converged: result.converged,
-    consensusLevel: Math.max(0, Math.min(1, consensusLevel)),
+    consensusLevel,  // Kuramoto R ∈ [0,1] by construction, no clamp needed
     opinionDiversity,
     totalInterventions,
     issuesDetected: [...new Set(allIssues)],
@@ -646,6 +650,30 @@ function stdDev(values: number[]): number {
 
 function mean(values: number[]): number {
   return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+/** Kuramoto 序参量 R = |Σ e^(iθ_j)| / N，θ = belief × π/2。R ∈ [0, 1]。 */
+function kuramotoR(beliefs: number[]): number {
+  const n = beliefs.length;
+  if (n === 0) return 0;
+  let sumCos = 0, sumSin = 0;
+  for (const b of beliefs) {
+    const theta = b * Math.PI / 2;
+    sumCos += Math.cos(theta);
+    sumSin += Math.sin(theta);
+  }
+  return Math.sqrt(sumCos * sumCos + sumSin * sumSin) / n;
+}
+
+/** mulberry32 seeded PRNG（用于 shuffle 旋转随机化） */
+function mulberry32(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s |= 0; s = s + 0x6D2B79F5 | 0;
+    let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
 }
 
 function cohensD(a: number[], b: number[]): number {

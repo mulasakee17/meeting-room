@@ -1,0 +1,30 @@
+{
+  "runId": "fraud_C_content_driven_9",
+  "group": "C",
+  "runIndex": 9,
+  "speakMode": "content_driven",
+  "timestamp": "2026-07-16T12:08:42.414Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "totalRounds": 1,
+  "totalUtterances": 5,
+  "converged": false,
+  "terminationReason": "strong_crystallized (强结晶态（R=0.993, T=0.073, H=0.000），立即终止（不可逆收敛）)",
+  "thermoHistory": [
+    {
+      "R": 0.993387988308957,
+      "T": 0.07328846670012348,
+      "H": 0,
+      "F": 0.006612011691042974,
+      "utteranceCount": 5,
+      "evalIndex": 0
+    }
+  ],
+  "finalBeliefs": {
+    "a1": 0.2591753464598596,
+    "a2": 0.4745694095099078,
+    "a3": 0.40091085176929625,
+    "a4": 0.4098845987846713,
+    "a5": 0.3344844332180509
+  }
+}

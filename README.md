@@ -562,16 +562,20 @@ npm run test:watch    # watch mode
 
 | Document | Content |
 |----------|---------|
-| [ONEPAGER.md](ONEPAGER.md) | One-page executive summary (project overview) |
+| [**DEVELOPER_GUIDE.md**](DEVELOPER_GUIDE.md) | 🔴 **Must-read for developers** — architecture, critical bug fix history, pitfalls, workflow |
+| [ONEPAGER.md](ONEPAGER.md) | One-page executive summary |
+| [README_CN.md](README_CN.md) | Full project documentation (Chinese, most up-to-date) |
+| [PROJECT_EVALUATION.md](PROJECT_EVALUATION.md) | Comprehensive project evaluation (strengths, weaknesses, risks) |
+| [EXPERIMENT_REVIEW.md](EXPERIMENT_REVIEW.md) | All experiment lines explained + design flaw audit |
+| [LIMITATIONS.md](LIMITATIONS.md) | 22 modules of known limitations and unfixed issues |
 | [ROADMAP.md](ROADMAP.md) | Development roadmap & academic outreach plan |
-| [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) | Deep technical architecture |
-| [API_CONTRACT.md](API_CONTRACT.md) | REST API + SDK API specification |
+| [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) | Technical architecture deep-dive |
+| [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) | Full research report (experiment design, falsification, paradigm critique) |
 | [MATHEMATICAL_FRAMEWORK.md](MATHEMATICAL_FRAMEWORK.md) | Complete formal math definitions |
-| [RESEARCH_STATEMENT.md](RESEARCH_STATEMENT.md) | Research contribution & experiment results |
-| [LIMITATIONS.md](LIMITATIONS.md) | Honest scope, statistical limitations, and non-significant findings |
-| [experiments/v2/analyze.ts](experiments/v2/analyze.ts) | Statistical analysis (t-CI + permutation test) |
-| [experiments/v2/causalAnalysis.ts](experiments/v2/causalAnalysis.ts) | 🆕 Causal effect estimation (trajectory matching + counterfactual) |
-| [experiments/v2/sensitivity.ts](experiments/v2/sensitivity.ts) | Parameter sensitivity sweep |
+| [THERMODYNAMICS_INTEGRATION.md](THERMODYNAMICS_INTEGRATION.md) | Thermodynamics formula reference & code index |
+| [PAPER_DRAFT.md](PAPER_DRAFT.md) | Academic paper draft (AAMAS/AAAI/CogSci 2027) |
+| [API_CONTRACT.md](API_CONTRACT.md) | REST API + SDK API specification |
+| [BAYESIAN_ANALYSIS.md](BAYESIAN_ANALYSIS.md) | Bayesian parameter estimation |
 
 ---
 
@@ -581,33 +585,27 @@ TypeScript · Next.js 14 · React 18 · Tailwind CSS · Vitest · DeepSeek API
 
 ---
 
-## Async Adaptive Discussion Engine (2026-07-16)
+## Async Adaptive Discussion Engine (2026-07-17, recalibrated)
 
-The async discussion engine (`AsyncDiscussionEngine`) extends the synchronous `DiscussionEngine` with two core innovations:
+The async discussion engine (`AsyncDiscussionEngine`) extends `DiscussionEngine` with content-driven speaking, thermodynamic termination, and passive listening updates. Two rounds of threshold calibration on the v2 difficulty-enhanced fraud task.
 
 ### Content-Driven Speaking (v2)
 
-Instead of random probability-based speaking (v1, "pseudo-async"), agents compute a **willingness score** based on internal state:
+Agents compute a **willingness score** based on internal state (info exposure, belief shift, consensus deviation, dependency triggers, recency penalty). Scores normalized via `tanh` to [0,1].
 
-| Factor | Weight | Rationale |
-|--------|--------|-----------|
-| Info exposure (×0.6) | 0.6 | Unexposed unique info → duty to share |
-| Belief shift (+0.4/+0.2) | 0.4/0.2 | Belief changed after hearing → new perspective |
-| Consensus deviation (+0.4/+0.2) | 0.4/0.2 | Disagreement → want to rebut |
-| Dependency triggered (+0.3) | 0.3 | Required info appeared → can speak now |
-| Recently spoke (−0.5) | -0.5 | Avoid domination |
+### Thermodynamic Adaptive Termination (Recalibrated 2026-07-17)
 
-Scores are normalized via `tanh` to [0,1]. Thresholds: ≥0.82 must speak, [0.40, 0.82) weighted random, <0.40 silent.
+Thresholds recalibrated after per-case autopsy of 4 hard-cap failures. See [README_CN.md](README_CN.md) for full analysis.
 
-### Thermodynamic Adaptive Termination
+| Parameter | Old | New | Rationale |
+|-----------|-----|-----|-----------|
+| `crystallH` | 0.35 | **0.42** | Run with τ=0.6 stuck at H=0.418 |
+| `crystallT` | 0.20 | **0.22** | Run with τ=0.2 stuck at T=0.207 |
+| `consecutiveCrystallRequired` | 2 | **3** | Prevented de-crystallization false termination |
+| `strongCrystallH` | 0.10 | **0.20** | Allowed strong-crystallization at T<0.07 |
+| `evalEveryKUtterances` | 3 | **2** | Denser evaluation cadence |
 
-Discussion termination is decided by social thermodynamics state (R, T, H) instead of fixed rounds:
-
-- **Strong crystallization** (H<0.10, T<0.10): Immediate termination — irreversible convergence
-- **Crystallization** (R>0.85, T<0.20, H<0.35): Terminate after 2 consecutive occurrences
-- **Hard cap** (40 utterances): Forced termination if no convergence
-- **Quenched state** (R high + T sudden drop + H not low): Inject diversity intervention
-- **Chaotic state** (R<0.40, T>0.50, H>0.60): Inject structure guidance
+**Results**: Hard-cap rate 40%→10%, mean τ 0.34→0.46, max τ 0.6→0.8. Remaining 10% hard cap is a discussion quality failure (speak willingness lacks quality dimension).
 
 ### Passive Listening Belief Update
 

@@ -23,7 +23,7 @@
 - [x] README.md —— 更新实验数据和技术亮点，对齐新叙事
 - [x] ONEPAGER.md —— 更新一页摘要
 - [x] README_CN.md —— 同步中文版 README
-- [x] RESEARCH_STATEMENT.md —— 更新研究声明
+- [x] ~~RESEARCH_STATEMENT.md~~ —— 已合并入 PROJECT_EVALUATION.md
 
 ### 1.2 代码清理
 - [x] 保留 AutoGenAdapter 的 throw Error（不静默降级是正确行为），转而给 StateInferenceBridge 补 LLM 推断层
@@ -33,7 +33,7 @@
 - [ ] 给 GovernanceRuntime 写 3 个使用示例（node 脚本、Express 中间件、WebSocket 实时监控）
 
 ### 1.3 测试与质量
-- [x] 确认 209 tests 全部通过（149 原有 + 32 StateInferenceBridge/PromptInjector + 28 causalEffect 测试）
+- [x] 确认 229 tests 全部通过
 - [x] 给 StateInferenceBridge 补测试（34 个测试覆盖三级提取、干预转译、LLM 推断、统计监控）
 - [x] 修复 extractGovTag 截断 JSON 容错 bug（正则匹配失效，改为 indexOf 定位 + 手动补全）
 
@@ -150,6 +150,6 @@
 
 ---
 
-> 当前时间：2026年7月12日
-> 当前阶段：Phase 1（止血与验证）—— 代码清理与测试已完成，待实验室重跑实验
-> 下一次回顾：实验室实验完成后
+> 当前时间：2026年7月18日
+> 当前阶段：Phase 1 完成 → Phase 2（过程监控演示）。376 次实验完成，6 个实验设计缺陷已修复，热力学阈值已重新标定。文档架构已精简（17→10 md）。
+> 下一次回顾：跨模型验证完成后

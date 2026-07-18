@@ -1,0 +1,21 @@
+{
+  "runId": "fraud_D_content_driven_8",
+  "group": "D",
+  "runIndex": 8,
+  "speakMode": "content_driven",
+  "timestamp": "2026-07-16T12:54:25.869Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "totalRounds": 14,
+  "totalUtterances": 30,
+  "converged": false,
+  "terminationReason": "completed",
+  "thermoHistory": [],
+  "finalBeliefs": {
+    "a1": -0.07713114745024284,
+    "a2": 0.6298394856469032,
+    "a3": -0.3034372482488051,
+    "a4": 0.002395061955588411,
+    "a5": 0.04711419267214925
+  }
+}

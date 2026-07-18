@@ -110,27 +110,60 @@ function main() {
   // ========================================================================
   console.log("\n═══ 发现 1：共识度与决策质量零相关（虚假共识）═══");
 
-  // 计算 consensusLevel（用信念的 1-std/2 近似，即 Kuramoto R）
-  // 数据中的 consensusLevel 字段是什么？让我们直接用数据中的字段
-  const consensusLevels = all.map(r => r.consensusLevel);
-  const finalTaus = all.map(r => r.kendallTau);
+  // P0-2 修复：从末轮信念重新计算真正的 Kuramoto R，而非依赖旧 JSON 中的 1-2*std 近似值
+  const consensusLevels = all.map(r => {
+    const rounds = r.rounds;
+    if (rounds && rounds.length > 0) {
+      const lastRound = rounds[rounds.length - 1];
+      const beliefs: number[] = Object.values(lastRound.beliefs || {});
+      if (beliefs.length >= 2) {
+        // 真正的 Kuramoto 序参量 R = |Σ e^(iθ_j)| / N
+        let sumCos = 0, sumSin = 0;
+        for (const b of beliefs) {
+          const theta = b * Math.PI / 2;
+          sumCos += Math.cos(theta);
+          sumSin += Math.sin(theta);
+        }
+        return Math.sqrt(sumCos * sumCos + sumSin * sumSin) / beliefs.length;
+      }
+    }
+    return NaN;
+  }).filter(r => !isNaN(r));
+  const finalTaus = all.filter((_, i) => {
+    const rounds = all[i].rounds;
+    return rounds && rounds.length > 0 && Object.values(rounds[rounds.length - 1].beliefs || {}).length >= 2;
+  }).map(r => r.kendallTau);
 
-  console.log(`\n样本量: n=${all.length}`);
-  console.log(`consensusLevel 范围: [${Math.min(...consensusLevels).toFixed(3)}, ${Math.max(...consensusLevels).toFixed(3)}]`);
+  console.log(`\n样本量: n=${consensusLevels.length}`);
+  console.log(`Kuramoto R 范围: [${Math.min(...consensusLevels).toFixed(3)}, ${Math.max(...consensusLevels).toFixed(3)}]`);
   console.log(`τ 范围: [${Math.min(...finalTaus).toFixed(3)}, ${Math.max(...finalTaus).toFixed(3)}]`);
 
   const rAll = pearsonCorr(consensusLevels, finalTaus);
   const pAll = permutationCorrTest(consensusLevels, finalTaus);
-  console.log(`\n全样本 Pearson r = ${rAll.toFixed(4)}, 置换检验 p = ${pAll.toFixed(4)}`);
+  console.log(`\n全样本 Pearson r (Kuramoto R vs τ) = ${rAll.toFixed(4)}, 置换检验 p = ${pAll.toFixed(4)}`);
 
   // 分条件计算
   console.log("\n分条件：");
   for (const [label, data] of [["none", none], ["full", full], ["shuffle", shuffle]]) {
-    const cl = data.map((r: any) => r.consensusLevel);
-    const ft = data.map((r: any) => r.kendallTau);
+    const valid = data.filter((r: any) => {
+      const rounds = r.rounds;
+      return rounds && rounds.length > 0 && Object.values(rounds[rounds.length - 1].beliefs || {}).length >= 2;
+    });
+    const cl = valid.map((r: any) => {
+      const lastRound = r.rounds[r.rounds.length - 1];
+      const beliefs: number[] = Object.values(lastRound.beliefs);
+      let sumCos = 0, sumSin = 0;
+      for (const b of beliefs) {
+        const theta = b * Math.PI / 2;
+        sumCos += Math.cos(theta);
+        sumSin += Math.sin(theta);
+      }
+      return Math.sqrt(sumCos * sumCos + sumSin * sumSin) / beliefs.length;
+    });
+    const ft = valid.map((r: any) => r.kendallTau);
     const r = pearsonCorr(cl, ft);
     const p = permutationCorrTest(cl, ft);
-    console.log(`  ${label.padEnd(8)}: r=${r.toFixed(4)}, p=${p.toFixed(4)} (n=${data.length})`);
+    console.log(`  ${label.padEnd(8)}: r=${r.toFixed(4)}, p=${p.toFixed(4)} (n=${valid.length})`);
   }
 
   console.log(`

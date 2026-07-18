@@ -74,12 +74,14 @@ function stdDev(xs: number[]): number {
   return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / (xs.length - 1));
 }
 
+/** Cohen's d with pooled SD (matches statsShared.ts and analyze.ts) */
 function cohensD(a: number[], b: number[]): number {
+  if (a.length < 2 || b.length < 2) return 0;
   const ma = mean(a), mb = mean(b);
-  const va = a.length > 1 ? a.reduce((s, x) => s + (x - ma) ** 2, 0) / (a.length - 1) : 0;
-  const vb = b.length > 1 ? b.reduce((s, x) => s + (x - mb) ** 2, 0) / (b.length - 1) : 0;
-  const pooled = Math.sqrt((va + vb) / 2);
-  return pooled > 0 ? (ma - mb) / pooled : 0;
+  const va = a.reduce((s, x) => s + (x - ma) ** 2, 0) / (a.length - 1);
+  const vb = b.reduce((s, x) => s + (x - mb) ** 2, 0) / (b.length - 1);
+  const sp = Math.sqrt(((a.length - 1) * va + (b.length - 1) * vb) / (a.length + b.length - 2));
+  return sp === 0 ? 0 : (ma - mb) / sp;
 }
 
 /** Cohen's d 效应量解读 */
@@ -91,14 +93,25 @@ function interpretD(d: number): string {
   return "大效应";
 }
 
+function mulberry32(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s |= 0; s = s + 0x6D2B79F5 | 0;
+    let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
 function permutationTest(a: number[], b: number[], nPerms = 5000): number {
   const observed = Math.abs(mean(a) - mean(b));
   const combined = [...a, ...b];
   const nA = a.length;
+  const rng = mulberry32(42);
   let count = 0;
   for (let p = 0; p < nPerms; p++) {
     for (let i = combined.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(rng() * (i + 1));
       [combined[i], combined[j]] = [combined[j], combined[i]];
     }
     const permA = combined.slice(0, nA);

@@ -132,31 +132,26 @@ function buildInfoKeywordsMap(): InfoKeywordsMap {
 // Ranking 提取和 τ 计算（复用 run.ts 逻辑）
 // ============================================================================
 
+/** P0-1 修复：移除 V1 fallback，统一使用 itemBeliefs 聚合路径。 */
 function extractRanking(
-  decision: string,
+  _decision: string,
   itemNames: string[],
   itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>
 ): string[] {
-  if (itemBeliefs && itemBeliefs.length > 0) {
-    const itemRanks = new Map<string, number[]>();
-    for (const ib of itemBeliefs) {
-      if (!itemRanks.has(ib.item)) itemRanks.set(ib.item, []);
-      itemRanks.get(ib.item)!.push(ib.rank);
-    }
-    const avgRanks = itemNames.map(name => {
-      const ranks = itemRanks.get(name);
-      return { name, avgRank: ranks && ranks.length > 0 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : Infinity };
-    });
-    avgRanks.sort((a, b) => a.avgRank - b.avgRank);
-    return avgRanks.map(r => r.name);
+  if (!itemBeliefs || itemBeliefs.length === 0) {
+    throw new Error("extractRanking: itemBeliefs 为空，无法提取排名。请检查 LLM 输出格式。");
   }
-  const positions = itemNames.map(name => {
-    const shortName = name.split("-")[0]?.trim() || name;
-    const idx = decision.indexOf(shortName);
-    return { name, pos: idx >= 0 ? idx : Infinity };
+  const itemRanks = new Map<string, number[]>();
+  for (const ib of itemBeliefs) {
+    if (!itemRanks.has(ib.item)) itemRanks.set(ib.item, []);
+    itemRanks.get(ib.item)!.push(ib.rank);
+  }
+  const avgRanks = itemNames.map(name => {
+    const ranks = itemRanks.get(name);
+    return { name, avgRank: ranks && ranks.length > 0 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : Infinity };
   });
-  positions.sort((a, b) => a.pos - b.pos);
-  return positions.map(p => p.name);
+  avgRanks.sort((a, b) => a.avgRank - b.avgRank);
+  return avgRanks.map(r => r.name);
 }
 
 function kendallTau(groundTruth: Record<string, number>, extracted: string[]): number {
@@ -174,24 +169,31 @@ function kendallTau(groundTruth: Record<string, number>, extracted: string[]): n
     if (!extractedRank.has(item)) extractedRank.set(item, n + 1);
   }
 
+  // 统计每个 rank 值出现的次数（用于 τ-b tie 修正）
+  const xGroups = new Map<number, number>();
+  const yGroups = new Map<number, number>();
+  for (let i = 0; i < n; i++) {
+    const xv = gtRank.get(items[i])!;
+    const yv = extractedRank.get(items[i])!;
+    xGroups.set(xv, (xGroups.get(xv) || 0) + 1);
+    yGroups.set(yv, (yGroups.get(yv) || 0) + 1);
+  }
+
   let concordant = 0, discordant = 0;
-  const xTies = new Map<number, number>();
-  const yTies = new Map<number, number>();
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      const x1 = gtRank.get(items[i])!, x2 = gtRank.get(items[j])!;
-      const y1 = extractedRank.get(items[i])!, y2 = extractedRank.get(items[j])!;
-      const dx = x1 - x2, dy = y1 - y2;
-      if (dx === 0) xTies.set(x1, (xTies.get(x1) || 0) + 1);
-      if (dy === 0) yTies.set(y1, (yTies.get(y1) || 0) + 1);
+      const dx = gtRank.get(items[i])! - gtRank.get(items[j])!;
+      const dy = extractedRank.get(items[i])! - extractedRank.get(items[j])!;
       if (dx * dy > 0) concordant++;
       else if (dx * dy < 0) discordant++;
     }
   }
+
+  // τ-b tie 修正：n1 = Σ t_i*(t_i-1)/2，t_i = 第 i 个 tie 组的项数
   const n0 = n * (n - 1) / 2;
   let n1 = 0, n2 = 0;
-  xTies.forEach(t => n1 += t * (t + 1) / 2);
-  yTies.forEach(t => n2 += t * (t + 1) / 2);
+  for (const count of xGroups.values()) n1 += count * (count - 1) / 2;
+  for (const count of yGroups.values()) n2 += count * (count - 1) / 2;
   const denom = Math.sqrt((n0 - n1) * (n0 - n2));
   return denom === 0 ? 0 : (concordant - discordant) / denom;
 }
