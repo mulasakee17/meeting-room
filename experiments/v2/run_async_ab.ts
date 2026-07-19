@@ -435,6 +435,7 @@ async function main() {
     model,
     apiKey,
     temperature: 0.2,
+    timeout: 120_000,  // 120s，推理模型（glm-4.5-air）长 prompt 下需要更长超时
   };
 
   console.log("=".repeat(70));

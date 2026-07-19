@@ -112,7 +112,10 @@ export async function callLLM(
       if (attempt >= maxRetries) throw error;
 
       if (error instanceof LLMError && error.isRetryable) {
-        const delay = baseDelayMs * attempt;
+        // 限流错误用更长的退避（10s/20s/30s），给限流窗口时间重置
+        const delay = error.type === LLMErrorType.RATE_LIMIT
+          ? 10000 * attempt
+          : baseDelayMs * attempt;
         console.warn(
           `[LLM retry] ${provider} attempt ${attempt}/${maxRetries} failed: ${error.type} — retrying in ${delay / 1000}s`
         );
