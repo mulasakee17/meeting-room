@@ -27,7 +27,7 @@ import { DiscussionEngine } from "../../src/lib/discussion";
 import { AsyncDiscussionEngine, type AsyncDiscussionConfig, type DependencyMap, type InfoKeywordsMap, type SpeakMode } from "../../src/lib/discussion/asyncEngine";
 import type { TaskConfig } from "../lunar_survival/config";
 import { TASK_FRAUD } from "./task_fraud";
-import type { LLMConfig } from "../../src/lib/llm/providers";
+import type { LLMConfig, LLMProvider } from "../../src/lib/llm/providers";
 
 // ============================================================================
 // 类型定义
@@ -57,19 +57,23 @@ interface AsyncExperimentResult {
 // CLI 参数解析
 // ============================================================================
 
-function parseCliArgs(): { group: Group; count: number; start: number; speakMode: SpeakMode } {
+function parseCliArgs(): { group: Group; count: number; start: number; speakMode: SpeakMode; provider: LLMProvider; model: string } {
   const args = process.argv.slice(2);
   let group: Group = "C";
   let count = 10;
   let start = 0;
-  let speakMode: SpeakMode = "content_driven"; // v2 默认内容驱动
+  let speakMode: SpeakMode = "content_driven";
+  let provider: LLMProvider = "deepseek";
+  let model = "deepseek-chat";
   for (const arg of args) {
     if (arg.startsWith("--group=")) group = arg.split("=")[1] as Group;
     if (arg.startsWith("--count=")) count = parseInt(arg.split("=")[1], 10);
     if (arg.startsWith("--start=")) start = parseInt(arg.split("=")[1], 10);
     if (arg.startsWith("--speakMode=")) speakMode = arg.split("=")[1] as SpeakMode;
+    if (arg.startsWith("--provider=")) provider = arg.split("=")[1] as LLMProvider;
+    if (arg.startsWith("--model=")) model = arg.split("=")[1];
   }
-  return { group, count, start, speakMode };
+  return { group, count, start, speakMode, provider, model };
 }
 
 // ============================================================================
@@ -402,19 +406,33 @@ async function runExperiment(
 // ============================================================================
 
 async function main() {
-  const { group, count, start, speakMode } = parseCliArgs();
-  const DATA_DIR = path.resolve(__dirname, "data_fraud");
+  const { group, count, start, speakMode, provider, model } = parseCliArgs();
+
+  // 跨模型验证：非 deepseek 提供商使用独立数据目录
+  const dataDirName = provider === "deepseek" ? "data_fraud" : `data_fraud_${provider}`;
+  const DATA_DIR = path.resolve(__dirname, dataDirName);
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  // 根据 provider 自动选择 API key
+  const apiKeyMap: Record<string, string | undefined> = {
+    deepseek: process.env.DEEPSEEK_API_KEY,
+    zhipu: process.env.ZHIPU_API_KEY,
+    openai: process.env.OPENAI_API_KEY,
+    anthropic: process.env.ANTHROPIC_API_KEY,
+  };
+  const apiKey = apiKeyMap[provider];
   if (!apiKey) {
-    console.error("请设置 DEEPSEEK_API_KEY 环境变量");
+    const envVar = provider === "deepseek" ? "DEEPSEEK_API_KEY"
+      : provider === "zhipu" ? "ZHIPU_API_KEY"
+      : provider === "openai" ? "OPENAI_API_KEY"
+      : "ANTHROPIC_API_KEY";
+    console.error(`请设置 ${envVar} 环境变量`);
     process.exit(1);
   }
 
   const llmConfig: LLMConfig = {
-    provider: "deepseek",
-    model: "deepseek-chat",
+    provider,
+    model,
     apiKey,
     temperature: 0.2,
   };
@@ -422,7 +440,9 @@ async function main() {
   console.log("=".repeat(70));
   console.log("  SwarmAlpha 异步自适应实验 — 欺诈调查任务");
   console.log(`  组别: ${group}`);
+  console.log(`  模型: ${provider}/${model}`);
   console.log(`  发言模式: ${speakMode}`);
+  console.log(`  数据目录: ${dataDirName}/`);
   console.log(`  样本: n=${count} (runIndex ${start}..${start + count - 1})`);
   console.log("=".repeat(70));
 
@@ -442,6 +462,8 @@ async function main() {
       // 记录失败
       const errorResult: AsyncExperimentResult = {
         runId, group, runIndex: i,
+        speakMode,
+        codeVersion: "2026-07-19",
         timestamp: new Date().toISOString(),
         kendallTau: 0, decisionQuality: 50,
         totalRounds: 0, totalUtterances: 0,
