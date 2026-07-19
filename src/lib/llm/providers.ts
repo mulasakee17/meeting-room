@@ -577,7 +577,9 @@ async function callZhipu(
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    // glm-4.5-air 等推理模型将输出放在 reasoning_content 中
+    const msg = data.choices?.[0]?.message;
+    const content = msg?.content || msg?.reasoning_content || "";
 
     if (!content) {
       throw new LLMError(
@@ -734,6 +736,6 @@ export const availableModels: Record<LLMProvider, string[]> = {
   openai: ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
   anthropic: ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"],
   deepseek: ["deepseek-chat", "deepseek-reasoner"],
-  zhipu: ["glm-4-flash", "glm-4", "glm-4-plus"],
+  zhipu: ["glm-4-flash", "glm-4-air", "glm-4.5-air", "glm-4", "glm-4-plus"],
   local: ["llama3", "mistral", "qwen2"],
 };
