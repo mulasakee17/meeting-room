@@ -1,20 +1,22 @@
 {
-  "runId": "fraud_B_8",
+  "runId": "fraud_B_content_driven_8",
   "group": "B",
   "runIndex": 8,
-  "timestamp": "2026-07-15T14:16:40.237Z",
-  "kendallTau": 0.4,
-  "decisionQuality": 70,
+  "speakMode": "content_driven",
+  "codeVersion": "2026-07-19",
+  "timestamp": "2026-07-19T05:19:09.202Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
   "totalRounds": 5,
-  "totalUtterances": 11,
+  "totalUtterances": 17,
   "converged": true,
   "terminationReason": "completed",
   "thermoHistory": [],
   "finalBeliefs": {
-    "a1": 0.372,
-    "a2": 0.34,
-    "a3": -0.33849999999999997,
-    "a4": -0.58,
-    "a5": 0.428
+    "a1": 0.63648,
+    "a2": 0.612,
+    "a3": 0.6288,
+    "a4": 0.63648,
+    "a5": -0.17951999999999999
   }
 }

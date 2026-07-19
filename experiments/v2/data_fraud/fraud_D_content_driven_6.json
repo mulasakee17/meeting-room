@@ -3,19 +3,20 @@
   "group": "D",
   "runIndex": 6,
   "speakMode": "content_driven",
-  "timestamp": "2026-07-16T12:50:13.084Z",
-  "kendallTau": 0.4,
-  "decisionQuality": 70,
-  "totalRounds": 15,
-  "totalUtterances": 40,
-  "converged": false,
+  "codeVersion": "2026-07-19",
+  "timestamp": "2026-07-19T05:26:53.849Z",
+  "kendallTau": 0.8,
+  "decisionQuality": 90,
+  "totalRounds": 4,
+  "totalUtterances": 11,
+  "converged": true,
   "terminationReason": "completed",
   "thermoHistory": [],
   "finalBeliefs": {
-    "a1": 0.6060256763369476,
-    "a2": -0.8013423342374123,
-    "a3": 0.9088904917002175,
-    "a4": 0.6073444185935685,
-    "a5": 0.6313836670254629
+    "a1": 0.4421513417252626,
+    "a2": 0.7124493923134931,
+    "a3": 0.5836025611750001,
+    "a4": 0.6800944,
+    "a5": 0.21307630500000008
   }
 }

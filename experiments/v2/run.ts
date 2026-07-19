@@ -86,6 +86,8 @@ interface ExperimentResult {
   runId: string;
   ablation: Ablation;
   runIndex: number;
+  /** 代码版本标记（格式: YYYY-MM-DD，用于区分修复前后数据） */
+  codeVersion: string;
   timestamp: string;
 
   // Primary metrics
@@ -607,6 +609,7 @@ async function runSingle(
 
   return {
     runId, ablation, runIndex,
+    codeVersion: "2026-07-19",
     timestamp: new Date().toISOString(),
     kendallTau: tau,
     decisionQuality: tauToQuality(tau),
@@ -747,6 +750,7 @@ async function main() {
             // 写入错误占位文件，分析时可识别
             const errorResult: ExperimentResult = {
               task: task.id, ablation, runIndex: i,
+              codeVersion: "2026-07-19",
               timestamp: new Date().toISOString(),
               finalDecision: `[ERROR] ${errMsg}`,
               rounds: [], totalRounds: 0,
@@ -808,6 +812,7 @@ async function main() {
   // ── Save aggregate ───────────────────────────────────────────────────
   const summary = {
     task: task.title,
+    codeVersion: "2026-07-19",
     params: PARAMS,
     timestamp: new Date().toISOString(),
     totalExperiments: allResults.length,

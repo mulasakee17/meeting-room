@@ -1,7 +1,7 @@
 # Limitations
 
 > 本文件诚实记录 SwarmAlpha 的检测器局限、未验证模块、缺失集成和样本量问题。
-> 更新日期: 2026-07-16（异步引擎 v2 难度增强重跑 + callLLM 重试）
+> 更新日期: 2026-07-19（beliefShift 修复 + B/D 组重跑 + K=2 修复 + codeVersion 标记）
 
 ---
 

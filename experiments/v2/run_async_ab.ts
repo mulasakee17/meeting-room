@@ -40,6 +40,8 @@ interface AsyncExperimentResult {
   group: Group;
   runIndex: number;
   speakMode?: string;
+  /** 代码版本标记（格式: YYYY-MM-DD，用于区分修复前后数据） */
+  codeVersion: string;
   timestamp: string;
   kendallTau: number;
   decisionQuality: number;
@@ -312,6 +314,7 @@ async function runExperiment(
     result = {
       runId: `fraud_A_${runIndex}`,
       group, runIndex,
+      codeVersion: "2026-07-19",
       timestamp: new Date().toISOString(),
       kendallTau: tau,
       decisionQuality: Math.round(((tau + 1) / 2) * 100),
@@ -325,7 +328,7 @@ async function runExperiment(
   } else {
     // B/C/D 组：使用 AsyncDiscussionEngine
     const asyncConfig: Partial<AsyncDiscussionConfig> = {
-      evalEveryKUtterances: 3,
+      evalEveryKUtterances: 2,  // K=2（2026-07-19 修复：与 DEFAULT_ASYNC_CONFIG 一致）
       maxSpeakersPerEval: 5,
       speakMode, // v2=content_driven, v1=random_prob
     };
@@ -378,6 +381,7 @@ async function runExperiment(
       runId: `fraud_${group}_${speakMode}_${runIndex}`,
       group, runIndex,
       speakMode, // v2=content_driven, v1=random_prob
+      codeVersion: "2026-07-19",
       timestamp: new Date().toISOString(),
       kendallTau: tau,
       decisionQuality: Math.round(((tau + 1) / 2) * 100),
