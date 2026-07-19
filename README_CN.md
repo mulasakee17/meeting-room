@@ -508,11 +508,12 @@ console.log(`决策质量：${evaluation.overallScore}/100`);
 | 提供商 | 模型 | 配置 |
 |--------|------|------|
 | **DeepSeek**（默认） | deepseek-chat | 在 `.env.local` 中设置 `DEEPSEEK_API_KEY` |
+| **智谱 (Zhipu)** | glm-4-flash | 在 `.env.local` 中设置 `ZHIPU_API_KEY` |
 | OpenAI | gpt-4o-mini | 在 `.env.local` 中设置 `OPENAI_API_KEY` |
 | Anthropic | claude-3-haiku | 在 `.env.local` 中设置 `ANTHROPIC_API_KEY` |
 | 本地（Ollama） | llama3, mistral | `LOCAL_LLM_URL=http://localhost:11434` |
 
-在 `experiments/v2/run.ts` 第 140 行切换提供商：将 `provider: "deepseek"` 改为 `"openai"` 或 `"anthropic"`。
+在 `experiments/v2/run.ts` 第 140 行切换提供商：将 `provider: "deepseek"` 改为 `"zhipu"`、`"openai"` 或 `"anthropic"`。
 
 ---
 

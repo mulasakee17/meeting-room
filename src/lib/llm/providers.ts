@@ -1,7 +1,7 @@
 import { LLM_DEFAULT_TIMEOUT_MS } from "../constants";
 import { safeJsonParse } from "../utils/jsonUtils";
 
-export type LLMProvider = "openai" | "anthropic" | "deepseek" | "local";
+export type LLMProvider = "openai" | "anthropic" | "deepseek" | "zhipu" | "local";
 
 // 错误类型分类
 export enum LLMErrorType {
@@ -96,6 +96,8 @@ export async function callLLM(
           return await callAnthropic(systemPrompt, userPrompt, config);
         case "deepseek":
           return await callDeepSeek(systemPrompt, userPrompt, config);
+        case "zhipu":
+          return await callZhipu(systemPrompt, userPrompt, config);
         case "local":
           return await callLocalLLM(systemPrompt, userPrompt, config);
         default:
@@ -521,6 +523,115 @@ async function callDeepSeek(
   }
 }
 
+async function callZhipu(
+  systemPrompt: string,
+  userPrompt: string,
+  config?: LLMConfig
+): Promise<LLMResponse> {
+  const apiKey = config?.apiKey || process.env.ZHIPU_API_KEY;
+  const model = config?.model || "glm-4-flash";
+  const timeout = config?.timeout || DEFAULT_TIMEOUT;
+  const temperature = config?.temperature ?? 0.7;
+
+  if (!apiKey) {
+    throw new LLMError(
+      '智谱 API Key 未配置（设置 ZHIPU_API_KEY 环境变量）',
+      LLMErrorType.AUTH_ERROR,
+      undefined,
+      false
+    );
+  }
+
+  const startTime = Date.now();
+  try {
+    const response = await fetchWithTimeout(
+      "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature,
+          ...(config?.seed !== undefined ? { seed: config.seed } : {}),
+        }),
+      },
+      timeout
+    );
+
+    if (!response.ok) {
+      const { type, isRetryable } = mapStatusToErrorType(response.status);
+      const errorBody = await response.text().catch(() => '');
+      throw new LLMError(
+        `智谱 API 错误 [${response.status}]: ${errorBody || response.statusText}`,
+        type,
+        response.status,
+        isRetryable
+      );
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      throw new LLMError(
+        '智谱 返回内容为空',
+        LLMErrorType.INVALID_RESPONSE,
+        undefined,
+        false
+      );
+    }
+
+    const result = parseLLMResponse(content, '智谱');
+    result.latencyMs = Date.now() - startTime;
+    if (data.usage) {
+      result.usage = {
+        promptTokens: data.usage.prompt_tokens ?? 0,
+        completionTokens: data.usage.completion_tokens ?? 0,
+        totalTokens: data.usage.total_tokens ?? 0,
+      };
+    }
+    return result;
+  } catch (error) {
+    if (error instanceof LLMError) {
+      throw error;
+    }
+
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new LLMError(
+          `智谱 请求超时（${timeout / 1000}秒）`,
+          LLMErrorType.TIMEOUT,
+          undefined,
+          true
+        );
+      }
+
+      if (error.message.includes('fetch') || error.message.includes('network')) {
+        throw new LLMError(
+          `智谱 网络错误: ${error.message}`,
+          LLMErrorType.NETWORK,
+          undefined,
+          true
+        );
+      }
+    }
+
+    throw new LLMError(
+      `智谱 调用失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      LLMErrorType.UNKNOWN,
+      undefined,
+      true
+    );
+  }
+}
+
 async function callLocalLLM(
   systemPrompt: string,
   userPrompt: string,
@@ -623,5 +734,6 @@ export const availableModels: Record<LLMProvider, string[]> = {
   openai: ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
   anthropic: ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"],
   deepseek: ["deepseek-chat", "deepseek-reasoner"],
+  zhipu: ["glm-4-flash", "glm-4", "glm-4-plus"],
   local: ["llama3", "mistral", "qwen2"],
 };

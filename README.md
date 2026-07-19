@@ -277,11 +277,12 @@ console.log(`Decision quality: ${evaluation.overallScore}/100`);
 | Provider | Model | Setup |
 |----------|-------|-------|
 | **DeepSeek** (default) | deepseek-chat | `DEEPSEEK_API_KEY` in `.env.local` |
+| **Zhipu (智谱)** | glm-4-flash | `ZHIPU_API_KEY` in `.env.local` |
 | OpenAI | gpt-4o-mini | `OPENAI_API_KEY` in `.env.local` |
 | Anthropic | claude-3-haiku | `ANTHROPIC_API_KEY` in `.env.local` |
 | Local (Ollama) | llama3, mistral | `LOCAL_LLM_URL=http://localhost:11434` |
 
-Switch provider in `experiments/v2/run.ts` line 140: change `provider: "deepseek"` to `"openai"` or `"anthropic"`.
+Switch provider in `experiments/v2/run.ts` line 140: change `provider: "deepseek"` to `"zhipu"`, `"openai"` or `"anthropic"`.
 
 ---
 
