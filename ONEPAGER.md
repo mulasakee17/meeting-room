@@ -130,7 +130,7 @@ The loop-fix (D1–D4) is itself a research contribution: identifying *why* gove
 | **Multi-LLM Support** | DeepSeek / OpenAI / Anthropic / Local (Ollama) — unified interface |
 | **Extensible Detection** | Custom bias detectors via `registerDetector()` — no core engine changes needed |
 | **Shared Utilities** | Registry/JSON/stats modules eliminate code duplication across the codebase |
-| **229 Automated Tests** | All core modules covered, 16 test files (including 28 causal-effect tests) |
+| **303 Automated Tests** | All core modules covered, 18 test files (including 28 causal-effect tests) |
 | **Mechanism Ablation** | 🆕 Per-intervention-type statistical analysis: reduce_weight d=1.51 (p=0.0001), force_reflection d=0.73 (p=0.001) — identifies which interventions drive governance effectiveness |
 | **Power Analysis** | 🆕 Non-central t-distribution power analysis: Crisis 88% ✅, Supplier 43% ⚠️ (needs n=72 for 80%) |
 | **Free-Energy Ranking** | 🆕 Social free energy F=(1-R)+T·H decomposition drives intervention priority when multiple detectors trigger (91.7% of Crisis runs). Backtest falsified original force_reflection↔structural mapping (p=0.041), corrected to thermal·(1-structural) |
@@ -179,7 +179,7 @@ const evaluation = runtime.getSessionResult(finalDecision);
 
 ## Who Built This
 
-**贺孟元** — High school student. Independent architecture design, implementation (~13,000 lines TypeScript), experiment design, and data analysis.
+**贺孟元** — High school student. Independent architecture design, implementation (~33,000 lines TypeScript), experiment design, and data analysis.
 
 AI-assisted coding (Claude Code). Architecture decisions and experiment design are fully autonomous.
 

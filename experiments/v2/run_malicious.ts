@@ -120,6 +120,15 @@ interface MaliciousExperimentResult {
     }>;
     beliefChanges: Record<string, { old: number; new: number; reason: string }>;
     converged: boolean;
+    /** Per-utterance 信念快照（质量因子验证，2026-07-21 新增） */
+    perUtteranceSnapshots?: Array<{
+      speakerId: string;
+      belief: number;
+      confidence: number;
+      referencedAgents: string[];
+      beliefsBefore: Record<string, { belief: number; confidence: number }>;
+      beliefsAfter: Record<string, { belief: number; confidence: number }>;
+    }>;
   }>;
   /**
    * 每轮 opinions（B1 升级：保存 itemBeliefs 轨迹）
@@ -384,6 +393,7 @@ async function runMaliciousExperiment(
     })),
     beliefChanges: r.beliefChanges || {},
     converged: r.converged,
+    perUtteranceSnapshots: (r as any).perUtteranceSnapshots || [],
   })) || [];
 
   // B1 升级：保存精简版 roundResults（含 itemBeliefs）以支持攻击目标核实

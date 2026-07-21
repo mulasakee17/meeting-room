@@ -33,7 +33,7 @@
 - [ ] 给 GovernanceRuntime 写 3 个使用示例（node 脚本、Express 中间件、WebSocket 实时监控）
 
 ### 1.3 测试与质量
-- [x] 确认 285 tests 全部通过
+- [x] 确认 303 tests 通过（300 passed, 3 network timeouts）
 - [x] 给 StateInferenceBridge 补测试（34 个测试覆盖三级提取、干预转译、LLM 推断、统计监控）
 - [x] 修复 extractGovTag 截断 JSON 容错 bug（正则匹配失效，改为 indexOf 定位 + 手动补全）
 

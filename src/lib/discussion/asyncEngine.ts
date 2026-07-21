@@ -22,6 +22,19 @@ import { BELIEF_MIN, BELIEF_MAX } from "../constants";
 /** 发言模式 */
 export type SpeakMode = "random_prob" | "content_driven";
 
+/** Per-utterance 信念快照（用于质量因子验证） */
+export interface UtteranceSnapshot {
+  speakerId: string;
+  /** 发言人本轮输出的信念 */
+  belief: number;
+  confidence: number;
+  referencedAgents: string[];
+  /** 发言前所有 agent 的信念状态 */
+  beliefsBefore: Record<string, { belief: number; confidence: number }>;
+  /** 发言后（含 DeGroot 更新）所有 agent 的信念状态 */
+  beliefsAfter: Record<string, { belief: number; confidence: number }>;
+}
+
 /** 异步讨论配置 */
 export interface AsyncDiscussionConfig {
   /** 每多少次发言触发一次热力学评估 */
@@ -250,59 +263,104 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
         speakers.push(agents[Math.floor(this.prng() * agents.length)]);
       }
 
-      // ── 发言阶段：复用 observeAgents 逻辑 ──
-      // observeAgents 已实现顺序发言（D3 修复），每个 agent 能看到同轮已发言的同伴
-      const observations = await this.observeAgents(
-        speakers as ObserverAgent[],
-        task,
-        evalCycle
-      );
+      // ── 逐发言者处理（含 per-utterance 信念快照）──
+      // 改为逐发言者循环，而非批量 observeAgents + updateBeliefs，
+      // 以便在每次发言前后捕获 agentStates 快照，用于质量因子验证。
+      const allOpinions: AgentOpinion[] = [];
+      const perUtteranceSnapshots: UtteranceSnapshot[] = [];
+      const currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number }> = [];
+      const prevStates = new Map(agentStates); // 周期开始前快照（用于 computeBeliefChanges）
 
-      // 存储记忆
-      for (const obs of observations) {
+      for (const speaker of speakers) {
+        // ── 发言前快照 ──
+        const beforeStates = new Map<string, { belief: number; confidence: number }>();
+        agentStates.forEach((v, k) => beforeStates.set(k, { belief: v.belief, confidence: v.confidence }));
+
+        // ── 单个 agent 发言 ──
+        const allMemory = this.memoryManager.getAll();
+        const state = (speaker as ObserverAgent).getState();
+        const ownEntries = allMemory.filter(e => e.agentId === speaker.id);
+        const mentionsMe = allMemory.filter(e =>
+          e.agentId !== speaker.id && e.referencedAgents?.includes(speaker.id)
+        );
+        const personalMemory = [...ownEntries, ...mentionsMe]
+          .sort((a, b) => a.roundNumber - b.roundNumber);
+        const prompt = this.buildPrompt(
+          { name: speaker.name, role: speaker.role, id: speaker.id },
+          typeof task.content === "string" ? task.content : JSON.stringify(task.content),
+          personalMemory, evalCycle, state, currentRoundOpinions
+        );
+        const response = await (speaker as ObserverAgent).sendMessage(prompt);
+        const parsedOpinion = this.opinionParser.parseOpinion(
+          response, speaker.id, state.belief, state.confidence, evalCycle
+        );
+        const opinion = parsedOpinion;
+        allOpinions.push(opinion);
+
+        // 累积到本轮已发言列表（后续发言者可见）
+        currentRoundOpinions.push({
+          agentId: speaker.id,
+          reasoning: opinion.reasoning,
+          belief: opinion.belief,
+          confidence: opinion.confidence,
+        });
+
+        // 存储记忆
         this.memoryManager.store({
           roundNumber: evalCycle,
-          agentId: obs.agentId,
-          reasoning: obs.parsedOpinion.reasoning,
-          evidence: obs.parsedOpinion.evidence,
-          belief: obs.parsedOpinion.belief,
-          confidence: obs.parsedOpinion.confidence,
-          referencedAgents: obs.parsedOpinion.referencedAgents,
-          timestamp: obs.timestamp,
+          agentId: speaker.id,
+          reasoning: opinion.reasoning,
+          evidence: opinion.evidence,
+          belief: opinion.belief,
+          confidence: opinion.confidence,
+          referencedAgents: opinion.referencedAgents,
+          timestamp: new Date().toISOString(),
+        });
+
+        // ── 更新信念（仅针对当前发言者）──
+        this.updateBeliefs([opinion], agentStates, evalCycle);
+        const speakerSet = new Set([speaker.id]);
+        this.updateListenerBeliefs(speakerSet, [opinion], agentStates);
+
+        // ── 发言后快照 ──
+        const afterStates = new Map<string, { belief: number; confidence: number }>();
+        agentStates.forEach((v, k) => afterStates.set(k, { belief: v.belief, confidence: v.confidence }));
+
+        perUtteranceSnapshots.push({
+          speakerId: speaker.id,
+          belief: opinion.belief,
+          confidence: opinion.confidence,
+          referencedAgents: opinion.referencedAgents || [],
+          beliefsBefore: Object.fromEntries(beforeStates),
+          beliefsAfter: Object.fromEntries(afterStates),
         });
       }
 
-      const opinions = observations.map(o => o.parsedOpinion);
-      this.totalUtterances += opinions.length;
+      this.totalUtterances += allOpinions.length;
 
       // ── 更新图和信念 ──
-      this.graphBuilder.updateFromOpinions(opinions, evalCycle);
+      this.graphBuilder.updateFromOpinions(allOpinions, evalCycle);
 
       const graph = this.graphBuilder.getGraph();
       const influenceFactorsMap = new Map<string, any[]>();
-      this.traceBuilder.addRound(evalCycle, opinions, this.memoryManager.getAll(), graph, influenceFactorsMap);
+      this.traceBuilder.addRound(evalCycle, allOpinions, this.memoryManager.getAll(), graph, influenceFactorsMap);
 
-      const prevStates = new Map(agentStates);
-      this.updateBeliefs(opinions, agentStates, evalCycle);
-      // 被动倾听：未发言 agent 根据听到的发言者观点更新信念（DeGroot 式更新）
-      // 这确保不发言 agent 的信念也会随讨论演进，产生发言意愿变化
-      const speakerIds = new Set(opinions.map(o => o.agentId));
-      this.updateListenerBeliefs(speakerIds, opinions, agentStates);
       this.updateAgentStates(agents, agentStates);
 
       // ── 治理（复用父类逻辑） ──
-      const governanceResult = this.applyGovernance(evalCycle, opinions, agentStates, agents);
+      const governanceResult = this.applyGovernance(evalCycle, allOpinions, agentStates, agents);
       const interventions = governanceResult?.hasIntervention ? governanceResult.interventions : [];
 
       // ── 记录轮次数据 ──
       const beliefChanges = this.computeBeliefChanges(prevStates, agentStates);
-      const converged = this.checkConvergence(opinions);
+      const converged = this.checkConvergence(allOpinions);
 
       this.roundDataArray.push({
         roundNumber: evalCycle,
         timestamp: new Date().toISOString(),
-        opinions: [...opinions],
+        opinions: [...allOpinions],
         beliefChanges,
+        perUtteranceSnapshots,
         influenceEvents: [],
         governanceIssues: governanceResult?.issues || [],
         interventions,
@@ -311,7 +369,7 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
 
       roundResults.push({
         roundNumber: evalCycle,
-        opinions: [...opinions],
+        opinions: [...allOpinions],
         timestamp: new Date().toISOString(),
         converged,
       });

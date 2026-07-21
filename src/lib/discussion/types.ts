@@ -276,6 +276,15 @@ export interface RoundData {
   timestamp: string;
   opinions: AgentOpinion[];
   beliefChanges: Record<string, { old: number; new: number; reason: string }>;
+  /** Per-utterance 信念快照（asyncEngine 逐发言者处理时填充，质量因子验证用） */
+  perUtteranceSnapshots?: Array<{
+    speakerId: string;
+    belief: number;
+    confidence: number;
+    referencedAgents: string[];
+    beliefsBefore: Record<string, { belief: number; confidence: number }>;
+    beliefsAfter: Record<string, { belief: number; confidence: number }>;
+  }>;
   influenceEvents: InfluenceEvent[];
   governanceIssues: GovernanceIssue[];
   interventions: Intervention[];

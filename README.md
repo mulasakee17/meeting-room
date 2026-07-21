@@ -6,7 +6,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
-[![Tests](https://img.shields.io/badge/tests-285%20passed-green)](./test/)
+[![Tests](https://img.shields.io/badge/tests-303-green)](./test/)
 [![Framework-Agnostic](https://img.shields.io/badge/framework-agnostic-purple)]()
 [![Embeddable](https://img.shields.io/badge/embeddable-SDK-orange)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
@@ -233,7 +233,7 @@ npm run analyze             # t-distribution CI + permutation test + statistical
 npm run sensitivity         # 5 params × 5 values sweep
 
 # Run tests (no API key needed)
-npm test                    # 285 tests
+npm test                    # 303 tests (300 passed, 3 network timeouts)
 ```
 
 **Causal effect analysis** (no API key needed, uses existing experiment data):
@@ -483,7 +483,7 @@ src/
 │   ├── page.tsx                  # Demo/Live comparison view
 │   └── api/v3/                   # API endpoints
 experiments/                      # Hidden Profile experiment framework
-└── test/                         # 285 automated tests
+└── test/                         # 303 automated tests
 ```
 
 ---
@@ -491,7 +491,7 @@ experiments/                      # Hidden Profile experiment framework
 ## Running Tests
 
 ```bash
-npm test              # 285 tests across 18 files
+npm test              # 303 tests across 18 files (300 passed, 3 network timeouts)
 npm run test:watch    # watch mode
 ```
 

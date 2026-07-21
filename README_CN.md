@@ -6,7 +6,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
-[![Tests](https://img.shields.io/badge/tests-285%20passed-green)](./test/)
+[![Tests](https://img.shields.io/badge/tests-303-green)](./test/)
 [![Framework-Agnostic](https://img.shields.io/badge/framework-agnostic-purple)]()
 [![Embeddable](https://img.shields.io/badge/embeddable-SDK-orange)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
@@ -489,7 +489,7 @@ npm run analyze             # t 分布置信区间 + 置换检验 + 统计推断
 npm run sensitivity         # 5 参数 × 5 值扫描
 
 # 运行测试（不需要 API key）
-npm test                    # 285 个测试
+npm test                    # 303 个测试（300 通过，3 个网络超时）
 ```
 
 **因果效应分析**（不需要 API key，使用已有实验数据）：
@@ -734,7 +734,7 @@ src/
 │   ├── page.tsx                  # 演示/实时对比视图
 │   └── api/v3/                   # API 端点
 experiments/                      # Hidden Profile 实验框架
-└── test/                         # 285 个自动化测试
+└── test/                         # 303 个自动化测试
 ```
 
 ---
@@ -742,7 +742,7 @@ experiments/                      # Hidden Profile 实验框架
 ## 运行测试
 
 ```bash
-npm test              # 285 个测试，覆盖 18 个文件
+npm test              # 303 个测试，覆盖 18 个文件（300 通过，3 个网络超时）
 npm run test:watch    # 监听模式
 ```
 

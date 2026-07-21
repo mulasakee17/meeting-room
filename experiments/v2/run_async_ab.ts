@@ -91,6 +91,15 @@ interface AsyncExperimentResult {
     }>;
     beliefChanges: Record<string, { old: number; new: number; reason: string }>;
     converged: boolean;
+    /** Per-utterance 信念快照（质量因子验证，2026-07-21 新增） */
+    perUtteranceSnapshots?: Array<{
+      speakerId: string;
+      belief: number;
+      confidence: number;
+      referencedAgents: string[];
+      beliefsBefore: Record<string, { belief: number; confidence: number }>;
+      beliefsAfter: Record<string, { belief: number; confidence: number }>;
+    }>;
   }>;
   /**
    * 每轮 opinions（B2 升级：与 run_malicious.ts 对齐）
@@ -429,6 +438,7 @@ async function runExperiment(
       })),
       beliefChanges: r.beliefChanges || {},
       converged: r.converged,
+      perUtteranceSnapshots: (r as any).perUtteranceSnapshots || [],
     })) || [];
 
     // B2 升级：保存精简版 roundResults（含 itemBeliefs），与 run_malicious.ts 对齐
