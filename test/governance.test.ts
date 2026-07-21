@@ -293,4 +293,320 @@ describe("GovernanceEngine", () => {
     // 单一干预时排序应不改变结果（返回原数组）
     expect(interventions.length).toBeLessThanOrEqual(1);
   });
+
+  // ==========================================================================
+  // A3 (MAST) 检测器：FM-2.4 / FM-2.5 / FM-2.6
+  // ==========================================================================
+
+  describe("A3 MAST 检测器", () => {
+    const a3engine = new GovernanceEngine();
+
+    // ---- FM-2.4 Information Withholding ----
+
+    it("FM-2.4: 检测 agent evidence 为空但他人有 evidence", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a3", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      const messages: MessageInfo[] = [
+        { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), evidence: ["e1", "e2"] },
+        { agentId: "a2", content: "msg2", timestamp: new Date().toISOString(), evidence: ["e3"] },
+        { agentId: "a3", content: "msg3", timestamp: new Date().toISOString(), evidence: [] },
+      ];
+
+      const result = a3engine.detectInformationWithholding(beliefs, messages, {
+        enableInformationWithholdingDetection: true,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(true);
+      expect(result.withholdingAgents).toEqual(["a3"]);
+      expect(result.intervention.type).toBe("force_reflection");
+      expect(result.intervention.applied).toBe(true);
+    });
+
+    it("FM-2.4: 所有 agent 都有 evidence 时不检测", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      const messages: MessageInfo[] = [
+        { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), evidence: ["e1"] },
+        { agentId: "a2", content: "msg2", timestamp: new Date().toISOString(), evidence: ["e2"] },
+      ];
+
+      const result = a3engine.detectInformationWithholding(beliefs, messages, {
+        enableInformationWithholdingDetection: true,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(false);
+      expect(result.withholdingAgents).toEqual([]);
+    });
+
+    it("FM-2.4: V1 数据（无 evidence 字段）安全降级为 notDetected", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      const messages: MessageInfo[] = [
+        { agentId: "a1", content: "msg1", timestamp: new Date().toISOString() },
+        { agentId: "a2", content: "msg2", timestamp: new Date().toISOString() },
+      ];
+
+      const result = a3engine.detectInformationWithholding(beliefs, messages, {
+        enableInformationWithholdingDetection: true,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(false);
+    });
+
+    it("FM-2.4: 禁用检测器时返回 notDetected", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      const messages: MessageInfo[] = [
+        { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), evidence: ["e1"] },
+        { agentId: "a2", content: "msg2", timestamp: new Date().toISOString(), evidence: [] },
+      ];
+
+      const result = a3engine.detectInformationWithholding(beliefs, messages, {
+        enableInformationWithholdingDetection: false,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(false);
+    });
+
+    // ---- FM-2.5 Ignored Input ----
+
+    it("FM-2.5: 检测被引用 ≥2 次但未回引的 agent", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a3", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      // a2 和 a3 都引用 a1，但 a1 不引用任何人
+      const messages: MessageInfo[] = [
+        { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), referencedAgents: [] },
+        { agentId: "a2", content: "msg2", timestamp: new Date().toISOString(), referencedAgents: ["a1"] },
+        { agentId: "a3", content: "msg3", timestamp: new Date().toISOString(), referencedAgents: ["a1"] },
+      ];
+
+      const result = a3engine.detectIgnoredInput(beliefs, messages, {
+        enableIgnoredInputDetection: true,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(true);
+      expect(result.ignoringAgents).toEqual(["a1"]);
+      expect(result.intervention.type).toBe("force_reflection");
+    });
+
+    it("FM-2.5: agent 被引用但自己也引用他人时不检测", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a3", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      // a1 被引用但自己也引用 a2 → 不算 ignoring
+      const messages: MessageInfo[] = [
+        { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), referencedAgents: ["a2"] },
+        { agentId: "a2", content: "msg2", timestamp: new Date().toISOString(), referencedAgents: ["a1"] },
+        { agentId: "a3", content: "msg3", timestamp: new Date().toISOString(), referencedAgents: ["a1"] },
+      ];
+
+      const result = a3engine.detectIgnoredInput(beliefs, messages, {
+        enableIgnoredInputDetection: true,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(false);
+    });
+
+    it("FM-2.5: V1 数据（无 referencedAgents 字段）安全降级", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      const messages: MessageInfo[] = [
+        { agentId: "a1", content: "msg1", timestamp: new Date().toISOString() },
+        { agentId: "a2", content: "msg2", timestamp: new Date().toISOString() },
+      ];
+
+      const result = a3engine.detectIgnoredInput(beliefs, messages, {
+        enableIgnoredInputDetection: true,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(false);
+    });
+
+    // ---- FM-2.6 Reasoning-Action Mismatch ----
+
+    it("FM-2.6: 检测 rank=1 的 item belief 不是最高且差距 >0.3", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      // a1: rank=1 的 item 是 "A" 但 belief=0.2，而 "B" rank=2 但 belief=0.8（差距 0.6 > 0.3）→ mismatch
+      const messages: MessageInfo[] = [
+        {
+          agentId: "a1", content: "msg1", timestamp: new Date().toISOString(),
+          itemBeliefs: [
+            { item: "A", rank: 1, belief: 0.2, confidence: 70 },
+            { item: "B", rank: 2, belief: 0.8, confidence: 70 },
+          ],
+        },
+        {
+          agentId: "a2", content: "msg2", timestamp: new Date().toISOString(),
+          itemBeliefs: [
+            { item: "A", rank: 1, belief: 0.9, confidence: 70 },
+            { item: "B", rank: 2, belief: 0.1, confidence: 70 },
+          ],
+        },
+      ];
+
+      const result = a3engine.detectReasoningActionMismatch(beliefs, messages, {
+        enableReasoningActionMismatchDetection: true,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(true);
+      expect(result.mismatchAgents).toEqual(["a1"]);
+      expect(result.intervention.type).toBe("force_reflection");
+    });
+
+    it("FM-2.6: rank 和 belief 一致时不检测", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      const messages: MessageInfo[] = [
+        {
+          agentId: "a1", content: "msg1", timestamp: new Date().toISOString(),
+          itemBeliefs: [
+            { item: "A", rank: 1, belief: 0.9, confidence: 70 },
+            { item: "B", rank: 2, belief: 0.1, confidence: 70 },
+          ],
+        },
+        {
+          agentId: "a2", content: "msg2", timestamp: new Date().toISOString(),
+          itemBeliefs: [
+            { item: "A", rank: 1, belief: 0.8, confidence: 70 },
+            { item: "B", rank: 2, belief: 0.2, confidence: 70 },
+          ],
+        },
+      ];
+
+      const result = a3engine.detectReasoningActionMismatch(beliefs, messages, {
+        enableReasoningActionMismatchDetection: true,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(false);
+    });
+
+    it("FM-2.6: 差距 ≤0.3 时不检测（避免误报）", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      // rank=1 belief=0.4，rank=2 belief=0.5，差距 0.1 ≤ 0.3 → 不检测
+      const messages: MessageInfo[] = [
+        {
+          agentId: "a1", content: "msg1", timestamp: new Date().toISOString(),
+          itemBeliefs: [
+            { item: "A", rank: 1, belief: 0.4, confidence: 70 },
+            { item: "B", rank: 2, belief: 0.5, confidence: 70 },
+          ],
+        },
+      ];
+
+      const result = a3engine.detectReasoningActionMismatch(beliefs, messages, {
+        enableReasoningActionMismatchDetection: true,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(false);
+    });
+
+    it("FM-2.6: V1 数据（无 itemBeliefs 字段）安全降级", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      const messages: MessageInfo[] = [
+        { agentId: "a1", content: "msg1", timestamp: new Date().toISOString() },
+        { agentId: "a2", content: "msg2", timestamp: new Date().toISOString() },
+      ];
+
+      const result = a3engine.detectReasoningActionMismatch(beliefs, messages, {
+        enableReasoningActionMismatchDetection: true,
+        interventionLevel: "medium",
+      });
+
+      expect(result.detected).toBe(false);
+    });
+
+    // ---- diagnose() 集成测试 ----
+
+    it("diagnose() 返回的 GovernanceResult 包含 3 个新字段", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a3", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      const messages: MessageInfo[] = [
+        { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), evidence: ["e1"], referencedAgents: [] },
+        { agentId: "a2", content: "msg2", timestamp: new Date().toISOString(), evidence: ["e2"], referencedAgents: ["a1"] },
+        { agentId: "a3", content: "msg3", timestamp: new Date().toISOString(), evidence: [], referencedAgents: ["a1"] },
+      ];
+
+      const result = a3engine.diagnose(beliefs, messages, ["a1", "a2", "a3"], {
+        enableInformationWithholdingDetection: true,
+        enableIgnoredInputDetection: true,
+        enableReasoningActionMismatchDetection: true,
+        interventionLevel: "none",
+      });
+
+      expect(result.informationWithholding).toBeDefined();
+      expect(result.ignoredInput).toBeDefined();
+      expect(result.reasoningActionMismatch).toBeDefined();
+      // a3 evidence 为空，a1/a2 有 → 触发 FM-2.4
+      expect(result.informationWithholding.detected).toBe(true);
+      expect(result.informationWithholding.withholdingAgents).toContain("a3");
+    });
+
+    it("diagnoseAndIntervene() 为 FM-2.4 触发 force_reflection 干预", () => {
+      const beliefs: AgentBelief[] = [
+        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a3", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      ];
+      const messages: MessageInfo[] = [
+        { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), evidence: ["e1"], referencedAgents: [] },
+        { agentId: "a2", content: "msg2", timestamp: new Date().toISOString(), evidence: ["e2"], referencedAgents: [] },
+        { agentId: "a3", content: "msg3", timestamp: new Date().toISOString(), evidence: [], referencedAgents: [] },
+      ];
+
+      const { interventions } = a3engine.diagnoseAndIntervene(beliefs, messages, ["a1", "a2", "a3"], undefined, {
+        enableInformationWithholdingDetection: true,
+        enableIgnoredInputDetection: true,
+        enableReasoningActionMismatchDetection: true,
+        interventionLevel: "medium",
+        currentRound: 1,
+        maxRounds: 3,
+        disabledInterventions: ["introduce_diversity", "continue_discussion"],
+      });
+
+      const forceReflections = interventions.filter(i => i.type === "force_reflection");
+      expect(forceReflections.length).toBeGreaterThan(0);
+      // a3 应在 targetAgents 中
+      const targets = forceReflections.flatMap(i => i.targetAgents || []);
+      expect(targets).toContain("a3");
+    });
+  });
 });

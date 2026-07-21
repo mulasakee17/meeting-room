@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { mulberry32, cohensD, mean, sampleStd, PERMUTATION_SEED, BOOTSTRAP_SEED } from "./statsShared";
 
 interface ExperimentResult {
   runId: string; ablation: string; runIndex: number;
@@ -30,35 +31,13 @@ function loadData(dir: string): ExperimentResult[] {
   return valid;
 }
 
-function mean(v: number[]) { return v.reduce((a, b) => a + b, 0) / v.length; }
-function stdDev(v: number[]): number {
-  if (v.length < 2) return 0;  // n<2 时返回 0 而非 NaN
-  const m = mean(v); return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
-function cohensD(a: number[], b: number[]): number {
-  if (a.length < 2 || b.length < 2) return 0;  // 小样本无法可靠估计效应量
-  const ma = mean(a), mb = mean(b);
-  const va = a.reduce((s, v) => s + (v - ma) ** 2, 0) / (a.length - 1);
-  const vb = b.reduce((s, v) => s + (v - mb) ** 2, 0) / (b.length - 1);
-  const sp = Math.sqrt(((a.length - 1) * va + (b.length - 1) * vb) / (a.length + b.length - 2));
-  return sp === 0 ? 0 : (ma - mb) / sp;
-}
 
 // ============================================================================
 // 统计推断：Bootstrap CI（百分位法）+ 置换检验 p-value
 // ============================================================================
 
-/** 确定性 PRNG (mulberry32)，保证 bootstrap/置换结果可复现 */
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
 
-const RNG_SEED = 42;
+// RNG_SEED 已迁移到 statsShared.ts 的 PERMUTATION_SEED / BOOTSTRAP_SEED（H-Fix: 跨脚本统一）
 const N_BOOT = 10000;
 const N_PERM = 10000;  // 置换次数
 const ALPHA = 0.05;
@@ -94,7 +73,7 @@ function tCritical(df: number): number {
 function bootstrapCI(samples: number[], nBoot = N_BOOT, alpha = ALPHA) {
   const n = samples.length;
   if (n === 0) return { mean: 0, ci95: [0, 0] as [number, number], ci95_t: [0, 0] as [number, number] };
-  const rng = mulberry32(RNG_SEED);
+  const rng = mulberry32(BOOTSTRAP_SEED);
   const means: number[] = [];
   for (let i = 0; i < nBoot; i++) {
     let sum = 0;
@@ -106,7 +85,7 @@ function bootstrapCI(samples: number[], nBoot = N_BOOT, alpha = ALPHA) {
   const hi = means[Math.floor(nBoot * (1 - alpha / 2))];
   const m = mean(samples);
   // t 分布 CI（小样本校正）
-  const sd = stdDev(samples);
+  const sd = sampleStd(samples);
   const tcrit = tCritical(n - 1);
   const margin = (tcrit * sd) / Math.sqrt(n);
   return { mean: m, ci95: [lo, hi] as [number, number], ci95_t: [m - margin, m + margin] as [number, number] };
@@ -125,7 +104,7 @@ function permutationTest(a: number[], b: number[], nPerm = N_PERM) {
   const obsDiff = mean(a) - mean(b);
   const pooled = [...a, ...b];
   const nA = a.length;
-  const rng = mulberry32(RNG_SEED + 0x50E8);  // 独立 seed 流
+  const rng = mulberry32(PERMUTATION_SEED);  // H-Fix: 统一为 PERMUTATION_SEED（原 RNG_SEED+0x50E8）
   let count = 0;
   for (let i = 0; i < nPerm; i++) {
     // Fisher-Yates 部分洗牌：前 nA 个作为 "组A"
@@ -150,7 +129,7 @@ function permutationTest(a: number[], b: number[], nPerm = N_PERM) {
  */
 function bootstrapMeanDiff(a: number[], b: number[], nBoot = N_BOOT, alpha = ALPHA) {
   if (a.length === 0 || b.length === 0) return { meanDiff: 0, ci95: [0, 0] as [number, number], ci95_t: [0, 0] as [number, number], pValue: 1 };
-  const rng = mulberry32(RNG_SEED + 0x5EED);
+  const rng = mulberry32(BOOTSTRAP_SEED);
   const diffs: number[] = [];
   const obsDiff = mean(a) - mean(b);
   for (let i = 0; i < nBoot; i++) {
@@ -166,7 +145,7 @@ function bootstrapMeanDiff(a: number[], b: number[], nBoot = N_BOOT, alpha = ALP
   const permResult = permutationTest(a, b);
   // t 分布 CI（Welch 近似，不假设等方差）
   // 小样本 guard：n<2 时 stdDev 返回 0，se=0，margin=0，CI 退化为点估计
-  const sdA = stdDev(a), sdB = stdDev(b);
+  const sdA = sampleStd(a), sdB = sampleStd(b);
   const se = Math.sqrt(sdA * sdA / a.length + sdB * sdB / b.length);
   let margin = 0;
   if (a.length >= 2 && b.length >= 2 && se > 0) {
@@ -232,11 +211,11 @@ function analyze(label: string, dir: string) {
       }
     }
     const deltaStr = deltas.length > 0
-      ? `${(mean(deltas) >= 0 ? "+" : "")}${mean(deltas).toFixed(3)}±${stdDev(deltas).toFixed(3)}`
+      ? `${(mean(deltas) >= 0 ? "+" : "")}${mean(deltas).toFixed(3)}±${sampleStd(deltas).toFixed(3)}`
       : "—";
 
     console.log(
-      `| ${ablation.padEnd(17)} | ${String(g.length).padStart(2)} | ${mean(qs).toFixed(1)}±${stdDev(qs).toFixed(1).padStart(4)} | ${mean(ts).toFixed(3)}±${stdDev(ts).toFixed(3)} | ${String(totalIntv).padStart(3)}   | ${dStr.padStart(7)}   | ${deltaStr.padStart(11)} |`
+      `| ${ablation.padEnd(17)} | ${String(g.length).padStart(2)} | ${mean(qs).toFixed(1)}±${sampleStd(qs).toFixed(1).padStart(4)} | ${mean(ts).toFixed(3)}±${sampleStd(ts).toFixed(3)} | ${String(totalIntv).padStart(3)}   | ${dStr.padStart(7)}   | ${deltaStr.padStart(11)} |`
     );
   }
 
@@ -266,8 +245,8 @@ function analyze(label: string, dir: string) {
     console.log(`  shuffle τ:            ${mean(shuffleG.map(r => r.kendallTau)).toFixed(3)} (d vs none = ${shuffleD >= 0 ? "+" : ""}${shuffleD.toFixed(2)})`);
     console.log(`  full τ:               ${mean(fullG.map(r => r.kendallTau)).toFixed(3)} (d vs none = ${cohensD(fullQs, baseline.map(r => r.decisionQuality)) >= 0 ? "+" : ""}${cohensD(fullQs, baseline.map(r => r.decisionQuality)).toFixed(2)})`);
     console.log(`  full vs shuffle d:    ${fullVsShuffleD >= 0 ? "+" : ""}${fullVsShuffleD.toFixed(2)}`);
-    console.log(`  shuffle Δτ:           ${mean(shuffleDeltas) >= 0 ? "+" : ""}${mean(shuffleDeltas).toFixed(3)}±${stdDev(shuffleDeltas).toFixed(3)}`);
-    console.log(`  full Δτ:              ${mean(fullDeltas) >= 0 ? "+" : ""}${mean(fullDeltas).toFixed(3)}±${stdDev(fullDeltas).toFixed(3)}`);
+    console.log(`  shuffle Δτ:           ${mean(shuffleDeltas) >= 0 ? "+" : ""}${mean(shuffleDeltas).toFixed(3)}±${sampleStd(shuffleDeltas).toFixed(3)}`);
+    console.log(`  full Δτ:              ${mean(fullDeltas) >= 0 ? "+" : ""}${mean(fullDeltas).toFixed(3)}±${sampleStd(fullDeltas).toFixed(3)}`);
 
     if (Math.abs(mean(shuffleDeltas)) < 0.1 && mean(fullDeltas) > 0.3) {
       console.log(`\n  ✓ shuffle Δτ ≈ 0 while full Δτ > 0.3 — regression to the mean is RULED OUT.`);
@@ -320,12 +299,12 @@ function analyze(label: string, dir: string) {
         ? `${(mean(deltas) >= 0 ? "+" : "")}${mean(deltas).toFixed(3)}`
         : "—";
 
-      console.log(`| ${modeLabels[mode].padEnd(27)} | ${mean(ts).toFixed(3)}±${stdDev(ts).toFixed(3)} | ${dStr.padStart(7)}   | ${deltaStr.padStart(11)} |`);
+      console.log(`| ${modeLabels[mode].padEnd(27)} | ${mean(ts).toFixed(3)}±${sampleStd(ts).toFixed(3)} | ${dStr.padStart(7)}   | ${deltaStr.padStart(11)} |`);
     }
 
     // Full vs each single mode
     if (fullG) {
-      console.log(`\n  full (all 4):          τ = ${mean(fullG.map(r => r.kendallTau)).toFixed(3)}±${stdDev(fullG.map(r => r.kendallTau)).toFixed(3)}`);
+      console.log(`\n  full (all 4):          τ = ${mean(fullG.map(r => r.kendallTau)).toFixed(3)}±${sampleStd(fullG.map(r => r.kendallTau)).toFixed(3)}`);
 
       // Check if any single mode matches full
       for (const mode of singleModes) {
@@ -361,7 +340,7 @@ function analyze(label: string, dir: string) {
       if (Object.keys(breakdown).length > 0) {
         console.log(`\n  Full-mode intervention distribution (per run):`);
         for (const [intvType, counts] of Object.entries(breakdown)) {
-          console.log(`    ${intvType}: ${mean(counts).toFixed(1)}±${stdDev(counts).toFixed(1)}`);
+          console.log(`    ${intvType}: ${mean(counts).toFixed(1)}±${sampleStd(counts).toFixed(1)}`);
         }
       }
     }

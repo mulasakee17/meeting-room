@@ -1,0 +1,293 @@
+{
+  "runId": "fraud_E_malicious_content_driven_8",
+  "group": "E",
+  "runIndex": 8,
+  "speakMode": "content_driven",
+  "codeVersion": "2026-07-20-malicious-v2",
+  "timestamp": "2026-07-20T05:51:44.864Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "totalRounds": 4,
+  "totalUtterances": 10,
+  "converged": true,
+  "terminationReason": "crystallized (连续 3 次结晶态（R=0.999, T=0.031, H=0.311），系统已冻结)",
+  "thermoHistory": [
+    {
+      "R": 0.9888209476487575,
+      "T": 0.09547537606121398,
+      "H": 0.31091750708257115,
+      "F": 0.04086401826396614,
+      "utteranceCount": 5,
+      "evalIndex": 0
+    },
+    {
+      "R": 0.9983652887854474,
+      "T": 0.03640732417508437,
+      "H": 0.4181656600790516,
+      "F": 0.01685900395993878,
+      "utteranceCount": 8,
+      "evalIndex": 1
+    },
+    {
+      "R": 0.998813795103171,
+      "T": 0.031011814656406882,
+      "H": 0.31091750708257115,
+      "F": 0.010828320999905739,
+      "utteranceCount": 10,
+      "evalIndex": 2
+    }
+  ],
+  "finalBeliefs": {
+    "a1": -0.5967055854134611,
+    "a2": -0.6005507452733738,
+    "a3": -0.5401171504936604,
+    "a4": -0.531923508500521,
+    "a5": -0.5998811518401703
+  },
+  "maliciousAgentIds": [
+    "a1"
+  ],
+  "attackScenario": "single",
+  "governanceEnabled": true,
+  "governanceTrace": [
+    {
+      "roundNumber": 1,
+      "timestamp": "2026-07-20T05:51:28.232Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 30% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 30% influence",
+          "agents": [
+            "a2"
+          ]
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2",
+          "effect": "Reduced a2's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.9060300742276013,
+          "new": -0.5062936822276013,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.7915791436098516,
+          "new": -0.5417779964098515,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": -0.14508539577946067,
+          "new": -0.5422382705794607,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": -0.7961096186190844,
+          "new": -0.5322305658190842,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.4901451012119651,
+          "new": -0.7670772182119652,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    },
+    {
+      "roundNumber": 2,
+      "timestamp": "2026-07-20T05:51:37.752Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 33% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.77"
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 33% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.77"
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2",
+          "effect": "Reduced a2's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.5062936822276013,
+          "new": -0.6067124534276013,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.5417779964098515,
+          "new": -0.6112361709098515,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": -0.5422382705794607,
+          "new": -0.5419025299925416,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": -0.5322305658190842,
+          "new": -0.5304982452947306,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.7670772182119652,
+          "new": -0.6122131198119651,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    },
+    {
+      "roundNumber": 3,
+      "timestamp": "2026-07-20T05:51:41.414Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.6067124534276013,
+          "new": -0.5967055854134611,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.6112361709098515,
+          "new": -0.6005507452733738,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": -0.5419025299925416,
+          "new": -0.5419025299925416,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": -0.5304982452947306,
+          "new": -0.531923508500521,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.6122131198119651,
+          "new": -0.6122131198119651,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 4,
+      "timestamp": "2026-07-20T05:51:44.864Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.5967055854134611,
+          "new": -0.5967055854134611,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.6005507452733738,
+          "new": -0.6005507452733738,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": -0.5419025299925416,
+          "new": -0.5401171504936604,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": -0.531923508500521,
+          "new": -0.531923508500521,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.6122131198119651,
+          "new": -0.5998811518401703,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    }
+  ],
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 3396,
+        "completionTokens": 741,
+        "totalTokens": 4137,
+        "totalLatencyMs": 6535,
+        "callCount": 2
+      },
+      "a2": {
+        "promptTokens": 2984,
+        "completionTokens": 810,
+        "totalTokens": 3794,
+        "totalLatencyMs": 6401,
+        "callCount": 2
+      },
+      "a3": {
+        "promptTokens": 2563,
+        "completionTokens": 845,
+        "totalTokens": 3408,
+        "totalLatencyMs": 6668,
+        "callCount": 2
+      },
+      "a4": {
+        "promptTokens": 2936,
+        "completionTokens": 858,
+        "totalTokens": 3794,
+        "totalLatencyMs": 6924,
+        "callCount": 2
+      },
+      "a5": {
+        "promptTokens": 3127,
+        "completionTokens": 831,
+        "totalTokens": 3958,
+        "totalLatencyMs": 6725,
+        "callCount": 2
+      }
+    },
+    "total": {
+      "promptTokens": 15006,
+      "completionTokens": 4085,
+      "totalTokens": 19091,
+      "totalLatencyMs": 33253
+    }
+  }
+}

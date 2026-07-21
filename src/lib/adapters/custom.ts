@@ -11,6 +11,7 @@ import {
 import { callLLM, LLMConfig, LLMResponse, TokenUsage } from "@/lib/llm/providers";
 import { DiscussionEngine, DiscussionAgent, DiscussionConfig } from "@/lib/discussion";
 import { GovernanceRuntime } from "@/runtime/GovernanceRuntime";
+import { mulberry32 } from "../utils/statsUtils";
 
 export interface AgentUsageStats {
   promptTokens: number;
@@ -22,15 +23,6 @@ export interface AgentUsageStats {
   latencies: number[];
 }
 
-/** 确定性 PRNG (mulberry32)，保证 agent 初始信念可复现 */
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
 
 /** 从 agent ID 派生确定性偏移量，确保同一 seed 下各 agent 初始信念不同 */
 function hashAgentId(id: string): number {

@@ -18,17 +18,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-
-// ============================================================================
-// 安全 JSON 解析
-// ============================================================================
-function safeJsonParse<T>(text: string, fallback: T): T {
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return fallback;
-  }
-}
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 统计工具
@@ -136,7 +126,7 @@ function loadData(dataDir: string, prefix: string): ExperimentResult[] {
   const files = fs.readdirSync(dataDir).filter(f => f.endsWith(".json") && f.startsWith(prefix) && f !== "summary.json");
   return files.map(f => {
     const content = fs.readFileSync(path.join(dataDir, f), "utf-8");
-    return safeJsonParse<ExperimentResult | null>(content, null);
+    return safeJsonParse<ExperimentResult>(content);
   }).filter((r): r is ExperimentResult => r !== null && !r.error);
 }
 

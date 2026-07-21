@@ -22,6 +22,7 @@
  */
 import * as fs from "fs";
 import * as path from "path";
+import { mulberry32 } from "./statsShared";
 
 interface Round {
   roundNumber: number;
@@ -66,10 +67,12 @@ function cohensDz(differences: number[]): number {
 function pairedPermutationTest(differences: number[], nPerms = 10000): number {
   if (differences.length === 0) return 1;
   const observed = Math.abs(mean(differences));
+  // 使用 seeded PRNG 保证可复现（替代 Math.random，H-Fix: 置换检验可复现性）
+  const rng = mulberry32(20260719);
   let count = 0;
   for (let p = 0; p < nPerms; p++) {
     // 随机翻转每个差值的符号
-    const permuted = differences.map(d => (Math.random() < 0.5 ? d : -d));
+    const permuted = differences.map(d => (rng() < 0.5 ? d : -d));
     if (Math.abs(mean(permuted)) >= observed) count++;
   }
   return (count + 1) / (nPerms + 1); // 项目规范：(count+1)/(nPerms+1)

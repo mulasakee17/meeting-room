@@ -18,6 +18,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { mulberry32, cohensD, mean, sampleStd, PERMUTATION_SEED } from "./statsShared";
 
 interface AsyncExperimentResult {
   runId: string;
@@ -50,9 +51,6 @@ function loadGroup(dir: string, group: string): AsyncExperimentResult[] {
   return results.sort((a, b) => a.runIndex - b.runIndex);
 }
 
-function mean(xs: number[]): number {
-  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
-}
 
 /**
  * 效率指标：单位发言的决策质量产出
@@ -68,21 +66,6 @@ function efficiency(tau: number, utterances: number): number {
   return utterances > 0 ? tau / utterances : 0;
 }
 
-function stdDev(xs: number[]): number {
-  if (xs.length < 2) return 0;
-  const m = mean(xs);
-  return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / (xs.length - 1));
-}
-
-/** Cohen's d with pooled SD (matches statsShared.ts and analyze.ts) */
-function cohensD(a: number[], b: number[]): number {
-  if (a.length < 2 || b.length < 2) return 0;
-  const ma = mean(a), mb = mean(b);
-  const va = a.reduce((s, x) => s + (x - ma) ** 2, 0) / (a.length - 1);
-  const vb = b.reduce((s, x) => s + (x - mb) ** 2, 0) / (b.length - 1);
-  const sp = Math.sqrt(((a.length - 1) * va + (b.length - 1) * vb) / (a.length + b.length - 2));
-  return sp === 0 ? 0 : (ma - mb) / sp;
-}
 
 /** Cohen's d 效应量解读 */
 function interpretD(d: number): string {
@@ -93,21 +76,11 @@ function interpretD(d: number): string {
   return "大效应";
 }
 
-function mulberry32(seed: number): () => number {
-  let s = seed;
-  return () => {
-    s |= 0; s = s + 0x6D2B79F5 | 0;
-    let t = Math.imul(s ^ s >>> 15, 1 | s);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
 function permutationTest(a: number[], b: number[], nPerms = 5000): number {
   const observed = Math.abs(mean(a) - mean(b));
   const combined = [...a, ...b];
   const nA = a.length;
-  const rng = mulberry32(42);
+  const rng = mulberry32(PERMUTATION_SEED);  // H-Fix: 统一为 PERMUTATION_SEED
   let count = 0;
   for (let p = 0; p < nPerms; p++) {
     for (let i = combined.length - 1; i > 0; i--) {
@@ -158,8 +131,8 @@ function printComparison(
   const nameA = name.split(" vs ")[0];
   const nameB = name.split(" vs ")[1];
 
-  console.log(`  ${nameA}: n=${groupA.length}, τ=${mean(tauA).toFixed(4)}±${stdDev(tauA).toFixed(4)}, 发言=${mean(uttA).toFixed(1)}`);
-  console.log(`  ${nameB}: n=${groupB.length}, τ=${mean(tauB).toFixed(4)}±${stdDev(tauB).toFixed(4)}, 发言=${mean(uttB).toFixed(1)}`);
+  console.log(`  ${nameA}: n=${groupA.length}, τ=${mean(tauA).toFixed(4)}±${sampleStd(tauA).toFixed(4)}, 发言=${mean(uttA).toFixed(1)}`);
+  console.log(`  ${nameB}: n=${groupB.length}, τ=${mean(tauB).toFixed(4)}±${sampleStd(tauB).toFixed(4)}, 发言=${mean(uttB).toFixed(1)}`);
 
   // 效率对比：揭示"用更少发言达到相同 τ"的异步价值
   const effA = efficiency(mean(tauA), mean(uttA));
@@ -254,7 +227,7 @@ for (const [name, group] of [["A", groupA], ["B", groupB], ["C", groupC], ["D", 
   const strongCryst = group.filter(r => r.terminationReason.includes("strong_crystallized")).length;
   const cryst = group.filter(r => r.terminationReason.includes("crystallized") && !r.terminationReason.includes("strong_crystallized")).length;
   const eff = efficiency(mean(taus), mean(utts));
-  console.log(`  ${name} 组: n=${group.length}, τ=${mean(taus).toFixed(4)}±${stdDev(taus).toFixed(4)}, 发言=${mean(utts).toFixed(1)}±${stdDev(utts).toFixed(1)}, 轮次=${mean(rounds).toFixed(1)}, 收敛=${converged}/${group.length}`);
+  console.log(`  ${name} 组: n=${group.length}, τ=${mean(taus).toFixed(4)}±${sampleStd(taus).toFixed(4)}, 发言=${mean(utts).toFixed(1)}±${sampleStd(utts).toFixed(1)}, 轮次=${mean(rounds).toFixed(1)}, 收敛=${converged}/${group.length}`);
   console.log(`    效率 τ/发言 = ${eff.toFixed(4)}（越高=单位发言产出越高）`);
   if (name === "C" || name === "D") {
     console.log(`    终止原因: 强结晶=${strongCryst}, 普通结晶=${cryst}, 硬上限=${hardCaps}`);

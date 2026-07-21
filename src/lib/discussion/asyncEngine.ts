@@ -15,20 +15,9 @@ import type { DiscussionAgent } from "./index";
 import type { DiscussionResult, RoundResult, AgentOpinion, DiscussionTask } from "./types";
 import type { RawObservation, ObserverAgent } from "../observation";
 import { TerminationDecider, type TerminationThresholds, type ThermoSnapshot, type TerminationDecision } from "../thermodynamics/TerminationDecider";
-import { shannonEntropy, normalizeTemperature } from "../utils/statsUtils";
+import { mulberry32, shannonEntropy, normalizeTemperature } from "../utils/statsUtils";
 import { BELIEF_MIN, BELIEF_MAX } from "../constants";
 
-// 确定性 PRNG (mulberry32)，保证异步发言选择/终止采样可复现
-// 与 DiscussionEngine 和 GovernanceEngine 保持一致的 PRNG 实现
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return function () {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 /** 发言模式 */
 export type SpeakMode = "random_prob" | "content_driven";
@@ -63,6 +52,8 @@ export interface AsyncDiscussionConfig {
   strongWillingnessThreshold: number;
   /** 内容驱动模式：刚发过言的惩罚值 */
   recentSpeakPenalty: number;
+  /** 内容驱动模式：recentlySpoke 检查窗口（最近 N 个周期内发过言则惩罚，默认 2） */
+  recentSpeakWindow: number;
 }
 
 export const DEFAULT_ASYNC_CONFIG: AsyncDiscussionConfig = {
@@ -80,6 +71,7 @@ export const DEFAULT_ASYNC_CONFIG: AsyncDiscussionConfig = {
   willingnessThreshold: 0.40,
   strongWillingnessThreshold: 0.82,
   recentSpeakPenalty: 0.5,
+  recentSpeakWindow: 2,  // H-Fix: 检查最近 2 个周期，避免"发言-沉默-发言"模式规避惩罚
 };
 
 /** 异步讨论结果（扩展 DiscussionResult） */
@@ -149,6 +141,24 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
     this.terminationDecider = new TerminationDecider(this.asyncConfig.terminationThresholds);
     // 初始化 PRNG：从 discussionConfig.seed 派生，保证同一 seed 下实验可复现
     const seed = discussionConfig?.seed ?? Date.now();
+    this.prng = mulberry32(seed);
+  }
+
+  /**
+   * 重写 reset()：清除 AsyncDiscussionEngine 自身字段，防止跨实验状态泄漏
+   *（H-Fix: 父类 reset() 不清除子类字段）
+   */
+  reset(): void {
+    super.reset();
+    this.terminationDecider.reset();
+    this.thermoHistory = [];
+    this.totalUtterances = 0;
+    this.randomTerminateAt = null;
+    this.lastTerminationDecision = null;
+    this.lastSpokeCycle.clear();
+    this.prevCycleBeliefs.clear();
+    // 重置 PRNG 到初始 seed 状态，保证跨实验可复现
+    const seed = this.config.seed ?? 42;
     this.prng = mulberry32(seed);
   }
 
@@ -635,9 +645,10 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
       }
     }
 
-    // 5. 上一轮是否刚发过言
+    // 5. 最近 N 个周期内是否发过言（H-Fix: 扩展窗口，避免"发言-沉默-发言"模式规避惩罚）
     const lastSpoke = this.lastSpokeCycle.get(agent.id);
-    const recentlySpoke = lastSpoke !== undefined && lastSpoke === currentCycle - 1;
+    const window = this.asyncConfig.recentSpeakWindow;
+    const recentlySpoke = lastSpoke !== undefined && lastSpoke >= currentCycle - window;
 
     return {
       infoExposure,
@@ -728,6 +739,9 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
     const R = Math.sqrt(sr * sr + si * si) / beliefs.length;
 
     // T (归一化)
+    // 注：使用总体方差（N）而非样本方差（N-1）。这是设计选择：将全部 agent 视为总体。
+    // 阈值 crystallT=0.22 等基于此方差标定。改用 N-1 会使 T 增大 ~11.8%（N=5），
+    // 需重新标定阈值 + 重跑异步实验。详见 LIMITATIONS.md。
     const mean = beliefs.reduce((a, b) => a + b, 0) / beliefs.length;
     const std = Math.sqrt(beliefs.reduce((s, v) => s + (v - mean) ** 2, 0) / beliefs.length);
     const T = normalizeTemperature(std);

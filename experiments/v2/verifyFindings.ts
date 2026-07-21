@@ -1,13 +1,18 @@
 /**
  * 关键发现验证脚本
  *
- * 对两个最重磅的发现做严格统计验证：
+ * 对三个核心发现做严格统计验证：
  * 1. 共识度 vs 决策质量 零相关（虚假共识）
  * 2. 治理的瞬时峰值效应（R2→R3 回退）
+ * 3. Shuffle 作为信息整合上限的精确测量
+ *
+ * 数据范围限制：所有结论基于 Crisis 任务 + DeepSeek-V3 + FlatTopology，
+ * 跨任务/跨模型/跨拓扑普适性尚未验证。
  */
 
 import * as fs from "fs";
 import * as path from "path";
+import { mulberry32, mean, PERMUTATION_SEED } from "./statsShared";
 
 interface ExperimentResult {
   runId: string;
@@ -27,10 +32,6 @@ function loadData(dir: string, prefix: string): any[] {
   });
 }
 
-function mean(v: number[]): number {
-  return v.reduce((a, b) => a + b, 0) / v.length;
-}
-
 function sampleStd(v: number[]): number {
   if (v.length < 2) return 0;
   const m = mean(v);
@@ -48,19 +49,11 @@ function pearsonCorr(x: number[], y: number[]): number {
   return num / Math.sqrt(dx * dy);
 }
 
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
 
 /** 相关系数的置换检验：H0: ρ=0 */
 function permutationCorrTest(x: number[], y: number[], nPerm: number = 10000): number {
   const obsR = pearsonCorr(x, y);
-  const rng = mulberry32(42);
+  const rng = mulberry32(PERMUTATION_SEED);  // H-Fix: 统一为 PERMUTATION_SEED
   let count = 0;
   const yPerm = [...y];
   for (let i = 0; i < nPerm; i++) {
@@ -79,7 +72,7 @@ function permutationCorrTest(x: number[], y: number[], nPerm: number = 10000): n
 function pairedPermutationTest(before: number[], after: number[], nPerm: number = 10000): number {
   const diffs = after.map((v, i) => v - before[i]);
   const obsMean = mean(diffs);
-  const rng = mulberry32(42);
+  const rng = mulberry32(PERMUTATION_SEED);  // H-Fix: 统一为 PERMUTATION_SEED
   let count = 0;
   for (let i = 0; i < nPerm; i++) {
     // 随机翻转符号（H0: 差异对称分布在 0 周围）
@@ -172,6 +165,7 @@ function main() {
       大家都同意，但同意的是错误答案。
 新颖性：★★★ 原创——首次在 LLM multi-agent 中量化此效应
       人类群体的 groupthink 是已知的，但 LLM 中同样存在且 r≈0 是新发现
+      ⚠️ 限制：仅 Crisis + Supplier 两任务，仅 DeepSeek-V3 + FlatTopology
 意义：治理不能只促进共识，必须确保共识方向正确。
       这直接证明了"认知治理"的必要性——
       光有社会影响（形成共识）不够，还需要认知纠偏。`);
@@ -218,6 +212,7 @@ function main() {
 含义：治理效果是"动态维持"的，不是"一次性改进"。
       像药物一样，需要持续给药才能维持效果。
 新颖性：★★★ 原创——首次在 LLM multi-agent 中量化治理的时间动力学
+      ⚠️ 限制：仅 Crisis 任务 3 轮讨论，更长讨论/其他任务/其他模型未验证
 意义：治理系统设计必须考虑"持续干预"而非"一次性干预"。
       最后一轮停止干预的策略（当前默认）会导致效果回退。
       这对治理策略设计有直接指导意义。`);
@@ -248,6 +243,8 @@ function main() {
 含义：shuffle 对照精确量化了"如果 agent 能获得全部信息，决策质量能有多好"。
       当前治理只能达到信息整合上限的 ${(coverage * 100).toFixed(0)}%。
 新颖性：★★☆ 原创——用 shuffle 作为实验对照的方法学是新的
+      ⚠️ 限制：shuffle 标定的是"信息整合上限"，非"协作上限"（shuffle 破坏角色连贯性）
+      且仅 Crisis 任务测得，Supplier 任务因基线过高未显示同样模式
 意义：为治理效果评估提供了绝对参照系，而非仅相对 none 的提升。
       回答了"治理离理论上限还有多远"的问题。`);
 
@@ -279,6 +276,9 @@ function main() {
   - 干预类型差异性（样本量偏小，需更多实验）
   - 第 1 轮决定论（人类已知现象的 LLM 验证）
   - 干预时机效应（第 3 轮 n=4 太小）
+
+整体范围限制：上述三个发现均基于 Crisis 任务（部分跨 Supplier 验证）+ DeepSeek-V3 + FlatTopology。
+跨任务/跨模型/跨拓扑普适性需更多实验验证，结论不应外推到所有 LLM multi-agent 场景。
 `);
 }
 
@@ -286,7 +286,7 @@ function permutationTest(a: number[], b: number[], nPerm: number = 10000): numbe
   const combined = [...a, ...b];
   const n1 = a.length;
   const obsDiff = mean(a) - mean(b);
-  const rng = mulberry32(42);
+  const rng = mulberry32(PERMUTATION_SEED);  // H-Fix: 统一为 PERMUTATION_SEED
   let count = 0;
   for (let i = 0; i < nPerm; i++) {
     for (let j = combined.length - 1; j > 0; j--) {

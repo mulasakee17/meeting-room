@@ -35,6 +35,7 @@
  * ```
  */
 
+import { mulberry32 } from "../lib/utils/statsUtils";
 import { GovernanceEngine } from "../lib/governance";
 import type {
   AgentBelief,
@@ -59,16 +60,6 @@ import type {
   RoundCompleteHandler,
 } from "./types";
 
-// H24 修复：种子化 PRNG，保证 random-intervene 模式可复现
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return function () {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 // ============================================================================
 // Default Configuration
@@ -97,6 +88,8 @@ export class GovernanceRuntime {
   private evaluationEngine: EvaluationEngine;
   private config: RuntimeConfig;
   private state: GovernanceRuntimeState;
+  /** 持久 PRNG — random-intervene 模式专用，避免每轮重建导致相同干预 */
+  private randomInterveneRng: () => number;
 
   // Event hooks
   private biasDetectedHandlers: BiasDetectedHandler[] = [];
@@ -124,6 +117,8 @@ export class GovernanceRuntime {
 
     this.governanceEngine = new GovernanceEngine(this.config.governanceConfig, this.config.seed);
     this.evaluationEngine = new EvaluationEngine();
+    // 持久 PRNG：random-intervene 模式下跨轮保持状态，避免每轮产生相同随机干预
+    this.randomInterveneRng = mulberry32((this.config.seed ?? 42) + 0x5A4D);
 
     this.state = {
       currentRound: 0,
@@ -704,8 +699,8 @@ export class GovernanceRuntime {
     const types: Array<Intervention["type"]> = [
       "reduce_weight", "introduce_diversity", "force_reflection", "continue_discussion",
     ];
-    // H24 修复：用种子化 PRNG 替代 Math.random，保证可复现
-    const rng = mulberry32((this.config.seed ?? 42) + 0x5A4D);
+    // H-Fix: 使用持久 PRNG（构造时初始化），避免每轮重建导致相同干预
+    const rng = this.randomInterveneRng;
     const count = 1 + Math.floor(rng() * 3); // 1-3 random interventions
 
     return Array.from({ length: count }, () => {

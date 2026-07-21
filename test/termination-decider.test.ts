@@ -12,28 +12,30 @@ describe("TerminationDecider", () => {
   });
 
   describe("普通结晶态判定", () => {
-    it("R>0.85, T<0.20, H<0.35 → crystallized", () => {
+    it("R>0.85, T<0.22, H<0.42 → crystallized", () => {
       // 第一次评估：建立基线（T 不低 → active，不触发骤降检测）
-      decider.evaluate(0.80, 0.25, 0.40, 3);
-      // 第二次评估：满足结晶态
+      decider.evaluate(0.80, 0.25, 0.45, 3);
+      // 第二次评估：满足结晶态（新阈值 T<0.22, H<0.42）
       const decision = decider.evaluate(0.90, 0.15, 0.25, 6);
       expect(decision.stateType).toBe("crystallized");
-      expect(decision.shouldTerminate).toBe(false); // 需要连续 2 次
+      expect(decision.shouldTerminate).toBe(false); // 需要连续 3 次
     });
 
-    it("连续 2 次结晶态 → shouldTerminate=true", () => {
+    it("连续 3 次结晶态 → shouldTerminate=true", () => {
       decider.evaluate(0.90, 0.15, 0.25, 3);
-      const decision = decider.evaluate(0.92, 0.12, 0.20, 6);
+      decider.evaluate(0.92, 0.12, 0.20, 6);
+      const decision = decider.evaluate(0.92, 0.12, 0.20, 9);
       expect(decision.stateType).toBe("crystallized");
       expect(decision.shouldTerminate).toBe(true);
       expect(decision.reason).toBe("crystallized");
     });
 
-    it("仅 1 次结晶态后中断 → shouldTerminate=false", () => {
+    it("仅 2 次结晶态后中断 → shouldTerminate=false", () => {
       decider.evaluate(0.90, 0.15, 0.25, 3);
-      // 第二次非结晶（T 回升）
-      const d2 = decider.evaluate(0.60, 0.30, 0.40, 6);
-      expect(d2.shouldTerminate).toBe(false);
+      decider.evaluate(0.90, 0.15, 0.25, 6);
+      // 第三次非结晶（T 回升）
+      const d3 = decider.evaluate(0.60, 0.30, 0.40, 9);
+      expect(d3.shouldTerminate).toBe(false);
     });
 
     it("R=0.80 不满足 0.85 → 非 crystallized", () => {
@@ -41,8 +43,8 @@ describe("TerminationDecider", () => {
       expect(decision.stateType).not.toBe("crystallized");
     });
 
-    it("H=0.36 不满足 0.35 → 非 crystallized", () => {
-      const decision = decider.evaluate(0.90, 0.15, 0.36, 3);
+    it("H=0.45 不满足 0.42 → 非 crystallized", () => {
+      const decision = decider.evaluate(0.90, 0.15, 0.45, 3);
       expect(decision.stateType).not.toBe("crystallized");
     });
   });
@@ -70,8 +72,8 @@ describe("TerminationDecider", () => {
       }
     });
 
-    it("H=0.15 不满足 strongCrystallH=0.10 → 不触发强结晶", () => {
-      const decision = decider.evaluate(0.95, 0.05, 0.15, 10);
+    it("H=0.25 不满足 strongCrystallH=0.20 → 不触发强结晶", () => {
+      const decision = decider.evaluate(0.95, 0.05, 0.25, 10);
       if (decision.shouldTerminate) {
         expect(decision.reason).not.toBe("strong_crystallized");
       }
@@ -119,7 +121,7 @@ describe("TerminationDecider", () => {
       // T 骤降 + H 低 → 是真结晶，不是淬火
       decider.evaluate(0.85, 0.25, 0.40, 3);
       const decision = decider.evaluate(0.92, 0.10, 0.25, 6);
-      // H=0.25 < 0.35 → 满足结晶条件
+      // H=0.25 < 0.42 → 满足结晶条件（新阈值）
       expect(decision.stateType).toBe("crystallized");
     });
   });
@@ -218,10 +220,12 @@ describe("TerminationDecider", () => {
       expect(d3.shouldTerminate).toBe(false); // 仅 1 次连续
     });
 
-    it("连续 3 次结晶在第 2 次就终止", () => {
+    it("连续 3 次结晶在第 3 次才终止", () => {
       decider.evaluate(0.90, 0.15, 0.25, 3);
       const d2 = decider.evaluate(0.90, 0.15, 0.25, 6);
-      expect(d2.shouldTerminate).toBe(true); // 第 2 次就终止
+      expect(d2.shouldTerminate).toBe(false); // 第 2 次不终止
+      const d3 = decider.evaluate(0.90, 0.15, 0.25, 9);
+      expect(d3.shouldTerminate).toBe(true); // 第 3 次终止
     });
   });
 
@@ -259,14 +263,14 @@ describe("TerminationDecider", () => {
   describe("DEFAULT_TERMINATION_THRESHOLDS", () => {
     it("普通结晶态默认值符合标定", () => {
       expect(DEFAULT_TERMINATION_THRESHOLDS.crystallR).toBe(0.85);
-      expect(DEFAULT_TERMINATION_THRESHOLDS.crystallT).toBe(0.20);
-      expect(DEFAULT_TERMINATION_THRESHOLDS.crystallH).toBe(0.35);
-      expect(DEFAULT_TERMINATION_THRESHOLDS.consecutiveCrystallRequired).toBe(2);
+      expect(DEFAULT_TERMINATION_THRESHOLDS.crystallT).toBe(0.22);
+      expect(DEFAULT_TERMINATION_THRESHOLDS.crystallH).toBe(0.42);
+      expect(DEFAULT_TERMINATION_THRESHOLDS.consecutiveCrystallRequired).toBe(3);
     });
 
     it("强结晶态默认值符合标定", () => {
       expect(DEFAULT_TERMINATION_THRESHOLDS.strongCrystallT).toBe(0.10);
-      expect(DEFAULT_TERMINATION_THRESHOLDS.strongCrystallH).toBe(0.10);
+      expect(DEFAULT_TERMINATION_THRESHOLDS.strongCrystallH).toBe(0.20);
     });
 
     it("混沌态默认值可配置", () => {

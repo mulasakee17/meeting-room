@@ -1,0 +1,555 @@
+{
+  "runId": "fraud_E_malicious_content_driven_7",
+  "group": "E",
+  "runIndex": 7,
+  "speakMode": "content_driven",
+  "codeVersion": "2026-07-20-malicious-v2",
+  "timestamp": "2026-07-20T05:51:11.607Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "totalRounds": 10,
+  "totalUtterances": 16,
+  "converged": false,
+  "terminationReason": "crystallized (连续 3 次结晶态（R=0.963, T=0.174, H=0.418），系统已冻结)",
+  "thermoHistory": [
+    {
+      "R": 0.9214960005353348,
+      "T": 0.255757175065555,
+      "H": 0.6554587535412855,
+      "F": 0.24614227864237426,
+      "utteranceCount": 5,
+      "evalIndex": 0
+    },
+    {
+      "R": 0.9421967395431163,
+      "T": 0.2186265797798794,
+      "H": 0.6554587535412855,
+      "F": 0.2011039659303978,
+      "utteranceCount": 7,
+      "evalIndex": 1
+    },
+    {
+      "R": 0.9529087192068515,
+      "T": 0.1968914633794977,
+      "H": 0.6554587535412855,
+      "F": 0.1761455139627937,
+      "utteranceCount": 9,
+      "evalIndex": 2
+    },
+    {
+      "R": 0.9721533323691682,
+      "T": 0.1509052778184203,
+      "H": 0.31091750708257115,
+      "F": 0.07476576041573783,
+      "utteranceCount": 11,
+      "evalIndex": 3
+    },
+    {
+      "R": 0.9735004394721237,
+      "T": 0.14712416996621797,
+      "H": 0.4181656600790516,
+      "F": 0.0880218361753824,
+      "utteranceCount": 13,
+      "evalIndex": 4
+    },
+    {
+      "R": 0.963143476598257,
+      "T": 0.1736211214871721,
+      "H": 0.4181656600790516,
+      "F": 0.10945891427209148,
+      "utteranceCount": 16,
+      "evalIndex": 5
+    }
+  ],
+  "finalBeliefs": {
+    "a1": 0.31144492284320796,
+    "a2": 0.7325847145976828,
+    "a3": 0.41811330210456066,
+    "a4": 0.5654517400134603,
+    "a5": 0.7575822542351351
+  },
+  "maliciousAgentIds": [
+    "a1"
+  ],
+  "attackScenario": "single",
+  "governanceEnabled": true,
+  "governanceTrace": [
+    {
+      "roundNumber": 1,
+      "timestamp": "2026-07-20T05:50:35.665Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 40% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 40% influence",
+          "agents": [
+            "a2"
+          ]
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2",
+          "effect": "Reduced a2's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.4437335776165128,
+          "new": -0.027888887983487154,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.6448191041126847,
+          "new": 0.6228151177126847,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.04833650263026357,
+          "new": 0.2822239806302636,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.7682025474496186,
+          "new": 0.5153376274496185,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.2676833779551089,
+          "new": 0.6602007779551088,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    },
+    {
+      "roundNumber": 2,
+      "timestamp": "2026-07-20T05:50:42.756Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a1 dominates with 40% influence",
+          "agents": [
+            "a1"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.96"
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a1 dominates with 40% influence",
+          "agents": [
+            "a1"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.96"
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1",
+          "effect": "Reduced a1's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.027888887983487154,
+          "new": 0.06929444521403592,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.6228151177126847,
+          "new": 0.6370121577126847,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.2822239806302636,
+          "new": 0.3328903835357241,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5153376274496185,
+          "new": 0.5310369833321757,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.6602007779551088,
+          "new": 0.6474949859551088,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    },
+    {
+      "roundNumber": 3,
+      "timestamp": "2026-07-20T05:50:46.305Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.06929444521403592,
+          "new": 0.10840027843193054,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.6370121577126847,
+          "new": 0.6370121577126847,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.3328903835357241,
+          "new": 0.3328903835357241,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5310369833321757,
+          "new": 0.5008814358323493,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.6474949859551088,
+          "new": 0.5998707380618424,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 4,
+      "timestamp": "2026-07-20T05:50:49.154Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.10840027843193054,
+          "new": 0.10840027843193054,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.6370121577126847,
+          "new": 0.640460334055782,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.3328903835357241,
+          "new": 0.3328903835357241,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5008814358323493,
+          "new": 0.5008814358323493,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.5998707380618424,
+          "new": 0.6088901273525661,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 5,
+      "timestamp": "2026-07-20T05:50:52.005Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.10840027843193054,
+          "new": 0.18814023666714097,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.640460334055782,
+          "new": 0.640460334055782,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.3328903835357241,
+          "new": 0.37895682600536545,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5008814358323493,
+          "new": 0.5217492204574969,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.6088901273525661,
+          "new": 0.6135566082496812,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 6,
+      "timestamp": "2026-07-20T05:50:55.016Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.18814023666714097,
+          "new": 0.2169192011670698,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.640460334055782,
+          "new": 0.640460334055782,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.37895682600536545,
+          "new": 0.37895682600536545,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5217492204574969,
+          "new": 0.5004868373888725,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.6135566082496812,
+          "new": 0.578523117012229,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 7,
+      "timestamp": "2026-07-20T05:50:57.963Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.2169192011670698,
+          "new": 0.2169192011670698,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.640460334055782,
+          "new": 0.6868912839474146,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.37895682600536545,
+          "new": 0.37895682600536545,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5004868373888725,
+          "new": 0.5004868373888725,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.578523117012229,
+          "new": 0.6342446494603947,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 8,
+      "timestamp": "2026-07-20T05:51:00.824Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.2169192011670698,
+          "new": 0.28038132099200935,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.6868912839474146,
+          "new": 0.6868912839474146,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.37895682600536545,
+          "new": 0.41811330210456066,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5004868373888725,
+          "new": 0.5214138117805416,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.6342446494603947,
+          "new": 0.6351079520413355,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 9,
+      "timestamp": "2026-07-20T05:51:04.814Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.28038132099200935,
+          "new": 0.38082412284320794,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.6868912839474146,
+          "new": 0.7263575913553024,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.41811330210456066,
+          "new": 0.41811330210456066,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5214138117805416,
+          "new": 0.5214138117805416,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.6351079520413355,
+          "new": 0.6823417592351352,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 10,
+      "timestamp": "2026-07-20T05:51:11.607Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a4 dominates with 50% influence",
+          "agents": [
+            "a4"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.73"
+        },
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a4 dominates with 50% influence",
+          "agents": [
+            "a4"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.73"
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a4",
+          "effect": "Reduced a4's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.38082412284320794,
+          "new": 0.31144492284320796,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.7263575913553024,
+          "new": 0.7325847145976828,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.41811330210456066,
+          "new": 0.41811330210456066,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5214138117805416,
+          "new": 0.5654517400134603,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.6823417592351352,
+          "new": 0.7575822542351351,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    }
+  ],
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 7498,
+        "completionTokens": 1614,
+        "totalTokens": 9112,
+        "totalLatencyMs": 12885,
+        "callCount": 4
+      },
+      "a2": {
+        "promptTokens": 7560,
+        "completionTokens": 1561,
+        "totalTokens": 9121,
+        "totalLatencyMs": 12403,
+        "callCount": 4
+      },
+      "a3": {
+        "promptTokens": 4659,
+        "completionTokens": 1321,
+        "totalTokens": 5980,
+        "totalLatencyMs": 10143,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 3480,
+        "completionTokens": 1053,
+        "totalTokens": 4533,
+        "totalLatencyMs": 8123,
+        "callCount": 2
+      },
+      "a5": {
+        "promptTokens": 5198,
+        "completionTokens": 1318,
+        "totalTokens": 6516,
+        "totalLatencyMs": 11026,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 28395,
+      "completionTokens": 6867,
+      "totalTokens": 35262,
+      "totalLatencyMs": 54580
+    }
+  }
+}

@@ -111,6 +111,49 @@ export interface PrematureConsensusDetection {
   };
 }
 
+// ============================================================================
+// A3 (MAST) 新增检测器接口 — FM-2.4/2.5/2.6
+// ============================================================================
+
+/** FM-2.4 Information withholding：agent 有独有信息但 evidence[] 为空 */
+export interface InformationWithholdingDetection {
+  detected: boolean;
+  severity: SeverityLevel;
+  /** 有独有信息但未在 evidence 中暴露的 agent 列表 */
+  withholdingAgents: string[];
+  intervention: {
+    type: InterventionType;
+    applied: boolean;
+    effect?: string;
+  };
+}
+
+/** FM-2.5 Ignored other's input：agent 被他人引用但未回应 */
+export interface IgnoredInputDetection {
+  detected: boolean;
+  severity: SeverityLevel;
+  /** 被引用但未回引的 agent 列表 */
+  ignoringAgents: string[];
+  intervention: {
+    type: InterventionType;
+    applied: boolean;
+    effect?: string;
+  };
+}
+
+/** FM-2.6 Reasoning-action mismatch：reasoning 倾向与 itemBeliefs 排序矛盾 */
+export interface ReasoningActionMismatchDetection {
+  detected: boolean;
+  severity: SeverityLevel;
+  /** reasoning 与 itemBeliefs 排序矛盾的 agent 列表 */
+  mismatchAgents: string[];
+  intervention: {
+    type: InterventionType;
+    applied: boolean;
+    effect?: string;
+  };
+}
+
 export interface GovernanceIssue {
   type: string;
   severity: SeverityLevel;
@@ -123,6 +166,12 @@ export interface GovernanceResult {
   authorityBias: AuthorityBiasDetection;
   polarization: PolarizationDetection;
   prematureConsensus: PrematureConsensusDetection;
+  /** A3 (MAST FM-2.4) */
+  informationWithholding: InformationWithholdingDetection;
+  /** A3 (MAST FM-2.5) */
+  ignoredInput: IgnoredInputDetection;
+  /** A3 (MAST FM-2.6) */
+  reasoningActionMismatch: ReasoningActionMismatchDetection;
   otherIssues: GovernanceIssue[];
   summary: string;
   interventionCount: number;
@@ -133,6 +182,12 @@ export interface GovernanceConfig {
   enableAuthorityBiasDetection?: boolean;
   enablePolarizationDetection?: boolean;
   enablePrematureConsensusDetection?: boolean;
+  /** A3 (MAST FM-2.4)：启用信息隐藏检测（默认 true，但需注入 infoKeywordsMap 才生效） */
+  enableInformationWithholdingDetection?: boolean;
+  /** A3 (MAST FM-2.5)：启用忽略他人输入检测（默认 true） */
+  enableIgnoredInputDetection?: boolean;
+  /** A3 (MAST FM-2.6)：启用推理-行动不匹配检测（默认 true，但需 messages 带 itemBeliefs/reasoning） */
+  enableReasoningActionMismatchDetection?: boolean;
   interventionLevel?: "none" | "light" | "medium" | "heavy";
   echoChamberThreshold?: number;
   authorityBiasThreshold?: number;
@@ -171,6 +226,12 @@ export interface MessageInfo {
   content: string;
   timestamp: string;
   referencedAgents?: string[];
+  /** A3 (MAST FM-2.4): preserved evidence items for information withholding detection */
+  evidence?: string[];
+  /** A3 (MAST FM-2.6): per-item beliefs for reasoning-action mismatch detection */
+  itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>;
+  /** A3 (MAST FM-2.6): original reasoning text for reasoning-action mismatch detection */
+  reasoning?: string;
 }
 
 // ============================================================================

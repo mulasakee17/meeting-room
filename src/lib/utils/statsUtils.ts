@@ -25,6 +25,28 @@ export function sampleStd(values: number[]): number {
   return Math.sqrt(values.reduce((sum, v) => sum + Math.pow(v - m, 2), 0) / (values.length - 1));
 }
 
+/** Cohen's d（pooled 标准差，含 n<2 guard） */
+export function cohensD(a: number[], b: number[]): number {
+  if (a.length < 2 || b.length < 2) return 0;
+  const ma = mean(a), mb = mean(b);
+  const va = a.reduce((s, v) => s + (v - ma) ** 2, 0) / (a.length - 1);
+  const vb = b.reduce((s, v) => s + (v - mb) ** 2, 0) / (b.length - 1);
+  const sp = Math.sqrt(((a.length - 1) * va + (b.length - 1) * vb) / (a.length + b.length - 2));
+  return sp === 0 ? 0 : (ma - mb) / sp;
+}
+
+/** mulberry32 seeded PRNG（替代 src/ 下 8 份副本） */
+export function mulberry32(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /** 方差 */
 export function variance(values: number[]): number {
   if (values.length < 2) return 0;

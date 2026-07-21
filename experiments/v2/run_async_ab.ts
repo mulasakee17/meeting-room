@@ -28,12 +28,21 @@ import { AsyncDiscussionEngine, type AsyncDiscussionConfig, type DependencyMap, 
 import type { TaskConfig } from "../lunar_survival/config";
 import { TASK_FRAUD } from "./task_fraud";
 import type { LLMConfig, LLMProvider } from "../../src/lib/llm/providers";
+import { extractRanking, kendallTau } from "./statsShared";
 
 // ============================================================================
 // 类型定义
 // ============================================================================
 
 type Group = "A" | "B" | "C" | "D";
+
+interface AgentTokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  totalLatencyMs: number;
+  callCount: number;
+}
 
 interface AsyncExperimentResult {
   runId: string;
@@ -51,13 +60,69 @@ interface AsyncExperimentResult {
   terminationReason: string;
   thermoHistory: Array<{ R: number; T: number; H: number; F: number; utteranceCount: number; evalIndex: number }>;
   finalBeliefs: Record<string, number>;
+  /**
+   * 治理干预 trace（B2 升级：与 run_malicious.ts 对齐）
+   *
+   * 历史问题：原 run_async_ab.ts 仅保存 thermoHistory + finalBeliefs，
+   * 丢弃了 engine.roundDataArray（含 governanceIssues + interventions + beliefChanges），
+   * 导致 A/B/C/D 组无法做治理过程分析。E 组（run_malicious.ts）已有此字段，
+   * 但 C vs E 对比时 C 组缺失 trace，造成实验设计问题 1（三重混淆变量之一）。
+   *
+   * 现补全此字段，使未来重跑的 C' 组能与 E 组对等分析治理过程。
+   *
+   * 兼容性：旧 JSON（A/B/C/D 组）无此字段，分析脚本需做空值兜底。
+   */
+  governanceTrace?: Array<{
+    roundNumber: number;
+    timestamp: string;
+    governanceIssues: Array<{
+      type: string;
+      severity: string;
+      description: string;
+      agents?: string[];
+    }>;
+    interventions: Array<{
+      type: string;
+      targetAgentId?: string;
+      targetAgents?: string[];
+      effect: string;
+      applied: boolean;
+      round?: number;
+    }>;
+    beliefChanges: Record<string, { old: number; new: number; reason: string }>;
+    converged: boolean;
+  }>;
+  /**
+   * 每轮 opinions（B2 升级：与 run_malicious.ts 对齐）
+   *
+   * 保存精简版 roundResults，含 itemBeliefs，支持 per-item 攻击目标核实。
+   * 详见 run_malicious.ts 中 roundResults 字段注释。
+   */
+  roundResults?: Array<{
+    roundNumber: number;
+    timestamp: string;
+    converged: boolean;
+    opinions: Array<{
+      agentId: string;
+      belief: number;
+      confidence: number;
+      referencedAgents: string[];
+      evidence: string[];
+      itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>;
+    }>;
+  }>;
+  /** Token 使用统计（H-Fix: 与 run.ts 一致，支持异步实验成本分析） */
+  tokenUsage?: {
+    byAgent: Record<string, AgentTokenUsage>;
+    total: { promptTokens: number; completionTokens: number; totalTokens: number; totalLatencyMs: number };
+  };
 }
 
 // ============================================================================
 // CLI 参数解析
 // ============================================================================
 
-function parseCliArgs(): { group: Group; count: number; start: number; speakMode: SpeakMode; provider: LLMProvider; model: string } {
+function parseCliArgs(): { group: Group; count: number; start: number; speakMode: SpeakMode; provider: LLMProvider; model: string; codeVersion: string } {
   const args = process.argv.slice(2);
   let group: Group = "C";
   let count = 10;
@@ -65,6 +130,7 @@ function parseCliArgs(): { group: Group; count: number; start: number; speakMode
   let speakMode: SpeakMode = "content_driven";
   let provider: LLMProvider = "deepseek";
   let model = "deepseek-chat";
+  let codeVersion = "2026-07-19"; // 默认保持原版本（不覆盖旧数据）
   for (const arg of args) {
     if (arg.startsWith("--group=")) group = arg.split("=")[1] as Group;
     if (arg.startsWith("--count=")) count = parseInt(arg.split("=")[1], 10);
@@ -72,8 +138,9 @@ function parseCliArgs(): { group: Group; count: number; start: number; speakMode
     if (arg.startsWith("--speakMode=")) speakMode = arg.split("=")[1] as SpeakMode;
     if (arg.startsWith("--provider=")) provider = arg.split("=")[1] as LLMProvider;
     if (arg.startsWith("--model=")) model = arg.split("=")[1];
+    if (arg.startsWith("--codeVersion=")) codeVersion = arg.split("=")[1];
   }
-  return { group, count, start, speakMode, provider, model };
+  return { group, count, start, speakMode, provider, model, codeVersion };
 }
 
 // ============================================================================
@@ -135,74 +202,8 @@ function buildInfoKeywordsMap(): InfoKeywordsMap {
 }
 
 // ============================================================================
-// Ranking 提取和 τ 计算（复用 run.ts 逻辑）
+// Ranking 提取和 τ 计算（已迁移到 ./statsShared，统一权威实现）
 // ============================================================================
-
-/** P0-1 修复：移除 V1 fallback，统一使用 itemBeliefs 聚合路径。 */
-function extractRanking(
-  _decision: string,
-  itemNames: string[],
-  itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>
-): string[] {
-  if (!itemBeliefs || itemBeliefs.length === 0) {
-    throw new Error("extractRanking: itemBeliefs 为空，无法提取排名。请检查 LLM 输出格式。");
-  }
-  const itemRanks = new Map<string, number[]>();
-  for (const ib of itemBeliefs) {
-    if (!itemRanks.has(ib.item)) itemRanks.set(ib.item, []);
-    itemRanks.get(ib.item)!.push(ib.rank);
-  }
-  const avgRanks = itemNames.map(name => {
-    const ranks = itemRanks.get(name);
-    return { name, avgRank: ranks && ranks.length > 0 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : Infinity };
-  });
-  avgRanks.sort((a, b) => a.avgRank - b.avgRank);
-  return avgRanks.map(r => r.name);
-}
-
-function kendallTau(groundTruth: Record<string, number>, extracted: string[]): number {
-  const items = Object.keys(groundTruth);
-  const n = items.length;
-  if (n < 2) return 0;
-
-  const gtRank = new Map<string, number>();
-  for (const [item, rank] of Object.entries(groundTruth)) {
-    gtRank.set(item, rank);
-  }
-  const extractedRank = new Map<string, number>();
-  extracted.forEach((item, idx) => extractedRank.set(item, idx + 1));
-  for (const item of items) {
-    if (!extractedRank.has(item)) extractedRank.set(item, n + 1);
-  }
-
-  // 统计每个 rank 值出现的次数（用于 τ-b tie 修正）
-  const xGroups = new Map<number, number>();
-  const yGroups = new Map<number, number>();
-  for (let i = 0; i < n; i++) {
-    const xv = gtRank.get(items[i])!;
-    const yv = extractedRank.get(items[i])!;
-    xGroups.set(xv, (xGroups.get(xv) || 0) + 1);
-    yGroups.set(yv, (yGroups.get(yv) || 0) + 1);
-  }
-
-  let concordant = 0, discordant = 0;
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      const dx = gtRank.get(items[i])! - gtRank.get(items[j])!;
-      const dy = extractedRank.get(items[i])! - extractedRank.get(items[j])!;
-      if (dx * dy > 0) concordant++;
-      else if (dx * dy < 0) discordant++;
-    }
-  }
-
-  // τ-b tie 修正：n1 = Σ t_i*(t_i-1)/2，t_i = 第 i 个 tie 组的项数
-  const n0 = n * (n - 1) / 2;
-  let n1 = 0, n2 = 0;
-  for (const count of xGroups.values()) n1 += count * (count - 1) / 2;
-  for (const count of yGroups.values()) n2 += count * (count - 1) / 2;
-  const denom = Math.sqrt((n0 - n1) * (n0 - n2));
-  return denom === 0 ? 0 : (concordant - discordant) / denom;
-}
 
 // ============================================================================
 // D 组匹配分布采样：从 C 组实际终止发言数分布中采样
@@ -282,7 +283,8 @@ async function runExperiment(
   runIndex: number,
   task: TaskConfig,
   llmConfig: LLMConfig,
-  speakMode: SpeakMode
+  speakMode: SpeakMode,
+  codeVersion: string = "2026-07-19"
 ): Promise<AsyncExperimentResult> {
   const agents = createAgents(task, llmConfig);
   const itemNames = Object.keys(task.correctAnswer);
@@ -318,7 +320,7 @@ async function runExperiment(
     result = {
       runId: `fraud_A_${runIndex}`,
       group, runIndex,
-      codeVersion: "2026-07-19",
+      codeVersion,
       timestamp: new Date().toISOString(),
       kendallTau: tau,
       decisionQuality: Math.round(((tau + 1) / 2) * 100),
@@ -328,6 +330,21 @@ async function runExperiment(
       terminationReason: `fixed_5_rounds`,
       thermoHistory: [],
       finalBeliefs: discResult.finalBeliefs,
+      // A 组同步路径不跑治理（fixed 5 rounds），trace 与 roundResults 仍保存以保持接口一致
+      governanceTrace: [],
+      roundResults: discResult.roundResults.map(r => ({
+        roundNumber: r.roundNumber,
+        timestamp: r.timestamp,
+        converged: r.converged,
+        opinions: r.opinions.map(o => ({
+          agentId: o.agentId,
+          belief: o.belief,
+          confidence: o.confidence,
+          referencedAgents: o.referencedAgents || [],
+          evidence: o.evidence || [],
+          itemBeliefs: o.itemBeliefs,
+        })),
+      })),
     };
   } else {
     // B/C/D 组：使用 AsyncDiscussionEngine
@@ -381,11 +398,59 @@ async function runExperiment(
     const extractedRanking = extractRanking(allReasoning, itemNames, allItemBeliefs);
     const tau = kendallTau(task.correctAnswer, extractedRanking);
 
+    // B2 升级：提取 governanceTrace（与 run_malicious.ts 对齐）
+    // 历史问题：原 async 路径仅存 thermoHistory + finalBeliefs，丢弃治理过程数据
+    const engineWithTrace = engine as unknown as {
+      roundDataArray: Array<{
+        roundNumber: number;
+        timestamp: string;
+        governanceIssues: Array<{
+          type: string; severity: string; description: string; agents?: string[];
+        }>;
+        interventions: Array<{
+          type: string; targetAgentId?: string; targetAgents?: string[];
+          effect: string; applied: boolean; round?: number;
+        }>;
+        beliefChanges: Record<string, { old: number; new: number; reason: string }>;
+        converged: boolean;
+      }>;
+    };
+    const governanceTrace = engineWithTrace.roundDataArray?.map(r => ({
+      roundNumber: r.roundNumber,
+      timestamp: r.timestamp,
+      governanceIssues: r.governanceIssues || [],
+      interventions: (r.interventions || []).map(i => ({
+        type: i.type,
+        targetAgentId: i.targetAgentId,
+        targetAgents: i.targetAgents,
+        effect: i.effect,
+        applied: i.applied,
+        round: i.round,
+      })),
+      beliefChanges: r.beliefChanges || {},
+      converged: r.converged,
+    })) || [];
+
+    // B2 升级：保存精简版 roundResults（含 itemBeliefs），与 run_malicious.ts 对齐
+    const roundResults = asyncResult.roundResults.map(r => ({
+      roundNumber: r.roundNumber,
+      timestamp: r.timestamp,
+      converged: r.converged,
+      opinions: r.opinions.map(o => ({
+        agentId: o.agentId,
+        belief: o.belief,
+        confidence: o.confidence,
+        referencedAgents: o.referencedAgents || [],
+        evidence: o.evidence || [],
+        itemBeliefs: o.itemBeliefs,
+      })),
+    }));
+
     result = {
       runId: `fraud_${group}_${speakMode}_${runIndex}`,
       group, runIndex,
       speakMode, // v2=content_driven, v1=random_prob
-      codeVersion: "2026-07-19",
+      codeVersion,
       timestamp: new Date().toISOString(),
       kendallTau: tau,
       decisionQuality: Math.round(((tau + 1) / 2) * 100),
@@ -395,8 +460,43 @@ async function runExperiment(
       terminationReason: asyncResult.terminationReason,
       thermoHistory: asyncResult.thermoHistory,
       finalBeliefs: asyncResult.finalBeliefs,
+      governanceTrace,
+      roundResults,
     };
   }
+
+  // ── Collect token usage from agents（H-Fix: 与 run.ts 一致）─────────────
+  // agents 是 CustomAgent[]，可直接调用 getUsageStats()（无需 cast）
+  const tokenUsageByAgent: Record<string, AgentTokenUsage> = {};
+  let totalPromptTokens = 0;
+  let totalCompletionTokens = 0;
+  let totalLatencyMs = 0;
+
+  for (const agent of agents) {
+    if (agent.getUsageStats) {
+      const stats = agent.getUsageStats();
+      tokenUsageByAgent[agent.id] = {
+        promptTokens: stats.promptTokens,
+        completionTokens: stats.completionTokens,
+        totalTokens: stats.totalTokens,
+        totalLatencyMs: stats.totalLatencyMs,
+        callCount: stats.callCount,
+      };
+      totalPromptTokens += stats.promptTokens;
+      totalCompletionTokens += stats.completionTokens;
+      totalLatencyMs += stats.totalLatencyMs;
+    }
+  }
+
+  result.tokenUsage = {
+    byAgent: tokenUsageByAgent,
+    total: {
+      promptTokens: totalPromptTokens,
+      completionTokens: totalCompletionTokens,
+      totalTokens: totalPromptTokens + totalCompletionTokens,
+      totalLatencyMs,
+    },
+  };
 
   return result;
 }
@@ -406,10 +506,16 @@ async function runExperiment(
 // ============================================================================
 
 async function main() {
-  const { group, count, start, speakMode, provider, model } = parseCliArgs();
+  const { group, count, start, speakMode, provider, model, codeVersion } = parseCliArgs();
 
   // 跨模型验证：非 deepseek 提供商使用独立数据目录
-  const dataDirName = provider === "deepseek" ? "data_fraud" : `data_fraud_${provider}`;
+  // B3 升级：非默认 codeVersion 时使用独立目录，避免覆盖旧数据
+  //   - 默认 "2026-07-19" → data_fraud/（保持原行为，保护现有 A/B/C/D 数据）
+  //   - "2026-07-20-ctrace-v2" → data_fraud_ctrace/（C' 组，含 trace）
+  //   - 其他自定义版本 → data_fraud_<version>/
+  const providerSuffix = provider === "deepseek" ? "" : `_${provider}`;
+  const versionSuffix = codeVersion === "2026-07-19" ? "" : `_${codeVersion.replace(/-/g, "").replace(/20260720/, "v")}`;
+  const dataDirName = `data_fraud${providerSuffix}${versionSuffix}`;
   const DATA_DIR = path.resolve(__dirname, dataDirName);
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -454,7 +560,7 @@ async function main() {
     console.log(`\n[${i - start + 1}/${count}] ${runId} 开始...`);
 
     try {
-      const result = await runExperiment(group, i, TASK_FRAUD, llmConfig, speakMode);
+      const result = await runExperiment(group, i, TASK_FRAUD, llmConfig, speakMode, codeVersion);
       const filepath = path.join(DATA_DIR, `${runId}.json`);
       fs.writeFileSync(filepath, JSON.stringify(result, null, 2));
       console.log(`  τ=${result.kendallTau.toFixed(3)}, 发言=${result.totalUtterances}, 轮次=${result.totalRounds}, 终止=${result.terminationReason}`);
@@ -464,7 +570,7 @@ async function main() {
       const errorResult: AsyncExperimentResult = {
         runId, group, runIndex: i,
         speakMode,
-        codeVersion: "2026-07-19",
+        codeVersion,
         timestamp: new Date().toISOString(),
         kendallTau: 0, decisionQuality: 50,
         totalRounds: 0, totalUtterances: 0,

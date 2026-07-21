@@ -1,112 +1,217 @@
-# SwarmAlpha — One Pager
+# SwarmAlpha — One-Page Summary
 
-> **用对照实验界定 LLM 多智能体系统治理的边界条件。**
-> 治理在何时有效、何时无效、何时有害——以统计严格性回答。
-
----
-
-## 一句话
-
-SwarmAlpha 是一个**框架无关的 LLM 多智能体治理运行时**，通过 406 次对照实验 + 置换检验 + 效应量，系统性回答"治理是否有用"及其边界条件。
+> **The first open-source cognitive governance runtime for multi-agent systems.**
+>
+> *Security governance prevents agents from doing harm. Cognitive governance prevents agents from thinking wrong. The agent governance stack needs both.*
+>
+> **Positioning**: Complementary to Microsoft Agent Governance Toolkit / Agent Control Standard (ACS). They handle tool-execution safety; SwarmAlpha handles discussion-process health — detecting echo chambers, authority bias, polarization, and premature consensus during LLM agent collaboration. Validated by independent academic evidence: Li et al. (SJTU, 2026) confirmed MAS echo chambers amplify bias undetected by standard methods [arXiv:2604.08963](https://arxiv.org/abs/2604.08963). ACS-compatible via `StateInferenceBridge` at the state checkpoint.
 
 ---
 
-## 核心结果
+## The Problem
 
-### 治理有效性（跨任务确认）
+LLM multi-agent systems (AutoGen, CrewAI, etc.) are being deployed in high-stakes scenarios — finance, healthcare, law. But they commit the **same systematic decision errors** as human groups:
 
-| | Crisis (n=24/cell) | Supplier (n=30/cell) |
+| Bias | Symptom | Consequence |
+|------|---------|-------------|
+| **Premature Consensus** | Agreement in round 1, critical info never discussed | Sub-optimal decisions |
+| **Authority Bias** | One overconfident agent dominates the rest | Herd-following errors |
+| **Echo Chamber** | Similar-minded agents confirm each other | Collective blind spots |
+| **Group Polarization** | Divergence hardens into deadlock | Decision paralysis |
+
+**No existing framework detects or intervenes on these failures.**
+
+---
+
+## What We Built
+
+SwarmAlpha is **not another multi-agent framework**. It's an **embeddable governance runtime** — a drop-in layer that provides three independent value dimensions:
+
+**1. Process Monitoring** — Real-time detection of 4 collective cognitive failures (echo chamber, authority bias, polarization, premature consensus). Value is independent of intervention: knowing your agent team is forming an echo chamber matters even if you choose not to act.
+
+**2. Decision Audit** — Full traceable chain: who influenced whom, when beliefs shifted, when governance intervened. Post-hoc accountability for compliance and debugging, regardless of whether the final decision was correct.
+
+**3. Adaptive Intervention** — Targeted prompts injected when bias is detected (diversity injection, weight reduction, forced reflection, continue discussion). Helpful under specific boundary conditions, not a universal upgrade.
+
+```
+Without SwarmAlpha:
+  Agents discuss → Vote → Done  (no visibility, no audit, no intervention)
+
+With SwarmAlpha:
+  Agents discuss → [Monitor → Detect → Audit → Intervene?] → Auditable decision
+```
+
+### Key Innovation: LLM Perception / Math Evolution Separation
+
+LLMs only extract beliefs and emotions from natural language. All governance logic (consensus computation, bias detection, belief dynamics) uses pure mathematics. Result: **fast, cheap, interpretable** — deployable as a lightweight plugin with near-zero additional LLM calls (only when agents fail to output the `[GOV]` structured tag does `StateInferenceBridge` fall back to LLM inference).
+
+### Framework Independence Verification
+
+The core governance engine (all 4 detectors, 4 intervention strategies, adaptive thresholds) has been self-verified to work **without the built-in DiscussionEngine**. Integration into any framework requires only: (1) append belief-extraction tags to agent prompts, (2) adapt messages via `StateInferenceBridge`, (3) call `processRound()`, (4) inject intervention prompts. Working prototype per framework: 2-4 hours.
+
+### Cognitive Defect Diagnosis of the Multi-Agent Discussion Paradigm
+
+A deeper architectural review diagnosed **4 root cognitive defects** in the prevailing multi-agent discussion paradigm — and all 4 have been fixed:
+
+| Defect | Symptom | Fix |
+|--------|---------|-----|
+| **D1: Missing state awareness** | `buildPrompt` did not inject `belief`/`confidence` into agent prompts — agents spoke without knowing their own or others' current state | Belief & confidence now injected into every prompt |
+| **D2: No conversation history** | Only a global summary was passed; agents had no personalized memory of prior exchanges | Per-agent personalized memory added |
+| **D3: Synchronous scripted turns** | `Promise.all` made agents speak simultaneously, reading from pre-written scripts rather than responding to each other | Replaced with sequential speaking order (agents hear prior turns) |
+| **D4: Fabricated influence network** | Influence edges were inferred from numerical differences rather than explicit citations | Influence graph now built only from explicit references |
+
+**Critical implication (updated 2026-07-14, expanded)**: These 4 defects meant the governance loop was *broken* during all 165 prior experiments — agents could not actually perceive, remember, respond to, or influence one another. **The defects have since been fixed (2026-07-12), and the experiments were re-run on a Crisis task (2026-07-14, expanded to n=24/cell, 72 runs) with the loop closed** — statistically confirming full vs none d=0.92, p=0.005, power=88%, τ +51%. The prior "governance is ineffective" conclusions were artifacts of the broken loop, not intrinsic to governance. Diagnosing *why* governance appeared ineffective is itself the research value.
+
+---
+
+## Experimental Evidence
+
+**161 experiments across 2 tasks (Crisis 72 + Supplier 89), 3 conditions (none/full/shuffle).** Primary metric: Kendall's τ + within-group Δτ. t-distribution 95% CI + permutation test p-values.
+
+### 2026-07-14 Cross-Task Validation (Primary Evidence, Expanded)
+
+After fixing 4 cognitive defects (D1–D4), **161 experiments across 2 independent tasks** were run with the governance loop closed:
+
+| | Crisis — 3 rounds (n=24/cell) | Supplier — 3 rounds (n=30/30/29*) |
 |---|---|---|
-| 无治理 τ | 0.408 | 0.680 |
-| 完整治理 τ | **0.617** | **0.767** |
-| Cohen's d | **+0.92** (p=0.005) | +0.47 (p=0.089) |
-| 统计功效 | 88% ✅ | 43% ⚠️ |
+| **Baseline τ** | 0.408 ± 0.182 (Q=72.2) | 0.680 ± 0.186 (Q=82.0) |
+| **Full governance τ** | **0.617 ± 0.263** (Q=81.1) | **0.767 ± 0.183** (Q=91.0) |
+| **Shuffle τ** | **0.717 ± 0.243** (Q=85.6) | 0.697 ± 0.204 (Q=84.0) |
+| **d vs none** | **+0.92** (p=0.005) / **+1.44** (p<0.001) | **+0.47** (p=0.089) / +0.09 (ns) |
+| **Power** | 88% ✅ | 43% ⚠️ |
 
-**治理在两个独立任务上方向一致有效。** 洗牌对照（信息完全流通的理论天花板）在困难任务中 d=1.44，在容易任务中出现天花板效应——信息整合的边界收益受任务难度调节。
+> *\*Supplier shuffle n=29 (1 run crashed due to API error; 89/90 experiments completed).*
 
-### 异步引擎 + 热力学终止（三阶段演进）
+**Four cross-task conclusions**:
 
-| 指标 | Phase 1（旧阈值） | Phase 2（新阈值） | Phase 3（+beliefShift） |
-|------|----------------|----------------|----------------------|
-| C 组硬截断率 | 40% → H_thermo 被证伪 | **10%** | **10%** |
-| C 组平均 τ | 0.34 | **0.46** (+35%) | **0.64** (+88%) |
-| C 组最高 τ | 0.6 | **0.8** | **1.0** 🔥 |
-| 平均发言数 | 28.2 | **22.4** (−20%) | **18.6** (−34%) |
+1. **Governance is statistically confirmed effective** — Crisis d=0.92, p=0.005, power=88%. Supplier directionally consistent (d=0.47) but underpowered (43%, needs n=72 for 80%).
+2. **"False consensus" replicates across tasks** — consensus-quality r ≈ 0 in both tasks (-0.14 / -0.11), proving this is a general LLM multi-agent property.
+3. **Shuffle control has boundary conditions** — effective on hard tasks (Crisis d=1.44, p<0.001), ineffective on easier tasks (Supplier d=0.09, p=0.78) due to ceiling effect (baseline already near full level).
+4. **Mechanism ablation is direction-consistent** — reduce_weight (Crisis d=1.51, p=0.0001) and force_reflection (Crisis d=0.73, p=0.001) drive the effect; both d>0 in Supplier.
 
-**三个组件耦合验证**：阈值标定 + beliefShift 修复 + 热力学终止是一个整体。单独修阈值只能从 0.34→0.46；beliefShift 修复后才从 0.46→0.64。C vs B 显著（d=1.09, p=0.028），C vs D 方向支持（d=0.70, p=0.116）。
+**Three primary results (Crisis, loop-closed, expanded)**:
 
-### 实验总览
+1. **Governance is statistically confirmed effective** — full vs none d=0.92, p=0.005, power=88%, τ +51%. The prior "governance is ineffective" finding was an artifact of the broken loop, not intrinsic to governance.
+2. **Shuffle is strongest on hard tasks** — d=1.44 on Crisis. shuffle represents the theoretical ceiling of *information exchange* (all agents access all expertise), not the ceiling of agent collaboration.
+3. **Intervention cost-benefit analyzed** (Crisis task, n=24) — 89 interventions, 47 effective (52.8%). `force_reflection` most reliable (79.4%), `reduce_weight` best cost-efficiency (+0.389 τ); `introduce_diversity` (9.1%) and `continue_discussion` (0%, harmful) now disabled by default.
 
-| 实验线 | 实验次数 | 关键发现 |
-|--------|---------|---------|
-| 治理消融矩阵 | 165 | 治理干预类型差异化效果 |
-| 跨任务验证（Crisis + Supplier） | 161 | 治理效果方向跨任务一致 |
-| 异步引擎 ABCD + 三阶段标定 | 80 (40+40) | 热力学终止可行，三组件耦合验证 |
-| **总计** | **376** | — |
+### Historical 2×2 Factorial (Broken Loop — Controls Only)
 
----
+> **⚠️ These 165 experiments were run while the governance loop was severed (D1–D4 unfixed). Conclusions are provisional and retained only as historical controls. The 161 expanded experiments (Crisis 72 + Supplier 89) above are the primary evidence.**
 
-## 架构
+| | Invest — 3 rounds | Invest — 5 rounds | M&A — 5 rounds |
+|---|---|---|---|
+| **Baseline τ** | 0.422±0.344 (Q=71.3) | 0.778±0.325 (Q=89.0) | 0.533±0.209 (Q=76.7) |
+| **Full governance τ** | 0.644±0.344 (Q=82.4) | 0.778±0.325 (Q=89.0) | 0.613±0.177 (Q=80.7) |
+| **Net Δτ** | +0.133 (p=0.152, NOT sig) | −0.089 (p=1.0, null) | −0.123 (p=0.36, NOT sig) |
+| **Cohen's d** | +0.65 (medium, NOT sig) | +0.00 (null) | +0.41 (NOT sig) |
+| **Key finding** | Directional improvement only | Null; reflection HARMFUL (p=0.048) | Shuffle beats all (p=0.0009) |
 
-```
-你的多智能体框架 (AutoGen / CrewAI / LangGraph / 自建)
-         │
-         ▼ 讨论消息流
-┌─────────────────────────────┐
-│  SwarmAlpha 治理运行时        │
-│                              │
-│  观测 → 信念建模 → 4种偏差检测  │
-│    → 自适应干预 → 5维决策评估  │
-│                              │
-│  框架无关 · 可嵌入 · 自适应    │
-└─────────────────────────────┘
-```
+The loop-fix (D1–D4) is itself a research contribution: identifying *why* governance appeared ineffective — agents could not perceive, remember, respond to, or influence one another — is more valuable than any single p-value.
 
-**四种治理模式**：`none`（基线）/ `detect-only`（霍桑效应）/ `full`（定向干预）/ `random-intervene`（消融：精准度是否必要）
-
-**四种检测器**：回声室 / 权威偏差 / 群体极化 / 过早共识
-
-**热力学隐喻**：Kuramoto 序参量 R → Shannon 熵 H → 归一化温度 T → 社会自由能 F = (1−R) + T·H。F 分解驱动干预优先级排序。
+> **Self-correction**: V1 results were affected by a system prompt answer leak and a broken authority bias detector. All 6 bugs independently identified, verified, and fixed. V2 data above is from the corrected pipeline. The 2026-07-14 Crisis re-validation is the first experiment run with the loop *actually closed*.
 
 ---
 
-## 快速开始
+## Technical Highlights
 
-```bash
-git clone https://github.com/mulasakee17/meeting-room.git && cd meeting-room && npm install
-cp .env.local.example .env.local  # 添加 DEEPSEEK_API_KEY
-npm run dev                        # http://localhost:3000（演示模式无需 key）
-npm run experiment                 # 完整消融矩阵（需 key，DeepSeek ≈ ¥0.07/次）
-npm test                           # 229 个测试
-```
+| Feature | Description |
+|---------|-------------|
+| **Framework-Agnostic** | Core engine audited: zero deps on DiscussionEngine. StateInferenceBridge enables prompt-injection integration with any framework in 2-4 hours |
+| **Embeddable SDK** | `import { GovernanceRuntime } from "@/runtime"` — one class, zero framework deps |
+| **Adaptive Governance** | Thresholds calibrate from round-1 data; intervention dosage scales with severity (config-gated, default off) |
+| **Cross-Examination** | Adversarial debate engine: splits agents into PRO/CON camps, synthesizes verdict |
+| **7 Ablation Modes** | Full + shuffle control + 4 single-intervention modes isolate which mechanism matters. **[Updated]** Expanded from 2 implemented modes to 7; full 105-run experiment pending lab execution |
+| **6 Hard Fixes (H-series)** | H4 Kuramoto mapping corrected; H6 `convergenceSpeed` annotation fixed; H2 `ablationModes` expanded (2→7); H19 seeded PRNG for reproducibility; H17 cache pollution eliminated; H18 `interventionPrompt` unified across modes. Additional fixes in 2026-07-13/14 audit (see LIMITATIONS.md §19). |
+| **Causal Effect Estimation** | 🆕 Nearest-neighbor trajectory matching (k=5) + 10000-permutation test + bootstrap CI — estimates counterfactual intervention effects, not just correlations. M&A 5-round shows +0.135 effect (d=0.96, p=0.067, CI excludes 0) |
+| **Statistical Inference** | t-distribution 95% CI + permutation test p-values on all key comparisons; Δτ baseline-corrected |
+| **Parameter Sensitivity** | One-at-a-time sweep over 5 governance parameters verifies robustness |
+| **Dropout Sensitivity** | Agent dropout analysis measures outcome sensitivity to each agent's presence |
+| **Multi-LLM Support** | DeepSeek / OpenAI / Anthropic / Local (Ollama) — unified interface |
+| **Extensible Detection** | Custom bias detectors via `registerDetector()` — no core engine changes needed |
+| **Shared Utilities** | Registry/JSON/stats modules eliminate code duplication across the codebase |
+| **229 Automated Tests** | All core modules covered, 16 test files (including 28 causal-effect tests) |
+| **Mechanism Ablation** | 🆕 Per-intervention-type statistical analysis: reduce_weight d=1.51 (p=0.0001), force_reflection d=0.73 (p=0.001) — identifies which interventions drive governance effectiveness |
+| **Power Analysis** | 🆕 Non-central t-distribution power analysis: Crisis 88% ✅, Supplier 43% ⚠️ (needs n=72 for 80%) |
+| **Free-Energy Ranking** | 🆕 Social free energy F=(1-R)+T·H decomposition drives intervention priority when multiple detectors trigger (91.7% of Crisis runs). Backtest falsified original force_reflection↔structural mapping (p=0.041), corrected to thermal·(1-structural) |
+| **Demo Mode** | Zero-config, no API key needed — instant visualization |
 
-**作为 SDK 嵌入**：
+---
+
+## Integration Example
 
 ```typescript
-import { GovernanceRuntime } from "@/runtime";
+import { GovernanceRuntime, CustomAdapter } from "@/runtime";
+
+// Wrap your existing agent system
 const runtime = new GovernanceRuntime({ maxRounds: 5, governanceMode: "full" });
-const result = runtime.processRound(messages);
-if (result.hasIntervention) applyIntervention(result.interventions[0]);
+const adapter = new CustomAdapter();
+
+for (const round of discussion) {
+  const messages = adapter.adaptMessages(round.rawMessages, round.number);
+  const result = runtime.processRound(messages);
+
+  if (result.hasIntervention) {
+    await adapter.applyIntervention(result.interventions[0], agentContext);
+  }
+}
+
+const evaluation = runtime.getSessionResult(finalDecision);
+// → { overallScore: 82, grade: "good", dimensions: {...}, governance: {...} }
 ```
 
 ---
 
-## 当前状态与下一步
+## Honest Limitations
 
-| 已完成 | 进行中 / 待做 |
-|--------|-------------|
-| ✅ 治理有效性跨任务统计确认 | ⚡ 发言意愿公式增加 `quality_factor`（抑制噪音 agent） |
-| ✅ 热力学终止阈值标定（硬截断 40%→10%） | ⚡ 阈值任务难度自适应（当前需手动标定） |
-| ✅ callLLM 重试逻辑（3 次指数退避） | ⚡ 跨模型验证（当前仅 DeepSeek-V3） |
-| ✅ 框架无关适配器接口 | ⚡ 被动倾听学习率敏感性分析 |
-| ✅ 229 单元测试 + 32 热力学测试 | ⚡ n=10 扩样至 n=30 |
+| Area | Status | Detail |
+|------|--------|--------|
+| **Parameter calibration** | ⚠️ Hand-tuned | 16 belief-update constants not empirically calibrated; sensitivity sweep infrastructure exists but not systematically run |
+| **Adaptive modules** | 🔧 Unvalidated | Adaptive thresholds & dosage implemented + unit-tested, but not used in 326 experiments |
+| **Topology** | 🔧 Unvalidated | Only FlatTopology (5 agents) tested; Grouped/Committee implemented but untested |
+| **Evaluation weights** | ⚠️ Heuristic | 5-dimension weights (0.20/0.25/0.20/0.17/0.18) not data-driven; equal-weight robustness check planned |
+| **Single model** | ⚠️ DeepSeek only | Cross-model generalization untested |
+| **Supplier underpowered** | ⚠️ 43% power | Supplier d=0.47, p=0.089 — directionally consistent but needs n=72 for 80% power |
+| **Shuffle boundary** | ⚠️ Task-dependent | Shuffle effective on hard tasks (Crisis d=1.44), ineffective on easy tasks (Supplier d=0.09) due to ceiling effect |
+| **Sensitivity ≠ causality** | ✅ Honest | Dropout analysis explicitly labeled as sensitivity diagnostic, not causal identification |
 
 ---
 
-## 文档导航
+## Who Built This
 
-- [**开发者指南**](./DEVELOPER_GUIDE.md) 🔴 — 架构、关键 bug 修复史、常见陷阱、工作流（新开发者必读）
-- [完整中文文档](./README_CN.md) — 实验设计、治理运行时、SDK 使用
-- [已知局限](./LIMITATIONS.md) — 22 个模块的已知边界和未解决问题
-- [热力学集成](./THERMODYNAMICS_INTEGRATION.md) — F 分解驱动的干预优先级排序
-- [C 组阈值尸检](./experiments/v2/analysis_c_group_thermo.md) — 4 例硬截断的逐轮 R/T/H 轨迹分析
+**贺孟元** — High school student. Independent architecture design, implementation (~13,000 lines TypeScript), experiment design, and data analysis.
+
+AI-assisted coding (Claude Code). Architecture decisions and experiment design are fully autonomous.
+
+- **GitHub**: [github.com/mulasakee17/swarmalpha](https://github.com/mulasakee17/swarmalpha)
+- **Tech Stack**: TypeScript + Next.js + DeepSeek API + Vitest
+
+---
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the full development plan with timelines, academic outreach strategy, and risk assessment. Summary:
+
+| Phase | Timeline | Focus |
+|-------|----------|-------|
+| **Phase 1** | This week | Stabilize code + unify documentation narrative |
+| **Phase 2** | 1-2 weeks | Process monitoring demo (static audit report) + framework adapters (AutoGen, CrewAI) |
+| **Phase 3** | 2-4 weeks | Multi-agent society experiments (50-500 agents, information propagation, governance structure comparison) |
+| **Phase 4** | Parallel to Phase 3 | Academic outreach — target labs at Tsinghua AIR, Shanghai AI Lab, PKU CFCS |
+| **Phase 5** | 3-6 months | Python SDK, formal paper (AAMAS/NeurIPS Workshop target), open source community |
+
+## Long-Term Vision: Agent Society Governance Infrastructure
+
+> *"Not a framework for building agents. An operating system for governing them."*
+
+As multi-agent systems scale from 5-agent discussions to 500-agent organizational ecosystems, the core challenge shifts from task completion to **emergent outcome trustworthiness**:
+
+- Echo chambers → information cartels
+- Authority bias → power monopolization
+- Premature consensus → institutional groupthink
+
+SwarmAlpha's observe→model→detect→intervene→evaluate loop is agent-count-agnostic and framework-agnostic — the minimal viable kernel of a future governance operating system for AI societies. Everyone is building how to simulate agent societies. No one is building how to govern them.
+
+---
+
+> *"Not replacing how agents decide — ensuring what they decide holds up to scrutiny."*

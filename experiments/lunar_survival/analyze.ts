@@ -6,6 +6,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { mulberry32, cohensD } from "../v2/statsShared";
 
 const DATA_DIR = path.resolve(__dirname, "data", "raw");
 const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith(".json"));
@@ -30,9 +31,6 @@ for (const r of runs) {
 }
 
 // ── Bootstrap CI ──────────────────────────────────────────────────────
-function mulberry32(seed: number): () => number {
-  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-}
 function bootstrapCI(samples: number[], nBoot = 10000, alpha = 0.05) {
   const n = samples.length;
   const rng = mulberry32(42);
@@ -50,15 +48,6 @@ function bootstrapCI(samples: number[], nBoot = 10000, alpha = 0.05) {
 }
 
 // ── Cohen's d ─────────────────────────────────────────────────────────
-function cohensD(a: number[], b: number[]) {
-  if (a.length < 2 || b.length < 2) return 0;
-  const ma = a.reduce((s, v) => s + v, 0) / a.length;
-  const mb = b.reduce((s, v) => s + v, 0) / b.length;
-  const va = a.reduce((s, v) => s + (v - ma) ** 2, 0) / (a.length - 1);
-  const vb = b.reduce((s, v) => s + (v - mb) ** 2, 0) / (b.length - 1);
-  const sp = Math.sqrt(((a.length - 1) * va + (b.length - 1) * vb) / (a.length + b.length - 2));
-  return sp === 0 ? 0 : (ma - mb) / sp;
-}
 
 // ── Power Analysis ────────────────────────────────────────────────────
 function powerAnalysis(a: number[], b: number[]) {

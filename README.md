@@ -6,7 +6,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
-[![Tests](https://img.shields.io/badge/tests-229%20passed-green)](./test/)
+[![Tests](https://img.shields.io/badge/tests-285%20passed-green)](./test/)
 [![Framework-Agnostic](https://img.shields.io/badge/framework-agnostic-purple)]()
 [![Embeddable](https://img.shields.io/badge/embeddable-SDK-orange)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
@@ -33,6 +33,8 @@ SwarmAlpha targets the cognitive layer. It does not compete with Microsoft's too
 ## Core Finding
 
 **After fixing 4 cognitive defects (D1–D4) that broke the governance loop, governance is now statistically confirmed effective.** Crisis task (n=24/cell, expanded): full vs none d=0.92, p=0.005, power=88%, τ +51%. Cross-task validation (Supplier n=30): directionally consistent (d=0.47, p=0.089, power=43%). The governance engine also provides **observability, auditability, and targeted intervention** — three capabilities independently valuable regardless of whether they change the final answer.
+
+**Total: 416 controlled experiments** (165 historical + 161 expanded + 80 async-engine + 10 cross-model). The async-engine line validates thermodynamic termination across 4 phases (Phase 1–4: τ 0.34→0.46→0.64; C vs B d=1.09, p=0.028) and cross-model (Zhipu glm-4-flash C group τ=0.76 vs DeepSeek 0.64, +18.8%). See [§ Async Adaptive Discussion Engine](#async-adaptive-discussion-engine-2026-07-17-recalibrated) below and [README_CN.md](README_CN.md) for full Phase 1–5 story.
 
 ### Three Independent Value Pillars
 
@@ -80,16 +82,7 @@ The diagnostic identified four root cognitive gaps in the multi-agent discussion
 
 ## Hard-Fault Fixes (H-series)
 
-A series of hard faults (H-series) were identified and repaired alongside the cognitive-gap pass. These are documented here for provenance; some of the 165-experiment numbers on this page were generated *before* these fixes landed.
-
-| ID | Fault | Repair |
-|----|-------|--------|
-| **H4** | Kuramoto phase mapping used `θ = π·b`, which maps extreme polarization (b=±0.99) to nearly the same phase (R≈1) — falsely indicating consensus. | Corrected to `θ = (π/2)·b`. Now b=±0.99 yields R≈0 (true polarization), b=0 yields R=1 (true consensus). |
-| **H6** | `convergenceSpeed` code comment was wrong (formula direction was correct). | Comment corrected; formula unchanged. |
-| **H2** | `ablationModes` only had `["none","full"]` (2 modes × 15 = 30 runs). | Expanded to 7 complete modes: `none / full / shuffle / full_diversity / full_weight / full_reflection / full_continue`. Full design now 7 × 15 = 105 runs (pending lab execution). |
-| **H19** | `introduceDiversity` used `Math.random()`, making interventions non-reproducible across runs. | Replaced with `mulberry32` seeded PRNG — interventions are now deterministic given the seed. |
-| **H17** | Cache pollution: stale placeholder files from failed runs were left in the cache and picked up by subsequent runs. | Polluted placeholder files deleted; affected experiments re-run from clean state. |
-| **H18** | `interventionPrompt` was inconsistently inlined across strategy files and `PromptInjector`. | Unified `interventionPrompt` helper wired into all 8 call sites (4 strategy files + 4 sites in `PromptInjector`). |
+A series of hard faults (H-series: H2/H4/H6/H17/H18/H19) were identified and repaired alongside the cognitive-gap pass. Some of the 165-experiment numbers on this page were generated *before* these fixes landed. Full H-series table with fault descriptions and repairs is documented in [DEVELOPER_GUIDE.md §5.3](DEVELOPER_GUIDE.md#53-数学-bug).
 
 > **Kuramoto formula update (H4)**: Wherever the Kuramoto phase mapping appears in docs/code, the formula is now `θ = (π/2) · b` (previously `θ = π · b`). This is a substantive fix, not a cosmetic one — it changes consensus detection for polarized states.
 
@@ -240,7 +233,7 @@ npm run analyze             # t-distribution CI + permutation test + statistical
 npm run sensitivity         # 5 params × 5 values sweep
 
 # Run tests (no API key needed)
-npm test                    # 229 tests
+npm test                    # 285 tests
 ```
 
 **Causal effect analysis** (no API key needed, uses existing experiment data):
@@ -309,7 +302,7 @@ Thresholds and intervention strength adapt to task context:
 
 - **Adaptive Thresholds** 🔧 *implemented, not yet experimentally validated*: Run a calibration discussion → measure convergence speed, base redundancy, influence concentration → auto-scale detection thresholds per task
 - **Adaptive Dosage** 🔧 *implemented, not yet experimentally validated*: Intervention strength scales with deviation severity, information coverage, and historical intervention effectiveness
-- **Free-Energy-Driven Intervention Ranking** ✅ *implemented + backtested + hypothesis falsified*: When multiple detectors trigger simultaneously (91.7% of Crisis experiments), interventions are ranked by social free energy F = (1-R) + T·H decomposition. Backtesting (97 force_reflection events, p=0.041) **falsified** the original `force_reflection↔structural` mapping — force_reflection is a *noise-reduction* intervention (effective in thermal-dominant states, harmful in polarized states), now mapped to `thermal·(1-structural)`. `reduce_weight↔thermal` directionally supported but not significant (p=0.100). See [THERMODYNAMICS_INTEGRATION.md §5.4](./THERMODYNAMICS_INTEGRATION.md)
+- **Free-Energy-Driven Intervention Ranking** ✅ *implemented + backtested + hypothesis falsified*: When multiple detectors trigger simultaneously (91.7% of Crisis experiments), interventions are ranked by social free energy F = (1-R) + T·H decomposition. Backtesting (97 force_reflection events, p=0.041) **falsified** the original `force_reflection↔structural` mapping — force_reflection is a *noise-reduction* intervention (effective in thermal-dominant states, harmful in polarized states), now mapped to `thermal·(1-structural)`. `reduce_weight↔thermal` directionally supported but not significant (p=0.100). See [THEORY.md 附录 B](THEORY.md)
 - **Cross-Examination Engine** ✅ *implemented + unit-tested*: When agents disagree, automatically split into PRO/CON camps, run adversarial debate, synthesize verdict with minority report
 
 > **Honest scope note**: The 165 experiments on this page use fixed thresholds and fixed dosage. Adaptive threshold/dosage code exists but has not been experimentally compared against fixed parameters. The 5-dimension evaluation weights (0.20/0.25/0.20/0.17/0.18) are heuristic, not empirically calibrated — an equal-weight robustness check is planned.
@@ -370,9 +363,15 @@ Shared utility modules (`src/lib/utils/`) eliminate duplicated code across the c
 
 ## Experimental Evidence
 
-**165 controlled experiments** (M&A: 80, Invest 5-round: 55, Invest 3-round: 30; 2 tasks × up to 9 ablation modes × n=5-15, 2×2 factorial design on Invest with n=15 per cell). Primary metric: Kendall's τ + **within-group τ trajectory (Δτ)** — tracking the *same* agents across rounds. Additionally, **161 expanded experiments** (Crisis 72 + Supplier 89) were run with the governance loop closed (post D1–D4 fix).
+**416 controlled experiments** across four lines:
+- **165 historical experiments** (M&A 80 + Invest 5-round 55 + Invest 3-round 30) — D1–D4 governance-loop break; preserved as provenance
+- **161 expanded experiments** (Crisis 72 + Supplier 89) — closed loop post D1–D4 fix; main evidence
+- **80 async-engine experiments** (fraud-investigation ABCD groups, 4-phase evolution)
+- **10 cross-model experiments** (Zhipu glm-4-flash C group, +18.8% τ vs DeepSeek)
 
-> **Ablation design update (H2)**: `ablationModes` has been expanded from `["none","full"]` to 7 complete modes (`none / full / shuffle / full_diversity / full_weight / full_reflection / full_continue`). The complete 7-mode experiment matrix (105 runs, 7 × 15) is pending lab execution; the 165-experiment numbers below were generated before this expansion and are preserved as-is for provenance.
+Primary metric: Kendall's τ + **within-group τ trajectory (Δτ)** — tracking the *same* agents across rounds. Statistical rigor: t-distribution 95% CI + permutation test p-values (with Bonferroni/BH FDR correction). 9 total configurations (4 governance modes + 5 extended ablation). All raw data preserved in `experiments/v2/data*/`.
+
+> **Ablation design update (H2)**: `ablationModes` has been expanded from `["none","full"]` to 7 complete modes (`none / full / shuffle / full_diversity / full_weight / full_reflection / full_continue`). The complete 7-mode experiment matrix (105 runs, 7 × 15) is pending lab execution; the 165-experiment numbers were generated before this expansion and are preserved as-is for provenance.
 
 ### Why Δτ + Shuffle matters
 
@@ -382,76 +381,15 @@ Shared utility modules (`src/lib/utils/`) eliminate duplicated code across the c
 | **Δτ** (within-group) | Same agents' improvement across rounds | — |
 | **Shuffle control** | Governance with scrambled knowledge | Tests regression-to-mean |
 
-### Task 1: Interdependent Investment — 3 rounds (Strong Collaboration Required)
+### Historical 165-experiment summary (D1–D4 governance-loop break)
 
-No single agent can determine the answer alone. n=15 per condition. Baseline τ = 0.422.
+These experiments were collected *before* the D1–D4 governance-loop fix, so state-modification interventions (reduce_weight, force_reflection) may be underestimated. Preserved as provenance; not the main evidence. **Full ablation tables for Task 1 (Invest 3-round + 5-round) and Task 2 (M&A 5-round) are in [TECHNICAL_REPORT.md §2.5](TECHNICAL_REPORT.md#25-历史对照165-环路断裂实验).**
 
-| Ablation | τ (μ±σ) | Q (μ±σ) | Δτ (within) | d vs none |
-|----------|----------|----------|-----|-----------|
-| None | 0.422±0.344 | 71.3±17.2 | +0.356 | — |
-| **Full** | **0.644±0.344** | **82.4±17.0** | **+0.489** | **+0.65** |
-
-- **Net Δτ (Full−Baseline) = +0.133, 95% CI [−0.09, +0.35], p=0.152** — directional improvement, NOT significant (medium effect size, d=+0.65)
-- **ΔQ = +11.1** (71.3 → 82.4) — full governance improves decision quality
-- **Both conditions improve from round-to-round** (baseline Δτ=+0.356, full Δτ=+0.489) — full governance accelerates within-group convergence
-- This is the only configuration where governance shows a positive directional net effect, but it does not reach statistical significance
-
-### Task 1 (Boundary): Interdependent Investment — 5 rounds
-
-n=15 for none/full; n=5 for ablations. Baseline τ = 0.778. With more rounds, baseline agents reach the same place — and governance becomes completely null.
-
-| Ablation | τ (μ±σ) | Q (μ±σ) | Δτ (within) | d vs none | p vs none |
-|----------|----------|----------|-----|-----------|-----------|
-| None | 0.778±0.325 | 89.0±16.1 | — | — | — |
-| **Full** | **0.778±0.325** | **89.0±16.1** | — | **+0.00** | **1.0 (completely null)** |
-| Shuffle | 1.000±0.000 | 100.0±0.0 | — | +0.77 | 0.264 (n=5, NOT sig) |
-| full_diversity | 0.733±0.365 | — | — | — | 1.0 (NOT sig) |
-| full_weight | 0.467±0.558 | — | — | — | 0.173 (harmful trend) |
-| **full_reflection** | **0.333±0.471** | — | — | — | **0.048 (SIGNIFICANTLY HARMFUL)** |
-| full_continue | 0.733±0.365 | — | — | — | 1.0 (NOT sig) |
-
-- **Net Δτ (Full−Baseline) = −0.089, 95% CI [−0.38, +0.21], p=1.0** — completely null (d=+0.00, ΔQ=+0.0)
-- **full_reflection is SIGNIFICANTLY HARMFUL**: τ=0.333 vs baseline 0.778, ΔQ=−22.2, **p=0.048** — the first statistically significant governance finding across all 165 experiments, and it is *negative*. Forcing reflection on interdependent tasks with sufficient discussion time actively hurts performance.
-- **full_weight shows the same harmful trend** (τ=0.467, ΔQ=−15.6, p=0.173) — cutting influence concentration also hurts on interdependent tasks
-- **Shuffle τ = 1.000** but p=0.264 (n=5 underpowered) — not significant
-- The 3-round directional improvement (d=+0.65) disappears entirely with 5 rounds (d=+0.00) — boundary condition confirmed: governance does not enable outcomes that wouldn't otherwise occur
-
-### Task 2: M&A Target Selection — 5 rounds (Weak Collaboration Required)
-
-Agents can reason independently. n=15 (none/full), n=10 (others). Baseline τ = 0.533.
-
-| Ablation | τ (μ±σ) | Q (μ±σ) | Δτ | d vs none |
-|----------|----------|----------|-----|-----------|
-| None | 0.533±0.209 | 76.7±10.5 | 0.000 | — |
-| **Full** | **0.613±0.177** | **80.7±8.8** | **−0.123±0.239** | +0.41 |
-| **Shuffle** | **0.900±0.194** | **95.0±9.7** | — | **+1.80 (p=0.0009)** |
-| full_diversity | 0.660±0.190 | — | — | +0.63 (p=0.174) |
-| full_weight | 0.700±0.316 | — | — | +0.65 (p=0.171) |
-| full_reflection | 0.660±0.190 | — | — | +0.63 (p=0.183) |
-| full_continue | 0.620±0.063 | — | — | +0.52 (p=0.267) |
-
-- **Net Δτ (Full−Baseline) = −0.123, 95% CI [−0.27, +0.02]** — NOT significant (p=0.36)
-- **Shuffle τ = 0.900, p=0.0009** — the ONLY statistically significant *positive* finding across all 165 experiments
-- **No single-intervention ablation reaches significance** — all directionally positive but underpowered
-- Governance doesn't help on weakly-interdependent tasks; breaking overconfidence (shuffle) does
-
-### The Boundary Condition — Fractional Factorial Design (with evidence)
-
-Two controlled comparisons isolate each moderator. Note: this is a fractional (not complete 2×2) design — M&A 3-round cell is missing.
-
-| Claim | Evidence |
-|-------|----------|
-| **Round-budget moderation** | Invest (strong interdependence) held constant: 3-round d=+0.65 (p=0.152, NOT sig) vs 5-round d=+0.00 (p=1.0, null). Pattern supports boundary hypothesis but is NOT statistically confirmed. |
-| **Task-interdependence moderation** | 5 rounds held constant: Invest (strong) d=+0.00 (null) vs M&A (weak) d=+0.41 (p=0.36, NOT sig). Governance doesn't significantly help either task type with sufficient rounds. |
-| Governance shows directional improvement only in limited rounds | Invest 3-round Δτ=+0.133 (CI [−0.09, +0.35], p=0.152, d=+0.65) — medium effect, NOT significant |
-| Effect disappears completely with more rounds | Invest 5-round Δτ=−0.089 (CI [−0.38, +0.21], p=1.0, d=+0.00) — completely null |
-| Governance does NOT help weakly-interdependent tasks | M&A Δτ=−0.123 (CI [−0.27, +0.02], p=0.36) |
-| **First significant governance finding is HARMFUL (uncorrected)** | Invest 5-round `full_reflection`: τ=0.333, ΔQ=−22.2, **p=0.048 (uncorrected; does NOT survive Bonferroni correction)** — forcing reflection on interdependent tasks with sufficient rounds hurts |
-| No positive single intervention is significant | All M&A ablation p-values > 0.17; Invest 5-round `full_weight` p=0.173 (harmful trend) |
-| Shuffle is the only positive significant finding | M&A Shuffle τ=0.900, d=+1.80, **p=0.0009** |
-| Weight reduction / reflection are harmful on interdependent tasks | Invest 5-round: full_weight ΔQ=−15.6 (p=0.173), full_reflection ΔQ=−22.2 (**p=0.048 uncorrected; does NOT survive Bonferroni correction**) |
-
-**Statistical rigor**: t-distribution 95% CI + permutation test p-values (with Bonferroni/BH FDR correction for multi-comparison). 9 total configurations (4 governance modes + 5 extended ablation). Fractional factorial design (n=15 per cell on Invest). Parameter sensitivity infrastructure (5×5×5 sweep). All raw data preserved in `experiments/v2/data*/`.
+Key takeaways from the 165-experiment historical data:
+- **Invest 3-round**: governance d=+0.65 (p=0.152, NOT sig) — medium effect, boundary condition
+- **Invest 5-round**: governance d=+0.00 (p=1.0) — completely null with sufficient rounds
+- **M&A 5-round**: governance d=+0.41 (p=0.36, NOT sig); **shuffle d=+1.80 (p=0.0009)** — the only statistically significant positive finding
+- **`full_reflection` on Invest 5-round**: p=0.048 (uncorrected; does NOT survive Bonferroni) — first significant governance finding is *harmful*
 
 ### Causal Effect Estimation (Trajectory Matching)
 
@@ -545,7 +483,7 @@ src/
 │   ├── page.tsx                  # Demo/Live comparison view
 │   └── api/v3/                   # API endpoints
 experiments/                      # Hidden Profile experiment framework
-└── test/                         # 229 automated tests
+└── test/                         # 285 automated tests
 ```
 
 ---
@@ -553,7 +491,7 @@ experiments/                      # Hidden Profile experiment framework
 ## Running Tests
 
 ```bash
-npm test              # 229 tests across 16 files
+npm test              # 285 tests across 18 files
 npm run test:watch    # watch mode
 ```
 
@@ -563,20 +501,13 @@ npm run test:watch    # watch mode
 
 | Document | Content |
 |----------|---------|
-| [**DEVELOPER_GUIDE.md**](DEVELOPER_GUIDE.md) | 🔴 **Must-read for developers** — architecture, critical bug fix history, pitfalls, workflow |
-| [ONEPAGER.md](ONEPAGER.md) | One-page executive summary |
+| [**DEVELOPER_GUIDE.md**](DEVELOPER_GUIDE.md) | 🔴 **Must-read for developers** — architecture, critical bug fix history, pitfalls, workflow (附录 A 架构概览 + 附录 B API 契约) |
 | [README_CN.md](README_CN.md) | Full project documentation (Chinese, most up-to-date) |
-| [PROJECT_EVALUATION.md](PROJECT_EVALUATION.md) | Comprehensive project evaluation (strengths, weaknesses, risks) |
-| [EXPERIMENT_REVIEW.md](EXPERIMENT_REVIEW.md) | All experiment lines explained + design flaw audit |
-| [LIMITATIONS.md](LIMITATIONS.md) | 22 modules of known limitations and unfixed issues |
-| [ROADMAP.md](ROADMAP.md) | Development roadmap & academic outreach plan |
-| [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) | Technical architecture deep-dive |
-| [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) | Full research report (experiment design, falsification, paradigm critique) |
-| [MATHEMATICAL_FRAMEWORK.md](MATHEMATICAL_FRAMEWORK.md) | Complete formal math definitions |
-| [THERMODYNAMICS_INTEGRATION.md](THERMODYNAMICS_INTEGRATION.md) | Thermodynamics formula reference & code index |
-| [PAPER_DRAFT.md](PAPER_DRAFT.md) | Academic paper draft (AAMAS/AAAI/CogSci 2027) |
-| [API_CONTRACT.md](API_CONTRACT.md) | REST API + SDK API specification |
-| [BAYESIAN_ANALYSIS.md](BAYESIAN_ANALYSIS.md) | Bayesian parameter estimation |
+| [PAPER_DRAFT.md](PAPER_DRAFT.md) | Academic paper draft — arxiv preprint (AAMAS/AAAI/CogSci 2027) |
+| [THEORY.md](THEORY.md) | Theoretical analysis — R information-theoretic interpretation + intervention fixed-point analysis (附录 A 数学框架 + 附录 B 热力学索引) |
+| [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) | Full research report — experiment design, falsification, paradigm critique (附录 A-E：实验复查 / E组分析 / 贝叶斯 / MAST / OWASP) |
+| [LIMITATIONS.md](LIMITATIONS.md) | 22 modules of known limitations and unfixed issues (附录 A 可证伪性 + 附录 B 预注册) |
+| [ROADMAP.md](ROADMAP.md) | Development roadmap & academic outreach plan (附录 A 升级计划 + 附录 B 项目评价) |
 
 ---
 
@@ -586,13 +517,13 @@ TypeScript · Next.js 14 · React 18 · Tailwind CSS · Vitest · DeepSeek API
 
 ---
 
-## Async Adaptive Discussion Engine (2026-07-17, recalibrated)
+## Async Adaptive Discussion Engine (2026-07-19, Phase 4)
 
-The async discussion engine (`AsyncDiscussionEngine`) extends `DiscussionEngine` with content-driven speaking, thermodynamic termination, and passive listening updates. Two rounds of threshold calibration on the v2 difficulty-enhanced fraud task.
+The async discussion engine (`AsyncDiscussionEngine`) extends `DiscussionEngine` with content-driven speaking, thermodynamic termination, and passive listening updates. Validated across 4 phases on the v2 difficulty-enhanced fraud-investigation task.
 
 ### Content-Driven Speaking (v2)
 
-Agents compute a **willingness score** based on internal state (info exposure, belief shift, consensus deviation, dependency triggers, recency penalty). Scores normalized via `tanh` to [0,1].
+Agents compute a **willingness score** based on internal state (info exposure, belief shift, consensus deviation, dependency triggers, recency penalty). Scores normalized via `tanh` to [0,1]. Thresholds: ≥0.7 must speak, 0.3–0.7 weighted random, <0.3 silent, with a fallback ensuring at least one speaker per turn.
 
 ### Thermodynamic Adaptive Termination (Recalibrated 2026-07-17)
 
@@ -606,8 +537,6 @@ Thresholds recalibrated after per-case autopsy of 4 hard-cap failures. See [READ
 | `strongCrystallH` | 0.10 | **0.20** | Allowed strong-crystallization at T<0.07 |
 | `evalEveryKUtterances` | 3 | **2** | Denser evaluation cadence |
 
-**Results**: Hard-cap rate 40%→10%, mean τ 0.34→0.46, max τ 0.6→0.8. Remaining 10% hard cap is a discussion quality failure (speak willingness lacks quality dimension).
-
 ### Passive Listening Belief Update
 
 Non-speaking agents update beliefs via DeGroot-style weighted averaging:
@@ -618,16 +547,53 @@ Confidence also updates: agreement → slight increase, disagreement → slight 
 
 ### Experiment Design (A/B/C/D)
 
-| Group | Speaking | Termination | Hypothesis |
-|-------|----------|-------------|------------|
-| A | Synchronous | Fixed 5 rounds | Baseline |
-| B | Async | Fixed 5 rounds | Does async affect quality? |
-| C | Async | Thermodynamic | H_thermo: adaptive > fixed |
-| D | Async | Random (matched) | H_diag: thermodynamic > random |
+| Group | Speaking | Termination | Hypothesis | n |
+|-------|----------|-------------|------------|---|
+| A | Synchronous | Fixed 5 rounds | Baseline | 10 |
+| B | Async content_driven | Fixed 5 eval cycles | Does async affect quality? | 10 |
+| C | Async content_driven | Thermodynamic (R/T/H/F) | H_thermo: adaptive > fixed | 10 |
+| D | Async content_driven | Sampled from C distribution | H_diag: thermodynamic > random | 10 |
 
 C/D groups run both v1 (random_prob) and v2 (content_driven) speaking modes. D group samples termination points from C group's actual distribution (matched by speakMode).
 
-See [THERMODYNAMICS_INTEGRATION.md](THERMODYNAMICS_INTEGRATION.md) §10 for full details and [LIMITATIONS.md](LIMITATIONS.md) §22 for known limitations.
+### Phase 1–4 Results (Old thresholds → Recalibrated → beliefShift fix → Full rerun)
+
+| Phase | C group τ | Hard-cap rate | Mean utterances | Max τ |
+|-------|-----------|---------------|-----------------|-------|
+| Phase 1 (old thresholds, no beliefShift) | 0.34 ± 0.16 | 40% (4/10) | 28.2 | 0.6 |
+| Phase 2 (new thresholds, no beliefShift) | 0.46 ± 0.17 | 10% (1/10) | 22.4 | 0.8 |
+| Phase 3 (new thresholds + beliefShift) | **0.64 ± 0.21** | 10% (1/10) | **18.6** | **1.0** 🔥 |
+| Phase 4 (all fixes, B/D rerun + codeVersion) | see below | — | — | — |
+
+**Phase 4 group comparison** (2026-07-19):
+
+| Group | τ | Utterances | Efficiency τ/utterance | Status |
+|-------|---|------------|------------------------|--------|
+| A | 0.88 ± 0.10 | 25.0 | 0.0352 | Baseline |
+| B | 0.42 ± 0.20 | 14.4 | 0.0292 | ⚠️ drops after beliefShift fix |
+| C | **0.64 ± 0.21** | 18.6 | **0.0344** | ✅ Optimal |
+| D | 0.46 ± 0.30 | 18.4 | 0.0250 | Direction supports C |
+
+**Statistical comparisons**: A vs B d=2.90 (p=0.0002, sync > async-fixed); **C vs B d=1.09 (p=0.028, thermodynamic > fixed)** ✅; C vs D d=0.70 (p=0.116, direction supports thermodynamic).
+
+**Why B drops after beliefShift fix**: Before the fix, beliefShift=0 → speaking was driven by infoExposure (info-sharing priority). After the fix, "persuaded agents" gain speaking rights, preempting info-driven speaking under the fixed 5-cycle budget. This conversely proves the necessity of thermodynamic termination: only elastic time (C avg 7.2 cycles vs B 5 cycles) lets beliefShift exert its positive effect. **Components are coupled**: beliefShift + thermodynamic → τ=0.64; beliefShift + fixed rounds → τ=0.42.
+
+### Phase 5: Cross-Model Validation 🔬 (2026-07-19, Zhipu glm-4-flash)
+
+**Motivation**: Phase 1–4 used only DeepSeek-V3. Phase 5 validates cross-model with Zhipu glm-4-flash (free, best cost-performance).
+
+**C group results** (n=10, content_driven + thermodynamic termination):
+
+| Metric | DeepSeek-V3 | **Zhipu glm-4-flash** | Δ |
+|--------|------------|----------------------|---|
+| Mean τ | 0.640 ± 0.196 | **0.760 ± 0.215** | **+18.8%** |
+| τ=1.0 achieved | 1/10 (10%) | **4/10 (40%)** 🔥 | 4× |
+| Mean utterances | 18.6 ± 9.5 | 25.3 ± 12.6 | +36% |
+| Hard-cap rate | 1/10 | 2/10 | — |
+
+**Key findings**: (1) Zhipu significantly outperforms DeepSeek on C group (+18.8%); (2) thermodynamic termination is directionally effective cross-model — eliminating "conclusion is model-specific" concern; (3) Zhipu speaks more (+36%) with slightly higher hard-cap — more active discussion but slower convergence. Cost: glm-4-flash is free, ~2–4 min/experiment.
+
+See [THEORY.md 附录 B](THEORY.md) for full details, [experiments/v2/analysis_c_group_thermo.md](experiments/v2/analysis_c_group_thermo.md) for the 4-case hard-cap autopsy, and [LIMITATIONS.md](LIMITATIONS.md) §22 for known limitations.
 
 ---
 

@@ -81,6 +81,39 @@ function findLastLineStartGovTag(text: string): number {
   return lastMatchEnd;
 }
 
+/**
+ * 括号配平提取：从 text 起始的 `{` 开始，扫描到深度归零的 `}` 为止。
+ *
+ * 替代原贪婪正则 `/^(\{[\s\S]*\})/`——后者在 [GOV] JSON 后还有 `}` 字符时
+ * 会过度匹配（如发言正文带代码块、其他 JSON 片段），破坏解析。
+ *
+ * 字符串感知：不计入字符串内的 `{`/`}`，正确处理 JSON 字符串值中的花括号。
+ *
+ * @returns 配平的 JSON 子串（含首尾花括号），或 null（未配平/未找到）
+ */
+function extractBalancedJson(text: string): string | null {
+  if (!text.startsWith("{")) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (escape) { escape = false; continue; }
+    if (inString) {
+      if (c === "\\") { escape = true; continue; }
+      if (c === '"') inString = false;
+      continue;
+    }
+    if (c === '"') { inString = true; continue; }
+    if (c === "{") depth++;
+    else if (c === "}") {
+      depth--;
+      if (depth === 0) return text.slice(0, i + 1);
+    }
+  }
+  return null; // 未配平（截断）
+}
+
 export function extractGovTag(text: string): ExtractedState | null {
   // 安全修复：只提取最后一个行首 [GOV] 标签，忽略正文中被引用/伪造的 [GOV]。
   const govIdx = findLastLineStartGovTag(text);
@@ -89,11 +122,11 @@ export function extractGovTag(text: string): ExtractedState | null {
   let afterGov = text.slice(govIdx).trimStart();
   if (!afterGov.startsWith("{")) return null;
 
-  // 贪婪匹配到最后一个 } （处理嵌套对象），若无 } 则取到行尾/文末再做容错
-  const braceMatch = afterGov.match(/^(\{[\s\S]*\})/);
+  // 括号配平提取（H-Fix: 替代贪婪正则，避免 JSON 后的 `}` 字符被吞入）
+  const balanced = extractBalancedJson(afterGov);
   let jsonStr: string;
-  if (braceMatch) {
-    jsonStr = braceMatch[1].trim();
+  if (balanced) {
+    jsonStr = balanced.trim();
   } else {
     // 截断的 JSON（缺右花括号）——取到行尾，后续补全
     const lineEnd = afterGov.indexOf("\n");

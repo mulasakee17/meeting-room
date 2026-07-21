@@ -4,6 +4,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { mulberry32, cohensD, mean, std, PERMUTATION_SEED } from "./statsShared";
 
 interface ExperimentResult {
   runId: string;
@@ -25,26 +26,9 @@ function loadData(dir: string, prefix: string): ExperimentResult[] {
   return files.map(f => JSON.parse(fs.readFileSync(path.join(dir, f), "utf-8")));
 }
 
-function mean(v: number[]): number { return v.reduce((a, b) => a + b, 0) / v.length; }
-function std(v: number[]): number {
-  if (v.length < 2) return 0;
-  const m = mean(v);
-  return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
-function cohensD(a: number[], b: number[]): number {
-  if (a.length < 2 || b.length < 2) return 0;
-  const ma = mean(a), mb = mean(b);
-  const va = a.reduce((s, v) => s + (v - ma) ** 2, 0) / (a.length - 1);
-  const vb = b.reduce((s, v) => s + (v - mb) ** 2, 0) / (b.length - 1);
-  const sp = Math.sqrt(((a.length - 1) * va + (b.length - 1) * vb) / (a.length + b.length - 2));
-  return sp === 0 ? 0 : (ma - mb) / sp;
-}
-function mulberry32(seed: number): () => number {
-  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-}
 function permutationTest(a: number[], b: number[], nPerm = 10000): number {
   const combined = [...a, ...b]; const n1 = a.length; const obsDiff = mean(a) - mean(b);
-  const rng = mulberry32(42); let count = 0;
+  const rng = mulberry32(PERMUTATION_SEED); let count = 0;  // H-Fix: 统一为 PERMUTATION_SEED
   for (let i = 0; i < nPerm; i++) {
     for (let j = combined.length - 1; j > 0; j--) { const k = Math.floor(rng() * (j + 1)); [combined[j], combined[k]] = [combined[k], combined[j]]; }
     if (Math.abs(mean(combined.slice(0, n1)) - mean(combined.slice(n1))) >= Math.abs(obsDiff)) count++;
@@ -182,12 +166,18 @@ function main() {
   console.log("\n── 跨任务普适性评估 ──");
   const governanceConsistent = d > 0;
   const fakeConsensusConsistent = Math.abs(rCorr) < 0.3;
-  
+  const shuffleConsistent = mean(shuffleTau) > mean(noneTau);  // Crisis: shuffle>none; Supplier: 反向
+
   console.log(`治理效果方向一致: ${governanceConsistent ? "✅" : "❌"}`);
   console.log(`虚假共识现象一致: ${fakeConsensusConsistent ? "✅" : "❌"}`);
-  
-  if (governanceConsistent && fakeConsensusConsistent) {
-    console.log("\n✅ 核心发现在两个任务间得到验证，具有跨任务普适性。");
+  console.log(`shuffle 上限假设一致: ${shuffleConsistent ? "✅" : "❌（Supplier 反向，见下方异常解释）"}`);
+
+  if (governanceConsistent && fakeConsensusConsistent && shuffleConsistent) {
+    console.log("\n✅ 三个核心发现在 Crisis + Supplier 两任务间方向一致，提示跨任务稳健性。");
+    console.log("   ⚠️ 但仅 2 任务不足以宣称普适性，需更多任务类型验证（弱/强依赖任务等）。");
+  } else if (governanceConsistent && fakeConsensusConsistent) {
+    console.log("\n⚠️ 治理与虚假共识两任务一致，但 shuffle 上限假设在 Supplier 不成立。");
+    console.log("   仅 2 任务不足以宣称普适性；shuffle 方法学受任务难度调节。");
   } else {
     console.log("\n⚠️ 部分发现在两个任务间不一致，需要进一步分析。");
   }

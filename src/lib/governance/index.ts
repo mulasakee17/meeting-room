@@ -5,6 +5,9 @@ import {
   AuthorityBiasDetection,
   PolarizationDetection,
   PrematureConsensusDetection,
+  InformationWithholdingDetection,
+  IgnoredInputDetection,
+  ReasoningActionMismatchDetection,
   GovernanceIssue,
   AgentBelief,
   MessageInfo,
@@ -19,7 +22,7 @@ import {
 import { ReduceWeightIntervention, IntroduceDiversityIntervention, ForceReflectionIntervention, ContinueDiscussionIntervention } from "./interventions";
 import { computeAdaptiveThresholds, computeCalibrationMetrics, type CalibrationMetrics } from "./adaptiveThresholds";
 import { computeAdaptiveDosage, type DosageContext } from "./adaptiveDosage";
-import { shannonEntropy, socialFreeEnergy, normalizeTemperature } from "../utils/statsUtils";
+import { mulberry32, shannonEntropy, socialFreeEnergy, normalizeTemperature } from "../utils/statsUtils";
 import {
   GOVERNANCE_ECHO_CHAMBER_THRESHOLD,
   GOVERNANCE_AUTHORITY_BIAS_THRESHOLD,
@@ -44,16 +47,6 @@ import {
   INTERVENTION_REFLECTION_FACTOR,
 } from "../constants";
 
-/** Mulberry32 seeded PRNG — deterministic, used for reproducible interventions */
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 export class GovernanceEngine {
   private strategies: Map<InterventionType, InterventionStrategy> = new Map();
@@ -211,6 +204,16 @@ export class GovernanceEngine {
     const prematureConsensus = this.detectPrematureConsensus(agentBeliefs, mergedConfig);
     if (prematureConsensus.intervention.applied) interventionCount++;
 
+    // A3 (MAST) 新检测器
+    const informationWithholding = this.detectInformationWithholding(agentBeliefs, messages, mergedConfig);
+    if (informationWithholding.intervention.applied) interventionCount++;
+
+    const ignoredInput = this.detectIgnoredInput(agentBeliefs, messages, mergedConfig);
+    if (ignoredInput.intervention.applied) interventionCount++;
+
+    const reasoningActionMismatch = this.detectReasoningActionMismatch(agentBeliefs, messages, mergedConfig);
+    if (reasoningActionMismatch.intervention.applied) interventionCount++;
+
     if (echoChamber.detected) {
       issues.push({
         type: "echo_chamber",
@@ -246,6 +249,33 @@ export class GovernanceEngine {
       });
     }
 
+    if (informationWithholding.detected) {
+      issues.push({
+        type: "information_withholding",
+        severity: informationWithholding.severity,
+        description: `MAST FM-2.4: ${informationWithholding.withholdingAgents.length} agent(s) withholding information (empty evidence)`,
+        agents: informationWithholding.withholdingAgents,
+      });
+    }
+
+    if (ignoredInput.detected) {
+      issues.push({
+        type: "ignored_input",
+        severity: ignoredInput.severity,
+        description: `MAST FM-2.5: ${ignoredInput.ignoringAgents.length} agent(s) ignoring others' input (referenced but not responding)`,
+        agents: ignoredInput.ignoringAgents,
+      });
+    }
+
+    if (reasoningActionMismatch.detected) {
+      issues.push({
+        type: "reasoning_action_mismatch",
+        severity: reasoningActionMismatch.severity,
+        description: `MAST FM-2.6: ${reasoningActionMismatch.mismatchAgents.length} agent(s) with reasoning-action mismatch (rank vs belief inconsistency)`,
+        agents: reasoningActionMismatch.mismatchAgents,
+      });
+    }
+
     // 运行自定义检测器
     for (const detector of Array.from(this.customDetectors.values())) {
       const result = detector.detect(agentBeliefs, messages, mergedConfig);
@@ -259,13 +289,16 @@ export class GovernanceEngine {
       }
     }
 
-    const summary = this.generateSummary(echoChamber, authorityBias, polarization, prematureConsensus, interventionCount);
+    const summary = this.generateSummary(echoChamber, authorityBias, polarization, prematureConsensus, informationWithholding, ignoredInput, reasoningActionMismatch, interventionCount);
 
     return {
       echoChamber,
       authorityBias,
       polarization,
       prematureConsensus,
+      informationWithholding,
+      ignoredInput,
+      reasoningActionMismatch,
       otherIssues: issues,
       summary,
       interventionCount,
@@ -518,6 +551,213 @@ export class GovernanceEngine {
     };
   }
 
+  // ---- A3 (MAST) 检测器：FM-2.4 / FM-2.5 / FM-2.6 -------------------------
+  //
+  // 三个检测器对齐 MAST (arXiv:2503.13657) 的 FC2 (Inter-Agent Failure) 中的
+  // 信息流失败模式。所有检测器复用现有 MessageInfo 字段（evidence /
+  // referencedAgents / itemBeliefs），无需修改 prompt。
+  //
+  // 重要：这些检测器依赖于 discussion/index.ts:applyGovernance 在
+  // opinions → messages 转换时保留 evidence/itemBeliefs/reasoning 字段。
+  // 若字段缺失（V1 数据），检测器自动返回 notDetected（安全降级）。
+
+  /**
+   * FM-2.4 Information Withholding：agent 有独有信息但 evidence[] 为空。
+   *
+   * 检测逻辑：若 ≥2 个 agent 提供了 evidence，但 ≥1 个 agent 的 evidence
+   * 为空，则判定后者在 withholding（其他人都有证据，为什么你没有？）。
+   *
+   * MAST 占比：9.1%（FC2 中最高频失败模式）。
+   * 干预：force_reflection（强制反思并暴露证据）。
+   */
+  detectInformationWithholding(
+    agentBeliefs: AgentBelief[],
+    messages: MessageInfo[],
+    config: GovernanceConfig
+  ): InformationWithholdingDetection {
+    const notDetected = (): InformationWithholdingDetection => ({
+      detected: false, severity: "low", withholdingAgents: [],
+      intervention: this.noIntervention(),
+    });
+
+    if (this.shouldSkipDetection(config.enableInformationWithholdingDetection, agentBeliefs.length, 2)) {
+      return notDetected();
+    }
+
+    // 安全降级：若所有 messages 都没有 evidence 字段（V1 数据），跳过检测
+    const hasEvidenceField = messages.some(m => m.evidence !== undefined);
+    if (!hasEvidenceField) {
+      return notDetected();
+    }
+
+    const evidenceCounts = messages.map(m => ({
+      agentId: m.agentId,
+      count: (m.evidence || []).length,
+    }));
+
+    const agentsWithEvidence = evidenceCounts.filter(e => e.count > 0);
+    const agentsWithoutEvidence = evidenceCounts.filter(e => e.count === 0);
+
+    // 检测条件：至少 2 个 agent 有 evidence，且至少 1 个 agent 没有 evidence
+    const detected = agentsWithEvidence.length >= 2 && agentsWithoutEvidence.length >= 1;
+    const withholdingAgents = agentsWithoutEvidence.map(e => e.agentId);
+    const severity: SeverityLevel = withholdingAgents.length >= 2 ? "medium" : "low";
+
+    const intervention = (detected && config.interventionLevel !== "none")
+      ? {
+          type: "force_reflection" as InterventionType,
+          applied: !this.isInterventionDisabled(config, "force_reflection"),
+          effect: this.isInterventionDisabled(config, "force_reflection")
+            ? "Detected but intervention disabled"
+            : `Forced reflection for ${withholdingAgents.length} agent(s) withholding information`,
+        }
+      : this.noIntervention();
+
+    return {
+      detected, severity, withholdingAgents,
+      intervention,
+    };
+  }
+
+  /**
+   * FM-2.5 Ignored other's input：agent 被他人引用但未回引。
+   *
+   * 检测逻辑：若某 agent 被他人 referencedAgents 引用 ≥2 次，但自己
+   * referencedAgents 为空（未引用任何人），则判定该 agent 在 ignoring
+   * 他人输入。
+   *
+   * MAST 占比：1.9%。
+   * 干预：force_reflection（强制回应他人）。
+   */
+  detectIgnoredInput(
+    agentBeliefs: AgentBelief[],
+    messages: MessageInfo[],
+    config: GovernanceConfig
+  ): IgnoredInputDetection {
+    const notDetected = (): IgnoredInputDetection => ({
+      detected: false, severity: "low", ignoringAgents: [],
+      intervention: this.noIntervention(),
+    });
+
+    if (this.shouldSkipDetection(config.enableIgnoredInputDetection, agentBeliefs.length, 2)) {
+      return notDetected();
+    }
+
+    // 安全降级：若所有 messages 都没有 referencedAgents 字段，跳过检测
+    const hasRefsField = messages.some(m => m.referencedAgents !== undefined);
+    if (!hasRefsField) {
+      return notDetected();
+    }
+
+    const referencedCount: Record<string, number> = {};
+    const referencingCount: Record<string, number> = {};
+
+    for (const msg of messages) {
+      const refs = msg.referencedAgents || [];
+      referencingCount[msg.agentId] = (referencingCount[msg.agentId] || 0) + refs.length;
+      for (const ref of refs) {
+        if (ref !== msg.agentId) {
+          referencedCount[ref] = (referencedCount[ref] || 0) + 1;
+        }
+      }
+    }
+
+    const ignoringAgents: string[] = [];
+    for (const agentId of Object.keys(referencedCount)) {
+      // 被引用 ≥2 次但自己未引用任何人
+      if (referencedCount[agentId] >= 2 && (referencingCount[agentId] || 0) === 0) {
+        ignoringAgents.push(agentId);
+      }
+    }
+
+    const detected = ignoringAgents.length > 0;
+    const severity: SeverityLevel = ignoringAgents.length >= 2 ? "medium" : "low";
+
+    const intervention = (detected && config.interventionLevel !== "none")
+      ? {
+          type: "force_reflection" as InterventionType,
+          applied: !this.isInterventionDisabled(config, "force_reflection"),
+          effect: this.isInterventionDisabled(config, "force_reflection")
+            ? "Detected but intervention disabled"
+            : `Forced reflection for ${ignoringAgents.length} agent(s) ignoring others' input`,
+        }
+      : this.noIntervention();
+
+    return {
+      detected, severity, ignoringAgents,
+      intervention,
+    };
+  }
+
+  /**
+   * FM-2.6 Reasoning-action mismatch：itemBeliefs 内部 rank 与 belief 不一致。
+   *
+   * 检测逻辑：prompt 约定 "rank=1=最优，belief∈[-1,1]=对该选项的独立偏好"。
+   * 若 agent 的 itemBeliefs 中 rank=1 的 item 的 belief 不是最高，且与最高
+   * belief 的差距 > 0.3，则判定为推理-行动不匹配（嘴上说 A 最好，评分却
+   * 给 B 更高）。
+   *
+   * MAST 占比：6.2%。
+   * 干预：force_reflection（强制反思并修正不一致）。
+   */
+  detectReasoningActionMismatch(
+    agentBeliefs: AgentBelief[],
+    messages: MessageInfo[],
+    config: GovernanceConfig
+  ): ReasoningActionMismatchDetection {
+    const notDetected = (): ReasoningActionMismatchDetection => ({
+      detected: false, severity: "low", mismatchAgents: [],
+      intervention: this.noIntervention(),
+    });
+
+    if (this.shouldSkipDetection(config.enableReasoningActionMismatchDetection, agentBeliefs.length, 2)) {
+      return notDetected();
+    }
+
+    // 安全降级：若所有 messages 都没有 itemBeliefs 字段（V1 数据），跳过检测
+    const hasItemBeliefs = messages.some(m => m.itemBeliefs && m.itemBeliefs.length > 0);
+    if (!hasItemBeliefs) {
+      return notDetected();
+    }
+
+    const mismatchAgents: string[] = [];
+
+    for (const msg of messages) {
+      if (!msg.itemBeliefs || msg.itemBeliefs.length < 2) continue;
+
+      // rank=1 最优 → belief 应该最高
+      const items = [...msg.itemBeliefs].sort((a, b) => a.rank - b.rank);
+      const topRankItem = items[0]; // rank 最小 = 最优
+      const maxBelief = Math.max(...items.map(i => i.belief));
+      const topBeliefItem = items.find(i => i.belief === maxBelief);
+
+      // 若 rank=1 的 item 的 belief 不是最高，且差距 > 0.3，则 mismatch
+      if (topBeliefItem
+          && topRankItem.item !== topBeliefItem.item
+          && (maxBelief - topRankItem.belief) > 0.3) {
+        mismatchAgents.push(msg.agentId);
+      }
+    }
+
+    const detected = mismatchAgents.length > 0;
+    const severity: SeverityLevel = mismatchAgents.length >= 2 ? "high" : "medium";
+
+    const intervention = (detected && config.interventionLevel !== "none")
+      ? {
+          type: "force_reflection" as InterventionType,
+          applied: !this.isInterventionDisabled(config, "force_reflection"),
+          effect: this.isInterventionDisabled(config, "force_reflection")
+            ? "Detected but intervention disabled"
+            : `Forced reflection for ${mismatchAgents.length} agent(s) with reasoning-action mismatch`,
+        }
+      : this.noIntervention();
+
+    return {
+      detected, severity, mismatchAgents,
+      intervention,
+    };
+  }
+
   private computeStd(values: number[]): number {
     if (values.length < 2) return 0;
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -693,10 +933,13 @@ export class GovernanceEngine {
     authorityBias: AuthorityBiasDetection,
     polarization: PolarizationDetection,
     prematureConsensus: PrematureConsensusDetection,
+    informationWithholding: InformationWithholdingDetection,
+    ignoredInput: IgnoredInputDetection,
+    reasoningActionMismatch: ReasoningActionMismatchDetection,
     interventionCount: number
   ): string {
     const issues: string[] = [];
-    
+
     if (echoChamber.detected) {
       issues.push(`echo chamber (${echoChamber.severity})`);
     }
@@ -709,11 +952,20 @@ export class GovernanceEngine {
     if (prematureConsensus.detected) {
       issues.push(`premature consensus (${prematureConsensus.severity})`);
     }
-    
+    if (informationWithholding.detected) {
+      issues.push(`information withholding (${informationWithholding.severity})`);
+    }
+    if (ignoredInput.detected) {
+      issues.push(`ignored input (${ignoredInput.severity})`);
+    }
+    if (reasoningActionMismatch.detected) {
+      issues.push(`reasoning-action mismatch (${reasoningActionMismatch.severity})`);
+    }
+
     if (issues.length === 0) {
       return "No group decision biases detected.";
     }
-    
+
     return `Detected ${issues.length} issue(s): ${issues.join(", ")}. ${interventionCount} intervention(s) applied.`;
   }
 
@@ -889,6 +1141,82 @@ export class GovernanceEngine {
           additionalRounds: Math.max(additionalRounds, 1),
           reason: `Premature consensus at round ${pcRound}`,
         },
+        effect: "",
+        applied: false,
+      });
+    }
+
+    // ---- A3 (MAST) 新检测器的干预触发 ----------------------------------------
+    // FM-2.4 / FM-2.5 / FM-2.6 均触发 force_reflection，让 agent 反思并修正
+    // 信息隐藏/忽略他人/推理-行动不一致。复用 force_reflection 策略，不引入
+    // 新干预类型，保持策略注册表稳定。
+    if (result.informationWithholding.detected
+        && result.informationWithholding.withholdingAgents.length > 0
+        && shouldTrigger("force_reflection")) {
+      let reflectionFactor = mergedConfig.reflectionFactor ?? INTERVENTION_REFLECTION_FACTOR;
+      if (useAdaptiveDosage) {
+        const dosage = computeAdaptiveDosage({
+          severity: this.severityToScore(result.informationWithholding.severity),
+          informationCoverage,
+          historyEffectiveness: this.getHistoryEffectiveness("force_reflection"),
+          roundProgress,
+          agentCount: agentIds.length,
+          baseMaxRounds: maxRounds,
+        });
+        reflectionFactor = dosage.reflectionStrength;
+      }
+      interventions.push({
+        type: "force_reflection",
+        targetAgents: result.informationWithholding.withholdingAgents,
+        parameters: { reflectionFactor, reason: "MAST FM-2.4: information withholding" },
+        effect: "",
+        applied: false,
+      });
+    }
+
+    if (result.ignoredInput.detected
+        && result.ignoredInput.ignoringAgents.length > 0
+        && shouldTrigger("force_reflection")) {
+      let reflectionFactor = mergedConfig.reflectionFactor ?? INTERVENTION_REFLECTION_FACTOR;
+      if (useAdaptiveDosage) {
+        const dosage = computeAdaptiveDosage({
+          severity: this.severityToScore(result.ignoredInput.severity),
+          informationCoverage,
+          historyEffectiveness: this.getHistoryEffectiveness("force_reflection"),
+          roundProgress,
+          agentCount: agentIds.length,
+          baseMaxRounds: maxRounds,
+        });
+        reflectionFactor = dosage.reflectionStrength;
+      }
+      interventions.push({
+        type: "force_reflection",
+        targetAgents: result.ignoredInput.ignoringAgents,
+        parameters: { reflectionFactor, reason: "MAST FM-2.5: ignored other's input" },
+        effect: "",
+        applied: false,
+      });
+    }
+
+    if (result.reasoningActionMismatch.detected
+        && result.reasoningActionMismatch.mismatchAgents.length > 0
+        && shouldTrigger("force_reflection")) {
+      let reflectionFactor = mergedConfig.reflectionFactor ?? INTERVENTION_REFLECTION_FACTOR;
+      if (useAdaptiveDosage) {
+        const dosage = computeAdaptiveDosage({
+          severity: this.severityToScore(result.reasoningActionMismatch.severity),
+          informationCoverage,
+          historyEffectiveness: this.getHistoryEffectiveness("force_reflection"),
+          roundProgress,
+          agentCount: agentIds.length,
+          baseMaxRounds: maxRounds,
+        });
+        reflectionFactor = dosage.reflectionStrength;
+      }
+      interventions.push({
+        type: "force_reflection",
+        targetAgents: result.reasoningActionMismatch.mismatchAgents,
+        parameters: { reflectionFactor, reason: "MAST FM-2.6: reasoning-action mismatch" },
         effect: "",
         applied: false,
       });

@@ -1,0 +1,47 @@
+{
+  "runId": "fraud_C_content_driven_7",
+  "group": "C",
+  "runIndex": 7,
+  "speakMode": "content_driven",
+  "codeVersion": "2026-07-19",
+  "timestamp": "2026-07-20T01:47:51.132Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "totalRounds": 4,
+  "totalUtterances": 9,
+  "converged": false,
+  "terminationReason": "crystallized (连续 3 次结晶态（R=0.991, T=0.083, H=0.418），系统已冻结)",
+  "thermoHistory": [
+    {
+      "R": 0.980741883926604,
+      "T": 0.12529364015282227,
+      "H": 0.4181656600790516,
+      "F": 0.07165161381160809,
+      "utteranceCount": 5,
+      "evalIndex": 0
+    },
+    {
+      "R": 0.9876574002628482,
+      "T": 0.10020668195412603,
+      "H": 0.4181656600790516,
+      "F": 0.05424559304083049,
+      "utteranceCount": 7,
+      "evalIndex": 1
+    },
+    {
+      "R": 0.991465907142236,
+      "T": 0.08327961161463174,
+      "H": 0.4181656600790516,
+      "F": 0.043358766619723495,
+      "utteranceCount": 9,
+      "evalIndex": 2
+    }
+  ],
+  "finalBeliefs": {
+    "a1": -0.48756572687094923,
+    "a2": -0.5743154593628774,
+    "a3": -0.7179263642033265,
+    "a4": -0.6352790838095871,
+    "a5": -0.6923857633657864
+  }
+}

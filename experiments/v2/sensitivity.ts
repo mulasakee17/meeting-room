@@ -23,6 +23,7 @@ import { EvaluationEngine } from "../../src/lib/evaluation";
 import type { LLMConfig } from "../../src/lib/llm/providers";
 import { TASK_INVEST } from "./task_invest";
 import type { TaskConfig } from "../lunar_survival/config";
+import { kendallTau } from "./statsShared";
 
 // ============================================================================
 // Types
@@ -112,6 +113,10 @@ const TASK: TaskConfig = TASK_INVEST;
 // Kendall's τ (copied from run.ts for self-contained sensitivity script)
 // ============================================================================
 
+// 注意：sensitivity.ts 使用 V1 indexOf 路径提取排名（非 V2 itemBeliefs 聚合）。
+// 原因：本脚本的 agent prompt（见 createAgents）仅要求输出 {emotion, reasoning}，
+// 不要求 itemBeliefs 字段。迁移到 V2 需改 prompt，会使现有 sensitivity 实验数据失效。
+// kendallTau 函数本身已于 2026-07-20 修复 tie 修正公式 BUG（与 run.ts 一致）。
 function extractRanking(decision: string, itemNames: string[]): string[] {
   const positions = itemNames.map(name => {
     const shortName = name.split("(")[0]?.trim() || name;
@@ -122,40 +127,7 @@ function extractRanking(decision: string, itemNames: string[]): string[] {
   return positions.map(p => p.name);
 }
 
-function kendallTau(groundTruth: Record<string, number>, extracted: string[]): number {
-  const items = Object.keys(groundTruth);
-  const n = items.length;
-  if (n < 2) return 0;
-  const gtRank = new Map<string, number>();
-  for (const [item, rank] of Object.entries(groundTruth)) gtRank.set(item, rank);
-  const x: number[] = [], y: number[] = [];
-  for (const item of items) {
-    const gt = gtRank.get(item) ?? 0;
-    const extIdx = extracted.indexOf(item);
-    x.push(gt);
-    y.push(extIdx >= 0 ? extIdx + 1 : n + 1);
-  }
-  let concordant = 0, discordant = 0;
-  const tieGroupsX = new Map<number, number>();
-  const tieGroupsY = new Map<number, number>();
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      const dx = x[i] - x[j], dy = y[i] - y[j];
-      if (dx === 0) tieGroupsX.set(x[i], (tieGroupsX.get(x[i]) || 0) + 1);
-      if (dy === 0) tieGroupsY.set(y[i], (tieGroupsY.get(y[i]) || 0) + 1);
-      if (dx * dy > 0) concordant++;
-      else if (dx * dy < 0) discordant++;
-    }
-  }
-  const n0 = n * (n - 1) / 2;
-  // Per-group tie correction: Σ t*(t-1)/2 for each tie group of size t
-  let n1 = 0;
-  for (const count of tieGroupsX.values()) n1 += count * (count + 1) / 2;
-  let n2 = 0;
-  for (const count of tieGroupsY.values()) n2 += count * (count + 1) / 2;
-  const denom = Math.sqrt((n0 - n1) * (n0 - n2));
-  return denom === 0 ? 0 : (concordant - discordant) / denom;
-}
+// kendallTau 已迁移到 ./statsShared（统一权威实现，τ-b 含 tie 修正）
 
 function tauToQuality(tau: number): number {
   return Math.round(((tau + 1) / 2) * 100);

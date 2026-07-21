@@ -239,6 +239,24 @@ describe("extractGovTag", () => {
     const result = extractGovTag(text);
     expect(result).toBeNull();
   });
+
+  it("H-Fix 回归：JSON 后文末带额外 `}` 字符时不被贪婪吞入", () => {
+    // 攻击/巧合场景：agent 在 [GOV] JSON 之后又输出了带 `}` 的文本
+    // 旧贪婪正则 /^(\{[\s\S]*\})/ 会匹配到最后一个 `}`，破坏 JSON 解析
+    const text = '[GOV]{"belief": 0.6, "confidence": 75}\n后续发言带 } 字符';
+    const result = extractGovTag(text);
+    expect(result).not.toBeNull();
+    expect(result!.belief).toBe(0.6);
+    expect(result!.confidence).toBe(75);
+  });
+
+  it("H-Fix 回归：JSON 字符串值含花括号时正确配平", () => {
+    // JSON 字符串值中的 {/} 不应计入配平深度
+    const text = '[GOV]{"belief": 0.5, "confidence": 70, "reasoning": "see code {block}"}';
+    const result = extractGovTag(text);
+    expect(result).not.toBeNull();
+    expect(result!.belief).toBe(0.5);
+  });
 });
 
 describe("stripGovTag", () => {

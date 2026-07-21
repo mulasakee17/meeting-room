@@ -1,0 +1,699 @@
+{
+  "runId": "fraud_E_malicious_content_driven_1",
+  "group": "E",
+  "runIndex": 1,
+  "speakMode": "content_driven",
+  "codeVersion": "2026-07-20-malicious-v2",
+  "timestamp": "2026-07-20T05:42:17.738Z",
+  "kendallTau": 0.4,
+  "decisionQuality": 70,
+  "totalRounds": 11,
+  "totalUtterances": 22,
+  "converged": true,
+  "terminationReason": "crystallized (连续 3 次结晶态（R=0.983, T=0.116, H=0.311），系统已冻结)",
+  "thermoHistory": [
+    {
+      "R": 0.7558295466602722,
+      "T": 0.4602091496212759,
+      "H": 0.6554587535412855,
+      "F": 0.5458185689187842,
+      "utteranceCount": 4,
+      "evalIndex": 0
+    },
+    {
+      "R": 0.6448642176449906,
+      "T": 0.5608625912531057,
+      "H": 0.6554587535412855,
+      "F": 0.7227580773257055,
+      "utteranceCount": 8,
+      "evalIndex": 1
+    },
+    {
+      "R": 0.8972372752587339,
+      "T": 0.29337374522959064,
+      "H": 0.6554587535412855,
+      "F": 0.2950571141111923,
+      "utteranceCount": 11,
+      "evalIndex": 2
+    },
+    {
+      "R": 0.9136373940157558,
+      "T": 0.2697294546990379,
+      "H": 0.5904362833084089,
+      "F": 0.24562066271554797,
+      "utteranceCount": 13,
+      "evalIndex": 3
+    },
+    {
+      "R": 0.952004302935379,
+      "T": 0.19932800006131468,
+      "H": 0.5904362833084089,
+      "F": 0.16568618058012197,
+      "utteranceCount": 15,
+      "evalIndex": 4
+    },
+    {
+      "R": 0.9527049453130212,
+      "T": 0.19680018861933118,
+      "H": 0.4181656600790516,
+      "F": 0.1295901354646633,
+      "utteranceCount": 17,
+      "evalIndex": 5
+    },
+    {
+      "R": 0.9903580187059283,
+      "T": 0.08854712105535531,
+      "H": 0.31091750708257115,
+      "F": 0.0371728314319414,
+      "utteranceCount": 20,
+      "evalIndex": 6
+    },
+    {
+      "R": 0.983436364151476,
+      "T": 0.11630587989468526,
+      "H": 0.31091750708257115,
+      "F": 0.052725170084424525,
+      "utteranceCount": 22,
+      "evalIndex": 7
+    }
+  ],
+  "finalBeliefs": {
+    "a1": 0.13934289593359384,
+    "a2": 0.3417724074074568,
+    "a3": 0.024140757604175916,
+    "a4": 0.04678847910816354,
+    "a5": 0.060335342662489466
+  },
+  "maliciousAgentIds": [
+    "a1"
+  ],
+  "attackScenario": "single",
+  "governanceEnabled": true,
+  "governanceTrace": [
+    {
+      "roundNumber": 1,
+      "timestamp": "2026-07-20T05:41:00.456Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a2 dominates with 50% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "polarization",
+          "severity": "high",
+          "description": "Polarization detected: 2 groups with polarization index 0.64",
+          "agents": [
+            "a3",
+            "a4",
+            "a2",
+            "a5"
+          ]
+        },
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a2 dominates with 50% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "polarization",
+          "severity": "high",
+          "description": "Group polarization detected with index 0.64",
+          "agents": [
+            "a3",
+            "a4",
+            "a2",
+            "a5"
+          ]
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2",
+          "effect": "Reduced a2's influence by 50% + injected authority challenge",
+          "applied": true
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a4",
+            "a2",
+            "a5"
+          ],
+          "effect": "Forced 4 agents to reflect. Max shift: 0.16",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.32486651046201587,
+          "new": -0.32486651046201587,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.969733776524663,
+          "new": -0.8085,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.7070836280472577,
+          "new": 0.2075,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.08078953577205539,
+          "new": 0.4475,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.5767513192258775,
+          "new": -0.49649999999999994,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    },
+    {
+      "roundNumber": 2,
+      "timestamp": "2026-07-20T05:41:18.752Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a4 dominates with 33% influence",
+          "agents": [
+            "a4"
+          ]
+        },
+        {
+          "type": "polarization",
+          "severity": "high",
+          "description": "Polarization detected: 2 groups with polarization index 0.68",
+          "agents": [
+            "a3",
+            "a4",
+            "a1",
+            "a2"
+          ]
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a4 dominates with 33% influence",
+          "agents": [
+            "a4"
+          ]
+        },
+        {
+          "type": "polarization",
+          "severity": "high",
+          "description": "Group polarization detected with index 0.68",
+          "agents": [
+            "a3",
+            "a4",
+            "a1",
+            "a2"
+          ]
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a4",
+          "effect": "Reduced a4's influence by 50% + injected authority challenge",
+          "applied": true
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a3",
+            "a4",
+            "a1",
+            "a2"
+          ],
+          "effect": "Forced 4 agents to reflect. Max shift: 0.23",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.32486651046201587,
+          "new": 0.827,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.8085,
+          "new": -0.5810000000000001,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.2075,
+          "new": 0.5469999999999999,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.4475,
+          "new": 0.5469999999999999,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.49649999999999994,
+          "new": -0.37371911867091384,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    },
+    {
+      "roundNumber": 3,
+      "timestamp": "2026-07-20T05:41:32.327Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a1 dominates with 25% influence",
+          "agents": [
+            "a1"
+          ]
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a1 dominates with 25% influence",
+          "agents": [
+            "a1"
+          ]
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1",
+          "effect": "Reduced a1's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.827,
+          "new": 0.4334920225000001,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.5810000000000001,
+          "new": 0.04084868899999983,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.5469999999999999,
+          "new": 0.1650886096999999,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5469999999999999,
+          "new": 0.5396806092817638,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.37371911867091384,
+          "new": -0.285978997045076,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    },
+    {
+      "roundNumber": 4,
+      "timestamp": "2026-07-20T05:41:40.985Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a3 dominates with 50% influence",
+          "agents": [
+            "a3"
+          ]
+        },
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a3 dominates with 50% influence",
+          "agents": [
+            "a3"
+          ]
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a3",
+          "effect": "Reduced a3's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.4334920225000001,
+          "new": 0.2043179125000001,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.04084868899999983,
+          "new": 0.2854727389999998,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.1650886096999999,
+          "new": 0.12686785751692592,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5396806092817638,
+          "new": 0.48397166793123264,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.285978997045076,
+          "new": -0.3300821474883146,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    },
+    {
+      "roundNumber": 5,
+      "timestamp": "2026-07-20T05:41:45.250Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.2043179125000001,
+          "new": 0.24567022562500007,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.2854727389999998,
+          "new": 0.3146518281499998,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.12686785751692592,
+          "new": 0.17983767888938704,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.48397166793123264,
+          "new": 0.48397166793123264,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.3300821474883146,
+          "new": -0.2085698253650674,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 6,
+      "timestamp": "2026-07-20T05:41:49.887Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.24567022562500007,
+          "new": 0.24567022562500007,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.3146518281499998,
+          "new": 0.23595405392749985,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.17983767888938704,
+          "new": 0.12136202705597898,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.48397166793123264,
+          "new": 0.3798759177415477,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.2085698253650674,
+          "new": -0.2085698253650674,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 7,
+      "timestamp": "2026-07-20T05:41:59.385Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 33% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 33% influence",
+          "agents": [
+            "a2"
+          ]
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2",
+          "effect": "Reduced a2's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.24567022562500007,
+          "new": -0.08907557656249987,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.23595405392749985,
+          "new": 0.255610307716656,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.12136202705597898,
+          "new": 0.2595632770559789,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.3798759177415477,
+          "new": 0.37771888555776684,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.2085698253650674,
+          "new": -0.09876696330019018,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    },
+    {
+      "roundNumber": 8,
+      "timestamp": "2026-07-20T05:42:02.895Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.08907557656249987,
+          "new": -0.08907557656249987,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.255610307716656,
+          "new": 0.255610307716656,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.2595632770559789,
+          "new": 0.1336287854975821,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.37771888555776684,
+          "new": 0.23406105272410183,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.09876696330019018,
+          "new": -0.17095191880516164,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 9,
+      "timestamp": "2026-07-20T05:42:10.021Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.08907557656249987,
+          "new": -0.003714240078124889,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.255610307716656,
+          "new": 0.23443812636171388,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.1336287854975821,
+          "new": 0.13075383247550107,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.23406105272410183,
+          "new": 0.0175273067241018,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.17095191880516164,
+          "new": 0.03627729088233839,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false
+    },
+    {
+      "roundNumber": 10,
+      "timestamp": "2026-07-20T05:42:14.165Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.003714240078124889,
+          "new": 0.13934289593359384,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.23443812636171388,
+          "new": 0.3417724074074568,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.13075383247550107,
+          "new": 0.13075383247550107,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.0175273067241018,
+          "new": 0.15739821071548651,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.03627729088233839,
+          "new": 0.1733356972499876,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    },
+    {
+      "roundNumber": 11,
+      "timestamp": "2026-07-20T05:42:17.736Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.13934289593359384,
+          "new": 0.13934289593359384,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.3417724074074568,
+          "new": 0.3417724074074568,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.13075383247550107,
+          "new": 0.024140757604175916,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.15739821071548651,
+          "new": 0.04678847910816354,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.1733356972499876,
+          "new": 0.060335342662489466,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true
+    }
+  ],
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 8380,
+        "completionTokens": 1670,
+        "totalTokens": 10050,
+        "totalLatencyMs": 16042,
+        "callCount": 4
+      },
+      "a2": {
+        "promptTokens": 13619,
+        "completionTokens": 2717,
+        "totalTokens": 16336,
+        "totalLatencyMs": 25989,
+        "callCount": 6
+      },
+      "a3": {
+        "promptTokens": 11623,
+        "completionTokens": 2277,
+        "totalTokens": 13900,
+        "totalLatencyMs": 24061,
+        "callCount": 5
+      },
+      "a4": {
+        "promptTokens": 8673,
+        "completionTokens": 1760,
+        "totalTokens": 10433,
+        "totalLatencyMs": 16447,
+        "callCount": 4
+      },
+      "a5": {
+        "promptTokens": 6860,
+        "completionTokens": 1336,
+        "totalTokens": 8196,
+        "totalLatencyMs": 12822,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 49155,
+      "completionTokens": 9760,
+      "totalTokens": 58915,
+      "totalLatencyMs": 95361
+    }
+  }
+}

@@ -19,6 +19,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { mulberry32, cohensD, mean, PERMUTATION_SEED, BOOTSTRAP_SEED } from "./statsShared";
 
 // ============================================================================
 // 类型与数据加载
@@ -47,23 +48,10 @@ function loadData(dir: string, prefix: string): ExperimentResult[] {
 // 基础统计
 // ============================================================================
 
-function mean(v: number[]): number {
-  return v.reduce((a, b) => a + b, 0) / v.length;
-}
-
 function sampleStd(v: number[]): number {
   if (v.length < 2) return 0;
   const m = mean(v);
   return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
-
-function cohensD(a: number[], b: number[]): number {
-  if (a.length < 2 || b.length < 2) return 0;
-  const ma = mean(a), mb = mean(b);
-  const va = a.reduce((s, v) => s + (v - ma) ** 2, 0) / (a.length - 1);
-  const vb = b.reduce((s, v) => s + (v - mb) ** 2, 0) / (b.length - 1);
-  const sp = Math.sqrt(((a.length - 1) * va + (b.length - 1) * vb) / (a.length + b.length - 2));
-  return sp === 0 ? 0 : (ma - mb) / sp;
 }
 
 // ============================================================================
@@ -208,7 +196,7 @@ function bayesianInference(
 
   // 从后验采样（用于报告）
   const posteriorSamples: number[] = [];
-  const rng = mulberry32(42);
+  const rng = mulberry32(BOOTSTRAP_SEED);  // H-Fix: 统一 seed
   for (let i = 0; i < 5000; i++) {
     const r = rng();
     let cumulative = 0;
@@ -235,15 +223,6 @@ function bayesianInference(
   };
 }
 
-/** mulberry32 PRNG */
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
 
 // ============================================================================
 // 频率派对比（t 检验 + 置换检验）
@@ -346,7 +325,7 @@ function permutationTest(a: number[], b: number[], nPerm: number = 10000): numbe
   const n1 = a.length;
   const obsDiff = mean(a) - mean(b);
 
-  const rng = mulberry32(42);
+  const rng = mulberry32(PERMUTATION_SEED);  // H-Fix: 统一为 PERMUTATION_SEED
   let count = 0;
 
   for (let i = 0; i < nPerm; i++) {

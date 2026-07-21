@@ -19,17 +19,8 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-
-// ============================================================================
-// 安全 JSON 解析
-// ============================================================================
-function safeJsonParse<T>(text: string, fallback: T): T {
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return fallback;
-  }
-}
+import { mulberry32, cohensD, mean, sampleStd, PERMUTATION_SEED } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 类型定义
@@ -72,33 +63,6 @@ interface InterventionRecord {
 // ============================================================================
 // 统计工具
 // ============================================================================
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
-function mean(v: number[]): number {
-  return v.length === 0 ? 0 : v.reduce((a, b) => a + b, 0) / v.length;
-}
-
-function stdDev(v: number[]): number {
-  if (v.length < 2) return 0;
-  const m = mean(v);
-  return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
-
-function cohensD(a: number[], b: number[]): number {
-  if (a.length < 2 || b.length < 2) return 0;
-  const ma = mean(a), mb = mean(b);
-  const va = a.reduce((s, v) => s + (v - ma) ** 2, 0) / (a.length - 1);
-  const vb = b.reduce((s, v) => s + (v - mb) ** 2, 0) / (b.length - 1);
-  const sp = Math.sqrt(((a.length - 1) * va + (b.length - 1) * vb) / (a.length + b.length - 2));
-  return sp === 0 ? 0 : (ma - mb) / sp;
-}
 
 // t 分布临界值表（双侧 α=0.05）
 const T_TABLE_005: Record<number, number> = {
@@ -130,7 +94,7 @@ function permutationTest(a: number[], b: number[], nPerm = 10000): { meanDiff: n
   const obsDiff = mean(a) - mean(b);
   const pooled = [...a, ...b];
   const nA = a.length;
-  const rng = mulberry32(42 + 0x50E8);
+  const rng = mulberry32(PERMUTATION_SEED);  // H-Fix: 统一为 PERMUTATION_SEED
   let count = 0;
   for (let i = 0; i < nPerm; i++) {
     const arr = [...pooled];
@@ -149,7 +113,7 @@ function tCI(samples: number[], alpha = 0.05): [number, number] {
   const n = samples.length;
   if (n < 2) return [0, 0];
   const m = mean(samples);
-  const sd = stdDev(samples);
+  const sd = sampleStd(samples);
   const tcrit = tCritical(n - 1);
   const margin = (tcrit * sd) / Math.sqrt(n);
   return [m - margin, m + margin];
@@ -163,7 +127,7 @@ function loadData(dataDir: string, prefix: string, task: string): ExperimentResu
   const files = fs.readdirSync(dataDir).filter(f => f.endsWith(".json") && f.startsWith(prefix) && f !== "summary.json");
   return files.map(f => {
     const content = fs.readFileSync(path.join(dataDir, f), "utf-8");
-    return safeJsonParse<ExperimentResult | null>(content, null);
+    return safeJsonParse<ExperimentResult>(content);
   }).filter((r): r is ExperimentResult => r !== null && !r.error);
 }
 
@@ -242,7 +206,7 @@ function analyzeTask(records: InterventionRecord[], baselineDeltas: number[], ta
   const overallRate = totalInterventions > 0 ? effectiveRecords.length / totalInterventions : 0;
 
   console.log(`\n总干预: ${totalInterventions} | 有效: ${effectiveRecords.length} (${(overallRate * 100).toFixed(1)}%)`);
-  console.log(`基线 Δτ（无干预轮次）: n=${baselineDeltas.length}, mean=${mean(baselineDeltas).toFixed(3)}, sd=${stdDev(baselineDeltas).toFixed(3)}`);
+  console.log(`基线 Δτ（无干预轮次）: n=${baselineDeltas.length}, mean=${mean(baselineDeltas).toFixed(3)}, sd=${sampleStd(baselineDeltas).toFixed(3)}`);
 
   // ===== 表 1: 按干预类型拆分 — Δτ、有效率、效应量、显著性 =====
   console.log("\n" + "-".repeat(80));

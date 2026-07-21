@@ -27,6 +27,7 @@ import { EvaluationEngine } from "../../src/lib/evaluation";
 import type { LLMConfig } from "../../src/lib/llm/providers";
 import { TASK_MA, type TaskConfig } from "../lunar_survival/config";
 import { TASK_INVEST } from "./task_invest";
+import { extractRanking, kendallTau } from "./statsShared";
 
 // ============================================================================
 // Types
@@ -181,67 +182,7 @@ function makeLLMConfig(runIndex: number): LLMConfig {
   return { ...LLM_CONFIG, seed: 42 + runIndex };
 }
 
-/** P0-1 修复：移除 V1 fallback，统一使用 itemBeliefs 聚合路径。 */
-function extractRanking(
-  _decision: string,
-  itemNames: string[],
-  itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>,
-): string[] {
-  if (!itemBeliefs || itemBeliefs.length === 0) {
-    throw new Error("extractRanking: itemBeliefs 为空，无法提取排名。");
-  }
-  const itemRanks = new Map<string, number[]>();
-  for (const ib of itemBeliefs) {
-    if (!itemRanks.has(ib.item)) itemRanks.set(ib.item, []);
-    itemRanks.get(ib.item)!.push(ib.rank);
-  }
-  const avgRanks = itemNames.map(name => {
-    const ranks = itemRanks.get(name);
-    return { name, avgRank: ranks && ranks.length > 0 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : Infinity };
-  });
-  avgRanks.sort((a, b) => a.avgRank - b.avgRank);
-  return avgRanks.map(r => r.name);
-}
-
-function kendallTau(groundTruth: Record<string, number>, extracted: string[]): number {
-  const items = Object.keys(groundTruth);
-  const n = items.length;
-  if (n < 2) return 0;
-  const gtRank = new Map<string, number>();
-  for (const [item, rank] of Object.entries(groundTruth)) gtRank.set(item, rank);
-  const x: number[] = [];
-  const y: number[] = [];
-  for (const item of items) {
-    const gt = gtRank.get(item) ?? 0;
-    const extIdx = extracted.indexOf(item);
-    const ext = extIdx >= 0 ? extIdx + 1 : n + 1;
-    x.push(gt);
-    y.push(ext);
-  }
-  let concordant = 0;
-  let discordant = 0;
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      const dx = x[i] - x[j];
-      const dy = y[i] - y[j];
-      if (dx * dy > 0) concordant++;
-      else if (dx * dy < 0) discordant++;
-    }
-  }
-  // τ-b 修正：含 tie 修正项（与 analyze.ts/extractRanking 保持一致）
-  const n0 = n * (n - 1) / 2;
-  // 统计 x 和 y 中的 tie 组
-  const xGroups = new Map<number, number>();
-  const yGroups = new Map<number, number>();
-  for (const v of x) xGroups.set(v, (xGroups.get(v) || 0) + 1);
-  for (const v of y) yGroups.set(v, (yGroups.get(v) || 0) + 1);
-  let n1 = 0, n2 = 0;
-  for (const c of xGroups.values()) n1 += c * (c - 1) / 2;
-  for (const c of yGroups.values()) n2 += c * (c - 1) / 2;
-  const denom = Math.sqrt((n0 - n1) * (n0 - n2));
-  if (denom === 0) return 0;
-  return (concordant - discordant) / denom;
-}
+// extractRanking 和 kendallTau 已迁移到 ./statsShared（统一权威实现）
 
 function tauToQuality(tau: number): number {
   return Math.round(Math.max(0, Math.min(100, (tau + 1) * 50)));
