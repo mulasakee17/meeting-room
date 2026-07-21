@@ -50,21 +50,53 @@ This work is at an early stage. The framework is implemented and unit-tested; th
 
 ## 2. Related Work
 
-### 2.1 Statistical Physics of LLM Agent Collectives
+### 2.1 Statistical Physics of Opinion Dynamics and Social Thermodynamics
 
-Statistical-physics models of agent collectives, including Ising-lattice formulations and treatments of conformity-driven phase transitions, have been explored in adjacent literatures. We are aware that such work exists but have not yet completed a systematic survey; we note this as a gap to be addressed during peer review. The distinguishing features of our approach are: (i) we connect phase variables to a concrete, deployable runtime rather than treating them as purely descriptive quantities; (ii) we incorporate role-information structure rather than modeling agents as interchangeable; and (iii) we engineer the phase signal into a closed-loop detect–intervene–evaluate governance cycle. We invite readers to direct us to relevant prior work we may have missed.
+Statistical-physics models of opinion dynamics have a rich history. The Kuramoto model was first adapted to opinion dynamics by Pluchino, Latora, and Rapisarda (2004, arXiv:cond-mat/0410217), who treated individual opinions as oscillator phases and studied the conditions under which heterogeneous agents reach consensus. More recently, Pradhan and Ujjwal (2025, arXiv:2509.19860) showed that Kuramoto-model variants exhibit explosive transitions between bipolarization and consensus, with diverse populations reaching consensus more easily—a finding that directly informs our R-based consensus detection. Reggio, Delabays, and Jacquod (2020, arXiv:2007.01214) extended the Kuramoto framework to bounded-confidence settings, constructing phase diagrams that reveal cluster structures beyond simple consensus/polarization dichotomies.
 
-### 2.2 MAST: A Taxonomy Without Detection
+The application of thermodynamic concepts to social systems has been explored by Tsekov (2023, arXiv:2307.05984) in his "Social Thermodynamics 2.0" model. López-Corona et al. (2015, arXiv:1502.05741) directly applied Helmholtz free energy to analyze the sustainability of cooperation in social systems—an approach conceptually parallel to our F = (1−R) + T·H decomposition. Wang, Yan, and Wu (2020, arXiv:2009.07984) constructed a free-utility model mathematically consistent with Helmholtz free energy, where the internal energy term corresponds to utility (consistency) and the entropy term to information-processing cost (diversity).
+
+Tomé, Fiore, and Oliveira (2022, arXiv:2212.07268) demonstrated that opinion formation can be incorporated into the stochastic thermodynamics framework, with steady-state heat flows linked to entropy production—a non-equilibrium characterization. Oliveira et al. (2023, arXiv:2311.05803) introduced a "social temperature" parameter as social anxiety noise, observing non-equilibrium order-disorder transitions accompanied by social entropy production. Han et al. (2019, arXiv:1909.04843) used Shannon information entropy to characterize opinion cluster structures, validating the entropy-maximization/entropy-minimization interpretation. Galam (2024, arXiv:2410.02582) analyzed echo chambers and random polarization through zero-temperature Ising models, distinguishing echo-chamber formation (symmetry breaking within a single group) from polarization (multiple echo chambers selecting different opinions).
+
+The distinguishing features of our approach relative to this literature are: (i) we connect phase variables to a concrete, deployable runtime rather than treating them as purely descriptive quantities; (ii) we incorporate role-information structure rather than modeling agents as interchangeable; and (iii) we engineer the phase signal into a closed-loop detect–intervene–evaluate governance cycle.
+
+### 2.2 MAST, Cognitive Bias Programming, and Bias Amplification
 
 Cemri et al. (2025, arXiv:2503.13657) constructed the first Multi-Agent System Failure Taxonomy from 1,600 annotated traces across seven frameworks, identifying 14 failure modes in three categories: system design (FC1, 44.2%), inter-agent misalignment (FC2, 32.3%), and task verification (FC3, 23.5%). The taxonomy is descriptive; detection and mitigation are explicitly deferred as future work. Our governance runtime implements detectors for three FC2 modes—FM-2.4 (information withholding), FM-2.5 (ignored input), and FM-2.6 (reasoning-action mismatch)—taking the first concrete step on MAST's roadmap from taxonomy to tool.
+
+Liu, Shang, and Jin (2025, arXiv:2509.13588, CHI 2026) proposed CoBRA, a toolkit for programming cognitive bias in social agents using two primitives: a Cognitive Bias Index (quantifying bias through classic social-science experiments) and a Behavioral Regulation Engine (closed-loop control of agent behavior). Their finding that natural-language descriptions cannot consistently control bias across models motivates our approach of using mathematical, interpretable detection metrics. Nudo et al. (2025, arXiv:2507.00657) demonstrated "generative exaggeration"—LLM agents systematically amplify polarization, stylistic signals, and toxic language in social interactions, with richer context leading to more polarization. This directly validates the bias-amplification phenomenon our detectors are designed to capture.
+
+Jin et al. (2024, arXiv:2406.12708, EMNLP 2024 Oral) quantified authority bias in a peer-review simulation, finding that reviewer bias accounts for 37.1% of decision variance—a benchmark for the severity of authority bias in multi-agent deliberation. Liang et al. (2024, arXiv:2305.19118, EMNLP 2024) identified Degeneration-of-Thought (DoT) in multi-agent debate: once LLMs establish confidence, they cannot generate new perspectives—providing a theoretical explanation for premature consensus and the observed failure of force_reflection on agents with locked positions.
 
 ### 2.3 Security-Layer Governance
 
 The OWASP Agentic Top 10 (2025-12) defines ten security risks for agentic applications and is a normative framework without detector implementations. Production tools such as Microsoft's Agent Governance Toolkit and NVIDIA OpenShell target the security boundary. Our work operates at a different layer—cognitive dynamics during deliberation—but is motivated by the same insight: collective behavior requires governance mechanisms beyond individual-agent alignment.
 
-### 2.4 Hidden Profile Tasks and Role-Information Coherence
+### 2.4 Hidden Profile Tasks, False Consensus, and Consensus–Quality Decoupling
 
-Hidden profile tasks (Stasser & Titus, 1985) are a social psychology paradigm in which each group member holds unique information needed to discover the optimal solution. Human groups systematically fail to share such unique information. We use hidden profile tasks as our experimental substrate and manipulate role-information coherence as an independent variable. LLM-agent studies on hidden profiles exist in the recent literature; a complete survey is reserved for the peer-review revision.
+Hidden profile tasks (Stasser & Titus, 1985) are a social psychology paradigm in which each group member holds unique information needed to discover the optimal solution. Human groups systematically fail to share such unique information. We use hidden profile tasks as our experimental substrate and manipulate role-information coherence as an independent variable.
+
+The relationship between consensus and decision quality has been questioned in recent work. Du et al. (2024, arXiv:2305.14325, ICML 2024) introduced multi-agent debate as a paradigm that assumes consensus convergence leads to correctness. Our finding that consensus (Kendall τ) and decision quality are uncorrelated (r ≈ −0.14 across two tasks) constitutes a direct empirical counterexample to this assumption. Cui et al. (2025, arXiv:2509.11035) independently challenged the "consensus = correctness" assumption in their Free-MAD framework, arguing that consensus mechanisms suffer from three flaws: high communication cost, LLM conformity causing error propagation, and majority-vote unfairness. They proposed an "anti-conformity" mechanism, conceptually parallel to our introduce_diversity intervention. Riedl (2025, arXiv:2510.05174, ICLR 2026) developed an information-theoretic framework using partial information decomposition (PID) on time-delayed mutual information (TDMI) to distinguish genuine cross-agent synergy from spurious temporal coupling—an approach that could provide a rigorous alternative to our R-based consensus metric and address our acknowledged blind spot in distinguishing true from false consensus.
+
+Myakala, Agrawal, and Manche (2026, arXiv:2603.23848) introduced BeliefShift, the first benchmark for evaluating temporal belief consistency and opinion drift in LLM agents across 2,400 annotated multi-session trajectories, providing four new metrics (BRA, DCS, CRR, ESI) that could serve as evaluation tools for our belief-evolution dynamics.
+
+### 2.5 Speaker Selection in Multi-Agent LLM Systems
+
+A growing body of work addresses how agents in multi-party LLM discussions decide who speaks and when—the turn-taking problem. We survey five representative approaches and characterize SwarmAlpha's position within this landscape.
+
+**MMAgents (Nonomura & Mori, 2025)** applies conversation analysis principles (Sacks, Schegloff, and Jefferson's turn-taking systematics) to AI dialogue. Agents use a `think()` function to generate an importance value (0–9) for self-selection, and a `detectDesignation()` mechanism identifies adjacency pairs (e.g., question–answer) for current-speaker-selects-next (CSSN). Results showed reduced dialogue breakdowns and improved information sharing. The mechanism is semi-decentralized—CSSN requires the current speaker to judge—and uses LLM black-box outputs rather than a factorized scoring function.
+
+**AutoGen SelectorGroupChat (Microsoft, 2025)** uses a centralized LLM selector: the model reads the full conversation history and outputs the name of the next speaker. A customizable selector prompt encodes conditions for when each speaker should be selected. This approach is fully centralized and incurs an LLM call per speaker selection, making it costly for long discussions.
+
+**LangChain Multi-Agent Bidding (2024)** implements a decentralized auction: each agent uses an LLM to output an integer bid representing relevance to the current topic, and the highest bidder speaks. Ties are broken randomly. The mechanism is decentralized but single-dimensional—bids capture only self-assessed relevance.
+
+**YES AND (Ghosh & Rintel, CHI 2025)** uses confidence-based turn-taking: agents organically decide to speak based on their confidence in contributing, building on each other's ideas in an ideation context. The mechanism is fully decentralized but uses a single factor (confidence).
+
+**SwarmAlpha content_driven (this work)** uses a five-factor decomposition: information exposure, belief shift, consensus deviation, dependency trigger, and recency penalty, combined into a raw willingness score normalized via tanh and gated by two thresholds. The mechanism is: (i) **fully decentralized**—each agent independently computes its score; (ii) **mathematically analyzable**—the closed-form score permits property proofs (boundedness, monotonicity, fallback conditions; see THEORY.md §4); and (iii) **zero additional LLM cost**—all factors are computed from maintained state variables.
+
+Recent work on willingness-based speaking further contextualizes our design. The Think-Before-Speak framework (Anonymous, 2026, arXiv:2606.03137, KDD'26 Workshop) explicitly uses a "willingness to speak" concept but parameterizes it through prompt descriptions rather than a closed-form mathematical formula—making it less analyzable and harder to reproduce. The "When to Think, When to Speak" framework (arXiv:2605.03314, ICML 2026) introduced the concept of a "silence tax"—the cost of not speaking—providing an economic justification for our fallback guarantee that at least one agent speaks per turn. Piao et al. (2025, arXiv:2502.08691, AgentSociety) demonstrated large-scale social simulation where polarization is a primary research focus, validating the real-world relevance of our detection targets.
+
+**Positioning.** To our knowledge, no existing turn-taking mechanism for LLM multi-agent systems simultaneously satisfies the combination of decentralization, mathematical analyzability, and zero marginal LLM cost. The cost of this design is that weights are hand-set heuristics rather than learned from data or produced by an LLM's implicit judgment. A formal comparative table appears in THEORY.md §4.9.
 
 ---
 
@@ -444,8 +476,30 @@ Five agents (Cost Analyst, Quality Engineer, Delivery Specialist, Technical Dire
 1. Cemri, M., Pan, M. Z., Yang, S., et al. (2025). *Why Do Multi-Agent LLM Systems Fail?* arXiv:2503.13657.
 2. OWASP (2025-12). *Top 10 for Agentic Applications for 2026.* ASI01–ASI10.
 3. Stasser, G., & Titus, W. (1985). *Pooling of unshared information in group decision making.* Journal of Personality and Social Psychology.
+4. Pluchino, A., Latora, V., & Rapisarda, A. (2004). *Changing Opinions in a Changing World: A New Perspective in Sociophysics.* arXiv:cond-mat/0410217.
+5. Pradhan, S., & Ujjwal, S. R. (2025). *Diversity mitigates polarization and consensus in opinion dynamics.* arXiv:2509.19860.
+6. Reggio, A., Delabays, R., & Jacquod, P. (2020). *Clusterization and phase diagram of the bimodal Kuramoto model with bounded confidence.* arXiv:2007.01214.
+7. Tsekov, R. (2023). *Social Thermodynamics 2.0.* arXiv:2307.05984.
+8. López-Corona, O., Padilla, P., Huerta, A., et al. (2015). *Measuring social complexity and the emergence of cooperation from entropic principles.* arXiv:1502.05741.
+9. Wang, H., Yan, X.-Y., & Wu, J. (2020). *Free utility model for explaining the social gravity law.* arXiv:2009.07984.
+10. Tomé, T., Fiore, C. E., & Oliveira, M. J. (2022). *Stochastic thermodynamics of opinion dynamics.* arXiv:2212.07268.
+11. Oliveira, I. V. G., Wang, C., Dong, G., et al. (2023). *Entropy Production on Cooperative Opinion Dynamics.* arXiv:2311.05803.
+12. Han, W., Feng, Y., Qian, X., Yang, Q., & Huang, C. (2019). *Clusters and the entropy in opinion dynamics on complex networks.* arXiv:1909.04843.
+13. Galam, S. (2024). *Spontaneous Symmetry Breaking, Group Decision Making and Beyond 1. Echo Chambers and Random Polarization.* arXiv:2410.02582.
+14. Liu, X., Shang, H., & Jin, H. (2025). *CoBRA: Programming Cognitive Bias in Social Agents Using Classic Social Science Experiments.* arXiv:2509.13588. (CHI 2026)
+15. Nudo, J., Pandolfo, M. E., Loru, E., Samory, M., Cinelli, M., & Quattrociocchi, W. (2025). *Generative Exaggeration in LLM Social Agents: Consistency, Bias, and Toxicity.* arXiv:2507.00657.
+16. Jin, Y., Zhao, Q., Wang, Y., Chen, H., Zhu, K., Xiao, Y., & Wang, J. (2024). *AgentReview: Exploring Peer Review Dynamics with LLM Agents.* arXiv:2406.12708. (EMNLP 2024 Oral)
+17. Liang, T., He, Z., Jiao, W., et al. (2024). *Encouraging Divergent Thinking in Large Language Models through Multi-Agent Debate.* arXiv:2305.19118. (EMNLP 2024)
+18. Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., & Mordatch, I. (2024). *Improving Factuality and Reasoning in Language Models through Multiagent Debate.* arXiv:2305.14325. (ICML 2024)
+19. Cui, Y., Fu, H., Zhang, H., Wang, L., & Zuo, C. (2025). *Free-MAD: Consensus-Free Multi-Agent Debate.* arXiv:2509.11035.
+20. Riedl, C. (2025). *Emergent Coordination in Multi-Agent Language Models.* arXiv:2510.05174. (ICLR 2026)
+21. Myakala, P. K., Agrawal, R., & Manche, R. (2026). *BeliefShift: Benchmarking Temporal Belief Consistency and Opinion Drift in LLM Agents.* arXiv:2603.23848.
+22. Piao, J., Yan, Y., Zhang, J., et al. (2025). *AgentSociety: Large-Scale Simulation of LLM-Driven Generative Agents.* arXiv:2502.08691.
+23. Think-Before-Speak (2026). *Willingness to Speak in Multi-Agent LLM Systems.* arXiv:2606.03137. (KDD'26 Workshop)
+24. When to Think, When to Speak (2026). arXiv:2605.03314. (ICML 2026)
+25. Mikaberidze, G., Mikaberidze, B., & Taylor, D. (2026). *GradNet: A Gradient-Based Framework for Optimal Network Science.* arXiv:2603.09197.
 
-> **Note on references.** This draft includes only references we can verify. The following areas will be surveyed during peer review: (i) statistical-physics models of LLM agent collectives; (ii) LLM-agent studies on hidden profile tasks; (iii) overconfidence and role bias in multi-agent LLM systems; (iv) distributional AGI safety frameworks. We welcome suggestions from readers.
+> **Note on references.** This draft now includes 25 verified references spanning statistical physics of opinion dynamics (Refs. 4–13), multi-agent bias detection and governance (Refs. 1, 14–17), consensus-quality decoupling (Refs. 18–21), and speaker selection mechanisms (Refs. 22–24). Areas requiring further survey during peer review: (i) distributional AGI safety frameworks; (ii) formal game-theoretic models of adversarial agents in deliberation; (iii) cross-cultural generalization of hidden-profile findings.
 
 ---
 
