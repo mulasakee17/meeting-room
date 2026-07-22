@@ -853,6 +853,6 @@ export const availableModels: Record<LLMProvider, string[]> = {
   anthropic: ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"],
   deepseek: ["deepseek-chat", "deepseek-reasoner"],
   zhipu: ["glm-4-flash", "glm-4-air", "glm-4.5-air", "glm-4", "glm-4-plus"],
-  qwen: ["qwen-plus", "qwen-max", "qwen-turbo", "qwen3.7-plus"],
+  qwen: ["qwen-flash", "qwen-plus", "qwen-max", "qwen-turbo"],
   local: ["llama3", "mistral", "qwen2"],
 };

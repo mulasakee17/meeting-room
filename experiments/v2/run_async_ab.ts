@@ -539,6 +539,7 @@ async function main() {
     deepseek: process.env.DEEPSEEK_API_KEY,
     zhipu: process.env.ZHIPU_API_KEY,
     openai: process.env.OPENAI_API_KEY,
+    qwen: process.env.QWEN_API_KEY,
     anthropic: process.env.ANTHROPIC_API_KEY,
   };
   const apiKey = apiKeyMap[provider];
@@ -546,6 +547,7 @@ async function main() {
     const envVar = provider === "deepseek" ? "DEEPSEEK_API_KEY"
       : provider === "zhipu" ? "ZHIPU_API_KEY"
       : provider === "openai" ? "OPENAI_API_KEY"
+      : provider === "qwen" ? "QWEN_API_KEY"
       : "ANTHROPIC_API_KEY";
     console.error(`请设置 ${envVar} 环境变量`);
     process.exit(1);
