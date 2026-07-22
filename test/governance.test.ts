@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GovernanceEngine, AgentBelief, MessageInfo, GovernanceConfig } from "@/lib/governance";
+import { GovernanceEngine, AgentBelief, MessageInfo, GovernanceConfig, BiasDetector, DetectorResult, InterventionType } from "@/lib/governance";
 
 describe("GovernanceEngine", () => {
   const engine = new GovernanceEngine();
@@ -607,6 +607,157 @@ describe("GovernanceEngine", () => {
       // a3 应在 targetAgents 中
       const targets = forceReflections.flatMap(i => i.targetAgents || []);
       expect(targets).toContain("a3");
+    });
+  });
+
+  // ─── 自定义检测器→干预闭合（方案 A）──────────────────────────────────────
+  describe("自定义检测器→干预闭合", () => {
+    /** 构造一个总是触发的自定义检测器 */
+    const makeDetector = (
+      type: string,
+      suggestedIntervention?: DetectorResult["suggestedIntervention"]
+    ): BiasDetector => ({
+      type,
+      detect: (): DetectorResult => ({
+        detected: true,
+        severity: "high",
+        description: `${type} triggered`,
+        agents: ["agent_1", "agent_2"],
+        suggestedIntervention,
+      }),
+    });
+
+    const baseConfig: GovernanceConfig = {
+      interventionLevel: "medium",
+      currentRound: 1,
+      maxRounds: 5,
+    };
+    const beliefs: AgentBelief[] = [
+      { agentId: "agent_0", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+      { agentId: "agent_1", belief: 0.6, confidence: 80, timestamp: new Date().toISOString() },
+      { agentId: "agent_2", belief: 0.4, confidence: 80, timestamp: new Date().toISOString() },
+    ];
+    const messages: MessageInfo[] = [
+      { agentId: "agent_0", content: "msg0", timestamp: new Date().toISOString() },
+      { agentId: "agent_1", content: "msg1", timestamp: new Date().toISOString() },
+      { agentId: "agent_2", content: "msg2", timestamp: new Date().toISOString() },
+    ];
+    const agentIds = ["agent_0", "agent_1", "agent_2"];
+
+    it("带 suggestedIntervention 的自定义检测器应触发对应干预", () => {
+      const eng = new GovernanceEngine();
+      eng.registerDetector(makeDetector("custom_polarization", {
+        type: "force_reflection",
+        targetAgents: ["agent_1", "agent_2"],
+        reason: "custom polarization detected",
+      }));
+      const { interventions } = eng.diagnoseAndIntervene(beliefs, messages, agentIds, undefined, baseConfig);
+      const custom = interventions.filter(i => i.parameters?.reason === "custom polarization detected");
+      expect(custom.length).toBe(1);
+      expect(custom[0].type).toBe("force_reflection");
+      expect(custom[0].targetAgents).toEqual(["agent_1", "agent_2"]);
+    });
+
+    it("不带 suggestedIntervention 的自定义检测器仅观测、不触发干预", () => {
+      const eng = new GovernanceEngine();
+      eng.registerDetector(makeDetector("custom_observer"));
+      const { result, interventions } = eng.diagnoseAndIntervene(beliefs, messages, agentIds, undefined, baseConfig);
+      // issue 进 otherIssues
+      const issue = result.otherIssues.find(i => i.type === "custom_observer");
+      expect(issue).toBeDefined();
+      expect(issue?.source).toBe("custom");
+      expect(issue?.suggestedIntervention).toBeUndefined();
+      // 但不产生干预
+      const custom = interventions.filter(i => i.parameters?.reason === "custom_observer triggered");
+      expect(custom.length).toBe(0);
+    });
+
+    it("disabledInterventions 应拦截自定义检测器建议的干预", () => {
+      const eng = new GovernanceEngine();
+      eng.registerDetector(makeDetector("custom_reduce", {
+        type: "reduce_weight",
+        targetAgents: ["agent_1"],
+      }));
+      const { interventions } = eng.diagnoseAndIntervene(beliefs, messages, agentIds, undefined, {
+        ...baseConfig,
+        disabledInterventions: ["reduce_weight"],
+      });
+      const custom = interventions.filter(i => i.parameters?.reason === "custom_reduce triggered");
+      expect(custom.length).toBe(0);
+    });
+
+    it("reduce_weight 建议应从 targetAgents[0] 回退到 targetAgentId", () => {
+      const eng = new GovernanceEngine();
+      eng.registerDetector(makeDetector("custom_authority", {
+        type: "reduce_weight",
+        targetAgents: ["agent_1", "agent_2"],
+      }));
+      const { interventions } = eng.diagnoseAndIntervene(beliefs, messages, agentIds, undefined, baseConfig);
+      const rw = interventions.find(i => i.type === "reduce_weight" && i.parameters?.reason === "custom_authority triggered");
+      expect(rw).toBeDefined();
+      expect(rw?.targetAgentId).toBe("agent_1");
+      expect(rw?.targetAgents).toBeUndefined();
+    });
+
+    it("内置检测器的 issue 标 source=builtin，不被自定义循环重复触发", () => {
+      // 用 createMockMessagesWithRefs 触发 authorityBias（builtin）
+      const eng = new GovernanceEngine();
+      const dominantAgent = "agent_0";
+      const refMsgs: MessageInfo[] = [];
+      for (let i = 0; i < 10; i++) {
+        const agentId = `agent_${i % 3}`;
+        const refs = i < 6 && agentId !== dominantAgent ? [dominantAgent] : [];
+        refMsgs.push({
+          agentId,
+          content: `Message ${i} from ${agentId} ${"x".repeat(20 + i * 5)}`,
+          timestamp: new Date().toISOString(),
+          referencedAgents: refs,
+        });
+      }
+      const { result } = eng.diagnoseAndIntervene(beliefs, refMsgs, agentIds, undefined, {
+        ...baseConfig,
+        authorityBiasThreshold: 0.3,
+      });
+      const builtinIssues = result.otherIssues.filter(i => i.source === "builtin");
+      expect(builtinIssues.length).toBeGreaterThan(0);
+      // builtin issue 不应有 suggestedIntervention（那是 custom 专属）
+      expect(builtinIssues.every(i => i.suggestedIntervention === undefined)).toBe(true);
+    });
+
+    it("continue_discussion 建议无需 targetAgents 也能触发（需显式启用，默认被禁用）", () => {
+      const eng = new GovernanceEngine();
+      eng.registerDetector(makeDetector("custom_premature", {
+        type: "continue_discussion",
+        reason: "custom premature consensus",
+      }));
+      const { interventions } = eng.diagnoseAndIntervene(beliefs, messages, agentIds, undefined, {
+        ...baseConfig,
+        // continue_discussion 默认被禁用（实验证明无效），这里显式清空禁用列表以测试闭合逻辑
+        disabledInterventions: [],
+      });
+      const custom = interventions.filter(i => i.parameters?.reason === "custom premature consensus");
+      expect(custom.length).toBe(1);
+      expect(custom[0].type).toBe("continue_discussion");
+      expect(custom[0].parameters?.additionalRounds).toBeDefined();
+    });
+
+    it("自定义检测器建议的干预进入 F 分解排序（与内置同等对待）", () => {
+      const eng = new GovernanceEngine();
+      eng.registerDetector(makeDetector("custom_diversity", {
+        type: "introduce_diversity",
+        targetAgents: ["agent_1", "agent_2"],
+        reason: "custom echo chamber",
+      }));
+      const { interventions } = eng.diagnoseAndIntervene(beliefs, messages, agentIds, undefined, {
+        ...baseConfig,
+        // introduce_diversity 默认被禁用，这里显式启用
+        disabledInterventions: [],
+        sortingMode: "fdecomposition",
+      });
+      // 自定义干预应在排序后的数组里
+      const custom = interventions.find(i => i.parameters?.reason === "custom echo chamber");
+      expect(custom).toBeDefined();
+      expect(custom?.type).toBe("introduce_diversity");
     });
   });
 });

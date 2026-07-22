@@ -220,6 +220,7 @@ export class GovernanceEngine {
         severity: echoChamber.severity,
         description: `Echo chamber detected: ${echoChamber.redundantAgents.length} agents share similar information`,
         agents: echoChamber.redundantAgents,
+        source: "builtin",
       });
     }
 
@@ -229,6 +230,7 @@ export class GovernanceEngine {
         severity: authorityBias.severity,
         description: `Authority bias detected: ${authorityBias.dominantAgent} dominates with ${(authorityBias.influenceRatio * 100).toFixed(0)}% influence`,
         agents: authorityBias.dominantAgent ? [authorityBias.dominantAgent] : undefined,
+        source: "builtin",
       });
     }
 
@@ -238,6 +240,7 @@ export class GovernanceEngine {
         severity: polarization.severity,
         description: `Group polarization detected with index ${polarization.polarizationIndex.toFixed(2)}`,
         agents: polarization.groups.flatMap(g => g.agentIds),
+        source: "builtin",
       });
     }
 
@@ -246,6 +249,7 @@ export class GovernanceEngine {
         type: "premature_consensus",
         severity: prematureConsensus.severity,
         description: `Premature consensus detected at round ${prematureConsensus.roundNumber}: consensus level ${prematureConsensus.consensusLevel.toFixed(2)}`,
+        source: "builtin",
       });
     }
 
@@ -255,6 +259,7 @@ export class GovernanceEngine {
         severity: informationWithholding.severity,
         description: `MAST FM-2.4: ${informationWithholding.withholdingAgents.length} agent(s) withholding information (empty evidence)`,
         agents: informationWithholding.withholdingAgents,
+        source: "builtin",
       });
     }
 
@@ -264,6 +269,7 @@ export class GovernanceEngine {
         severity: ignoredInput.severity,
         description: `MAST FM-2.5: ${ignoredInput.ignoringAgents.length} agent(s) ignoring others' input (referenced but not responding)`,
         agents: ignoredInput.ignoringAgents,
+        source: "builtin",
       });
     }
 
@@ -273,6 +279,7 @@ export class GovernanceEngine {
         severity: reasoningActionMismatch.severity,
         description: `MAST FM-2.6: ${reasoningActionMismatch.mismatchAgents.length} agent(s) with reasoning-action mismatch (rank vs belief inconsistency)`,
         agents: reasoningActionMismatch.mismatchAgents,
+        source: "builtin",
       });
     }
 
@@ -285,6 +292,8 @@ export class GovernanceEngine {
           severity: result.severity,
           description: result.description,
           agents: result.agents,
+          source: "custom",
+          suggestedIntervention: result.suggestedIntervention,
         });
       }
     }
@@ -1222,6 +1231,48 @@ export class GovernanceEngine {
       });
     }
 
+    // ---- 自定义检测器→干预闭合 ------------------------------------------------
+    // 消费 otherIssues 中 source==="custom" 且带 suggestedIntervention 的 issue。
+    // builtin issue 已由上方 7 个 if 处理，此处跳过避免双重触发。
+    // suggestedIntervention.type 受 InterventionType 闭合联合约束（H8），
+    // dosage 走与内置检测器相同的 computeAdaptiveDosage 路径。
+    for (const issue of result.otherIssues) {
+      if (issue.source !== "custom") continue;
+      const sug = issue.suggestedIntervention;
+      if (!sug || !shouldTrigger(sug.type)) continue;
+
+      const targetAgents = sug.targetAgents ?? issue.agents ?? [];
+      // reduce_weight 下游只认 targetAgentId（单数），从 targetAgents[0] 回退
+      // introduce_diversity / force_reflection 下游认 targetAgents（数组，≥1）
+      // continue_discussion 无需 target
+      if (targetAgents.length === 0 && sug.type !== "continue_discussion") continue;
+
+      const params = this.mergeDosageParams(
+        sug.type,
+        sug.parameters ?? {},
+        issue.severity,
+        informationCoverage,
+        roundProgress,
+        agentIds.length,
+        maxRounds,
+        useAdaptiveDosage,
+        mergedConfig,
+      );
+
+      const intervention: Intervention = {
+        type: sug.type,
+        parameters: { ...params, reason: sug.reason ?? issue.description },
+        effect: "",
+        applied: false,
+      };
+      if (sug.type === "reduce_weight" && targetAgents.length > 0) {
+        intervention.targetAgentId = targetAgents[0];
+      } else if (targetAgents.length > 0) {
+        intervention.targetAgents = targetAgents;
+      }
+      interventions.push(intervention);
+    }
+
     // 干预优先级排序：根据 sortingMode 选择 F 分解排序或固定排序
     // - 'fdecomposition'（默认）：社会热力学 F 分解按当前系统"物理状态"排序
     // - 'fixed'：保持检测器触发顺序（A/B 对照实验 B 组）
@@ -1252,6 +1303,87 @@ export class GovernanceEngine {
       case "low": return 0.3;
       default: return 0.5;
     }
+  }
+
+  /**
+   * 合并自定义检测器的 parameters 与自适应 dosage。
+   * 自适应开启时：dosage 覆盖用户 parameters 中的强度字段（与内置 if 一致）；
+   *               用户 parameters 中的非强度字段（如 reason）保留。
+   * 自适应关闭时：直接用用户 parameters + 配置默认值（与内置 if 一致）。
+   * NOTE: 字段映射与上方 7 个内置 if 块保持同步，修改此处需同步修改对应 if。
+   */
+  private mergeDosageParams(
+    type: InterventionType,
+    userParams: Record<string, unknown>,
+    severity: SeverityLevel,
+    informationCoverage: number,
+    roundProgress: number,
+    agentCount: number,
+    baseMaxRounds: number,
+    useAdaptiveDosage: boolean,
+    config: GovernanceConfig,
+  ): Record<string, unknown> {
+    const params: Record<string, unknown> = { ...userParams };
+
+    if (!useAdaptiveDosage) {
+      // 非自适应：用配置默认值填充缺失的强度字段（与内置 if 的 else 分支一致）
+      switch (type) {
+        case "reduce_weight":
+          if (params.reductionFactor === undefined) {
+            params.reductionFactor = config.reduceWeightFactor ?? INTERVENTION_REDUCE_WEIGHT_FACTOR;
+          }
+          break;
+        case "introduce_diversity":
+          if (params.perturbationAmount === undefined) {
+            params.perturbationAmount = config.diversityPerturbation ?? INTERVENTION_DIVERSITY_PERTURBATION;
+          }
+          if (params.seed === undefined && this.rng) {
+            params.seed = Math.floor(this.rng() * 0x7fffffff);
+          }
+          break;
+        case "force_reflection":
+          if (params.reflectionFactor === undefined) {
+            params.reflectionFactor = config.reflectionFactor ?? INTERVENTION_REFLECTION_FACTOR;
+          }
+          break;
+        case "continue_discussion":
+          if (params.additionalRounds === undefined) {
+            params.additionalRounds = Math.max(1, Math.ceil(baseMaxRounds * (0.5 - roundProgress)));
+          }
+          break;
+        case "none": break;
+      }
+      return params;
+    }
+
+    // 自适应：用 dosage 覆盖强度字段
+    const dosage = computeAdaptiveDosage({
+      severity: this.severityToScore(severity),
+      informationCoverage,
+      historyEffectiveness: this.getHistoryEffectiveness(type),
+      roundProgress,
+      agentCount,
+      baseMaxRounds,
+    });
+    switch (type) {
+      case "reduce_weight":
+        params.reductionFactor = dosage.weightReduction;
+        break;
+      case "introduce_diversity":
+        params.perturbationAmount = dosage.perturbationAmount;
+        if (params.seed === undefined && this.rng) {
+          params.seed = Math.floor(this.rng() * 0x7fffffff);
+        }
+        break;
+      case "force_reflection":
+        params.reflectionFactor = dosage.reflectionStrength;
+        break;
+      case "continue_discussion":
+        params.additionalRounds = Math.max(dosage.additionalRounds, 1);
+        break;
+      case "none": break;
+    }
+    return params;
   }
 
   evaluateEffects(

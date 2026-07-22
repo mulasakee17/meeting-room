@@ -12,6 +12,7 @@
 import type { GovernanceBridge, BridgeOptions } from "./types";
 import type { DiscussionMessage, FrameworkMessage } from "../types";
 import type { Intervention } from "../../lib/governance/types";
+import { mulberry32 } from "../../lib/utils/statsUtils";
 
 // ============================================================================
 // CustomBridge — built-in agent governance bridge
@@ -20,12 +21,15 @@ import type { Intervention } from "../../lib/governance/types";
 export class CustomAdapter implements GovernanceBridge {
   readonly framework = "custom";
   private options: BridgeOptions;
+  /** 实例级 PRNG — 用于 introduce_diversity 等随机干预，保证可复现 */
+  private rng: () => number;
 
   constructor(options: BridgeOptions = {}) {
     this.options = {
       governanceEnabled: true,
       ...options,
     };
+    this.rng = mulberry32(options.seed ?? 0x5EED);
   }
 
   adaptMessages(
@@ -93,7 +97,7 @@ export class CustomAdapter implements GovernanceBridge {
           const target = ctx.agents.find(a => a.id === agentId);
           if (target) {
             const state = target.getState() || { belief: 0, confidence: 50 };
-            const perturbation = (Math.random() - 0.5) * 0.6;
+            const perturbation = (this.rng() - 0.5) * 0.6;
             target.setState({
               belief: Math.max(-1, Math.min(1, state.belief + perturbation)),
               confidence: state.confidence,

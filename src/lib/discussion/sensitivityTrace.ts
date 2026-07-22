@@ -26,6 +26,7 @@
  */
 
 import type { AgentOpinion, InteractionGraph, InteractionEdge } from "./types";
+import { mulberry32 } from "@/lib/utils/statsUtils";
 
 // ============================================================================
 // 类型定义
@@ -104,12 +105,11 @@ export function selectCounterfactualDropout(
 ): { droppedAgentId: string; remainingAgentIds: string[] } | null {
   if (agentIds.length < 3) return null; // 至少 3 个 Agent 才能 dropout
 
-  // 确定性伪随机: 用轮次+种子保证可复现
-  const rng = seed !== undefined
-    ? ((seed * 31 + round * 7) % agentIds.length)
-    : Math.floor(Math.random() * agentIds.length);
-
-  const droppedIdx = Math.abs(rng) % agentIds.length;
+  // 确定性伪随机: 用 mulberry32(seed + round 偏移) 保证可复现
+  // 每轮用不同偏移，确保各轮 dropout 选择独立
+  const effectiveSeed = seed ?? 42;
+  const rng = mulberry32(effectiveSeed ^ (round * 0x9E3779B9));
+  const droppedIdx = Math.floor(rng() * agentIds.length);
   const droppedAgentId = agentIds[droppedIdx];
   const remainingAgentIds = agentIds.filter(id => id !== droppedAgentId);
 

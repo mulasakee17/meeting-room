@@ -12,6 +12,14 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
+// 网络集成测试：需要真实 API 连接，CI 和无 key 环境下自动 skip
+const hasNetworkEnv = process.env.CI !== "true" && (
+  process.env.OPENAI_API_KEY ||
+  process.env.DEEPSEEK_API_KEY ||
+  process.env.QWEN_API_KEY
+);
+const netDescribe = describe.skipIf(!hasNetworkEnv);
+
 // 保存到局部变量避免 import 被 vitest hoisting 影响
 let callLLM: any;
 let LLMError: any;
@@ -77,7 +85,7 @@ describe("callLLM", () => {
     }
   });
 
-  it("无效 API Key 应抛出 AUTH_ERROR（OpenAI）", async () => {
+  it.skipIf(!hasNetworkEnv)("无效 API Key 应抛出 AUTH_ERROR（OpenAI）", async () => {
     try {
       await callLLM("sys", "user", {
         provider: "openai", model: "gpt-4o-mini",
@@ -92,7 +100,7 @@ describe("callLLM", () => {
     }
   });
 
-  it("Local 提供商默认 URL 可用（无连接时返回 NETWORK 或 TIMEOUT）", async () => {
+  it.skipIf(!hasNetworkEnv)("Local 提供商默认 URL 可用（无连接时返回 NETWORK 或 TIMEOUT）", async () => {
     try {
       await callLLM("sys", "user", {
         provider: "local", model: "llama3",
@@ -126,7 +134,7 @@ describe("parseLLMResponse (indirect)", () => {
 // ============================================================================
 
 describe("fetchWithTimeout", () => {
-  it("短超时（1ms）连接不可达主机应该触发 AbortError → TIMEOUT", async () => {
+  it.skipIf(!hasNetworkEnv)("短超时（1ms）连接不可达主机应该触发 AbortError → TIMEOUT", async () => {
     try {
       await callLLM("sys", "user", {
         provider: "deepseek", model: "deepseek-chat",

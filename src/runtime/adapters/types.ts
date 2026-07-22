@@ -94,6 +94,8 @@ export interface BridgeOptions {
   systemPrompt?: string;
   /** Whether governance is enabled for this bridge */
   governanceEnabled?: boolean;
+  /** 可复现性 seed — 用于 introduce_diversity 等随机干预的确定性 PRNG */
+  seed?: number;
   /** Additional framework-specific options */
   custom?: Record<string, unknown>;
 }

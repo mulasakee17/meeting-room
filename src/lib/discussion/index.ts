@@ -176,7 +176,7 @@ export class DiscussionEngine {
       // -- agent dropout (sensitivity analysis) ---------------------------
       let dropoutAgentId: string | null = null;
       if (this.config.enableDropoutAnalysis && agents.length >= 3) {
-        const dropout = selectCounterfactualDropout(agents.map(a => a.id), round);
+        const dropout = selectCounterfactualDropout(agents.map(a => a.id), round, this.config.seed);
         if (dropout) dropoutAgentId = dropout.droppedAgentId;
       }
 

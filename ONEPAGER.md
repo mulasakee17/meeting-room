@@ -95,17 +95,9 @@ After fixing 4 cognitive defects (D1–D4), **161 experiments across 2 independe
 2. **Shuffle is strongest on hard tasks** — d=1.44 on Crisis. shuffle represents the theoretical ceiling of *information exchange* (all agents access all expertise), not the ceiling of agent collaboration.
 3. **Intervention cost-benefit analyzed** (Crisis task, n=24) — 89 interventions, 47 effective (52.8%). `force_reflection` most reliable (79.4%), `reduce_weight` best cost-efficiency (+0.389 τ); `introduce_diversity` (9.1%) and `continue_discussion` (0%, harmful) now disabled by default.
 
-### Historical 2×2 Factorial (Broken Loop — Controls Only)
+### Historical Data (Broken-Loop, Retained as Provenance Only)
 
-> **⚠️ These 165 experiments were run while the governance loop was severed (D1–D4 unfixed). Conclusions are provisional and retained only as historical controls. The 161 expanded experiments (Crisis 72 + Supplier 89) above are the primary evidence.**
-
-| | Invest — 3 rounds | Invest — 5 rounds | M&A — 5 rounds |
-|---|---|---|---|
-| **Baseline τ** | 0.422±0.344 (Q=71.3) | 0.778±0.325 (Q=89.0) | 0.533±0.209 (Q=76.7) |
-| **Full governance τ** | 0.644±0.344 (Q=82.4) | 0.778±0.325 (Q=89.0) | 0.613±0.177 (Q=80.7) |
-| **Net Δτ** | +0.133 (p=0.152, NOT sig) | −0.089 (p=1.0, null) | −0.123 (p=0.36, NOT sig) |
-| **Cohen's d** | +0.65 (medium, NOT sig) | +0.00 (null) | +0.41 (NOT sig) |
-| **Key finding** | Directional improvement only | Null; reflection HARMFUL (p=0.048) | Shuffle beats all (p=0.0009) |
+165 of 416 runs were collected *before* the D1–D4 cognitive defects were fixed — the governance loop was severed. These data are retained for provenance in [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md). **The 161 closed-loop runs (Crisis 72 + Supplier 89) above are the primary evidence.**
 
 The loop-fix (D1–D4) is itself a research contribution: identifying *why* governance appeared ineffective — agents could not perceive, remember, respond to, or influence one another — is more valuable than any single p-value.
 
@@ -117,24 +109,14 @@ The loop-fix (D1–D4) is itself a research contribution: identifying *why* gove
 
 | Feature | Description |
 |---------|-------------|
-| **Framework-Agnostic** | Core engine audited: zero deps on DiscussionEngine. StateInferenceBridge enables prompt-injection integration with any framework in 2-4 hours |
-| **Embeddable SDK** | `import { GovernanceRuntime } from "@/runtime"` — one class, zero framework deps |
-| **Adaptive Governance** | Thresholds calibrate from round-1 data; intervention dosage scales with severity (config-gated, default off) |
-| **Cross-Examination** | Adversarial debate engine: splits agents into PRO/CON camps, synthesizes verdict |
-| **7 Ablation Modes** | Full + shuffle control + 4 single-intervention modes isolate which mechanism matters. **[Updated]** Expanded from 2 implemented modes to 7; full 105-run experiment pending lab execution |
-| **6 Hard Fixes (H-series)** | H4 Kuramoto mapping corrected; H6 `convergenceSpeed` annotation fixed; H2 `ablationModes` expanded (2→7); H19 seeded PRNG for reproducibility; H17 cache pollution eliminated; H18 `interventionPrompt` unified across modes. Additional fixes in 2026-07-13/14 audit (see LIMITATIONS.md §19). |
-| **Causal Effect Estimation** | 🆕 Nearest-neighbor trajectory matching (k=5) + 10000-permutation test + bootstrap CI — estimates counterfactual intervention effects, not just correlations. M&A 5-round shows +0.135 effect (d=0.96, p=0.067, CI excludes 0) |
-| **Statistical Inference** | t-distribution 95% CI + permutation test p-values on all key comparisons; Δτ baseline-corrected |
-| **Parameter Sensitivity** | One-at-a-time sweep over 5 governance parameters verifies robustness |
-| **Dropout Sensitivity** | Agent dropout analysis measures outcome sensitivity to each agent's presence |
-| **Multi-LLM Support** | DeepSeek / OpenAI / Anthropic / Local (Ollama) — unified interface |
-| **Extensible Detection** | Custom bias detectors via `registerDetector()` — no core engine changes needed |
-| **Shared Utilities** | Registry/JSON/stats modules eliminate code duplication across the codebase |
-| **303 Automated Tests** | All core modules covered, 18 test files (including 28 causal-effect tests) |
-| **Mechanism Ablation** | 🆕 Per-intervention-type statistical analysis: reduce_weight d=1.51 (p=0.0001), force_reflection d=0.73 (p=0.001) — identifies which interventions drive governance effectiveness |
-| **Power Analysis** | 🆕 Non-central t-distribution power analysis: Crisis 88% ✅, Supplier 43% ⚠️ (needs n=72 for 80%) |
-| **Free-Energy Ranking** | 🆕 Social free energy F=(1-R)+T·H decomposition drives intervention priority when multiple detectors trigger (91.7% of Crisis runs). Backtest falsified original force_reflection↔structural mapping (p=0.041), corrected to thermal·(1-structural) |
-| **Demo Mode** | Zero-config, no API key needed — instant visualization |
+| **Framework-Agnostic SDK** | `import { GovernanceRuntime } from "@/runtime"` — zero framework deps. StateInferenceBridge enables integration with AutoGen/CrewAI/LangGraph in 2-4 hours |
+| **Extensible Detection** | Custom bias detectors via `registerDetector()` — recently closed the "custom detector → intervention" architecture gap (see [docs/GOVERNANCE_DESIGN.md](docs/GOVERNANCE_DESIGN.md)) |
+| **6 Hard Fixes (H-series)** | H4 Kuramoto mapping corrected (θ=π·b → θ=(π/2)·b); H19 seeded PRNG for reproducibility; H17 cache pollution eliminated; H18 interventionPrompt unified. Full audit in [LIMITATIONS.md](LIMITATIONS.md) §19 |
+| **Statistical Rigor** | Permutation test p-values (with (count+1)/(n+1) correction) + t-distribution 95% CI + Cohen's d_z + non-central-t power analysis + causal effect estimation (k=5 nearest-neighbor trajectory matching) |
+| **Free-Energy Ranking** | Social free energy F=(1-R)+T·H decomposition drives intervention priority. Backtest falsified original force_reflection↔structural mapping (p=0.041), corrected to thermal·(1-structural) |
+| **310 Automated Tests** | 18 test files, 307 passing, 3 network-dependent skipped. Including 13 MAST detector tests and 28 causal-effect tests |
+
+> Full feature inventory (adaptive thresholds, cross-examination, dropout sensitivity, multi-LLM support, etc.) in [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md).
 
 ---
 

@@ -24,7 +24,7 @@ import { CustomAgent } from "../../src/lib/adapters/custom";
 import { DiscussionEngine, type DiscussionAgent } from "../../src/lib/discussion";
 import { EvaluationEngine } from "../../src/lib/evaluation";
 import { GovernanceRuntime } from "../../src/runtime/GovernanceRuntime";
-import type { LLMConfig } from "../../src/lib/llm/providers";
+import type { LLMConfig, LLMProvider } from "../../src/lib/llm/providers";
 import { TASK_MA, type TaskConfig } from "../lunar_survival/config";
 import { TASK_INVEST } from "./task_invest";
 import { TASK_CRISIS } from "./task_crisis";
@@ -60,6 +60,8 @@ interface RoundRecord {
   issues: string[];
   /** Interventions applied this round */
   interventions: Array<{ type: string; targetAgentId?: string; targetAgents?: string[] }>;
+  /** Per-agent conversation text this round (agentId → reasoning). 2026-07-22 新增以支持对话原文回溯。 */
+  messages?: Record<string, string>;
 }
 
 interface InterventionEffect {
@@ -146,24 +148,31 @@ const PARAMS = {
   ablationModes: ["none", "full", "shuffle"] as Ablation[],
 };
 
-// CLI 扩样支持: npx tsx run.ts <task> --start=<N> --count=<M> --mode=<ablation>
+// CLI 扩样支持: npx tsx run.ts <task> --start=<N> --count=<M> --mode=<ablation> --provider=<P> --model=<M>
 // --start: 起始 runIndex（默认 0）
 // --count: 本次运行的实验数/cell（默认 PARAMS.runsPerCondition）
 // --mode:  只跑指定 ablation mode（默认跑 PARAMS.ablationModes 全部）
-function parseCliArgs(): { start: number; count: number; mode: string | null } {
+// --provider: LLM 提供商（默认 deepseek），跨模型验证时用 qwen/openai/zhipu
+// --model: 模型名（默认 deepseek-chat）
+function parseCliArgs(): { start: number; count: number; mode: string | null; provider: LLMProvider; model: string } {
   const args = process.argv.slice(3);
   let start = 0;
   let count = PARAMS.runsPerCondition;
   let mode: string | null = null;
+  let provider: LLMProvider = PARAMS.provider;
+  let model = PARAMS.model;
   for (const arg of args) {
     if (arg.startsWith("--start=")) start = parseInt(arg.split("=")[1], 10);
     if (arg.startsWith("--count=")) count = parseInt(arg.split("=")[1], 10);
     if (arg.startsWith("--mode=")) mode = arg.split("=")[1];
+    if (arg.startsWith("--provider=")) provider = arg.split("=")[1] as LLMProvider;
+    if (arg.startsWith("--model=")) model = arg.split("=")[1];
   }
-  return { start, count, mode };
+  return { start, count, mode, provider, model };
 }
 
-const LLM_CONFIG: LLMConfig = {
+// LLM_CONFIG 在 main 中根据 CLI 参数覆盖
+let LLM_CONFIG: LLMConfig = {
   provider: PARAMS.provider,
   model: PARAMS.model,
   temperature: PARAMS.temperature,
@@ -428,6 +437,7 @@ async function runSingle(
       converged: rr.converged,
       issues: roundIssues,
       interventions: roundInterventions,
+      messages: Object.fromEntries(rr.opinions.map(o => [o.agentId, o.reasoning])),
     });
   }
 
@@ -573,9 +583,39 @@ async function main() {
     console.error(`Available tasks: ${Object.keys(TASKS).join(", ")}`);
     process.exit(1);
   }
-  const { start, count, mode } = parseCliArgs();
+  const { start, count, mode, provider, model } = parseCliArgs();
   const { task, dataDir: dataDirName } = TASKS[taskKey];
-  const DATA_DIR = path.resolve(__dirname, dataDirName);
+
+  // 跨模型验证：非 deepseek 提供商使用独立数据目录，避免覆盖
+  const providerSuffix = provider === "deepseek" ? "" : `_${provider}`;
+  const effectiveDataDir = `${dataDirName}${providerSuffix}`;
+
+  // 根据 provider 自动选择 API key
+  const apiKeyMap: Record<string, string | undefined> = {
+    deepseek: process.env.DEEPSEEK_API_KEY,
+    openai: process.env.OPENAI_API_KEY,
+    zhipu: process.env.ZHIPU_API_KEY,
+    qwen: process.env.QWEN_API_KEY,
+    anthropic: process.env.ANTHROPIC_API_KEY,
+    local: undefined,
+  };
+  const apiKey = apiKeyMap[provider];
+  if (!apiKey && provider !== "local") {
+    const envVar = provider === "deepseek" ? "DEEPSEEK_API_KEY"
+      : provider === "openai" ? "OPENAI_API_KEY"
+      : provider === "zhipu" ? "ZHIPU_API_KEY"
+      : provider === "qwen" ? "QWEN_API_KEY"
+      : provider === "anthropic" ? "ANTHROPIC_API_KEY"
+      : "UNKNOWN";
+    console.error(`[FATAL] ${envVar} 未设置，无法使用 ${provider} 提供商`);
+    process.exit(1);
+  }
+
+  // 覆盖 LLM_CONFIG（Qwen3.7-plus 等大模型需要更长超时）
+  const providerTimeoutMs = provider === "qwen" ? 120_000 : 30_000;
+  LLM_CONFIG = { provider, model, temperature: PARAMS.temperature, apiKey, timeout: providerTimeoutMs };
+
+  const DATA_DIR = path.resolve(__dirname, effectiveDataDir);
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   const allResults: ExperimentResult[] = [];
 
@@ -585,7 +625,8 @@ async function main() {
   console.log("=".repeat(70));
   console.log("  SwarmAlpha V2 — Experiment Runner");
   console.log(`  Task: ${task.title} (${taskKey})`);
-  console.log(`  Data dir: ${dataDirName}`);
+  console.log(`  Provider: ${provider} | Model: ${model}`);
+  console.log(`  Data dir: ${effectiveDataDir}`);
   console.log(`  Modes: ${modesToRun.join(", ")}`);
   console.log(`  Runs: ${count} per condition (runIndex ${start}..${start + count - 1})`);
   console.log(`  Total: ${count * modesToRun.length} experiments`);
@@ -611,9 +652,26 @@ async function main() {
       // 最多重试 3 次，指数退避（1s, 2s, 4s）
       let result: ExperimentResult | null = null;
       const maxRetries = 3;
+      // qwen3.7-plus 等大模型响应慢（15 次 LLM 调用 × 30-60s/次 ≈ 8-15 分钟），放宽到 20 分钟
+      const EXPERIMENT_TIMEOUT_MS = provider === "qwen" ? 20 * 60 * 1000 : 5 * 60 * 1000;
+      const timeoutLabel = provider === "qwen" ? "20 分钟" : "5 分钟";
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          result = await runSingle(task, ablation, i);
+          // 超时报警：单次实验超过阈值则中断
+          const expStart = Date.now();
+          let timerId: ReturnType<typeof setTimeout>;
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            timerId = setTimeout(() => {
+              const elapsed = ((Date.now() - expStart) / 1000).toFixed(0);
+              console.error(`  ⏰ [TIMEOUT ALARM] ${ablation}/${i} 已运行 ${elapsed}s，超过 ${timeoutLabel}限制，强制中断`);
+              reject(new Error(`实验超时（${elapsed}s）`));
+            }, EXPERIMENT_TIMEOUT_MS);
+          });
+          result = await Promise.race([
+            runSingle(task, ablation, i),
+            timeoutPromise,
+          ]);
+          clearTimeout(timerId!);
           break;
         } catch (err) {
           const isLastAttempt = attempt === maxRetries;

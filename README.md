@@ -4,11 +4,8 @@
 >
 > *Controlled experiments to demarcate when governance helps, when it's neutral, and when it harms multi-agent decision quality.*
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
-[![Tests](https://img.shields.io/badge/tests-303-green)](./test/)
+[![Tests](https://img.shields.io/badge/tests-310-green)](./test/)
 [![Framework-Agnostic](https://img.shields.io/badge/framework-agnostic-purple)]()
-[![Embeddable](https://img.shields.io/badge/embeddable-SDK-orange)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 **English** | [中文](./README_CN.md)
@@ -17,16 +14,9 @@
 
 ## Where SwarmAlpha Fits
 
-The agent governance landscape is splitting into two layers:
+Agent governance has two layers. **Security governance** (preventing agents from *doing* harm — unauthorized tool calls, data leaks) is a crowded space. **Cognitive governance** (preventing agents from *thinking* wrong — echo chambers, authority bias, polarization, premature consensus) is open. SwarmAlpha targets the cognitive layer.
 
-| Layer | Concern | Tools | Status |
-|-------|---------|-------|--------|
-| **Security governance** | Prevent agents from *doing* harm — unauthorized tool calls, budget overruns, data leaks | Microsoft Agent Governance Toolkit, Agent Control Standard (ACS), NVIDIA OpenShell | Crowded (2026) |
-| **Cognitive governance** | Prevent agents from *thinking* wrong — echo chambers, authority bias, polarization, premature consensus | **SwarmAlpha** | Open |
-
-SwarmAlpha targets the cognitive layer. It does not compete with Microsoft's toolkit or the ACS standard — it complements them. A complete agent governance stack needs both: security governance at the tool-execution boundary, and cognitive governance inside the discussion loop. SwarmAlpha's `StateInferenceBridge` is designed to interoperate with ACS-standard middleware hooks at the state checkpoint.
-
-**Academic validation**: Li et al. (SJTU, 2026) independently confirmed that multi-agent workflows act as echo chambers, amplifying minor stochastic biases into systemic polarization — and that standard bias detection methods miss these effects. [*Aligned Agents, Biased Swarm: Measuring Bias Amplification in Multi-Agent Systems*, arXiv:2604.08963](https://arxiv.org/abs/2604.08963). Yang (2026) introduced a "coupling gain γ" diagnostic to distinguish genuine emergent consensus from model artifacts. [*When Is Emergent Consensus Real?*, arXiv:2606.22203](https://arxiv.org/abs/2606.22203). These papers validate the problem SwarmAlpha solves and inform its detection methodology.
+**Academic validation**: Li et al. (SJTU, 2026) independently confirmed that multi-agent workflows act as echo chambers, amplifying minor stochastic biases into systemic polarization — and that standard bias detection methods miss these effects. [*Aligned Agents, Biased Swarm*, arXiv:2604.08963](https://arxiv.org/abs/2604.08963). Yang (2026) introduced a "coupling gain γ" diagnostic to distinguish genuine emergent consensus from model artifacts. [*When Is Emergent Consensus Real?*, arXiv:2606.22203](https://arxiv.org/abs/2606.22203).
 
 ---
 
@@ -44,22 +34,11 @@ SwarmAlpha targets the cognitive layer. It does not compete with Microsoft's too
 | **Decision Audit** | Full traceable decision chain: who influenced whom, when beliefs shifted, when governance intervened | Post-hoc accountability and compliance. Doesn't change outcomes — changes *responsibility attribution*. |
 | **Adaptive Intervention** | Targeted prompts injected when bias detected (diversity injection, forced reflection, weight reduction, continue discussion) | Accelerates convergence on genuinely interdependent tasks — but has clear boundary conditions |
 
-### 2×2 Factorial Design — Preliminary Results (n=15 per cell)
+### Historical Data (Broken-Loop, Retained as Provenance Only)
 
-> ⚠️ **These data were collected before the governance loop was fully repaired.** State-modification interventions (reduce_weight, force_reflection) may be underestimated. The engine is ready; reliable experimental conclusions require re-running with the repaired loop. See [ROADMAP.md](ROADMAP.md).
+165 of 416 runs were collected *before* the D1–D4 cognitive defects were fixed — the governance loop was severed (detectors fired but interventions could not reach agent perception). These data are retained for provenance in [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) and are explicitly labeled as provisional. **The 161 closed-loop runs (Crisis 72 + Supplier 89) in the Core Finding above are the primary evidence.**
 
-| | Invest — 3 rounds (Strong Interdependence) | Invest — 5 rounds | M&A — 5 rounds (Weak Interdependence) |
-|---|---|---|---|
-| **Baseline τ** | 0.422±0.344 (Q=71.3) | 0.778±0.325 (Q=89.0) | 0.533±0.209 (Q=76.7) |
-| **Full governance τ** | 0.644±0.344 (Q=82.4) | 0.778±0.325 (Q=89.0) | 0.613±0.177 (Q=80.7) |
-| **Net Δτ** | +0.133 ([−0.09, +0.35], p=0.152) | −0.089 ([−0.38, +0.21], p=1.0) | −0.123 ([−0.27, +0.02], p=0.36) |
-| **Cohen's d** | +0.65 (medium, NOT sig) | +0.00 (null) | +0.41 (NOT sig) |
-| **Shuffle τ** | — | 1.000 (n=5, NOT sig) | **0.900 (p=0.0009)** |
-| **Direction** | Governance may accelerate convergence | With sufficient rounds, baseline catches up | Governance unnecessary; breaking overconfidence works |
-
-**Key insight**: On weakly-interdependent tasks, governance is unnecessary (M&A p=0.36). On strongly-interdependent tasks with limited rounds, governance shows directional but non-significant improvement (d=+0.65, p=0.152). With sufficient rounds, baseline agents catch up and governance becomes null (p=1.0). **The only statistically significant positive finding is the shuffle control on M&A (p=0.0009)** — breaking professional overconfidence outperforms targeted governance. Notably, `full_reflection` is significantly *harmful* on Invest 5-round (p=0.048) — forcing reflection when agents already converge naturally hurts performance.
-
-> **Self-correction note**: Earlier V1 results claiming larger governance effects were affected by a system prompt answer leak and a structurally broken authority bias detector. All 6 bugs were independently identified, verified, and fixed. The V2 data above is from the corrected pipeline. This self-correction process is itself evidence of the project's commitment to integrity — and demonstrates why process monitoring matters: even without intervention, visibility into what's actually happening in agent discussions catches problems that silent pipelines hide.
+> **Self-correction note**: Earlier V1 results were affected by a system prompt answer leak and a structurally broken authority bias detector. All 6 bugs were independently identified, verified, and fixed. This self-correction process is itself a research contribution — and demonstrates why process monitoring matters: visibility into agent discussions catches problems that silent pipelines hide.
 
 ---
 
@@ -90,35 +69,9 @@ A series of hard faults (H-series: H2/H4/H6/H17/H18/H19) were identified and rep
 
 ## What is SwarmAlpha?
 
-SwarmAlpha is the **governance runtime** used to generate the evidence above — an embeddable layer that observes, detects, and intervenes on collective decision failures in multi-agent systems.
+SwarmAlpha is an **embeddable governance runtime** — it plugs into existing multi-agent frameworks (AutoGen, CrewAI, LangGraph) to provide observation, bias detection, intervention, and evaluation. It does NOT create agents or manage workflows.
 
-**Application scenario**: Real-time process governance for LLM multi-agent collaborative decision-making — detecting polarization, authority bias, echo chambers, and premature consensus during consensus formation and applying targeted interventions to safeguard decision quality in limited-round discussions.
-
-It does NOT create agents or manage workflows. It plugs into existing frameworks to provide:
-
-- 🔍 **Observation** — extract agent beliefs and emotions from natural language
-- 📊 **Belief Modeling** — track belief evolution and influence propagation
-- 🚨 **Bias Detection** — echo chambers, authority bias, polarization, premature consensus
-- 🛡️ **Intervention** — targeted prompts injected into agent discussion
-- 📈 **Evaluation** — 5-dimension scoring with t-distribution confidence intervals
-- 🧪 **Causal Effect Estimation** — nearest-neighbor trajectory matching + permutation test to estimate counterfactual intervention effects
-
-**Key principle**: LLMs only do perception (extracting beliefs from language). Mathematics handles everything else — consensus computation, bias detection, belief dynamics. This means the governance runtime is **fast, cheap, and interpretable** with near-zero additional LLM calls (only when agents fail to output the `[GOV]` structured tag does `StateInferenceBridge` fall back to LLM inference).
-
----
-
-## Why Governance Matters
-
-When 5 AI agents discuss a problem, they fall into the same traps as human groups:
-
-| Failure Mode | What Happens | Impact |
-|-------------|-------------|--------|
-| **Premature Consensus** | Agreement in round 1 without exploring critical information | Sub-optimal decisions |
-| **Authority Bias** | One overconfident agent dominates the group | Herd-following errors |
-| **Echo Chamber** | Similar-minded agents mutually confirm biases | Collective blind spots |
-| **Group Polarization** | Divergence hardens into deadlock | Decision paralysis |
-
-**No existing multi-agent framework detects or intervenes on these failures.** SwarmAlpha fills this gap — as a drop-in governance layer.
+**Key principle**: LLMs only do perception (extracting beliefs from language). Mathematics handles everything else — consensus computation, bias detection, belief dynamics. This makes the runtime **fast, cheap, and interpretable** with near-zero additional LLM calls.
 
 ---
 
@@ -174,7 +127,7 @@ To verify that the core findings are **not Crisis-task-specific**, a second task
 
 **1. Governance is statistically confirmed effective (Crisis) and direction-consistent (Supplier)**: Crisis reaches statistical confirmation (d=0.92, p=0.005, power=88%). Supplier is directionally consistent (d=0.47) but underpowered (43%, needs n=72 for 80% power).
 
-**2. "False consensus" is a cross-task universal phenomenon**: Both tasks show consensus-quality correlation near zero (r=-0.14 vs r=-0.11), proving that "high consensus ≠ high quality" is a general feature of LLM multi-agent systems.
+**2. "False consensus" is a cross-task universal phenomenon**: Both tasks show consensus-quality correlation near zero (r=-0.05 for Crisis, r=-0.03 for Supplier; combined r=-0.10, n=169), proving that "high consensus ≠ high quality" is a general feature of LLM multi-agent systems.
 
 **3. Boundary conditions for shuffle controls** (unexpected discovery): Crisis shuffle d=1.44 (p<0.001) — effective on hard tasks (none τ=0.41). Supplier shuffle d=0.09 (p=0.78) — ineffective on easier tasks (none τ=0.68) due to ceiling effect (baseline already near full level).
 
@@ -220,20 +173,26 @@ DEEPSEEK_API_KEY=sk-your-key-here     # Get from https://platform.deepseek.com/
 ### 3. Run
 
 ```bash
+# 30-second demo — pure local, no API key needed
+npm run demo                # Shows governance engine: detection → intervention → F-decomposition sorting
+
 # Web UI (demo mode works without API key)
-npm run dev                # → http://localhost:3000
+npm run dev                 # → http://localhost:3000
 
 # Run experiments (needs API key)
-npm run experiment          # Full ablation matrix
+npm run experiment           # Full ablation matrix
 
 # Analyze results (no API key needed)
-npm run analyze             # t-distribution CI + permutation test + statistical inference
+npm run analyze              # t-distribution CI + permutation test + statistical inference
+
+# Recalculate core findings with unified formula (no API key needed)
+npx tsx experiments/v2/recalc_consensus_corr.ts   # Cross-task r value verification
 
 # Parameter sensitivity (needs API key)
-npm run sensitivity         # 5 params × 5 values sweep
+npm run sensitivity          # 5 params × 5 values sweep
 
 # Run tests (no API key needed)
-npm test                    # 303 tests (300 passed, 3 network timeouts)
+npm test                    # 310 tests (307 passed, 3 network-dependent skipped)
 ```
 
 **Causal effect analysis** (no API key needed, uses existing experiment data):
@@ -413,24 +372,6 @@ Beyond correlational analysis (t-test, permutation test), SwarmAlpha includes a 
 
 ---
 
-## Why This Matters
-
-Multi-agent systems are being deployed in high-stakes domains — finance, healthcare, law. When AI agents discuss critical decisions, they commit the **same systematic failures as human groups**. Current frameworks (AutoGen, CrewAI, LangGraph) provide zero governance — not even basic observability into what's happening in agent discussions.
-
-SwarmAlpha provides three layers of value:
-
-1. **Process Monitoring (independent of decision outcomes)** — Real-time detection of echo chambers, authority bias, polarization, and premature consensus. This matters even if you never intervene: enterprises deploying AI agent teams need to *see* what's happening in their discussions. You can't fix what you can't observe.
-
-2. **Decision Audit (independent of intervention)** — Full traceable decision chains answer "why did the agent team decide this?" Post-hoc accountability is valuable for compliance (EU AI Act), debugging, and trust — regardless of whether the decision was correct.
-
-3. **Targeted Intervention (now statistically confirmed)** — After fixing D1–D4 governance loop defects, Crisis task (n=24/cell) shows full vs none d=0.92, p=0.005, power=88%. Cross-task validation (Supplier n=30) is directionally consistent (d=0.47, p=0.089). Mechanism ablation reveals reduce_weight (d=1.51, p=0.0001) and force_reflection (d=0.73, p=0.001) as core drivers. **Governance is now confirmed effective under the closed loop.**
-
-**The engine has been self-verified for framework independence** — all 4 bias detectors, 4 intervention strategies, and the StateInferenceBridge work without the built-in DiscussionEngine, making them genuinely embeddable. Integrating into any framework takes 2-4 hours for a working prototype.
-
-**The implication for AI deployment**: Don't blindly deploy governance. But also don't deploy agent teams without *any* process monitoring. SwarmAlpha provides the observability layer that every multi-agent system currently lacks — and the intervention layer for the specific conditions where it demonstrably helps.
-
----
-
 ## Scalable Architecture: 5 Agents → 500 Agents
 
 SwarmAlpha's discussion topology layer enables the same governance engine to operate at any scale:
@@ -483,7 +424,7 @@ src/
 │   ├── page.tsx                  # Demo/Live comparison view
 │   └── api/v3/                   # API endpoints
 experiments/                      # Hidden Profile experiment framework
-└── test/                         # 303 automated tests
+└── test/                         # 310 automated tests
 ```
 
 ---
@@ -491,7 +432,7 @@ experiments/                      # Hidden Profile experiment framework
 ## Running Tests
 
 ```bash
-npm test              # 303 tests across 18 files (300 passed, 3 network timeouts)
+npm test              # 310 tests across 18 files (307 passed, 3 network-dependent skipped)
 npm run test:watch    # watch mode
 ```
 
@@ -499,15 +440,35 @@ npm run test:watch    # watch mode
 
 ## Documentation
 
-| Document | Content |
-|----------|---------|
-| [**DEVELOPER_GUIDE.md**](DEVELOPER_GUIDE.md) | 🔴 **Must-read for developers** — architecture, critical bug fix history, pitfalls, workflow (附录 A 架构概览 + 附录 B API 契约) |
-| [README_CN.md](README_CN.md) | Full project documentation (Chinese, most up-to-date) |
-| [PAPER_DRAFT.md](PAPER_DRAFT.md) | Academic paper draft — arxiv preprint (AAMAS/AAAI/CogSci 2027) |
-| [THEORY.md](THEORY.md) | Theoretical analysis — R information-theoretic interpretation + intervention fixed-point analysis (附录 A 数学框架 + 附录 B 热力学索引) |
-| [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) | Full research report — experiment design, falsification, paradigm critique (附录 A-E：实验复查 / E组分析 / 贝叶斯 / MAST / OWASP) |
-| [LIMITATIONS.md](LIMITATIONS.md) | 22 modules of known limitations and unfixed issues (附录 A 可证伪性 + 附录 B 预注册) |
-| [ROADMAP.md](ROADMAP.md) | Development roadmap & academic outreach plan (附录 A 升级计划 + 附录 B 项目评价) |
+### For Professors / Reviewers (5-minute path)
+
+Start here if you're evaluating this project for academic collaboration:
+
+| Priority | Document | What you'll learn |
+|---|---|---|
+| **1st** | [**ONEPAGER.md**](ONEPAGER.md) | 3-minute overview: positioning, problem, what we built, key findings |
+| **2nd** | [**LIMITATIONS.md**](LIMITATIONS.md) | 22 modules of known boundaries — shows scientific honesty and self-awareness |
+| **3rd** | [**PAPER_DRAFT.md**](PAPER_DRAFT.md) | Academic paper draft with 13 formal findings (F1-F11), statistical evidence, and falsification records |
+| **4th** | [**TECHNICAL_REPORT.md**](TECHNICAL_REPORT.md) | Full research report: experiment design, D1-D4 paradigm critique, Bayesian reanalysis, causal effect estimation |
+
+### For Developers / Collaborators
+
+| Document | Purpose |
+|---|---|
+| [**DEVELOPER_GUIDE.md**](DEVELOPER_GUIDE.md) | Architecture, API contracts, critical bug fix history, extension guide (custom detectors, new tasks) |
+| [**docs/GOVERNANCE_DESIGN.md**](docs/GOVERNANCE_DESIGN.md) | ADR: how we closed the "custom detector → intervention" architecture gap |
+| [**docs/INTEGRATION.md**](docs/INTEGRATION.md) | SDK integration guide for embedding governance into AutoGen/CrewAI/LangGraph |
+| [**EXPERIMENT_DESIGN.md**](EXPERIMENT_DESIGN.md) | Engineering retrospective: technical route, speech willingness formula, DeGroot update, statistical methods |
+
+### Deep Dive
+
+| Document | Purpose |
+|---|---|
+| [**THEORY.md**](THEORY.md) | Theoretical analysis: R information-theoretic interpretation, intervention fixed-point analysis, Proposition 4' proof |
+| [**ROADMAP.md**](ROADMAP.md) | Development roadmap, academic outreach plan, project self-assessment |
+| [**AGENT_SOCIETY_VISION.md**](AGENT_SOCIETY_VISION.md) | Long-term vision: SwarmAlpha as governance substrate for agent society |
+| [**PAPER_PROFESSOR_VERSION.md**](PAPER_PROFESSOR_VERSION.md) | Professor-specific paper version (also available as [PDF](PAPER_PROFESSOR_VERSION.pdf)) |
+| [README_CN.md](README_CN.md) | Full project documentation in Chinese |
 
 ---
 
@@ -517,83 +478,17 @@ TypeScript · Next.js 14 · React 18 · Tailwind CSS · Vitest · DeepSeek API
 
 ---
 
-## Async Adaptive Discussion Engine (2026-07-19, Phase 4)
+## Async Adaptive Discussion Engine
 
-The async discussion engine (`AsyncDiscussionEngine`) extends `DiscussionEngine` with content-driven speaking, thermodynamic termination, and passive listening updates. Validated across 4 phases on the v2 difficulty-enhanced fraud-investigation task.
+The async engine (`AsyncDiscussionEngine`) extends the synchronous engine with three innovations, validated across 5 phases on difficulty-enhanced tasks:
 
-### Content-Driven Speaking (v2)
+1. **Content-driven speaking** — Agents compute a willingness score from 5 factors (info exposure ×0.6, belief shift, consensus deviation, dependency triggers, recency penalty −0.5), normalized via `tanh`. Thresholds: ≥0.82 must speak, 0.40–0.82 weighted random, <0.40 silent.
+2. **Thermodynamic adaptive termination** — Discussion ends when the system reaches a "crystallized" state (Kuramoto R > 0.85, temperature T < 0.22, entropy H < 0.42, sustained for 3 consecutive evaluations), or a hard cap of 40 utterances.
+3. **Passive listening belief update** — Non-speaking agents update beliefs via DeGroot-style weighted averaging, so even silent agents evolve.
 
-Agents compute a **willingness score** based on internal state (info exposure, belief shift, consensus deviation, dependency triggers, recency penalty). Scores normalized via `tanh` to [0,1]. Thresholds: ≥0.7 must speak, 0.3–0.7 weighted random, <0.3 silent, with a fallback ensuring at least one speaker per turn.
+**Key result**: C group (thermodynamic termination) τ=0.64 vs B group (fixed rounds) τ=0.42, **d=1.09, p=0.028**. Cross-model validation: Zhipu glm-4-flash C group τ=0.76 vs DeepSeek 0.64 (**+18.8%**), confirming thermodynamic termination is not model-specific.
 
-### Thermodynamic Adaptive Termination (Recalibrated 2026-07-17)
-
-Thresholds recalibrated after per-case autopsy of 4 hard-cap failures. See [README_CN.md](README_CN.md) for full analysis.
-
-| Parameter | Old | New | Rationale |
-|-----------|-----|-----|-----------|
-| `crystallH` | 0.35 | **0.42** | Run with τ=0.6 stuck at H=0.418 |
-| `crystallT` | 0.20 | **0.22** | Run with τ=0.2 stuck at T=0.207 |
-| `consecutiveCrystallRequired` | 2 | **3** | Prevented de-crystallization false termination |
-| `strongCrystallH` | 0.10 | **0.20** | Allowed strong-crystallization at T<0.07 |
-| `evalEveryKUtterances` | 3 | **2** | Denser evaluation cadence |
-
-### Passive Listening Belief Update
-
-Non-speaking agents update beliefs via DeGroot-style weighted averaging:
-```
-delta = learning_rate × Σ(w_ij × (belief_j - belief_i)) / Σ(w_ij)
-```
-Confidence also updates: agreement → slight increase, disagreement → slight decrease (LR=0.03).
-
-### Experiment Design (A/B/C/D)
-
-| Group | Speaking | Termination | Hypothesis | n |
-|-------|----------|-------------|------------|---|
-| A | Synchronous | Fixed 5 rounds | Baseline | 10 |
-| B | Async content_driven | Fixed 5 eval cycles | Does async affect quality? | 10 |
-| C | Async content_driven | Thermodynamic (R/T/H/F) | H_thermo: adaptive > fixed | 10 |
-| D | Async content_driven | Sampled from C distribution | H_diag: thermodynamic > random | 10 |
-
-C/D groups run both v1 (random_prob) and v2 (content_driven) speaking modes. D group samples termination points from C group's actual distribution (matched by speakMode).
-
-### Phase 1–4 Results (Old thresholds → Recalibrated → beliefShift fix → Full rerun)
-
-| Phase | C group τ | Hard-cap rate | Mean utterances | Max τ |
-|-------|-----------|---------------|-----------------|-------|
-| Phase 1 (old thresholds, no beliefShift) | 0.34 ± 0.16 | 40% (4/10) | 28.2 | 0.6 |
-| Phase 2 (new thresholds, no beliefShift) | 0.46 ± 0.17 | 10% (1/10) | 22.4 | 0.8 |
-| Phase 3 (new thresholds + beliefShift) | **0.64 ± 0.21** | 10% (1/10) | **18.6** | **1.0** 🔥 |
-| Phase 4 (all fixes, B/D rerun + codeVersion) | see below | — | — | — |
-
-**Phase 4 group comparison** (2026-07-19):
-
-| Group | τ | Utterances | Efficiency τ/utterance | Status |
-|-------|---|------------|------------------------|--------|
-| A | 0.88 ± 0.10 | 25.0 | 0.0352 | Baseline |
-| B | 0.42 ± 0.20 | 14.4 | 0.0292 | ⚠️ drops after beliefShift fix |
-| C | **0.64 ± 0.21** | 18.6 | **0.0344** | ✅ Optimal |
-| D | 0.46 ± 0.30 | 18.4 | 0.0250 | Direction supports C |
-
-**Statistical comparisons**: A vs B d=2.90 (p=0.0002, sync > async-fixed); **C vs B d=1.09 (p=0.028, thermodynamic > fixed)** ✅; C vs D d=0.70 (p=0.116, direction supports thermodynamic).
-
-**Why B drops after beliefShift fix**: Before the fix, beliefShift=0 → speaking was driven by infoExposure (info-sharing priority). After the fix, "persuaded agents" gain speaking rights, preempting info-driven speaking under the fixed 5-cycle budget. This conversely proves the necessity of thermodynamic termination: only elastic time (C avg 7.2 cycles vs B 5 cycles) lets beliefShift exert its positive effect. **Components are coupled**: beliefShift + thermodynamic → τ=0.64; beliefShift + fixed rounds → τ=0.42.
-
-### Phase 5: Cross-Model Validation 🔬 (2026-07-19, Zhipu glm-4-flash)
-
-**Motivation**: Phase 1–4 used only DeepSeek-V3. Phase 5 validates cross-model with Zhipu glm-4-flash (free, best cost-performance).
-
-**C group results** (n=10, content_driven + thermodynamic termination):
-
-| Metric | DeepSeek-V3 | **Zhipu glm-4-flash** | Δ |
-|--------|------------|----------------------|---|
-| Mean τ | 0.640 ± 0.196 | **0.760 ± 0.215** | **+18.8%** |
-| τ=1.0 achieved | 1/10 (10%) | **4/10 (40%)** 🔥 | 4× |
-| Mean utterances | 18.6 ± 9.5 | 25.3 ± 12.6 | +36% |
-| Hard-cap rate | 1/10 | 2/10 | — |
-
-**Key findings**: (1) Zhipu significantly outperforms DeepSeek on C group (+18.8%); (2) thermodynamic termination is directionally effective cross-model — eliminating "conclusion is model-specific" concern; (3) Zhipu speaks more (+36%) with slightly higher hard-cap — more active discussion but slower convergence. Cost: glm-4-flash is free, ~2–4 min/experiment.
-
-See [THEORY.md 附录 B](THEORY.md) for full details, [experiments/v2/analysis_c_group_thermo.md](experiments/v2/analysis_c_group_thermo.md) for the 4-case hard-cap autopsy, and [LIMITATIONS.md](LIMITATIONS.md) §22 for known limitations.
+Full experiment design, phase-by-phase results, threshold calibration, and cross-model analysis in [EXPERIMENT_DESIGN.md](EXPERIMENT_DESIGN.md) and [README_CN.md](README_CN.md).
 
 ---
 

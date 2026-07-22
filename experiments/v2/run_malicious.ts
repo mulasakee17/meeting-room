@@ -399,6 +399,7 @@ async function runMaliciousExperiment(
   // B1 升级：保存精简版 roundResults（含 itemBeliefs）以支持攻击目标核实
   // 历史问题：仅存顶层 beliefChanges，无法判断"a1 是否真在推动线索3"
   // 现保存每轮 opinions 的 itemBeliefs，使分析能定位到 per-item 攻击效果
+  // 2026-07-22 新增：保存 reasoning 字段以支持对话原文回溯
   const roundResults = asyncResult.roundResults.map(r => ({
     roundNumber: r.roundNumber,
     timestamp: r.timestamp,
@@ -407,6 +408,7 @@ async function runMaliciousExperiment(
       agentId: o.agentId,
       belief: o.belief,
       confidence: o.confidence,
+      reasoning: o.reasoning,
       referencedAgents: o.referencedAgents || [],
       evidence: o.evidence || [],
       itemBeliefs: o.itemBeliefs,

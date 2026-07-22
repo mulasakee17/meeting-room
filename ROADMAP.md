@@ -21,7 +21,7 @@
 - [x] PROJECT_SUMMARY.md —— 三层独立价值（监控/审计/治理）
 - [x] ROADMAP.md —— 本文件
 - [x] README.md —— 更新实验数据和技术亮点，对齐新叙事
-- [x] ~~ONEPAGER.md~~ —— 已删除（内容已并入 README.md）
+- [x] ONEPAGER.md —— 内容已并入 README.md，文件保留作为外部快速入口
 - [x] README_CN.md —— 同步中文版 README
 - [x] ~~RESEARCH_STATEMENT.md~~ —— 已合并入本文档附录 B
 
@@ -33,7 +33,7 @@
 - [ ] 给 GovernanceRuntime 写 3 个使用示例（node 脚本、Express 中间件、WebSocket 实时监控）
 
 ### 1.3 测试与质量
-- [x] 确认 303 tests 通过（300 passed, 3 network timeouts）
+- [x] 确认 310 tests 通过（307 passed, 3 network-dependent skipped）
 - [x] 给 StateInferenceBridge 补测试（34 个测试覆盖三级提取、干预转译、LLM 推断、统计监控）
 - [x] 修复 extractGovTag 截断 JSON 容错 bug（正则匹配失效，改为 indexOf 定位 + 手动补全）
 

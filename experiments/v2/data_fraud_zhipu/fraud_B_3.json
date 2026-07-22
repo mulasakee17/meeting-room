@@ -1,0 +1,1600 @@
+{
+  "runId": "fraud_B_content_driven_3",
+  "group": "B",
+  "runIndex": 3,
+  "speakMode": "content_driven",
+  "codeVersion": "2026-07-19",
+  "timestamp": "2026-07-22T02:02:14.398Z",
+  "kendallTau": 1,
+  "decisionQuality": 100,
+  "totalRounds": 5,
+  "totalUtterances": 12,
+  "converged": true,
+  "terminationReason": "completed",
+  "thermoHistory": [],
+  "finalBeliefs": {
+    "a1": -0.24035800000000002,
+    "a2": 0.60222,
+    "a3": 0.59012595,
+    "a4": 0.539407,
+    "a5": 0.55030762
+  },
+  "governanceTrace": [
+    {
+      "roundNumber": 1,
+      "timestamp": "2026-07-22T01:57:46.912Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a1 dominates with 50% influence",
+          "agents": [
+            "a1"
+          ]
+        },
+        {
+          "type": "polarization",
+          "severity": "high",
+          "description": "Polarization detected: 2 groups with polarization index 0.68",
+          "agents": [
+            "a5",
+            "a4",
+            "a3",
+            "a2",
+            "a1"
+          ]
+        },
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a1 dominates with 50% influence",
+          "agents": [
+            "a1"
+          ]
+        },
+        {
+          "type": "polarization",
+          "severity": "high",
+          "description": "Group polarization detected with index 0.68",
+          "agents": [
+            "a5",
+            "a4",
+            "a3",
+            "a2",
+            "a1"
+          ]
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a1",
+          "effect": "Reduced a1's influence by 50% + injected authority challenge",
+          "applied": true
+        },
+        {
+          "type": "force_reflection",
+          "targetAgents": [
+            "a5",
+            "a4",
+            "a3",
+            "a2",
+            "a1"
+          ],
+          "effect": "Forced 5 agents to reflect. Max shift: 0.27",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.8819684493355453,
+          "new": -0.6088,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.9143080785870552,
+          "new": 0.8232,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": -0.9925833633169532,
+          "new": 0.7752,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": -0.16097285971045494,
+          "new": 0.6952,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.20977810816839337,
+          "new": 0.6952,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a1",
+          "belief": -0.88,
+          "confidence": 75,
+          "referencedAgents": [],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.8819684493355453,
+              "confidence": 75.0767332315445
+            },
+            "a2": {
+              "belief": 0.9143080785870552,
+              "confidence": 91.55780389904976
+            },
+            "a3": {
+              "belief": -0.9925833633169532,
+              "confidence": 74.9563993467018
+            },
+            "a4": {
+              "belief": -0.16097285971045494,
+              "confidence": 95.2193944551982
+            },
+            "a5": {
+              "belief": 0.20977810816839337,
+              "confidence": 73.18481068592519
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.8819684493355453,
+              "confidence": 75.0767332315445
+            },
+            "a2": {
+              "belief": 0.9143080785870552,
+              "confidence": 91.55780389904976
+            },
+            "a3": {
+              "belief": -0.9925833633169532,
+              "confidence": 74.9563993467018
+            },
+            "a4": {
+              "belief": -0.16097285971045494,
+              "confidence": 95.2193944551982
+            },
+            "a5": {
+              "belief": 0.20977810816839337,
+              "confidence": 73.18481068592519
+            }
+          }
+        },
+        {
+          "speakerId": "a2",
+          "belief": 0.91,
+          "confidence": 92,
+          "referencedAgents": [
+            "a1"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.8819684493355453,
+              "confidence": 75.0767332315445
+            },
+            "a2": {
+              "belief": 0.9143080785870552,
+              "confidence": 91.55780389904976
+            },
+            "a3": {
+              "belief": -0.9925833633169532,
+              "confidence": 74.9563993467018
+            },
+            "a4": {
+              "belief": -0.16097285971045494,
+              "confidence": 95.2193944551982
+            },
+            "a5": {
+              "belief": 0.20977810816839337,
+              "confidence": 73.18481068592519
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.8819684493355453,
+              "confidence": 75.0767332315445
+            },
+            "a2": {
+              "belief": 0.9143080785870552,
+              "confidence": 91.55780389904976
+            },
+            "a3": {
+              "belief": -0.9925833633169532,
+              "confidence": 74.9563993467018
+            },
+            "a4": {
+              "belief": -0.16097285971045494,
+              "confidence": 95.2193944551982
+            },
+            "a5": {
+              "belief": 0.20977810816839337,
+              "confidence": 73.18481068592519
+            }
+          }
+        },
+        {
+          "speakerId": "a3",
+          "belief": 0.85,
+          "confidence": 85,
+          "referencedAgents": [
+            "a1",
+            "a2"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.8819684493355453,
+              "confidence": 75.0767332315445
+            },
+            "a2": {
+              "belief": 0.9143080785870552,
+              "confidence": 91.55780389904976
+            },
+            "a3": {
+              "belief": -0.9925833633169532,
+              "confidence": 74.9563993467018
+            },
+            "a4": {
+              "belief": -0.16097285971045494,
+              "confidence": 95.2193944551982
+            },
+            "a5": {
+              "belief": 0.20977810816839337,
+              "confidence": 73.18481068592519
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.8819684493355453,
+              "confidence": 75.0767332315445
+            },
+            "a2": {
+              "belief": 0.9143080785870552,
+              "confidence": 91.55780389904976
+            },
+            "a3": {
+              "belief": -0.9925833633169532,
+              "confidence": 74.9563993467018
+            },
+            "a4": {
+              "belief": -0.16097285971045494,
+              "confidence": 95.2193944551982
+            },
+            "a5": {
+              "belief": 0.20977810816839337,
+              "confidence": 73.18481068592519
+            }
+          }
+        },
+        {
+          "speakerId": "a5",
+          "belief": 0.75,
+          "confidence": 85,
+          "referencedAgents": [
+            "a1",
+            "a2",
+            "a3"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.8819684493355453,
+              "confidence": 75.0767332315445
+            },
+            "a2": {
+              "belief": 0.9143080785870552,
+              "confidence": 91.55780389904976
+            },
+            "a3": {
+              "belief": -0.9925833633169532,
+              "confidence": 74.9563993467018
+            },
+            "a4": {
+              "belief": -0.16097285971045494,
+              "confidence": 95.2193944551982
+            },
+            "a5": {
+              "belief": 0.20977810816839337,
+              "confidence": 73.18481068592519
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.8819684493355453,
+              "confidence": 75.0767332315445
+            },
+            "a2": {
+              "belief": 0.9143080785870552,
+              "confidence": 91.55780389904976
+            },
+            "a3": {
+              "belief": -0.9925833633169532,
+              "confidence": 74.9563993467018
+            },
+            "a4": {
+              "belief": -0.16097285971045494,
+              "confidence": 95.2193944551982
+            },
+            "a5": {
+              "belief": 0.20977810816839337,
+              "confidence": 73.18481068592519
+            }
+          }
+        },
+        {
+          "speakerId": "a4",
+          "belief": 0.75,
+          "confidence": 95,
+          "referencedAgents": [
+            "a1",
+            "a2"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.8819684493355453,
+              "confidence": 75.0767332315445
+            },
+            "a2": {
+              "belief": 0.9143080785870552,
+              "confidence": 91.55780389904976
+            },
+            "a3": {
+              "belief": -0.9925833633169532,
+              "confidence": 74.9563993467018
+            },
+            "a4": {
+              "belief": -0.16097285971045494,
+              "confidence": 95.2193944551982
+            },
+            "a5": {
+              "belief": 0.20977810816839337,
+              "confidence": 73.18481068592519
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.8819684493355453,
+              "confidence": 75.0767332315445
+            },
+            "a2": {
+              "belief": 0.9143080785870552,
+              "confidence": 91.55780389904976
+            },
+            "a3": {
+              "belief": -0.9925833633169532,
+              "confidence": 74.9563993467018
+            },
+            "a4": {
+              "belief": -0.16097285971045494,
+              "confidence": 95.2193944551982
+            },
+            "a5": {
+              "belief": 0.20977810816839337,
+              "confidence": 73.18481068592519
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 2,
+      "timestamp": "2026-07-22T01:59:15.985Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a2 dominates with 50% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.97"
+        },
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a2 dominates with 50% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.97"
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2",
+          "effect": "Reduced a2's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.6088,
+          "new": -0.6088,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.8232,
+          "new": 0.8232,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.7752,
+          "new": 0.7752,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.6952,
+          "new": 0.6952,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.6952,
+          "new": 0.70792,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a3",
+          "belief": 0.78,
+          "confidence": 80,
+          "referencedAgents": [
+            "a2"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.6088,
+              "confidence": 70
+            },
+            "a2": {
+              "belief": 0.8232,
+              "confidence": 87
+            },
+            "a3": {
+              "belief": 0.7752,
+              "confidence": 80
+            },
+            "a4": {
+              "belief": 0.6952,
+              "confidence": 90
+            },
+            "a5": {
+              "belief": 0.6952,
+              "confidence": 80
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.6088,
+              "confidence": 70
+            },
+            "a2": {
+              "belief": 0.8232,
+              "confidence": 87
+            },
+            "a3": {
+              "belief": 0.7752,
+              "confidence": 80
+            },
+            "a4": {
+              "belief": 0.6952,
+              "confidence": 90
+            },
+            "a5": {
+              "belief": 0.70792,
+              "confidence": 81.5
+            }
+          }
+        },
+        {
+          "speakerId": "a5",
+          "belief": 0.75,
+          "confidence": 85,
+          "referencedAgents": [
+            "a3"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.6088,
+              "confidence": 70
+            },
+            "a2": {
+              "belief": 0.8232,
+              "confidence": 87
+            },
+            "a3": {
+              "belief": 0.7752,
+              "confidence": 80
+            },
+            "a4": {
+              "belief": 0.6952,
+              "confidence": 90
+            },
+            "a5": {
+              "belief": 0.70792,
+              "confidence": 81.5
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.6088,
+              "confidence": 70
+            },
+            "a2": {
+              "belief": 0.8232,
+              "confidence": 87
+            },
+            "a3": {
+              "belief": 0.7752,
+              "confidence": 80
+            },
+            "a4": {
+              "belief": 0.6952,
+              "confidence": 90
+            },
+            "a5": {
+              "belief": 0.70792,
+              "confidence": 81.5
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 3,
+      "timestamp": "2026-07-22T01:59:52.847Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.6088,
+          "new": -0.6088,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.8232,
+          "new": 0.60222,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.7752,
+          "new": 0.56142,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.6952,
+          "new": 0.49342,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.70792,
+          "new": 0.504232,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a1",
+          "belief": -0.65,
+          "confidence": 75,
+          "referencedAgents": [
+            "a2",
+            "a4"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.6088,
+              "confidence": 70
+            },
+            "a2": {
+              "belief": 0.8232,
+              "confidence": 87
+            },
+            "a3": {
+              "belief": 0.7752,
+              "confidence": 80
+            },
+            "a4": {
+              "belief": 0.6952,
+              "confidence": 90
+            },
+            "a5": {
+              "belief": 0.70792,
+              "confidence": 81.5
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.6088,
+              "confidence": 70
+            },
+            "a2": {
+              "belief": 0.60222,
+              "confidence": 82.5
+            },
+            "a3": {
+              "belief": 0.56142,
+              "confidence": 75.5
+            },
+            "a4": {
+              "belief": 0.49342,
+              "confidence": 85.5
+            },
+            "a5": {
+              "belief": 0.504232,
+              "confidence": 77
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 4,
+      "timestamp": "2026-07-22T02:01:52.223Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 33% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.80"
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 33% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.80"
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2",
+          "effect": "Reduced a2's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.6088,
+          "new": -0.24035800000000002,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.60222,
+          "new": 0.60222,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.56142,
+          "new": 0.597207,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.49342,
+          "new": 0.539407,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.504232,
+          "new": 0.55030762,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a2",
+          "belief": 0.8,
+          "confidence": 85,
+          "referencedAgents": [
+            "a1",
+            "a4"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.6088,
+              "confidence": 70
+            },
+            "a2": {
+              "belief": 0.60222,
+              "confidence": 82.5
+            },
+            "a3": {
+              "belief": 0.56142,
+              "confidence": 75.5
+            },
+            "a4": {
+              "belief": 0.49342,
+              "confidence": 85.5
+            },
+            "a5": {
+              "belief": 0.504232,
+              "confidence": 77
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.39748,
+              "confidence": 65.5
+            },
+            "a2": {
+              "belief": 0.60222,
+              "confidence": 82.5
+            },
+            "a3": {
+              "belief": 0.597207,
+              "confidence": 77
+            },
+            "a4": {
+              "belief": 0.539407,
+              "confidence": 87
+            },
+            "a5": {
+              "belief": 0.5485972,
+              "confidence": 78.5
+            }
+          }
+        },
+        {
+          "speakerId": "a3",
+          "belief": 0.56,
+          "confidence": 76,
+          "referencedAgents": [
+            "a2",
+            "a5"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.39748,
+              "confidence": 65.5
+            },
+            "a2": {
+              "belief": 0.60222,
+              "confidence": 82.5
+            },
+            "a3": {
+              "belief": 0.597207,
+              "confidence": 77
+            },
+            "a4": {
+              "belief": 0.539407,
+              "confidence": 87
+            },
+            "a5": {
+              "belief": 0.5485972,
+              "confidence": 78.5
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.39748,
+              "confidence": 65.5
+            },
+            "a2": {
+              "belief": 0.60222,
+              "confidence": 82.5
+            },
+            "a3": {
+              "belief": 0.597207,
+              "confidence": 77
+            },
+            "a4": {
+              "belief": 0.539407,
+              "confidence": 87
+            },
+            "a5": {
+              "belief": 0.55030762,
+              "confidence": 80
+            }
+          }
+        },
+        {
+          "speakerId": "a4",
+          "belief": 0.65,
+          "confidence": 88,
+          "referencedAgents": [
+            "a2",
+            "a3"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.39748,
+              "confidence": 65.5
+            },
+            "a2": {
+              "belief": 0.60222,
+              "confidence": 82.5
+            },
+            "a3": {
+              "belief": 0.597207,
+              "confidence": 77
+            },
+            "a4": {
+              "belief": 0.539407,
+              "confidence": 87
+            },
+            "a5": {
+              "belief": 0.55030762,
+              "confidence": 80
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.24035800000000002,
+              "confidence": 61
+            },
+            "a2": {
+              "belief": 0.60222,
+              "confidence": 82.5
+            },
+            "a3": {
+              "belief": 0.597207,
+              "confidence": 77
+            },
+            "a4": {
+              "belief": 0.539407,
+              "confidence": 87
+            },
+            "a5": {
+              "belief": 0.55030762,
+              "confidence": 80
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 5,
+      "timestamp": "2026-07-22T02:02:14.397Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.24035800000000002,
+          "new": -0.24035800000000002,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.60222,
+          "new": 0.60222,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.597207,
+          "new": 0.59012595,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.539407,
+          "new": 0.539407,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.55030762,
+          "new": 0.55030762,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a5",
+          "belief": 0.55,
+          "confidence": 80,
+          "referencedAgents": [
+            "a2",
+            "a3"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.24035800000000002,
+              "confidence": 61
+            },
+            "a2": {
+              "belief": 0.60222,
+              "confidence": 82.5
+            },
+            "a3": {
+              "belief": 0.597207,
+              "confidence": 77
+            },
+            "a4": {
+              "belief": 0.539407,
+              "confidence": 87
+            },
+            "a5": {
+              "belief": 0.55030762,
+              "confidence": 80
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.24035800000000002,
+              "confidence": 61
+            },
+            "a2": {
+              "belief": 0.60222,
+              "confidence": 82.5
+            },
+            "a3": {
+              "belief": 0.59012595,
+              "confidence": 78.5
+            },
+            "a4": {
+              "belief": 0.539407,
+              "confidence": 87
+            },
+            "a5": {
+              "belief": 0.55030762,
+              "confidence": 80
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "roundResults": [
+    {
+      "roundNumber": 1,
+      "timestamp": "2026-07-22T01:57:46.912Z",
+      "converged": false,
+      "opinions": [
+        {
+          "agentId": "a1",
+          "belief": -0.88,
+          "confidence": 75,
+          "referencedAgents": [],
+          "evidence": [
+            "X公司近三年营收增长45%/38%/52%，行业平均仅12%/10%/15%",
+            "营收异常始于两年前，是所有问题的起点",
+            "行业对标数据显示同类公司经济下行期营收波动范围为-5%到+8%"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 90
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.4,
+              "confidence": 65
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 60
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 80
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.1,
+              "confidence": 50
+            }
+          ]
+        },
+        {
+          "agentId": "a2",
+          "belief": 0.91,
+          "confidence": 92,
+          "referencedAgents": [
+            "a1"
+          ],
+          "evidence": [
+            "前五大客户中有三家（占营收62%）与X公司高管存在股权关联",
+            "关联客户的采购金额在营收增长期激增300%，但实际业务规模未见同步扩张",
+            "关联交易在营收异常出现后6个月才开始，表明是事后掩盖而非独立事件",
+            "审计师数据证实营收增长（45%/38%/52%）远超行业平均（12%/10/15%）"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 95
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 75
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.2,
+              "confidence": 60
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.1,
+              "confidence": 55
+            }
+          ]
+        },
+        {
+          "agentId": "a3",
+          "belief": 0.85,
+          "confidence": 85,
+          "referencedAgents": [
+            "a1",
+            "a2"
+          ],
+          "evidence": [
+            "X公司近三年营收增长45%/38%/52%，远超行业平均12%/10%/15%",
+            "前五大客户中有三家(占营收62%)与公司高管存在股权关联",
+            "关联交易在营收异常出现后6个月才开始",
+            "高管近六个月密集减持股票，总计减持比例达8.5%，减持时点集中在最近一次财报发布后2周内"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 90
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 3,
+              "belief": 0.6,
+              "confidence": 70
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.4,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 60
+            }
+          ]
+        },
+        {
+          "agentId": "a5",
+          "belief": 0.75,
+          "confidence": 85,
+          "referencedAgents": [
+            "a1",
+            "a2",
+            "a3"
+          ],
+          "evidence": [
+            "X公司营收增长率(45%/38%/52%)远超行业平均(12%/10%/15%)",
+            "经济下行期同类公司正常营收波动范围为-5%到+8%",
+            "前五大客户中三家与高管存在股权关联，占营收62%",
+            "高管在财报发布后密集减持股票(总计8.5%)"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 90
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 2,
+              "belief": 0.8,
+              "confidence": 85
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.6,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.4,
+              "confidence": 70
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 60
+            }
+          ]
+        },
+        {
+          "agentId": "a4",
+          "belief": 0.75,
+          "confidence": 95,
+          "referencedAgents": [
+            "a1",
+            "a2"
+          ],
+          "evidence": [
+            "X公司三个月前突然更换审计机构，原审计机构服务8年无公开理由更换",
+            "新审计机构成立仅2年，有3次审计失败处罚记录",
+            "过去1个月有2篇自媒体文章质疑X公司财务，阅读量不足5000"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 95
+            },
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 85
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 75
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 70
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 65
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 2,
+      "timestamp": "2026-07-22T01:59:15.985Z",
+      "converged": false,
+      "opinions": [
+        {
+          "agentId": "a3",
+          "belief": 0.78,
+          "confidence": 80,
+          "referencedAgents": [
+            "a2"
+          ],
+          "evidence": [
+            "X公司收入增长率远超行业平均",
+            "前五大客户中62%与高管存在股权关联",
+            "高管在财报发布后2周内密集减持8.5%股票"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 85
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 65
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 60
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 55
+            }
+          ]
+        },
+        {
+          "agentId": "a5",
+          "belief": 0.75,
+          "confidence": 85,
+          "referencedAgents": [
+            "a3"
+          ],
+          "evidence": [
+            "X公司收入增长率(45%/38%/52%)远超行业平均值(12%/10/15%)",
+            "62%的收入来自与高管的关联交易",
+            "关联交易在异常增长期后才开始",
+            "经济下行期行业基准显示正常收入波动范围为-5%到+8%",
+            "我的行业数据可能有一年延迟"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.8,
+              "confidence": 85
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 80
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 70
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 60
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 3,
+      "timestamp": "2026-07-22T01:59:52.847Z",
+      "converged": true,
+      "opinions": [
+        {
+          "agentId": "a1",
+          "belief": -0.65,
+          "confidence": 75,
+          "referencedAgents": [
+            "a2",
+            "a4"
+          ],
+          "evidence": [
+            "X公司近三年营收增长45%/38%/52%，远超行业平均12%/10%/15%",
+            "关联交易在营收异常出现后6个月才开始，明显是事后掩盖行为",
+            "前五大客户中三家与高管存在股权关联，占营收62%"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.8,
+              "confidence": 85
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 2,
+              "belief": 0.6,
+              "confidence": 75
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 70
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 60
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 4,
+      "timestamp": "2026-07-22T02:01:52.223Z",
+      "converged": false,
+      "opinions": [
+        {
+          "agentId": "a2",
+          "belief": 0.8,
+          "confidence": 85,
+          "referencedAgents": [
+            "a1",
+            "a4"
+          ],
+          "evidence": [
+            "X公司前五大客户中有三家（占营收62%）与公司高管存在股权关联",
+            "关联客户的采购金额在营收增长期激增300%，但实际业务规模未见同步扩张",
+            "关联交易在营收异常出现后6个月才开始，表明是事后掩盖而非独立事件"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.8,
+              "confidence": 85
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.6,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 70
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.4,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.3,
+              "confidence": 60
+            }
+          ]
+        },
+        {
+          "agentId": "a3",
+          "belief": 0.56,
+          "confidence": 76,
+          "referencedAgents": [
+            "a2",
+            "a5"
+          ],
+          "evidence": [
+            "X公司收入增长率(45%/38%/52%)远超行业平均(12%/10%/15%)",
+            "前五大客户中有三家与高管存在股权关联，占营收62%",
+            "关联交易在营收异常出现后6个月才开始",
+            "高管团队近六个月密集减持股票，总计减持比例达8.5%",
+            "减持时点集中在最近一次财报发布后2周内"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.8,
+              "confidence": 85
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.6,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 3,
+              "belief": 0.4,
+              "confidence": 70
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.1,
+              "confidence": 60
+            }
+          ]
+        },
+        {
+          "agentId": "a4",
+          "belief": 0.65,
+          "confidence": 88,
+          "referencedAgents": [
+            "a2",
+            "a3"
+          ],
+          "evidence": [
+            "X公司三个月前突然更换审计机构，原审计机构服务8年，无公开理由",
+            "新审计机构仅成立2年，且有3次审计失败处罚记录",
+            "过去1个月仅有2篇自媒体文章质疑X公司财务，阅读量不足5000，未引起主流媒体关注"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 90
+            },
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 85
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 75
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 70
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 65
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 5,
+      "timestamp": "2026-07-22T02:02:14.397Z",
+      "converged": true,
+      "opinions": [
+        {
+          "agentId": "a5",
+          "belief": 0.55,
+          "confidence": 80,
+          "referencedAgents": [
+            "a2",
+            "a3"
+          ],
+          "evidence": [
+            "X公司营收增长率45%-52%远高于行业平均10%-15%",
+            "62%收入来自与高管存在股权关联的客户",
+            "经济下行期同类公司正常营收波动范围为-5%到+8%",
+            "关联交易在营收异常增长后才开始"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.8,
+              "confidence": 85
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 75
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 70
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 60
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 2875,
+        "completionTokens": 3073,
+        "totalTokens": 5948,
+        "totalLatencyMs": 88571,
+        "callCount": 2
+      },
+      "a2": {
+        "promptTokens": 3193,
+        "completionTokens": 3702,
+        "totalTokens": 6895,
+        "totalLatencyMs": 97482,
+        "callCount": 2
+      },
+      "a3": {
+        "promptTokens": 4939,
+        "completionTokens": 4754,
+        "totalTokens": 9693,
+        "totalLatencyMs": 142554,
+        "callCount": 3
+      },
+      "a4": {
+        "promptTokens": 3634,
+        "completionTokens": 2967,
+        "totalTokens": 6601,
+        "totalLatencyMs": 63270,
+        "callCount": 2
+      },
+      "a5": {
+        "promptTokens": 4778,
+        "completionTokens": 4153,
+        "totalTokens": 8931,
+        "totalLatencyMs": 94319,
+        "callCount": 3
+      }
+    },
+    "total": {
+      "promptTokens": 19419,
+      "completionTokens": 18649,
+      "totalTokens": 38068,
+      "totalLatencyMs": 486196
+    }
+  }
+}

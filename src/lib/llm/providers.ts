@@ -1,7 +1,7 @@
 import { LLM_DEFAULT_TIMEOUT_MS } from "../constants";
 import { safeJsonParse } from "../utils/jsonUtils";
 
-export type LLMProvider = "openai" | "anthropic" | "deepseek" | "zhipu" | "local";
+export type LLMProvider = "openai" | "anthropic" | "deepseek" | "zhipu" | "qwen" | "local";
 
 // 错误类型分类
 export enum LLMErrorType {
@@ -98,6 +98,8 @@ export async function callLLM(
           return await callDeepSeek(systemPrompt, userPrompt, config);
         case "zhipu":
           return await callZhipu(systemPrompt, userPrompt, config);
+        case "qwen":
+          return await callQwen(systemPrompt, userPrompt, config);
         case "local":
           return await callLocalLLM(systemPrompt, userPrompt, config);
         default:
@@ -637,6 +639,117 @@ async function callZhipu(
   }
 }
 
+// Qwen (阿里云 DashScope, OpenAI 兼容格式)
+async function callQwen(
+  systemPrompt: string,
+  userPrompt: string,
+  config?: LLMConfig
+): Promise<LLMResponse> {
+  const apiKey = config?.apiKey || process.env.QWEN_API_KEY;
+  const model = config?.model || "qwen-plus";
+  const timeout = config?.timeout || DEFAULT_TIMEOUT;
+  const temperature = config?.temperature ?? 0.7;
+
+  if (!apiKey) {
+    throw new LLMError(
+      'Qwen API Key 未配置（设置 QWEN_API_KEY 环境变量）',
+      LLMErrorType.AUTH_ERROR,
+      undefined,
+      false
+    );
+  }
+
+  const startTime = Date.now();
+  try {
+    const response = await fetchWithTimeout(
+      "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature,
+          ...(config?.seed !== undefined ? { seed: config.seed } : {}),
+        }),
+      },
+      timeout
+    );
+
+    if (!response.ok) {
+      const { type, isRetryable } = mapStatusToErrorType(response.status);
+      const errorBody = await response.text().catch(() => '');
+      throw new LLMError(
+        `Qwen API 错误 [${response.status}]: ${errorBody || response.statusText}`,
+        type,
+        response.status,
+        isRetryable
+      );
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      throw new LLMError(
+        'Qwen 返回内容为空',
+        LLMErrorType.INVALID_RESPONSE,
+        undefined,
+        false
+      );
+    }
+
+    const result = parseLLMResponse(content, 'Qwen');
+    result.latencyMs = Date.now() - startTime;
+    if (data.usage) {
+      result.usage = {
+        promptTokens: data.usage.prompt_tokens ?? 0,
+        completionTokens: data.usage.completion_tokens ?? 0,
+        totalTokens: data.usage.total_tokens ?? 0,
+      };
+    }
+    return result;
+  } catch (error) {
+    if (error instanceof LLMError) {
+      throw error;
+    }
+
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new LLMError(
+          `Qwen 请求超时（${timeout / 1000}秒）`,
+          LLMErrorType.TIMEOUT,
+          undefined,
+          true
+        );
+      }
+
+      if (error.message.includes('fetch') || error.message.includes('network')) {
+        throw new LLMError(
+          `Qwen 网络错误: ${error.message}`,
+          LLMErrorType.NETWORK,
+          undefined,
+          true
+        );
+      }
+    }
+
+    throw new LLMError(
+      `Qwen 调用失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      LLMErrorType.UNKNOWN,
+      undefined,
+      true
+    );
+  }
+}
+
 async function callLocalLLM(
   systemPrompt: string,
   userPrompt: string,
@@ -740,5 +853,6 @@ export const availableModels: Record<LLMProvider, string[]> = {
   anthropic: ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"],
   deepseek: ["deepseek-chat", "deepseek-reasoner"],
   zhipu: ["glm-4-flash", "glm-4-air", "glm-4.5-air", "glm-4", "glm-4-plus"],
+  qwen: ["qwen-plus", "qwen-max", "qwen-turbo", "qwen3.7-plus"],
   local: ["llama3", "mistral", "qwen2"],
 };

@@ -10,6 +10,10 @@ import { EvaluationEngine } from "@/lib/evaluation";
 import { GovernanceEngine } from "@/lib/governance";
 import type { FrameworkAdapter } from "@/lib/adapters/types";
 import { safeJsonParse } from "@/lib/utils/jsonUtils";
+import { mulberry32 } from "@/lib/utils/statsUtils";
+
+// pipeline 无实验 seed，用固定 seed PRNG 保证 confidence fallback 可复现
+const pipelineFallbackRng = mulberry32(0x5EED);
 
 // ---- 输入类型 ----------------------------------------------------------------
 
@@ -123,7 +127,7 @@ function parseAgentStates(
     return {
       agentId: state.agentId,
       content: parsedReasoning || "No message",
-      confidence: state.confidence ?? (70 + Math.random() * 30),
+      confidence: state.confidence ?? (70 + pipelineFallbackRng() * 30),
       reasoning: parsedReasoning || "Default reasoning",
       belief,
     };

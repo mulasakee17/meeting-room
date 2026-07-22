@@ -159,6 +159,18 @@ export interface GovernanceIssue {
   severity: SeverityLevel;
   description: string;
   agents?: string[];
+  /** 标记 issue 来源：内置检测器（builtin）或自定义检测器（custom）。
+   *  diagnoseAndIntervene 消费 otherIssues 时仅处理 custom，避免与内置 if 链双重触发。 */
+  source?: "builtin" | "custom";
+  /** 自定义检测器建议的干预。留空则仅记录不触发干预（观测模式）。
+   *  type 必须是 InterventionType 闭合联合的成员（H8 约束）。 */
+  suggestedIntervention?: {
+    type: InterventionType;
+    /** 目标 agent 列表。reduce_weight 会自动取第一个回退到 targetAgentId。 */
+    targetAgents?: string[];
+    parameters?: Record<string, unknown>;
+    reason?: string;
+  };
 }
 
 export interface GovernanceResult {
@@ -277,4 +289,15 @@ export interface DetectorResult {
   severity: SeverityLevel;
   description: string;
   agents?: string[];
+  /** 自定义检测器建议的干预。留空则仅记录不触发干预（观测模式）。
+   *  diagnose() 会透传到 GovernanceIssue.suggestedIntervention，
+   *  diagnoseAndIntervene() 消费 otherIssues 时据此触发干预。
+   *  type 必须是 InterventionType 闭合联合的成员（H8 约束）。 */
+  suggestedIntervention?: {
+    type: InterventionType;
+    /** 目标 agent 列表。reduce_weight 会自动取第一个回退到 targetAgentId。 */
+    targetAgents?: string[];
+    parameters?: Record<string, unknown>;
+    reason?: string;
+  };
 }

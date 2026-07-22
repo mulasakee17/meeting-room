@@ -12,7 +12,7 @@
 
 LLM multi-agent systems lack a principled, runtime-detectable signal for identifying when group deliberation is drifting toward collective failure. We propose **social thermodynamics** as such a signal: a four-variable state space—Kuramoto order parameter $R$, normalized temperature $T$, Shannon entropy $H$, and Helmholtz-style free energy $F = (1-R) + T \cdot H$—computed deterministically from agents' structured belief outputs with zero additional LLM calls. We engineer this signal into a governance runtime that combines seven bias detectors with four intervention strategies ranked by $F$-decomposition and a thermodynamic termination criterion. From 416 preliminary experiments across two hidden-profile tasks, we report three findings that challenge common assumptions about multi-agent deliberation:
 
-1. **False consensus** ($N=169$, two tasks): the correlation between final consensus level ($R$) and decision quality (Kendall $\tau$) is $r \approx -0.14$ on both tasks—consensus is essentially uncorrelated with correctness, undermining convergence-based stopping criteria.
+1. **False consensus** ($N=169$, two tasks): the correlation between final consensus level ($R$) and decision quality (Kendall $\tau$) is $r \approx -0.10$ on both tasks—consensus is essentially uncorrelated with correctness, undermining convergence-based stopping criteria.
 
 2. **Structural precursors dominate procedural correction** ($N=24$ per condition, hard task): breaking role-information coherence ($d=1.44$) substantially outperforms within-discussion governance interventions ($d=0.92$), suggesting that the topology of information distribution is a more powerful lever than runtime correction.
 
@@ -76,7 +76,7 @@ The OWASP Agentic Top 10 (2025-12) defines ten security risks for agentic applic
 
 Hidden profile tasks (Stasser & Titus, 1985) are a social psychology paradigm in which each group member holds unique information needed to discover the optimal solution. Human groups systematically fail to share such unique information. We use hidden profile tasks as our experimental substrate and manipulate role-information coherence as an independent variable.
 
-The relationship between consensus and decision quality has been questioned in recent work. Du et al. (2024, arXiv:2305.14325, ICML 2024) introduced multi-agent debate as a paradigm that assumes consensus convergence leads to correctness. Our finding that consensus (Kendall τ) and decision quality are uncorrelated (r ≈ −0.14 across two tasks) constitutes a direct empirical counterexample to this assumption. Cui et al. (2025, arXiv:2509.11035) independently challenged the "consensus = correctness" assumption in their Free-MAD framework, arguing that consensus mechanisms suffer from three flaws: high communication cost, LLM conformity causing error propagation, and majority-vote unfairness. They proposed an "anti-conformity" mechanism, conceptually parallel to our introduce_diversity intervention. Riedl (2025, arXiv:2510.05174, ICLR 2026) developed an information-theoretic framework using partial information decomposition (PID) on time-delayed mutual information (TDMI) to distinguish genuine cross-agent synergy from spurious temporal coupling—an approach that could provide a rigorous alternative to our R-based consensus metric and address our acknowledged blind spot in distinguishing true from false consensus.
+The relationship between consensus and decision quality has been questioned in recent work. Du et al. (2024, arXiv:2305.14325, ICML 2024) introduced multi-agent debate as a paradigm that assumes consensus convergence leads to correctness. Our finding that consensus (Kendall τ) and decision quality are uncorrelated (r ≈ −0.10 across two tasks) constitutes a direct empirical counterexample to this assumption. Cui et al. (2025, arXiv:2509.11035) independently challenged the "consensus = correctness" assumption in their Free-MAD framework, arguing that consensus mechanisms suffer from three flaws: high communication cost, LLM conformity causing error propagation, and majority-vote unfairness. They proposed an "anti-conformity" mechanism, conceptually parallel to our introduce_diversity intervention. Riedl (2025, arXiv:2510.05174, ICLR 2026) developed an information-theoretic framework using partial information decomposition (PID) on time-delayed mutual information (TDMI) to distinguish genuine cross-agent synergy from spurious temporal coupling—an approach that could provide a rigorous alternative to our R-based consensus metric and address our acknowledged blind spot in distinguishing true from false consensus.
 
 Myakala, Agrawal, and Manche (2026, arXiv:2603.23848) introduced BeliefShift, the first benchmark for evaluating temporal belief consistency and opinion drift in LLM agents across 2,400 annotated multi-session trajectories, providing four new metrics (BRA, DCS, CRR, ESI) that could serve as evaluation tools for our belief-evolution dynamics.
 
@@ -208,7 +208,7 @@ An A/B paired experiment (Crisis task, $N=8$ pilot) comparing F-decomposition ra
 
 ### 4.4 Thermodynamic Termination
 
-The async engine terminates when the thermodynamic state indicates crystallization. The primary criterion is $R \geq 0.85$, a sufficient-but-not-necessary condition for directional convergence (Proposition 3). A hard cap of 25 utterances per discussion prevents runaway loops. The termination decider classifies states into crystallized, divergent, premature, and stable categories based on $(R, T, H)$ trajectories.
+The async engine terminates when the thermodynamic state indicates crystallization. The primary criterion is $R \geq 0.85$, a sufficient-but-not-necessary condition for directional convergence (Proposition 3). A hard cap of 40 utterances per discussion prevents runaway loops. The termination decider classifies states into crystallized, divergent, premature, and stable categories based on $(R, T, H)$ trajectories.
 
 This termination signal addresses MAST failure mode FM-1.5 ("unaware of stopping")—a failure that MAST catalogues but for which it provides no operational resolution.
 
@@ -226,7 +226,7 @@ All stochastic operations use a `mulberry32` PRNG seeded from experiment configu
 
 **Conditions.** `none` (no detection or intervention), `full` (all detectors active, interventions applied), `shuffle` (agent private knowledge rotated by +2 positions with role labels fixed—breaking role-information coherence without changing the information content).
 
-**Infrastructure.** Model: DeepSeek-V3, temperature 0.2. Five agents. Three rounds (sync engine) or up to 25 utterances (async engine). Crisis: $n = 24$ per condition. Supplier: $n = 30$ per condition.
+**Infrastructure.** Model: DeepSeek-V3, temperature 0.2. Five agents. Three rounds (sync engine) or up to 40 utterances (async engine). Crisis: $n = 24$ per condition. Supplier: $n = 30$ per condition.
 
 **Statistics.** Kendall $\tau$-b for decision quality with tie correction. Permutation test ($10^4$ permutations, seed 42) for $p$-values with $(\text{count}+1)/(\text{nPerms}+1)$ correction. Bootstrap percentile CI ($10^4$ resamples). Welch $t$-distribution CI for small-sample correction. Cohen's $d$ with extreme-value trimming. Benjamini-Hochberg FDR for multiple comparisons.
 
@@ -238,7 +238,7 @@ Before presenting results, we characterize the evidential status of each claim. 
 
 | Finding | Type | $N$ | Model(s) | Independent replication | Key limitation |
 |---|---|---|---|---|---|
-| False consensus ($r \approx -0.14$) | Confirmatory | 169 | DeepSeek-V3 | Two tasks (within-study) | Single model; correlational |
+| False consensus ($r \approx -0.10$) | Confirmatory | 169 | DeepSeek-V3 | Two tasks (within-study) | Single model; correlational |
 | Shuffle > governance (hard task) | Confirmatory | 24/cell | DeepSeek-V3 | No | Discovered post-hoc; not pre-registered |
 | Shuffle ceiling (moderate task) | Confirmatory | 29–30/cell | DeepSeek-V3 | No | Ceiling effect; task boundary identified |
 | More interventions → worse outcomes | Exploratory | 10 | DeepSeek-V3 | No | $n = 2$ in failure group; confounded |
@@ -275,7 +275,7 @@ We present confirmatory findings in an affirmative voice and exploratory observa
 
 ### 5.4 False Consensus: Consensus Is Uncorrelated with Correctness
 
-Across all conditions and both tasks ($N = 169$), the Pearson correlation between final consensus level ($R$) and final decision quality ($\tau$) is $r \approx -0.14$ on each task individually. The correlation is near zero and slightly negative.
+Across all conditions and both tasks ($N = 169$), the Pearson correlation between final consensus level ($R$) and final decision quality ($\tau$) is $r \approx -0.10$. Breaking down by task: Crisis ($r \approx -0.05$, $n=80$) and Supplier ($r \approx -0.03$, $n=89$). In both cases, the correlation is near zero and slightly negative.
 
 This finding has direct implications. Agents can reach near-perfect agreement (belief standard deviation below 0.05) while producing incorrect rankings. Conversely, high-quality rankings can emerge from discussions with substantial disagreement. The DeGroot-model assumption that convergence implies correctness—implicit in many consensus-based stopping criteria—is empirically violated in this setting. The theoretical basis is straightforward: $R$ measures directional consistency, not directional correctness. A malicious agent pushing all beliefs toward $+1$ increases $R$ regardless of whether $+1$ corresponds to the correct ranking.
 
@@ -318,7 +318,7 @@ Across all `full`-condition runs, intervention effectiveness decays with round n
 
 ### 6.1 A Unified Narrative: Consensus Is Not Correctness
 
-The three main findings of this work—false consensus, the superiority of structural rearrangement over procedural governance, and the risk of intervention backfire—form a coherent story. The DeGroot-model assumption that multi-agent deliberation converges toward correct answers is not supported by our data. Consensus and correctness are essentially uncorrelated ($r \approx -0.14$). This means that any governance system optimized for convergence speed is optimizing the wrong objective.
+The three main findings of this work—false consensus, the superiority of structural rearrangement over procedural governance, and the risk of intervention backfire—form a coherent story. The DeGroot-model assumption that multi-agent deliberation converges toward correct answers is not supported by our data. Consensus and correctness are essentially uncorrelated ($r \approx -0.10$). This means that any governance system optimized for convergence speed is optimizing the wrong objective.
 
 Our thermodynamic framework takes this observation as its starting point. Rather than treating convergence as the goal, it monitors the *quality* of the convergence process: distinguishing structural disorder from thermal noise, identifying when consensus is premature rather than genuine, and providing a termination signal that does not simply equate agreement with success.
 
@@ -373,7 +373,7 @@ We consolidate here the limitations and corrections that, in an earlier draft, w
 
 **Broken-loop historical data.** 165 of 416 runs predate a critical fix that made state-modification interventions visible to agent perception. In these runs, the governance loop was broken—detectors fired and interventions were logged but could not affect agent behavior. Closed-loop runs (161) are the primary evidence.
 
-**Async engine PRNG bug (fixed).** An earlier version used `Math.random()` in the async engine, violating reproducibility. All instances have been replaced with the seeded `mulberry32` PRNG. The fix is verified by 300 of 303 passing unit tests (the three failures are network timeout errors, unrelated to governance logic).
+**Async engine PRNG bug (fixed).** An earlier version used `Math.random()` in the async engine, violating reproducibility. All instances have been replaced with the seeded `mulberry32` PRNG. The fix is verified by 307 of 310 passing unit tests (the three skips are network-dependent tests, unrelated to governance logic).
 
 ---
 
@@ -462,7 +462,7 @@ Five agents (Cost Analyst, Quality Engineer, Delivery Specialist, Technical Dire
 - [x] Unified `PERMUTATION_SEED = 42` and `BOOTSTRAP_SEED = 42 + 0x5EED` across all analysis scripts
 - [x] Full experiment logs with per-round beliefs, confidences, interventions, token usage
 - [x] Statistical analysis scripts with explicit random seeds
-- [x] 300/303 unit tests pass (3 failures: network/API key timeout, unrelated to governance logic)
+- [x] 307/310 unit tests pass (3 network-dependent tests skipped, unrelated to governance logic)
 - [x] 13 dedicated MAST detector unit tests (FM-2.4/2.5/2.6 positive, negative, safe-degradation, integration)
 - [ ] Pre-registration (protocol written; not yet executed for new experiments)
 - [ ] Cross-model validation (designed; pilot $N = 10$ Zhipu only)

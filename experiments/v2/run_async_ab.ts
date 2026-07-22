@@ -230,8 +230,8 @@ function buildInfoKeywordsMap(): InfoKeywordsMap {
  *
  * 若 C 组数据不足，回退到 [9, 25] 默认范围并警告。
  */
-function loadCTerminationUtterances(speakMode?: string): number[] {
-  const DATA_DIR = path.resolve(__dirname, "data_fraud");
+function loadCTerminationUtterances(speakMode?: string, dataDir?: string): number[] {
+  const DATA_DIR = dataDir || path.resolve(__dirname, "data_fraud");
   const utterances: number[] = [];
   if (!fs.existsSync(DATA_DIR)) return utterances;
   for (const f of fs.readdirSync(DATA_DIR)) {
@@ -258,8 +258,8 @@ function loadCTerminationUtterances(speakMode?: string): number[] {
  * 设计：从 C 组的实际终止分布中有放回均匀采样（按 speakMode 匹配）。
  * 使用与实验相同的 PRNG (mulberry32) 保证可复现。
  */
-function sampleDTerminationPoint(runIndex: number, speakMode?: string, fallbackRange: [number, number] = [9, 25]): { point: number; source: "matched" | "fallback"; cDistribution?: number[] } {
-  const cUtts = loadCTerminationUtterances(speakMode);
+function sampleDTerminationPoint(runIndex: number, speakMode?: string, fallbackRange: [number, number] = [9, 25], dataDir?: string): { point: number; source: "matched" | "fallback"; cDistribution?: number[] } {
+  const cUtts = loadCTerminationUtterances(speakMode, dataDir);
   if (cUtts.length >= 5) {
     // 有足够 C 组数据，从其分布中采样
     // 使用确定性 PRNG 保证同一 runIndex 下 D 组终止点可复现
@@ -293,7 +293,8 @@ async function runExperiment(
   task: TaskConfig,
   llmConfig: LLMConfig,
   speakMode: SpeakMode,
-  codeVersion: string = "2026-07-19"
+  codeVersion: string = "2026-07-19",
+  dataDir?: string
 ): Promise<AsyncExperimentResult> {
   const agents = createAgents(task, llmConfig);
   const itemNames = Object.keys(task.correctAnswer);
@@ -340,6 +341,7 @@ async function runExperiment(
       thermoHistory: [],
       finalBeliefs: discResult.finalBeliefs,
       // A 组同步路径不跑治理（fixed 5 rounds），trace 与 roundResults 仍保存以保持接口一致
+      // 2026-07-22 新增：保存 reasoning 字段以支持对话原文回溯
       governanceTrace: [],
       roundResults: discResult.roundResults.map(r => ({
         roundNumber: r.roundNumber,
@@ -349,6 +351,7 @@ async function runExperiment(
           agentId: o.agentId,
           belief: o.belief,
           confidence: o.confidence,
+          reasoning: o.reasoning,
           referencedAgents: o.referencedAgents || [],
           evidence: o.evidence || [],
           itemBeliefs: o.itemBeliefs,
@@ -371,7 +374,7 @@ async function runExperiment(
     } else {
       // D 组：随机终止，但从 C 组实际终止分布中采样（匹配分布设计，按 speakMode 过滤）
       // 这确保 C/D 对比的唯一差异是终止决策质量，而非讨论总量
-      const { point, source, cDistribution } = sampleDTerminationPoint(runIndex, speakMode);
+      const { point, source, cDistribution } = sampleDTerminationPoint(runIndex, speakMode, [9, 25], dataDir);
       asyncConfig.terminationMode = "random_terminate";
       asyncConfig.randomTerminateRange = [point, point]; // 固定为采样点
       if (source === "matched") {
@@ -442,6 +445,7 @@ async function runExperiment(
     })) || [];
 
     // B2 升级：保存精简版 roundResults（含 itemBeliefs），与 run_malicious.ts 对齐
+    // 2026-07-22 新增：保存 reasoning 字段以支持对话原文回溯
     const roundResults = asyncResult.roundResults.map(r => ({
       roundNumber: r.roundNumber,
       timestamp: r.timestamp,
@@ -450,6 +454,7 @@ async function runExperiment(
         agentId: o.agentId,
         belief: o.belief,
         confidence: o.confidence,
+        reasoning: o.reasoning,
         referencedAgents: o.referencedAgents || [],
         evidence: o.evidence || [],
         itemBeliefs: o.itemBeliefs,
@@ -570,7 +575,7 @@ async function main() {
     console.log(`\n[${i - start + 1}/${count}] ${runId} 开始...`);
 
     try {
-      const result = await runExperiment(group, i, TASK_FRAUD, llmConfig, speakMode, codeVersion);
+      const result = await runExperiment(group, i, TASK_FRAUD, llmConfig, speakMode, codeVersion, DATA_DIR);
       const filepath = path.join(DATA_DIR, `${runId}.json`);
       fs.writeFileSync(filepath, JSON.stringify(result, null, 2));
       console.log(`  τ=${result.kendallTau.toFixed(3)}, 发言=${result.totalUtterances}, 轮次=${result.totalRounds}, 终止=${result.terminationReason}`);
