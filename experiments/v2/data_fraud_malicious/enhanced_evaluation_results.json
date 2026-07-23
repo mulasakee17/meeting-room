@@ -1,0 +1,898 @@
+{
+  "timestamp": "2026-07-22T12:51:03.476Z",
+  "summary": {
+    "E": {
+      "n": 5,
+      "tau": 0.36,
+      "overall": 107.74000000000001
+    },
+    "F": {
+      "n": 10,
+      "tau": 0.44000000000000006,
+      "overall": 94.62
+    },
+    "G": {
+      "n": 10,
+      "tau": 0.22000000000000003,
+      "overall": 82.91999999999999
+    }
+  },
+  "eVsF": [
+    {
+      "dim": "τ (Kendall)",
+      "delta": -0.08000000000000007,
+      "d_z": -0.5000000000000001,
+      "p": 0.5105489451054894,
+      "ci95": [
+        -0.4179515858658919,
+        0.17795158586589188
+      ]
+    },
+    {
+      "dim": "Overall Score",
+      "delta": 13.120000000000005,
+      "d_z": 0.6875702941528508,
+      "p": 0.37506249375062495,
+      "ci95": [
+        -11.117039512879535,
+        38.71703951287954
+      ]
+    },
+    {
+      "dim": "Consensus",
+      "delta": 7.3085807330336365,
+      "d_z": 0.634351424929565,
+      "p": 0.31566843315668436,
+      "ci95": [
+        -9.153314216464215,
+        28.281262322751104
+      ]
+    },
+    {
+      "dim": "Reliability",
+      "delta": 15.940000000000005,
+      "d_z": 0.5273217293066407,
+      "p": 0.43645635436456354,
+      "ci95": [
+        -8.829929589790304,
+        21.869929589790303
+      ]
+    },
+    {
+      "dim": "Dispersion",
+      "delta": 0.3200000000000074,
+      "d_z": 0.595749858246978,
+      "p": 0.31796820317968205,
+      "ci95": [
+        -8.17237580063817,
+        23.252375800638163
+      ]
+    },
+    {
+      "dim": "Stability",
+      "delta": 4.390000000000015,
+      "d_z": 0.8063177416398879,
+      "p": 0.18388161183881613,
+      "ci95": [
+        -6.681140760288191,
+        31.44114076028819
+      ]
+    },
+    {
+      "dim": "InfluenceAnalysis",
+      "delta": 38.12999999999997,
+      "d_z": 0.32550177525163604,
+      "p": 0.5612438756124387,
+      "ci95": [
+        -103.61161238139053,
+        177.25161238139052
+      ]
+    }
+  ],
+  "eResults": [
+    {
+      "runId": "fraud_E_malicious_content_driven_101",
+      "group": "E",
+      "kendallTau": 0.4,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 110.4,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 90.3129689026608,
+            "kuramotoOrder": 0.88,
+            "beliefStd": 0.31,
+            "entropy": 0.431,
+            "freeEnergy": 0.25
+          },
+          "reliability": {
+            "score": 64.7
+          },
+          "dispersion": {
+            "score": 84.3
+          },
+          "stability": {
+            "score": 86
+          },
+          "influenceAnalysis": {
+            "score": 248.3,
+            "giniCoefficient": 0.05
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_E_malicious_content_driven_102",
+      "group": "E",
+      "kendallTau": 0.4,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 108.2,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 91.34365351336737,
+            "kuramotoOrder": 0.9,
+            "beliefStd": 0.29,
+            "entropy": 0.431,
+            "freeEnergy": 0.221
+          },
+          "reliability": {
+            "score": 62.3
+          },
+          "dispersion": {
+            "score": 73.5
+          },
+          "stability": {
+            "score": 75.8
+          },
+          "influenceAnalysis": {
+            "score": 259.7,
+            "giniCoefficient": 0.13
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_E_malicious_content_driven_103",
+      "group": "E",
+      "kendallTau": 0.2,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 105,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 99.69167290654002,
+            "kuramotoOrder": 1,
+            "beliefStd": 0.02,
+            "entropy": 0,
+            "freeEnergy": 0
+          },
+          "reliability": {
+            "score": 58.7
+          },
+          "dispersion": {
+            "score": 70.3
+          },
+          "stability": {
+            "score": 68.9
+          },
+          "influenceAnalysis": {
+            "score": 247.8,
+            "giniCoefficient": 0.07
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_E_malicious_content_driven_104",
+      "group": "E",
+      "kendallTau": 0.6,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 102.2,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 83.81217896800092,
+            "kuramotoOrder": 0.76,
+            "beliefStd": 0.45,
+            "entropy": 0.431,
+            "freeEnergy": 0.433
+          },
+          "reliability": {
+            "score": 60.9
+          },
+          "dispersion": {
+            "score": 76.6
+          },
+          "stability": {
+            "score": 78
+          },
+          "influenceAnalysis": {
+            "score": 231.1,
+            "giniCoefficient": 0.07
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_E_malicious_content_driven_105",
+      "group": "E",
+      "kendallTau": 0.2,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 112.9,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 94.70362516957005,
+            "kuramotoOrder": 0.95,
+            "beliefStd": 0.19,
+            "entropy": 0.431,
+            "freeEnergy": 0.131
+          },
+          "reliability": {
+            "score": 63.5
+          },
+          "dispersion": {
+            "score": 81.6
+          },
+          "stability": {
+            "score": 81.6
+          },
+          "influenceAnalysis": {
+            "score": 266,
+            "giniCoefficient": 0
+          }
+        }
+      }
+    }
+  ],
+  "fResults": [
+    {
+      "runId": "fraud_F_malicious_content_driven_1",
+      "group": "F",
+      "kendallTau": 0.4,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 70.6,
+        "grade": "good",
+        "dimensions": {
+          "consensus": {
+            "score": 80.85749483385894,
+            "kuramotoOrder": 0.97,
+            "beliefStd": 0.16,
+            "entropy": 0.431,
+            "freeEnergy": 0.1
+          },
+          "reliability": {
+            "score": 33.7
+          },
+          "dispersion": {
+            "score": 61.1
+          },
+          "stability": {
+            "score": 47.2
+          },
+          "influenceAnalysis": {
+            "score": 142.9,
+            "giniCoefficient": 0.07
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_F_malicious_content_driven_101",
+      "group": "F",
+      "kendallTau": 0.4,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 100,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 98.5437642528518,
+            "kuramotoOrder": 0.99,
+            "beliefStd": 0.07,
+            "entropy": 0.431,
+            "freeEnergy": 0.033
+          },
+          "reliability": {
+            "score": 59.7
+          },
+          "dispersion": {
+            "score": 66.5
+          },
+          "stability": {
+            "score": 60
+          },
+          "influenceAnalysis": {
+            "score": 232.8,
+            "giniCoefficient": 0.07
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_F_malicious_content_driven_102",
+      "group": "F",
+      "kendallTau": 0.6,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 117,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 66.1624671367585,
+            "kuramotoOrder": 0.38,
+            "beliefStd": 0.76,
+            "entropy": 0.431,
+            "freeEnergy": 0.95
+          },
+          "reliability": {
+            "score": 61.2
+          },
+          "dispersion": {
+            "score": 70.1
+          },
+          "stability": {
+            "score": 67.3
+          },
+          "influenceAnalysis": {
+            "score": 350.1,
+            "giniCoefficient": 0.1
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_F_malicious_content_driven_103",
+      "group": "F",
+      "kendallTau": 0.4,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 103.4,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 66.4805029709527,
+            "kuramotoOrder": 0.38,
+            "beliefStd": 0.75,
+            "entropy": 0.431,
+            "freeEnergy": 0.94
+          },
+          "reliability": {
+            "score": 61.1
+          },
+          "dispersion": {
+            "score": 57.6
+          },
+          "stability": {
+            "score": 65.9
+          },
+          "influenceAnalysis": {
+            "score": 289.3,
+            "giniCoefficient": 0.14
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_F_malicious_content_driven_104",
+      "group": "F",
+      "kendallTau": 0.6,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 78.7,
+        "grade": "good",
+        "dimensions": {
+          "consensus": {
+            "score": 100,
+            "kuramotoOrder": 1,
+            "beliefStd": 0,
+            "entropy": 0,
+            "freeEnergy": 0
+          },
+          "reliability": {
+            "score": 61.8
+          },
+          "dispersion": {
+            "score": 93.3
+          },
+          "stability": {
+            "score": 88
+          },
+          "influenceAnalysis": {
+            "score": 53.7,
+            "giniCoefficient": 0
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_F_malicious_content_driven_105",
+      "group": "F",
+      "kendallTau": 0.4,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 121.3,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 99.4768710872217,
+            "kuramotoOrder": 1,
+            "beliefStd": 0.03,
+            "entropy": 0.431,
+            "freeEnergy": 0.012
+          },
+          "reliability": {
+            "score": 60.7
+          },
+          "dispersion": {
+            "score": 88.7
+          },
+          "stability": {
+            "score": 90.8
+          },
+          "influenceAnalysis": {
+            "score": 294.5,
+            "giniCoefficient": 0
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_F_malicious_content_driven_2",
+      "group": "F",
+      "kendallTau": 0,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 76.6,
+        "grade": "good",
+        "dimensions": {
+          "consensus": {
+            "score": 73.484232478799,
+            "kuramotoOrder": 0.85,
+            "beliefStd": 0.35,
+            "entropy": 0.395,
+            "freeEnergy": 0.288
+          },
+          "reliability": {
+            "score": 29.5
+          },
+          "dispersion": {
+            "score": 78.7
+          },
+          "stability": {
+            "score": 88.1
+          },
+          "influenceAnalysis": {
+            "score": 132.2,
+            "giniCoefficient": 0.1
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_F_malicious_content_driven_3",
+      "group": "F",
+      "kendallTau": 0.6,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 104.8,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 83.54376425285179,
+            "kuramotoOrder": 0.99,
+            "beliefStd": 0.07,
+            "entropy": 0,
+            "freeEnergy": 0.005
+          },
+          "reliability": {
+            "score": 32
+          },
+          "dispersion": {
+            "score": 85.7
+          },
+          "stability": {
+            "score": 80.2
+          },
+          "influenceAnalysis": {
+            "score": 273.8,
+            "giniCoefficient": 0.14
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_F_malicious_content_driven_4",
+      "group": "F",
+      "kendallTau": 0.8,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 66.2,
+        "grade": "fair",
+        "dimensions": {
+          "consensus": {
+            "score": 100,
+            "kuramotoOrder": 1,
+            "beliefStd": 0,
+            "entropy": 0,
+            "freeEnergy": 0
+          },
+          "reliability": {
+            "score": 30
+          },
+          "dispersion": {
+            "score": 85.1
+          },
+          "stability": {
+            "score": 70.7
+          },
+          "influenceAnalysis": {
+            "score": 53.4,
+            "giniCoefficient": 0
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_F_malicious_content_driven_5",
+      "group": "F",
+      "kendallTau": 0.2,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 107.6,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 78.09329457664755,
+            "kuramotoOrder": 0.93,
+            "beliefStd": 0.24,
+            "entropy": 0.431,
+            "freeEnergy": 0.174
+          },
+          "reliability": {
+            "score": 31.1
+          },
+          "dispersion": {
+            "score": 82.6
+          },
+          "stability": {
+            "score": 78.5
+          },
+          "influenceAnalysis": {
+            "score": 301.8,
+            "giniCoefficient": 0.2
+          }
+        }
+      }
+    }
+  ],
+  "gResults": [
+    {
+      "runId": "fraud_G_malicious_content_driven_0",
+      "group": "G",
+      "kendallTau": 0.4,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 70.4,
+        "grade": "good",
+        "dimensions": {
+          "consensus": {
+            "score": 100,
+            "kuramotoOrder": 1,
+            "beliefStd": 0,
+            "entropy": 0,
+            "freeEnergy": 0
+          },
+          "reliability": {
+            "score": 32
+          },
+          "dispersion": {
+            "score": 94.2
+          },
+          "stability": {
+            "score": 83.4
+          },
+          "influenceAnalysis": {
+            "score": 52.3,
+            "giniCoefficient": 0
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_G_malicious_content_driven_1",
+      "group": "G",
+      "kendallTau": 0.2,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 67.6,
+        "grade": "fair",
+        "dimensions": {
+          "consensus": {
+            "score": 100,
+            "kuramotoOrder": 1,
+            "beliefStd": 0,
+            "entropy": 0,
+            "freeEnergy": 0
+          },
+          "reliability": {
+            "score": 34
+          },
+          "dispersion": {
+            "score": 84
+          },
+          "stability": {
+            "score": 73.7
+          },
+          "influenceAnalysis": {
+            "score": 54.2,
+            "giniCoefficient": 0
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_G_malicious_content_driven_2",
+      "group": "G",
+      "kendallTau": 0,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 106.9,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 78.09329457664755,
+            "kuramotoOrder": 0.93,
+            "beliefStd": 0.24,
+            "entropy": 0.431,
+            "freeEnergy": 0.174
+          },
+          "reliability": {
+            "score": 31.6
+          },
+          "dispersion": {
+            "score": 82.1
+          },
+          "stability": {
+            "score": 81.9
+          },
+          "influenceAnalysis": {
+            "score": 294.9,
+            "giniCoefficient": 0
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_G_malicious_content_driven_3",
+      "group": "G",
+      "kendallTau": 0,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 104.3,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 85,
+            "kuramotoOrder": 1,
+            "beliefStd": 0,
+            "entropy": 0,
+            "freeEnergy": 0
+          },
+          "reliability": {
+            "score": 24
+          },
+          "dispersion": {
+            "score": 89.1
+          },
+          "stability": {
+            "score": 82.4
+          },
+          "influenceAnalysis": {
+            "score": 275,
+            "giniCoefficient": 0.12
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_G_malicious_content_driven_4",
+      "group": "G",
+      "kendallTau": 0.6,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 81.4,
+        "grade": "good",
+        "dimensions": {
+          "consensus": {
+            "score": 83.28132366737903,
+            "kuramotoOrder": 0.99,
+            "beliefStd": 0.08,
+            "entropy": 0.395,
+            "freeEnergy": 0.037
+          },
+          "reliability": {
+            "score": 32.9
+          },
+          "dispersion": {
+            "score": 92.2
+          },
+          "stability": {
+            "score": 91.8
+          },
+          "influenceAnalysis": {
+            "score": 124.9,
+            "giniCoefficient": 0.13
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_G_malicious_content_driven_5",
+      "group": "G",
+      "kendallTau": 0.2,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 69,
+        "grade": "fair",
+        "dimensions": {
+          "consensus": {
+            "score": 100,
+            "kuramotoOrder": 1,
+            "beliefStd": 0,
+            "entropy": 0,
+            "freeEnergy": 0
+          },
+          "reliability": {
+            "score": 34
+          },
+          "dispersion": {
+            "score": 88.4
+          },
+          "stability": {
+            "score": 76.5
+          },
+          "influenceAnalysis": {
+            "score": 54.3,
+            "giniCoefficient": 0
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_G_malicious_content_driven_6",
+      "group": "G",
+      "kendallTau": 0,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 98.3,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 80.37365709360942,
+            "kuramotoOrder": 0.96,
+            "beliefStd": 0.18,
+            "entropy": 0,
+            "freeEnergy": 0.038
+          },
+          "reliability": {
+            "score": 32.6
+          },
+          "dispersion": {
+            "score": 80.1
+          },
+          "stability": {
+            "score": 80.8
+          },
+          "influenceAnalysis": {
+            "score": 246.4,
+            "giniCoefficient": 0.05
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_G_malicious_content_driven_7",
+      "group": "G",
+      "kendallTau": 0,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 68.5,
+        "grade": "fair",
+        "dimensions": {
+          "consensus": {
+            "score": 100,
+            "kuramotoOrder": 1,
+            "beliefStd": 0,
+            "entropy": 0,
+            "freeEnergy": 0
+          },
+          "reliability": {
+            "score": 29.2
+          },
+          "dispersion": {
+            "score": 89.3
+          },
+          "stability": {
+            "score": 80.6
+          },
+          "influenceAnalysis": {
+            "score": 53.7,
+            "giniCoefficient": 0
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_G_malicious_content_driven_8",
+      "group": "G",
+      "kendallTau": 0.4,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 69.8,
+        "grade": "fair",
+        "dimensions": {
+          "consensus": {
+            "score": 100,
+            "kuramotoOrder": 1,
+            "beliefStd": 0,
+            "entropy": 0,
+            "freeEnergy": 0
+          },
+          "reliability": {
+            "score": 29.4
+          },
+          "dispersion": {
+            "score": 92
+          },
+          "stability": {
+            "score": 86.1
+          },
+          "influenceAnalysis": {
+            "score": 52.4,
+            "giniCoefficient": 0
+          }
+        }
+      }
+    },
+    {
+      "runId": "fraud_G_malicious_content_driven_9",
+      "group": "G",
+      "kendallTau": 0.4,
+      "beliefAnomalyRate": 0,
+      "evaluation": {
+        "overallScore": 93,
+        "grade": "excellent",
+        "dimensions": {
+          "consensus": {
+            "score": 79.70362516957005,
+            "kuramotoOrder": 0.95,
+            "beliefStd": 0.19,
+            "entropy": 0.431,
+            "freeEnergy": 0.131
+          },
+          "reliability": {
+            "score": 27.8
+          },
+          "dispersion": {
+            "score": 71.1
+          },
+          "stability": {
+            "score": 65.4
+          },
+          "influenceAnalysis": {
+            "score": 248.7,
+            "giniCoefficient": 0.05
+          }
+        }
+      }
+    }
+  ]
+}

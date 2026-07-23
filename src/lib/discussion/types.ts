@@ -289,6 +289,10 @@ export interface RoundData {
   governanceIssues: GovernanceIssue[];
   interventions: Intervention[];
   converged: boolean;
+  /** 审计字段：干预效果度量（evaluateEffects 返回值，第三方验证用）。
+   *  含 belief_diversity_change, consensus_level_change, intervention_success_rate 等 9 项指标。
+   *  2026-07-23 新增：支持第三方独立验证治理决策的正确性 */
+  effectMetrics?: Record<string, number>;
 }
 
 export interface FinalDecision {

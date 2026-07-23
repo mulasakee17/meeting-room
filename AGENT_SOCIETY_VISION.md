@@ -290,7 +290,7 @@ Between the current project and the vision, these are the gaps that cannot be pa
 
 ### Gap 1: Single-Model Validation
 
-All 416 experiments use DeepSeek-V3 (with 10 cross-model runs on Zhipu glm-4-flash). The claim that mathematical detectors are "un-deceivable" is structurally true but empirically unverified against GPT-4o or Claude. A sufficiently capable model might learn to output structured tags that pass all mathematical consistency checks while still being strategically deceptive.
+All 445 experiments use DeepSeek-V3 (with 10 cross-model runs on Zhipu glm-4-flash + 30 cross-model runs on Qwen 3.7-plus). The claim that mathematical detectors are "un-deceivable" is structurally true but empirically unverified against GPT-4o or Claude. A sufficiently capable model might learn to output structured tags that pass all mathematical consistency checks while still being strategically deceptive.
 
 **Mitigation**: Cross-model adversarial validation (Phase B above).
 

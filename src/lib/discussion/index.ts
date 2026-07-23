@@ -46,6 +46,11 @@ import {
   BELIEF_MAX,
   CONFIDENCE_MIN,
   CONFIDENCE_MAX,
+  // 审计字段：detectionMetrics 需要存阈值供第三方验证（2026-07-23 新增）
+  GOVERNANCE_ECHO_CHAMBER_THRESHOLD,
+  GOVERNANCE_AUTHORITY_BIAS_THRESHOLD,
+  GOVERNANCE_POLARIZATION_THRESHOLD,
+  GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD,
 } from "../constants";
 import type { GovernanceRuntime as GovernanceRuntimeType } from "@/runtime/GovernanceRuntime";
 import type { DiscussionMessage } from "@/runtime/types";
@@ -304,6 +309,8 @@ export class DiscussionEngine {
         opinions: [...opinions], beliefChanges, influenceEvents,
         governanceIssues: governanceResult?.issues || [],
         interventions, converged,
+        // 审计字段：存储干预效果度量（第三方验证用，2026-07-23 新增）
+        effectMetrics: governanceResult?.effectMetrics,
       });
 
       this.eventTracker.track({
@@ -816,9 +823,13 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     round: number,
     opinions: AgentOpinion[],
     agentStates: Map<string, { belief: number; confidence: number }>,
-    agents: DiscussionAgent[]
+    agents: DiscussionAgent[],
+    /** 异步引擎覆写：currentRound / maxRounds。同步引擎无需传。 */
+    governanceConfigOverride?: { currentRound: number; maxRounds: number }
   ): { hasIntervention: boolean; interventions: Intervention[]; effectMetrics?: Record<string, number>; issues: GovernanceIssue[] } | null {
     const mode = this.config.governanceMode || "full";
+    const effectiveMaxRounds = governanceConfigOverride?.maxRounds ?? this.config.maxRounds;
+    const effectiveCurrentRound = governanceConfigOverride?.currentRound ?? round;
 
     // "none" mode: skip everything
     if (mode === "none") return null;
@@ -874,14 +885,16 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
         enablePolarizationDetection: true,
         enablePrematureConsensusDetection: true,
         interventionLevel: "medium",
+        currentRound: effectiveCurrentRound,
+        maxRounds: effectiveMaxRounds,
       });
 
       // Build issues from diagnosis (for recording)
-      const issues = this.buildIssuesFromResult(result);
+      const issues = this.buildIssuesFromResult(result, this.config.governanceConfig);
 
       // Generate random interventions regardless of detection
       const randomInterventions = this.generateRandomInterventions(
-        agentBeliefs, agents, round, this.config.maxRounds
+        agentBeliefs, agents, effectiveCurrentRound, effectiveMaxRounds
       );
 
       if (randomInterventions.length === 0) {
@@ -928,12 +941,13 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
       agentBeliefs,
       messages,
       agentIds,
-      interactionGraph
+      interactionGraph,
+      { currentRound: effectiveCurrentRound, maxRounds: effectiveMaxRounds }
     );
 
     // "detect-only": skip intervention application, only record issues
     if (mode === "detect-only") {
-      const issues = this.buildIssuesFromResult(result);
+      const issues = this.buildIssuesFromResult(result, this.config.governanceConfig);
       return {
         hasIntervention: false,
         interventions: [],
@@ -988,7 +1002,7 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
       results.map(r => r.intervention)
     );
 
-    const issues = this.buildIssuesFromResult(result);
+    const issues = this.buildIssuesFromResult(result, this.config.governanceConfig);
 
     return {
       hasIntervention: results.some(r => r.success),
@@ -1117,7 +1131,10 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
   }
 
   /** Extract GovernanceIssue[] from GovernanceResult */
-  private buildIssuesFromResult(result: ReturnType<GovernanceEngine["diagnose"]>): GovernanceIssue[] {
+  private buildIssuesFromResult(
+    result: ReturnType<GovernanceEngine["diagnose"]>,
+    governanceConfig?: GovernanceConfig
+  ): GovernanceIssue[] {
     const issues: GovernanceIssue[] = [];
     if (result.echoChamber.detected) {
       issues.push({
@@ -1125,6 +1142,12 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
         severity: result.echoChamber.severity,
         description: `Echo chamber detected: ${result.echoChamber.redundantAgents.length} agents share similar information`,
         agents: result.echoChamber.redundantAgents,
+        // 审计字段：保留结构化数值供第三方验证（含阈值，2026-07-23 修复）
+        detectionMetrics: {
+          infoRedundancyScore: Math.round(result.echoChamber.infoRedundancyScore * 1000) / 1000,
+          threshold: Math.round((governanceConfig?.echoChamberThreshold ?? GOVERNANCE_ECHO_CHAMBER_THRESHOLD) * 1000) / 1000,
+          redundantAgentCount: result.echoChamber.redundantAgents.length,
+        },
       });
     }
     if (result.authorityBias.detected) {
@@ -1133,6 +1156,10 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
         severity: result.authorityBias.severity,
         description: `Authority bias detected: ${result.authorityBias.dominantAgent} dominates with ${(result.authorityBias.influenceRatio * 100).toFixed(0)}% influence`,
         agents: result.authorityBias.dominantAgent ? [result.authorityBias.dominantAgent] : undefined,
+        detectionMetrics: {
+          influenceRatio: Math.round(result.authorityBias.influenceRatio * 1000) / 1000,
+          threshold: Math.round((governanceConfig?.authorityBiasThreshold ?? GOVERNANCE_AUTHORITY_BIAS_THRESHOLD) * 1000) / 1000,
+        },
       });
     }
     if (result.polarization.detected) {
@@ -1141,6 +1168,14 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
         severity: result.polarization.severity,
         description: `Polarization detected: ${result.polarization.groups.length} groups with polarization index ${result.polarization.polarizationIndex.toFixed(2)}`,
         agents: result.polarization.groups.flatMap(g => g.agentIds),
+        detectionMetrics: {
+          polarizationIndex: Math.round(result.polarization.polarizationIndex * 1000) / 1000,
+          threshold: Math.round((governanceConfig?.polarizationThreshold ?? GOVERNANCE_POLARIZATION_THRESHOLD) * 1000) / 1000,
+          ...(result.polarization.bimodalityCoefficient !== undefined
+            ? { bimodalityCoefficient: Math.round(result.polarization.bimodalityCoefficient * 1000) / 1000 }
+            : {}),
+          groupCount: result.polarization.groups.length,
+        },
       });
     }
     if (result.prematureConsensus.detected) {
@@ -1148,6 +1183,13 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
         type: "premature_consensus",
         severity: result.prematureConsensus.severity,
         description: `Premature consensus detected at round ${result.prematureConsensus.roundNumber}: consensus level ${result.prematureConsensus.consensusLevel.toFixed(2)}`,
+        detectionMetrics: {
+          beliefStd: Math.round(result.prematureConsensus.beliefStd * 1000) / 1000,
+          consensusLevel: Math.round(result.prematureConsensus.consensusLevel * 1000) / 1000,
+          threshold: Math.round((governanceConfig?.prematureConsensusThreshold ?? GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD) * 1000) / 1000,
+          roundNumber: result.prematureConsensus.roundNumber,
+          maxRounds: result.prematureConsensus.maxRounds,
+        },
       });
     }
     issues.push(...result.otherIssues);
@@ -1183,7 +1225,11 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
         build: () => ({
           type: "introduce_diversity",
           targetAgents: [agentIds[Math.floor(rng() * agentIds.length)]],
-          parameters: { perturbationAmount: 0.1 + rng() * 0.4 },
+          // H-Fix: 传入 seed 避免 introduceDiversity.apply 回退到 Math.random（破坏可复现性）
+          parameters: {
+            perturbationAmount: 0.1 + rng() * 0.4,
+            seed: (this.config.seed ?? 42) + currentRound * 0x5A4D,
+          },
           effect: "",
           applied: false,
         }),

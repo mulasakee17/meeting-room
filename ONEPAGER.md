@@ -3,8 +3,11 @@
 > **The first open-source cognitive governance runtime for multi-agent systems.**
 >
 > *Security governance prevents agents from doing harm. Cognitive governance prevents agents from thinking wrong. The agent governance stack needs both.*
->
-> **Positioning**: Complementary to Microsoft Agent Governance Toolkit / Agent Control Standard (ACS). They handle tool-execution safety; SwarmAlpha handles discussion-process health — detecting echo chambers, authority bias, polarization, and premature consensus during LLM agent collaboration. Validated by independent academic evidence: Li et al. (SJTU, 2026) confirmed MAS echo chambers amplify bias undetected by standard methods [arXiv:2604.08963](https://arxiv.org/abs/2604.08963). ACS-compatible via `StateInferenceBridge` at the state checkpoint.
+
+**Positioning**: SwarmAlpha handles discussion-process health — detecting echo chambers, authority bias, polarization, and premature consensus during LLM agent collaboration. It is complementary to (not competing with) Microsoft Agent Governance Toolkit / Agent Control Standard (ACS), which handle tool-execution safety.
+- **Academic validation**: Li et al. (SJTU, 2026) confirmed MAS echo chambers amplify bias undetected by standard methods [arXiv:2604.08963](https://arxiv.org/abs/2604.08963).
+- **Compatibility**: ACS-compatible via `StateInferenceBridge` at the state checkpoint.
+- **Long-term vision**: The governance layer above the [A2A protocol](https://github.com/google/A2A).
 
 ---
 
@@ -60,17 +63,17 @@ A deeper architectural review diagnosed **4 root cognitive defects** in the prev
 | **D3: Synchronous scripted turns** | `Promise.all` made agents speak simultaneously, reading from pre-written scripts rather than responding to each other | Replaced with sequential speaking order (agents hear prior turns) |
 | **D4: Fabricated influence network** | Influence edges were inferred from numerical differences rather than explicit citations | Influence graph now built only from explicit references |
 
-**Critical implication (updated 2026-07-14, expanded)**: These 4 defects meant the governance loop was *broken* during all 165 prior experiments — agents could not actually perceive, remember, respond to, or influence one another. **The defects have since been fixed (2026-07-12), and the experiments were re-run on a Crisis task (2026-07-14, expanded to n=24/cell, 72 runs) with the loop closed** — statistically confirming full vs none d=0.92, p=0.005, power=88%, τ +51%. The prior "governance is ineffective" conclusions were artifacts of the broken loop, not intrinsic to governance. Diagnosing *why* governance appeared ineffective is itself the research value.
+**Critical implication (updated 2026-07-14, expanded)**: These 4 defects meant the governance loop was *broken* during all 120 prior experiments — agents could not actually perceive, remember, respond to, or influence one another. **The defects have since been fixed (2026-07-12), and the experiments were re-run on a Crisis task (2026-07-14, expanded to n=24/cell, 80 runs) with the loop closed** — statistically confirming full vs none d=0.92, p=0.005, power=88%, τ +51%. The prior "governance is ineffective" conclusions were artifacts of the broken loop, not intrinsic to governance. Diagnosing *why* governance appeared ineffective is itself the research value.
 
 ---
 
 ## Experimental Evidence
 
-**161 experiments across 2 tasks (Crisis 72 + Supplier 89), 3 conditions (none/full/shuffle).** Primary metric: Kendall's τ + within-group Δτ. t-distribution 95% CI + permutation test p-values.
+**169 experiments across 2 tasks (Crisis 80 + Supplier 89), 3 conditions (none/full/shuffle).** Primary metric: Kendall's τ + within-group Δτ. t-distribution 95% CI + permutation test p-values.
 
 ### 2026-07-14 Cross-Task Validation (Primary Evidence, Expanded)
 
-After fixing 4 cognitive defects (D1–D4), **161 experiments across 2 independent tasks** were run with the governance loop closed:
+After fixing 4 cognitive defects (D1–D4), **169 experiments across 2 independent tasks** were run with the governance loop closed:
 
 | | Crisis — 3 rounds (n=24/cell) | Supplier — 3 rounds (n=30/30/29*) |
 |---|---|---|
@@ -97,7 +100,7 @@ After fixing 4 cognitive defects (D1–D4), **161 experiments across 2 independe
 
 ### Historical Data (Broken-Loop, Retained as Provenance Only)
 
-165 of 416 runs were collected *before* the D1–D4 cognitive defects were fixed — the governance loop was severed. These data are retained for provenance in [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md). **The 161 closed-loop runs (Crisis 72 + Supplier 89) above are the primary evidence.**
+120 of 445 runs were collected *before* the D1–D4 cognitive defects were fixed — the governance loop was severed. These data are retained for provenance in [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md). **The 169 closed-loop runs (Crisis 80 + Supplier 89) above are the primary evidence.**
 
 The loop-fix (D1–D4) is itself a research contribution: identifying *why* governance appeared ineffective — agents could not perceive, remember, respond to, or influence one another — is more valuable than any single p-value.
 
@@ -109,7 +112,7 @@ The loop-fix (D1–D4) is itself a research contribution: identifying *why* gove
 
 | Feature | Description |
 |---------|-------------|
-| **Framework-Agnostic SDK** | `import { GovernanceRuntime } from "@/runtime"` — zero framework deps. StateInferenceBridge enables integration with AutoGen/CrewAI/LangGraph in 2-4 hours |
+| **Framework-Agnostic SDK** | `import { GovernanceRuntime } from "@/runtime"` — zero framework deps. StateInferenceBridge enables integration with any agent system (long-term target: A2A protocol governance layer) |
 | **Extensible Detection** | Custom bias detectors via `registerDetector()` — recently closed the "custom detector → intervention" architecture gap (see [docs/GOVERNANCE_DESIGN.md](docs/GOVERNANCE_DESIGN.md)) |
 | **6 Hard Fixes (H-series)** | H4 Kuramoto mapping corrected (θ=π·b → θ=(π/2)·b); H19 seeded PRNG for reproducibility; H17 cache pollution eliminated; H18 interventionPrompt unified. Full audit in [LIMITATIONS.md](LIMITATIONS.md) §19 |
 | **Statistical Rigor** | Permutation test p-values (with (count+1)/(n+1) correction) + t-distribution 95% CI + Cohen's d_z + non-central-t power analysis + causal effect estimation (k=5 nearest-neighbor trajectory matching) |
@@ -177,7 +180,7 @@ See [ROADMAP.md](ROADMAP.md) for the full development plan with timelines, acade
 | Phase | Timeline | Focus |
 |-------|----------|-------|
 | **Phase 1** | This week | Stabilize code + unify documentation narrative |
-| **Phase 2** | 1-2 weeks | Process monitoring demo (static audit report) + framework adapters (AutoGen, CrewAI) |
+| **Phase 2** | 1-2 weeks | Process monitoring demo (static audit report) + StateInferenceBridge integration examples |
 | **Phase 3** | 2-4 weeks | Multi-agent society experiments (50-500 agents, information propagation, governance structure comparison) |
 | **Phase 4** | Parallel to Phase 3 | Academic outreach — target labs at Tsinghua AIR, Shanghai AI Lab, PKU CFCS |
 | **Phase 5** | 3-6 months | Python SDK, formal paper (AAMAS/NeurIPS Workshop target), open source community |

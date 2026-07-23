@@ -51,17 +51,22 @@
 - 自适应开关 (`enableAdaptiveThresholds` / `enableAdaptiveDosage`) 已正确接入运行时配置
 - 所有 165 次实验均使用固定阈值和固定剂量
 
-## 4. 框架适配器
+## 4. 框架适配器（已降级：项目定位为 a2a 治理层，非多框架适配器）
 
-| 框架 | 适配器 | 状态 |
-|------|--------|------|
-| Custom (内置) | `CustomAdapter` | ✅ 完整集成，干预通过直接修改 agent 状态实现 |
-| AutoGen | `AutoGenAdapter` | ⚠️ `applyIntervention` 抛出错误——需要 Python sidecar 实现 |
-| CrewAI | — | ❌ 计划中，未实现 |
-| LangGraph | — | ❌ 计划中，未实现 |
+> **2026-07-23 定位修正**：SwarmAlpha 的真正愿景是 **a2a 协议上层的治理框架**（详见 [AGENT_SOCIETY_VISION.md](AGENT_SOCIETY_VISION.md)），不是多智能体框架的适配器集合。所有 445 个实验均基于内置 `CustomAgent`，AutoGenAdapter 从未参与任何实验，其 `applyIntervention` 抛错是诚实的设计而非缺陷。
+>
+> 当前保留 `AutoGenAdapter` 仅作为 StateInferenceBridge 的集成示例（消息转换 + LLM 推断层），不作为项目核心能力宣传。未来若实现 a2a 协议适配，将替换此适配器。
 
-- AutoGenAdapter 的 `adaptMessages` 和 `extractBeliefs` 可用
-- AutoGenAdapter 的 `applyIntervention` 明确抛出错误，不会静默失败
+| 框架 | 适配器 | 状态 | 定位 |
+|------|--------|------|------|
+| Custom (内置) | `CustomAgent` | ✅ 所有实验均基于此 | 核心实现 |
+| a2a 协议（未来） | 待设计 | 🗓️ 长期路线 | 真正的集成目标（见 AGENT_SOCIETY_VISION.md） |
+| AutoGen | `AutoGenAdapter` | 🔧 仅作 StateInferenceBridge 集成示例，`applyIntervention` 抛错 | 降级为示例代码 |
+| CrewAI / LangGraph | — | ❌ 不计划实现 | 从路线图移除（与 a2a 定位无关） |
+
+- AutoGenAdapter 的 `adaptMessages` 和 `extractBeliefs` 可用，但仅作 StateInferenceBridge 的 demo
+- AutoGenAdapter 的 `applyIntervention` 明确抛出错误，**这是正确行为不是 bug**——避免静默降级
+- **a2a 治理层定位的关键 gap**：当前用 `CustomAgent` 模拟 a2a 语义，无真实 a2a 协议适配代码；文档需明确"当前为研究平台，a2a 集成为未来工作"
 
 ## 5. 检测器局限
 
@@ -97,7 +102,7 @@
 - **仅 2 个任务** (M&A + Invest)，任务多样性不足
 - **Invest none/full n=15，shuffle/single-intervention n=5**：none/full 已达充分功效，单干预模式仍不足
 - **2×2 因子设计已完成**：3轮×5轮 × none×full，每格 n=15
-- **full_reflection 显著有害**：在 5轮 Invest 中 p=0.048，是首个统计显著的治理效果
+- **full_reflection 显著有害**：在 5轮 Invest 中 p=0.048，是首个统计显著的治理效果 ⚠️ **已撤回（2026-07-23）**：此结论在 D1-D4 断裂环路下得出（agents 无法感知/记忆/响应/影响），不反映治理系统真实效果。Crisis 任务重验证（闭合环路）显示 force_reflection 有效率 79.4%（34 次干预 27 次有效），方向已逆转
 - **无预注册** (pre-registration)：实验假设和分析方法在数据收集后调整
 
 ## 9. 治理闭环验证
@@ -601,6 +606,58 @@ A3 任务（原 P1 优先级）已完成，实现 3 个 MAST FC2 检测器：
 | **加权总分** | **6.05** | **6.20** | +0.15 |
 
 **诚实定性**：6.20 仍是"中等偏下"。A3 提升的是"解决方法"维度（从设计到实现），但未经实验验证的检测器价值有限。
+
+---
+
+## §25 治理审计基础设施（2026-07-23，待新实验验证）
+
+### 25.1 实现内容
+
+为支持第三方独立验证治理决策的正确性，新增两层审计基础设施：
+
+**P0 — governanceTrace 字段补全**（已完成，307/310 测试通过）：
+
+| 字段 | 位置 | 用途 |
+|---|---|---|
+| `GovernanceIssue.detectionMetrics` | [src/lib/governance/types.ts](src/lib/governance/types.ts) | detector 触发的结构化数值依据（如 `authority_bias: { influenceRatio: 0.44, threshold: 0.30 }`） |
+| `Intervention.parameters` | 序列化保留（run_malicious.ts / run_async_ab.ts） | 干预参数（之前被显式丢弃，现已保留） |
+| `RoundData.effectMetrics` | [src/lib/discussion/types.ts](src/lib/discussion/types.ts) + 两个引擎的 roundDataArray | `evaluateEffects` 返回的 9 项效果度量（之前计算后未持久化） |
+
+**P1 — 文件级审计工具**（已实现，端到端验证通过）：
+
+| 脚本 | 输出 | 用途 |
+|---|---|---|
+| [experiments/v2/generate_manifest.ts](experiments/v2/generate_manifest.ts) | `audit_manifest.json` | 为全部 445 个实验 JSON 生成 SHA-256 哈希清单 |
+| [experiments/v2/verify_audit.ts](experiments/v2/verify_audit.ts) | `audit_report.json` | 验证文件完整性 + 重算检测逻辑一致性 |
+
+### 25.2 当前验证状态
+
+| 检查项 | 445 个旧实验（pre-2026-07-23） | 新实验（post-2026-07-23，待跑） |
+|---|---|---|
+| SHA-256 文件完整性 | ✅ 445/445 通过 | ✅ 自动覆盖 |
+| 检测逻辑一致性（detectionMetrics vs detected） | ❌ 无字段，跳过 | ✅ 可验证 |
+| 干预参数保真（parameters） | ❌ 字段被旧序列化丢弃 | ✅ 已修复 |
+| 效果度量持久化（effectMetrics） | ❌ 未存储 | ✅ 已存储 |
+
+**关键诚实声明**：审计字段（detectionMetrics/parameters/effectMetrics）的"检测逻辑一致性验证"目前**无任何新实验数据可验证**——所有 445 个实验均为 P0 修改前生成。验证脚本的深度检查路径（verifyDetectionLogic）需在新实验跑出后才能真正触发。当前验证脚本仅对旧数据做文件完整性校验，未触发任何深度异常。
+
+### 25.3 已知局限
+
+| 局限 | 说明 | 影响 |
+|---|---|---|
+| **新实验未跑** | P0 审计字段已落地但无新实验数据 | 验证脚本的深度检查路径未在真实数据上触发 |
+| **无加密签名** | 仅用 SHA-256 哈希，非加密签名 | 防篡改依赖 git 历史 + 文件哈希比对，非密码学不可否认 |
+| **manifest 非真正 append-only** | 脚本可重新生成覆盖 | "append-only" 语义靠流程约束（不原地改实验文件），非技术强制 |
+| **detectionMetrics 阈值硬编码** | verify_audit.ts 中 4 个检测器的阈值比对逻辑硬编码 | 与 governance/index.ts 中的实际阈值常量未自动同步，若常量改需同步脚本 |
+| **parameters 字段类型为 Record<string, unknown>** | 不强制 schema | 第三方验证时需人工解读参数含义 |
+
+### 25.4 实验数据文档号待对齐（已延期）
+
+2026-07-23 文档审计发现：PAPER_DRAFT.md / TECHNICAL_REPORT.md 等文档中"416 次实验""461 次实验"等数字与磁盘真实文件数（manifest 实测 445 个非聚合 JSON）存在不一致，且"165 历史实验 = M&A 80 + Invest 55 + Invest 30"等分解项与磁盘 `ma_*`（49 个）和 `invest_*`（10 个）文件数不匹配。
+
+- **当前状态**：用户决定**暂不处理**，优先完成审计基础设施
+- **风险**：文档数字与磁盘真实数据割裂，实验室评审若抽查会发现问题
+- **建议修复路径**：基于 `audit_manifest.json` 重新统计各 task/group 的真实文件数，统一更新所有 .md 文档中的实验数声明
 
 ---
 

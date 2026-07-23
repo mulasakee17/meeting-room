@@ -171,6 +171,11 @@ export interface GovernanceIssue {
     parameters?: Record<string, unknown>;
     reason?: string;
   };
+  /** 审计字段：detector 触发的结构化数值依据（第三方验证用）。
+   *  例如 authority_bias: { influenceRatio: 0.44, threshold: 0.30 }
+   *  例如 polarization: { polarizationIndex: 0.72, bimodalityCoefficient: 0.58, threshold: 0.15 }
+   *  2026-07-23 新增：支持第三方独立验证治理决策的正确性 */
+  detectionMetrics?: Record<string, number>;
 }
 
 export interface GovernanceResult {

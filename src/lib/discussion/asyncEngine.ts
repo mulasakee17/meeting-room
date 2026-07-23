@@ -347,8 +347,15 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
 
       this.updateAgentStates(agents, agentStates);
 
-      // ── 治理（复用父类逻辑） ──
-      const governanceResult = this.applyGovernance(evalCycle, allOpinions, agentStates, agents);
+      // ── 治理（复用父类逻辑）─────────────────
+      // 异步引擎没有固定轮次概念——evalCycle 可能远超 this.config.maxRounds。
+      // 必须根据实际终止模式计算有效的 maxRounds，否则 premature consensus
+      // 检测的 roundProgress 永远是假值（始终 1/3=0.33），导致检测断裂。
+      const effectiveMaxRounds = this.getEffectiveMaxRounds();
+      const governanceResult = this.applyGovernance(
+        evalCycle, allOpinions, agentStates, agents,
+        { currentRound: evalCycle, maxRounds: effectiveMaxRounds }
+      );
       const interventions = governanceResult?.hasIntervention ? governanceResult.interventions : [];
 
       // ── 记录轮次数据 ──
@@ -365,6 +372,8 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
         governanceIssues: governanceResult?.issues || [],
         interventions,
         converged,
+        // 审计字段：存储干预效果度量（第三方验证用，2026-07-23 新增）
+        effectMetrics: governanceResult?.effectMetrics,
       });
 
       roundResults.push({
@@ -785,6 +794,40 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
   // ==========================================================================
   // 辅助方法
   // ==========================================================================
+
+  /**
+   * 根据终止模式计算治理引擎所需的 effective maxRounds。
+   *
+   * 异步引擎没有固定轮次概念——evalCycle 可能跑 10-20 轮。
+   * 但 premature consensus 检测需要 roundProgress = currentRound / maxRounds
+   * 来判断"是否过早收敛"。因此必须根据实际终止模式估算 maxRounds。
+   *
+   * - fixed_rounds：直接用 fixedRounds
+   * - adaptive：hardCap / evalEveryK = 理论上最大 evalCycle
+   * - random_terminate：randomTerminateAt / evalEveryK = 估计最大 evalCycle
+   */
+  private getEffectiveMaxRounds(): number {
+    const evalK = this.asyncConfig.evalEveryKUtterances;
+
+    switch (this.asyncConfig.terminationMode) {
+      case "fixed_rounds":
+        return this.asyncConfig.fixedRounds ?? 5;
+
+      case "random_terminate": {
+        if (this.randomTerminateAt !== null) {
+          return Math.ceil(this.randomTerminateAt / evalK);
+        }
+        const [min, max] = this.asyncConfig.randomTerminateRange ?? [5, 20];
+        return Math.ceil((min + max) / 2 / evalK);
+      }
+
+      case "adaptive":
+      default: {
+        const hardCap = this.asyncConfig.terminationThresholds?.hardCapUtterances ?? 40;
+        return Math.ceil(hardCap / evalK);
+      }
+    }
+  }
 
   /** 计算热力学状态 (R, T, H) */
   private computeThermoState(beliefs: number[]): { R: number; T: number; H: number } {

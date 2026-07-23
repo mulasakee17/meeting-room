@@ -58,9 +58,13 @@
 - 右栏：检测事件线（何时触发了什么偏差检测）
 - 不要求实时——静态回放即可
 
-### 2.3 框架适配器 MVP
-- [ ] 完善 `AutoGenAdapter`——消息转换已可用，applyIntervention 保留抛错（不静默降级），通过 StateInferenceBridge 的 LLM 推断层兜底
-- [ ] 新增 `CrewAIAdapter`——需先验证 StateInferenceBridge + LLM 推断层在 CrewAI 场景的可行性（CrewAI 无原生 belief/confidence，依赖 LLM 推断成本较高）
+### 2.3 框架适配器 MVP（2026-07-23 定位修正）
+
+> **定位修正**：SwarmAlpha 不是多框架适配器集合，而是研究平台 + 未来 a2a 治理层。CrewAI/LangGraph 已从路线图移除（详见 [LIMITATIONS.md §4](LIMITATIONS.md)）。AutoGenAdapter 降级为 StateInferenceBridge 集成示例，不再作为核心能力推进。
+
+- [x] 保留 `AutoGenAdapter` 的 throw Error（不静默降级是正确行为）
+- [x] `AutoGenAdapter` 降级为 StateInferenceBridge 集成示例（不计划完善为完整适配器）
+- [~] ~~新增 `CrewAIAdapter`~~——**已从路线图移除**（与 a2a 治理层定位无关）
 - [ ] 写集成文档：`docs/INTEGRATION.md`（"如何用 5 分钟把 SwarmAlpha 接入你的 agent 系统"）
 
 ---
@@ -151,7 +155,7 @@
 ---
 
 > 当前时间：2026年7月19日
-> 当前阶段：Phase 1 完成 → Phase 2（过程监控演示）。406 次实验完成，信念转变修复 + B/D 组重跑完成，K=2 修复生效，codeVersion 标记机制上线。异步引擎三阶段演进（旧阈值→新阈值→beliefShift）记录完整。
+> 当前阶段：Phase 1 完成 → Phase 2（过程监控演示）。445 次实验完成，信念转变修复 + B/D 组重跑完成，K=2 修复生效，codeVersion 标记机制上线。异步引擎三阶段演进（旧阈值→新阈值→beliefShift）记录完整。
 
 ---
 
@@ -367,7 +371,7 @@
 
 > 本节原为独立文档 PROJECT_EVALUATION.md，现已合并入 ROADMAP.md 以集中规划信息。
 
-> 2026-07-18，基于全部源码、416 次实验数据、17 份文档的完整评估
+> 2026-07-18，基于全部源码、416 次实验数据、17 份文档的完整评估（2026-07-23 校准：manifest 实测 445 次实验，详见 [audit_manifest.json](experiments/v2/audit_manifest.json)）
 
 ---
 
@@ -449,9 +453,9 @@
 | 条件矩阵 | 7 种消融模式，覆盖基线→完整治理→单干预的完整梯度 |
 | 样本量 | n=10-30/cell。足够检大效应（d>0.8），不足检中等效应 |
 | 跨任务验证 | ✅ 双任务（Crisis+Supplier），方向一致 |
-| 跨模型验证 | 🟡 部分（DeepSeek-V3 主，Zhipu glm-4-flash C 组 n=10） |
+| 跨模型验证 | 🟡 部分（DeepSeek-V3 主，跨模型 54 次 = Zhipu 14 + Qwen 40） |
 | 跨拓扑验证 | ❌ 仅 FlatTopology |
-| 实验总规模 | 416 次，中等偏小（对比：AutoGen 论文通常 ~1000 次） |
+| 实验总规模 | 445 次（manifest 实测 2026-07-23），中等偏小（对比：AutoGen 论文通常 ~1000 次） |
 | 自动化 | 缓存命中跳过、错误隔离重试、CLI 参数化（--start/--count/--mode） |
 | 分析管线 | 完整的 analyze → verify → mechanism → causal → bayesian 分析链 |
 
@@ -467,7 +471,7 @@
 | 局限文档 | 22 节详细记录 | 通常无或仅一段 |
 | 可复现性 | PRNG 贯穿全链路 | 罕见明确说明 |
 | 跨任务验证 | 2 任务 | 通常单任务 |
-| 实验规模 | 416 | 通常 100-1000+ |
+| 实验规模 | 445 | 通常 100-1000+ |
 | 物理隐喻 | 有（热力学） | 通常无 |
 
 SwarmAlpha 的**统计严谨性远超典型的 LLM multi-agent 实验论文**。大多数该领域论文的实验部分只是"跑了 N 次取平均 ± 标准差"。SwarmAlpha 的置换检验 + 效应量 + CI 三件套、shuffle 对照的方法学设计、以及诚实的局限性文档，在方法论层面接近心理学或生物医学的 RCT 标准。
@@ -480,7 +484,7 @@ SwarmAlpha 的**统计严谨性远超典型的 LLM multi-agent 实验论文**。
 
 ### 风险 1：单模型依赖（严重程度：高）
 
-416 次实验中 406 次使用 DeepSeek-V3，10 次跨模型验证使用 Zhipu glm-4-flash。虚假共识（r≈0）这一最重磅的发现在 DeepSeek-V3 上验证，但跨模型对比（Zhipu C 组 τ=0.76 > DeepSeek 0.64，+18.8%）已初步支持热力学终止方向的有效性。
+445 次实验中 391 次使用 DeepSeek-V3，54 次跨模型验证（Zhipu 14 + Qwen 40）。虚假共识（r≈0）这一最重磅的发现在 DeepSeek-V3 上验证，但跨模型对比（Zhipu C 组 τ=0.76 > DeepSeek 0.64，+18.8%）已初步支持热力学终止方向的有效性。
 
 **缓解方案**：至少跑 GPT-4o-mini 和 Claude Haiku 各一组（n=10, Crisis none/full/shuffle），成本约 ¥20-50。如果 r≈0 在三个模型上都复现，普适性主张将大幅增强。
 

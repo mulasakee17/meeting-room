@@ -1,0 +1,115 @@
+{
+  "runId": "crisis_none_6",
+  "ablation": "none",
+  "runIndex": 6,
+  "codeVersion": "2026-07-19",
+  "timestamp": "2026-07-22T15:00:27.907Z",
+  "kendallTau": 0.8,
+  "decisionQuality": 90,
+  "tauTrajectory": [
+    0.8
+  ],
+  "totalRounds": 1,
+  "converged": true,
+  "consensusLevel": 1,
+  "opinionDiversity": 0,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "totalTokens": 0,
+        "totalLatencyMs": 0,
+        "callCount": 0
+      },
+      "a2": {
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "totalTokens": 0,
+        "totalLatencyMs": 0,
+        "callCount": 0
+      },
+      "a3": {
+        "promptTokens": 1227,
+        "completionTokens": 731,
+        "totalTokens": 1958,
+        "totalLatencyMs": 9860,
+        "callCount": 1
+      },
+      "a4": {
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "totalTokens": 0,
+        "totalLatencyMs": 0,
+        "callCount": 0
+      },
+      "a5": {
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "totalTokens": 0,
+        "totalLatencyMs": 0,
+        "callCount": 0
+      }
+    },
+    "total": {
+      "promptTokens": 1227,
+      "completionTokens": 731,
+      "totalTokens": 1958,
+      "totalLatencyMs": 9860
+    }
+  },
+  "evaluationScores": {
+    "consensus": 100,
+    "reliability": 17.6,
+    "dispersion": 82.5,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 66.3
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a3": 0.6
+      },
+      "confidences": {
+        "a3": 88
+      },
+      "converged": true,
+      "issues": [],
+      "interventions": [],
+      "messages": {
+        "a3": "根据市长‘时间就是生命’的指令，速度是最高优先级，每延误1小时将新增50例感染。因此，响应方案必须在最短时间内启动并产生有效控制。我此前掌握的历史数据表明，方案C（精准疏散）具有最高的净效果（88%），远超其他方案，且其核心优势在于‘精准’——仅针对高风险区域行动，避免全城封锁带来的资源浪费和延误就医问题。这与‘快速响应’原则高度契合：它能在不引发大规模社会混乱的前提下，迅速遏制传播链。然而，当前信念强度为-0.11，说明我对‘速度是否优先于效果’仍存疑虑。若其他顾问强调‘立即行动’而非‘最优策略’，可能倾向于全城封锁或军事管制等可立即执行的方案。但根据我的数据，方案A（全城封锁）虽快，但净效果仅52%，且因延误就医导致死亡率上升18%，反而可能加剧悲剧；方案D（军事管制）虽执行高效，但民众配合度仅43%，存在严重社会反弹风险，实际控制力受限。因此，尽管方案B（分阶段响应）具备75%净效果，但其‘分阶段’特性意味着延迟启动，不符合‘每小时新增50例’的紧迫性。相比之下，方案C可在1小时内完成高风险区识别与疏散部署，实现‘快而准’。我坚持认为，真正的‘快速响应’不应是盲目行动，而是以最小代价实现最大控制。因此，应优先推动方案C，同时要求技术团队提供‘精准定位水源污染点’的实时支持，以确保其可行性。"
+      },
+      "tau": 0.8,
+      "decisionQuality": 90,
+      "evalScores": {
+        "consensus": 100,
+        "reliability": 17.6,
+        "dispersion": 82.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 66.3
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 1 rounds (overall belief: 0.60 - positive):\n\na3: 根据市长‘时间就是生命’的指令，速度是最高优先级，每延误1小时将新增50例感染。因此，响应方案必须在最短时间内启动并产生有效控制。我此前掌握的历史数据表明，方案C（精准疏散）具有最高的净效果（88%），远超其他方案，且其核心优势在于‘精准’——仅针对高风险区域行动，避免全城封锁带来的资源浪费和延误就医问题。这与‘快速响应’原则高度契合：它能在不引发大规模社会混乱的前提下，迅速遏制传播链。然而，当前信念强度为-0.11，说明我对‘速度是否优先于效果’仍存疑虑。若其他顾问强调‘立即行动’而非‘最优策略’，可能倾向于全城封锁或军事管制等可立即执行的方案。但根据我的数据，方案A（全城封锁）虽快，但净效果仅52%，且因延误就医导致死亡率上升18%，反而可能加剧悲剧；方案D（军事管制）虽执行高效，但民众配合度仅43%，存在严重社会反弹风险，实际控制力受限。因此，尽管方案B（分阶段响应）具备75%净效果，但其‘分阶段’特性意味着延迟启动，不符合‘每小时新增50例’的紧迫性。相比之下，方案C可在1小时内完成高风险区识别与疏散部署，实现‘快而准’。我坚持认为，真正的‘快速响应’不应是盲目行动，而是以最小代价实现最大控制。因此，应优先推动方案C，同时要求技术团队提供‘精准定位水源污染点’的实时支持，以确保其可行性。",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案C-精准疏散",
+    "方案B-分阶段响应",
+    "方案E-社区自治",
+    "方案A-全城封锁",
+    "方案D-军事管制"
+  ]
+}

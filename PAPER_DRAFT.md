@@ -3,14 +3,14 @@
 **He Mengyuan** (Independent Researcher)
 
 > **Target venues**: arXiv preprint → AAMAS 2027 / AAAI 2027 / ICML 2027 Workshop on Multi-Agent Systems
-> **Status**: Pre-submission draft. Framework complete, preliminary experiments (N=416 runs) complete; large-scale validation in preparation.
+> **Status**: Pre-submission draft. Framework complete, preliminary experiments (N=445 runs, manifest-verified 2026-07-23) complete; large-scale validation in preparation.
 > **Code**: [github.com/mulasakee17/swarmalpha](https://github.com/mulasakee17/swarmalpha)
 
 ---
 
 ## Abstract
 
-LLM multi-agent systems lack a principled, runtime-detectable signal for identifying when group deliberation is drifting toward collective failure. We propose **social thermodynamics** as such a signal: a four-variable state space—Kuramoto order parameter $R$, normalized temperature $T$, Shannon entropy $H$, and Helmholtz-style free energy $F = (1-R) + T \cdot H$—computed deterministically from agents' structured belief outputs with zero additional LLM calls. We engineer this signal into a governance runtime that combines seven bias detectors with four intervention strategies ranked by $F$-decomposition and a thermodynamic termination criterion. From 416 preliminary experiments across two hidden-profile tasks, we report three findings that challenge common assumptions about multi-agent deliberation:
+LLM multi-agent systems lack a principled, runtime-detectable signal for identifying when group deliberation is drifting toward collective failure. We propose **social thermodynamics** as such a signal: a four-variable state space—Kuramoto order parameter $R$, normalized temperature $T$, Shannon entropy $H$, and Helmholtz-style free energy $F = (1-R) + T \cdot H$—computed deterministically from agents' structured belief outputs with zero additional LLM calls. We engineer this signal into a governance runtime that combines seven bias detectors with four intervention strategies ranked by $F$-decomposition and a thermodynamic termination criterion. From 445 preliminary experiments across two hidden-profile tasks, we report three findings that challenge common assumptions about multi-agent deliberation:
 
 1. **False consensus** ($N=169$, two tasks): the correlation between final consensus level ($R$) and decision quality (Kendall $\tau$) is $r \approx -0.10$ on both tasks—consensus is essentially uncorrelated with correctness, undermining convergence-based stopping criteria.
 
@@ -42,7 +42,7 @@ This paper presents two intertwined contributions:
 
 **A governance framework grounded in social thermodynamics.** We define a four-variable thermodynamic state $(R, T, H, F)$ computed deterministically from agents' structured belief outputs at every discussion round. We engineer this state into a runtime that closes the detect–intervene loop: seven bias detectors consume the thermodynamic state, interventions are ranked by decomposing $F$ into structural versus thermal disorder components, and termination is governed by a crystallization criterion on $R$. All governance logic is deterministic; LLMs are used only for perception—extracting structured beliefs from natural language.
 
-**Counterintuitive experimental findings from 416 preliminary runs.** The experiments surface several findings that challenge prevailing assumptions. The most consequential—false consensus, the near-zero correlation between consensus and correctness—directly contradicts the DeGroot-model assumption embedded in most convergence-based stopping criteria. Two additional findings (the dominance of structural rearrangement over procedural governance, and the risk that interventions can worsen outcomes) point toward principles that any multi-agent governance system must contend with.
+**Counterintuitive experimental findings from 445 preliminary runs.** The experiments surface several findings that challenge prevailing assumptions. The most consequential—false consensus, the near-zero correlation between consensus and correctness—directly contradicts the DeGroot-model assumption embedded in most convergence-based stopping criteria. Two additional findings (the dominance of structural rearrangement over procedural governance, and the risk that interventions can worsen outcomes) point toward principles that any multi-agent governance system must contend with.
 
 This work is at an early stage. The framework is implemented and unit-tested; the experiments are preliminary and conducted on a single model (DeepSeek-V3); the theoretical propositions are partially formalized; and the MAST-aligned detectors await large-scale calibration. We present it as a scientific communication—a principled engineering effort whose empirical signals, though provisional, merit wider scrutiny and replication. The limitations are discussed in detail in §7, and the validation steps now underway are outlined in §8.
 
@@ -230,7 +230,7 @@ All stochastic operations use a `mulberry32` PRNG seeded from experiment configu
 
 **Statistics.** Kendall $\tau$-b for decision quality with tie correction. Permutation test ($10^4$ permutations, seed 42) for $p$-values with $(\text{count}+1)/(\text{nPerms}+1)$ correction. Bootstrap percentile CI ($10^4$ resamples). Welch $t$-distribution CI for small-sample correction. Cohen's $d$ with extreme-value trimming. Benjamini-Hochberg FDR for multiple comparisons.
 
-**Total runs.** 416 = 161 closed-loop (Crisis 72 + Supplier 89) + 165 historical broken-loop + 80 async engine + 10 cross-model.
+**Total runs.** 445 (manifest-verified 2026-07-23) = 169 closed-loop (Crisis 80 + Supplier 89) + 120 historical broken-loop + 80 async engine + 54 cross-model (Crisis Qwen 30 + Fraud Qwen 10 + Fraud Zhipu 14) + 22 other.
 
 ### 5.2 Evidence Strength Overview
 
@@ -246,7 +246,7 @@ Before presenting results, we characterize the evidential status of each claim. 
 | Governance effective (Crisis) | Confirmatory | 24/cell | DeepSeek-V3 | No | Single task; single model |
 | Governance not significant (Supplier) | Confirmatory | 30/cell | DeepSeek-V3 | No | Underpowered (43%) |
 | F-decomposition no runtime benefit | Confirmatory | 8 paired | DeepSeek-V3 | No | Pilot; 3-round only |
-| Temporal decay of intervention effect | Exploratory | 161 closed-loop | DeepSeek-V3 | No | No Round 4 data |
+| Temporal decay of intervention effect | Exploratory | 169 closed-loop | DeepSeek-V3 | No | No Round 4 data |
 | Classical detector trigger rates | Descriptive | 279 | DeepSeek-V3 | No | No ground truth; thresholds heuristic |
 | MAST detector design coverage | Theoretical | 0 empirical | — | No | Implemented; unvalidated at scale |
 | `force_reflection` reverse reinforcement | Retracted | — | — | — | Attribution error; see §5.4 |
@@ -365,13 +365,13 @@ We consolidate here the limitations and corrections that, in an earlier draft, w
 
 **F-decomposition null result.** The A/B comparison of F-decomposition versus fixed ranking showed no significant benefit. Whether this reflects a genuine null effect or insufficient statistical power ($N = 8$ pairs, three-round format) is unresolved.
 
-**Single-model limitation.** All 416 runs used DeepSeek-V3. Cross-model replication (GPT-4o, Claude, Zhipu) has been designed and pre-registered but not executed beyond a preliminary $N=10$ Zhipu comparison.
+**Single-model limitation.** Of 445 runs, 391 used DeepSeek-V3; 54 cross-model runs validated Qwen 3.7-plus (Crisis 30 + Fraud 10) and Zhipu glm-4-flash (Fraud 14). Cross-model replication on GPT-4o and Claude has been designed and pre-registered but not yet executed.
 
 **Underpowered cells.** The Supplier task governance effect ($d = 0.47$, $p = 0.089$, power 43%) requires $n = 72$ per cell for 80% power. The failure group in the rogue-agent analysis contains only two runs.
 
 **Shuffle not pre-registered.** The shuffle effect was discovered during control-condition design rather than hypothesized in advance. Future experiments have been pre-registered.
 
-**Broken-loop historical data.** 165 of 416 runs predate a critical fix that made state-modification interventions visible to agent perception. In these runs, the governance loop was broken—detectors fired and interventions were logged but could not affect agent behavior. Closed-loop runs (161) are the primary evidence.
+**Broken-loop historical data.** 120 of 445 runs predate a critical fix that made state-modification interventions visible to agent perception. In these runs, the governance loop was broken—detectors fired and interventions were logged but could not affect agent behavior. Closed-loop runs (169) are the primary evidence.
 
 **Async engine PRNG bug (fixed).** An earlier version used `Math.random()` in the async engine, violating reproducibility. All instances have been replaced with the seeded `mulberry32` PRNG. The fix is verified by 307 of 310 passing unit tests (the three skips are network-dependent tests, unrelated to governance logic).
 
@@ -399,7 +399,7 @@ The limitations enumerated in §6.4 represent the current boundaries of this wor
 
 ## 8. Conclusion and Next Steps
 
-We have engineered social thermodynamics—a four-variable state space $(R, T, H, F)$ computed deterministically from structured belief outputs—into a runtime governance signal for LLM multi-agent systems. The framework combines seven bias detectors (four classical, three aligned to MAST inter-agent failure modes), four intervention strategies ranked by free-energy decomposition, and a thermodynamic crystallization criterion for termination. Preliminary experiments across 416 runs surface three findings with implications for multi-agent system design: consensus is uncorrelated with correctness, structural rearrangement can dominate procedural governance, and interventions carry backfire risk through dependency-chain cascades.
+We have engineered social thermodynamics—a four-variable state space $(R, T, H, F)$ computed deterministically from structured belief outputs—into a runtime governance signal for LLM multi-agent systems. The framework combines seven bias detectors (four classical, three aligned to MAST inter-agent failure modes), four intervention strategies ranked by free-energy decomposition, and a thermodynamic crystallization criterion for termination. Preliminary experiments across 445 runs (manifest-verified 2026-07-23) surface three findings with implications for multi-agent system design: consensus is uncorrelated with correctness, structural rearrangement can dominate procedural governance, and interventions carry backfire risk through dependency-chain cascades.
 
 We are actively pursuing several directions to move this work from preliminary evidence to calibrated deployment:
 
@@ -507,50 +507,3 @@ Five agents (Cost Analyst, Quality Engineer, Delivery Specialist, Technical Dire
 > **Code**: [github.com/mulasakee17/swarmalpha](https://github.com/mulasakee17/swarmalpha)
 > **Author**: He Mengyuan (independent researcher)
 > **Contact**: via repository issues
-
----
-
-## Rewrite Notes (for Author Review)
-
-This section is not part of the paper; it documents the major structural and stylistic changes made in this revision.
-
-### Structural Changes
-
-1. **Removed all "Honest X" meta-commentary.** The phrases "Honest positioning," "Honest assessment," "Honest limitation," "Honest note on references," "Honest data provenance," and "Honest assessment of F-decomposition" have been eliminated. The facts they conveyed are either integrated into the natural flow of the relevant section or consolidated in §6.4 (Self-Critique and Methodological Reflection).
-
-2. **Removed the "What it is / What it is not" dichotomy** from the Discussion. The content now appears as a straightforward comparison table (§6.2) and as part of the self-critique subsection.
-
-3. **Eliminated fake precision.** "39.3% of MAST's 14 failure modes" is now expressed qualitatively: "over a third of the MAST taxonomy's 14 failure modes at the design level." The "5.5/14" figure has been removed.
-
-4. **Added epistemological framing (§3.1).** A new subsection explicitly states that the thermodynamic variables are operational heuristics, not physical quantities. This addresses the core tension between the framework's mathematical precision and the inherent noise of LLM belief outputs.
-
-5. **Created evidence strength table (§5.2).** Each claim is now categorized by type (confirmatory/exploratory/descriptive/theoretical), sample size, model, replication status, and key limitation. This replaces the previous pattern of qualifying every sentence individually.
-
-6. **Consolidated self-criticism (§6.4).** All corrections, retractions, null results, and methodological caveats are gathered in one clearly labeled subsection. The body of the paper is now free of repeated disclaimers.
-
-7. **Repositioned the conclusion (§8).** The passive "inviting collaboration" framing has been replaced with active "work in progress" language: specific validation steps are listed in the present continuous tense ("we are designing," "we have initiated discussions").
-
-8. **Proposition corrections appear once (§3.3).** The corrective episode is narrated as a single, coherent paragraph under "Corrective episode," framed as evidence of empirical discipline rather than as a recurring confession.
-
-9. **Removed inline code references.** File paths like `asyncEngine.ts:736`, `statsUtils.ts:80`, and internal document references (THEORY.md, LIMITATIONS.md, TECHNICAL_REPORT.md, README_CN.md) have been removed from the body text. The repository URL is retained as the authoritative reference.
-
-10. **Rewritten abstract.** The abstract now leads with the problem and the proposed signal, states the three findings without defensive qualifiers, and ends with the epistemological framing.
-
-### Stylistic Changes
-
-- All "What is it / What is it not" Q&A patterns removed.
-- "We explicitly flag this as" constructions removed.
-- "This is a preprint to invite collaboration, not a finished result" removed from body (integrated once in Introduction and once in Conclusion).
-- Tone adjusted from defensive/confessional to calm, confident, and measured.
-- Self-qualifying adjectives ("honest," "explicitly," "frankly") eliminated.
-- All statistical numbers preserved exactly; only the framing prose around them changed.
-
-### Content Preserved Without Change
-
-- All experimental data, statistical results, and numerical values.
-- All detector specifications, threshold values, and trigger rate tables.
-- All proposition statements and their corrected forms.
-- All framework technical descriptions.
-- All appendices.
-- The retraction of C1 and its documentation.
-- The F5 cascading collateral damage case.

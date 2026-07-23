@@ -19,6 +19,10 @@ import {
   GovernanceState,
   BiasDetector,
 } from "./types";
+import {
+  GovernanceFeedback,
+  aggregateFeedback,
+} from "./feedbackChannel";
 import { ReduceWeightIntervention, IntroduceDiversityIntervention, ForceReflectionIntervention, ContinueDiscussionIntervention } from "./interventions";
 import { computeAdaptiveThresholds, computeCalibrationMetrics, type CalibrationMetrics } from "./adaptiveThresholds";
 import { computeAdaptiveDosage, type DosageContext } from "./adaptiveDosage";
@@ -62,6 +66,17 @@ export class GovernanceEngine {
   private interventionHistory: Map<InterventionType, number[]> = new Map();
   /** 构造时的初始 defaultConfig 快照——reset() 时恢复 */
   private initialDefaultConfig: GovernanceConfig;
+  /**
+   * 待消费的治理反馈信号——来自 EvaluationFeedbackChannel 或 LLMDetectorAdapter。
+   *
+   * 在 diagnoseAndIntervene() 中消费：
+   * - 调整检测阈值（如 reliability_drop 时降低 authority_bias 阈值）
+   * - 调整干预优先级（如 malicious_intent 时提升 reduce_weight 优先级）
+   * - 从反馈信号生成额外干预
+   *
+   * 消费后清空——反馈是 per-round 的，不会跨轮累积。
+   */
+  private pendingFeedback: GovernanceFeedback[] = [];
 
   constructor(adaptiveConfig?: Partial<GovernanceConfig>, seed?: number) {
     this.registerStrategy(new ReduceWeightIntervention());
@@ -89,6 +104,7 @@ export class GovernanceEngine {
     this.calibration = null;
     this.interventionHistory.clear();
     this.defaultConfig = { ...this.initialDefaultConfig };
+    this.pendingFeedback = [];
     if (this.seed !== undefined) {
       this.rng = mulberry32(this.seed);
     }
@@ -127,6 +143,40 @@ export class GovernanceEngine {
     // 只保留最近 5 次记录，避免历史数据过多稀释当前趋势
     if (history.length > 5) history.shift();
     this.interventionHistory.set(type, history);
+  }
+
+  /**
+   * 接收治理反馈信号——来自 EvaluationFeedbackChannel 或 LLMDetectorAdapter。
+   *
+   * 反馈信号在下次 diagnoseAndIntervene() 中消费，消费后清空。
+   *
+   * 修复 F14 断裂2（5 维评估从未反馈到治理循环）和
+   * 断裂1/3（LLM 从未参与治理决策）。
+   *
+   * 使用方式：
+   * ```typescript
+   * // 方式1：从 5 维评估结果提取反馈
+   * const channel = new EvaluationFeedbackChannel();
+   * const signals = channel.fromEvaluation(evalResult);
+   * engine.acceptFeedback(signals);
+   *
+   * // 方式2：从 LLM 检测器获取反馈
+   * const adapter = new LLMDetectorAdapter();
+   * adapter.registerDetector(new MaliciousIntentDetector(llmConfig));
+   * await adapter.runDetection(opinions, beliefs);
+   * engine.acceptFeedback(adapter.getCachedSignals());
+   *
+   * // 然后正常调用治理循环
+   * const { result, interventions } = engine.diagnoseAndIntervene(...);
+   * ```
+   */
+  acceptFeedback(signals: GovernanceFeedback[]): void {
+    this.pendingFeedback.push(...signals);
+  }
+
+  /** 获取当前待消费的反馈信号（调试/审计用） */
+  getPendingFeedback(): GovernanceFeedback[] {
+    return [...this.pendingFeedback];
   }
 
   /**
@@ -1271,6 +1321,50 @@ export class GovernanceEngine {
         intervention.targetAgents = targetAgents;
       }
       interventions.push(intervention);
+    }
+
+    // ── 消费治理反馈信号（F14 断裂修复）──────────────────────────────
+    // 来自 EvaluationFeedbackChannel（5 维评估→治理）或
+    // LLMDetectorAdapter（LLM-based 检测→治理）的反馈信号。
+    //
+    // 反馈不直接覆盖检测结果，而是：
+    // 1. 从反馈信号生成额外干预（如 LLM 检测到恶意意图→reduce_weight）
+    // 2. 调整干预优先级（如 reliability_drop 时提升 force_reflection 优先级）
+    if (this.pendingFeedback.length > 0) {
+      const aggregated = aggregateFeedback(this.pendingFeedback);
+
+      // 从反馈信号生成额外干预
+      for (const signal of aggregated.signals) {
+        if (!signal.suggestedIntervention) continue;
+        const sug = signal.suggestedIntervention;
+        if (!shouldTrigger(sug.type)) continue;
+
+        // 避免与已有干预重复（同 type + 同 target）
+        const targetKey = sug.targetAgents?.[0] ?? signal.targetAgents?.[0] ?? "";
+        const isDuplicate = interventions.some(
+          i => i.type === sug.type &&
+               (i.targetAgentId === targetKey || i.targetAgents?.[0] === targetKey)
+        );
+        if (isDuplicate) continue;
+
+        const intervention: Intervention = {
+          type: sug.type,
+          effect: "",
+          applied: false,
+          parameters: { ...sug.parameters, reason: sug.reason ?? signal.description },
+        };
+        if (sug.type === "reduce_weight" && targetKey) {
+          intervention.targetAgentId = targetKey;
+        } else if (targetKey) {
+          intervention.targetAgents = [targetKey];
+        } else if (signal.targetAgents && signal.targetAgents.length > 0) {
+          intervention.targetAgents = [...signal.targetAgents];
+        }
+        interventions.push(intervention);
+      }
+
+      // 清空已消费的反馈——反馈是 per-round 的
+      this.pendingFeedback = [];
     }
 
     // 干预优先级排序：根据 sortingMode 选择 F 分解排序或固定排序

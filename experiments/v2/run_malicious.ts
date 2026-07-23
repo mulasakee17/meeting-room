@@ -109,11 +109,15 @@ interface MaliciousExperimentResult {
       severity: string;
       description: string;
       agents?: string[];
+      /** 审计字段：detector 触发的结构化数值依据（2026-07-23 新增） */
+      detectionMetrics?: Record<string, number>;
     }>;
     interventions: Array<{
       type: string;
       targetAgentId?: string;
       targetAgents?: string[];
+      /** 审计字段：干预参数（2026-07-23 修复，之前被丢弃） */
+      parameters?: Record<string, unknown>;
       effect: string;
       applied: boolean;
       round?: number;
@@ -129,6 +133,8 @@ interface MaliciousExperimentResult {
       beliefsBefore: Record<string, { belief: number; confidence: number }>;
       beliefsAfter: Record<string, { belief: number; confidence: number }>;
     }>;
+    /** 审计字段：干预效果度量（2026-07-23 新增，第三方验证用） */
+    effectMetrics?: Record<string, number>;
   }>;
   /**
    * 每轮 opinions（B1 升级：保存 itemBeliefs 轨迹）
@@ -357,6 +363,8 @@ async function runMaliciousExperiment(
   // 历史实验数据缺失此字段，导致治理效果不可分析。
   // 通过类型转换访问 protected 字段——这是实验脚本的合法访问，
   // 不修改 src 代码，避免破坏现有测试。
+  // 2026-07-23 审计升级：保留 parameters + detectionMetrics + effectMetrics
+  // 支持第三方独立验证治理决策的正确性
   const engineWithTrace = engine as unknown as {
     roundDataArray: Array<{
       roundNumber: number;
@@ -366,17 +374,20 @@ async function runMaliciousExperiment(
         severity: string;
         description: string;
         agents?: string[];
+        detectionMetrics?: Record<string, number>;
       }>;
       interventions: Array<{
         type: string;
         targetAgentId?: string;
         targetAgents?: string[];
+        parameters?: Record<string, unknown>;
         effect: string;
         applied: boolean;
         round?: number;
       }>;
       beliefChanges: Record<string, { old: number; new: number; reason: string }>;
       converged: boolean;
+      effectMetrics?: Record<string, number>;
     }>;
   };
   const governanceTrace = engineWithTrace.roundDataArray?.map(r => ({
@@ -387,6 +398,8 @@ async function runMaliciousExperiment(
       type: i.type,
       targetAgentId: i.targetAgentId,
       targetAgents: i.targetAgents,
+      // 审计字段：保留干预参数（第三方验证用，2026-07-23 修复）
+      parameters: i.parameters,
       effect: i.effect,
       applied: i.applied,
       round: i.round,
@@ -394,6 +407,8 @@ async function runMaliciousExperiment(
     beliefChanges: r.beliefChanges || {},
     converged: r.converged,
     perUtteranceSnapshots: (r as any).perUtteranceSnapshots || [],
+    // 审计字段：干预效果度量（第三方验证用，2026-07-23 新增）
+    effectMetrics: r.effectMetrics,
   })) || [];
 
   // B1 升级：保存精简版 roundResults（含 itemBeliefs）以支持攻击目标核实

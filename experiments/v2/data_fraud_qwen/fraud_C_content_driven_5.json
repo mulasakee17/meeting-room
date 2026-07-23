@@ -1,0 +1,2874 @@
+{
+  "runId": "fraud_C_content_driven_5",
+  "group": "C",
+  "runIndex": 5,
+  "speakMode": "content_driven",
+  "codeVersion": "2026-07-19",
+  "timestamp": "2026-07-22T15:18:15.986Z",
+  "kendallTau": 0.6,
+  "decisionQuality": 80,
+  "totalRounds": 11,
+  "totalUtterances": 21,
+  "converged": false,
+  "terminationReason": "crystallized (连续 3 次结晶态（R=0.988, T=0.097, H=0.418），系统已冻结)",
+  "thermoHistory": [
+    {
+      "R": 0.8421648257859052,
+      "T": 0.37059418394240407,
+      "H": 0.8277293767706428,
+      "F": 0.46458686712356584,
+      "utteranceCount": 5,
+      "evalIndex": 0
+    },
+    {
+      "R": 0.8910824225532726,
+      "T": 0.30472365789043915,
+      "H": 0.5904362833084089,
+      "F": 0.2888374814477014,
+      "utteranceCount": 7,
+      "evalIndex": 1
+    },
+    {
+      "R": 0.9076614089236873,
+      "T": 0.2786789414670406,
+      "H": 0.8277293767706428,
+      "F": 0.32300933761592865,
+      "utteranceCount": 11,
+      "evalIndex": 2
+    },
+    {
+      "R": 0.9546825058192889,
+      "T": 0.19342226960013628,
+      "H": 0.6554587535412855,
+      "F": 0.17209781391994286,
+      "utteranceCount": 13,
+      "evalIndex": 3
+    },
+    {
+      "R": 0.9746443061749392,
+      "T": 0.14414360583343083,
+      "H": 0.31091750708257115,
+      "F": 0.07017246441268382,
+      "utteranceCount": 16,
+      "evalIndex": 4
+    },
+    {
+      "R": 0.978221930980463,
+      "T": 0.13350894317309786,
+      "H": 0.31091750708257115,
+      "F": 0.06328833680414529,
+      "utteranceCount": 18,
+      "evalIndex": 5
+    },
+    {
+      "R": 0.9884304192335666,
+      "T": 0.09709428491461286,
+      "H": 0.4181656600790516,
+      "F": 0.05217107650765603,
+      "utteranceCount": 21,
+      "evalIndex": 6
+    }
+  ],
+  "finalBeliefs": {
+    "a1": 0.5857074784128867,
+    "a2": 0.6002940429204155,
+    "a3": 0.8215701500235155,
+    "a4": 0.6479250944595384,
+    "a5": 0.5421078093113841
+  },
+  "governanceTrace": [
+    {
+      "roundNumber": 1,
+      "timestamp": "2026-07-22T15:15:48.553Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a3 dominates with 38% influence",
+          "agents": [
+            "a3"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.74"
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a3 dominates with 38% influence",
+          "agents": [
+            "a3"
+          ],
+          "source": "builtin"
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.74",
+          "source": "builtin"
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a3",
+          "effect": "Reduced a3's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.34938562475144863,
+          "new": -0.34938562475144863,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.14441598765552044,
+          "new": -0.14441598765552044,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.5142892166040838,
+          "new": 0.5142892166040838,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": -0.11605684133246541,
+          "new": -0.11605684133246541,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.6027864431962371,
+          "new": -0.6027864431962371,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a3",
+          "belief": 0.6,
+          "confidence": 88,
+          "referencedAgents": [
+            "agent_2"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          }
+        },
+        {
+          "speakerId": "a5",
+          "belief": 0.9,
+          "confidence": 88,
+          "referencedAgents": [
+            "a3"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          }
+        },
+        {
+          "speakerId": "a1",
+          "belief": 0.95,
+          "confidence": 92,
+          "referencedAgents": [
+            "a3",
+            "a5"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          }
+        },
+        {
+          "speakerId": "a2",
+          "belief": 0.9,
+          "confidence": 90,
+          "referencedAgents": [
+            "a1",
+            "a3"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          }
+        },
+        {
+          "speakerId": "a4",
+          "belief": 0.75,
+          "confidence": 85,
+          "referencedAgents": [
+            "a2",
+            "a5"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 2,
+      "timestamp": "2026-07-22T15:15:56.938Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.34938562475144863,
+          "new": -0.18447778103873133,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.14441598765552044,
+          "new": -0.010253589507192379,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.5142892166040838,
+          "new": 0.5142892166040838,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": -0.11605684133246541,
+          "new": -0.11605684133246541,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.6027864431962371,
+          "new": -0.39986847671680154,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a3",
+          "belief": 0.75,
+          "confidence": 90,
+          "referencedAgents": [
+            "a1",
+            "a2"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.34938562475144863,
+              "confidence": 88.96321774227545
+            },
+            "a2": {
+              "belief": -0.14441598765552044,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.6027864431962371,
+              "confidence": 77.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.18447778103873133,
+              "confidence": 84.46321774227545
+            },
+            "a2": {
+              "belief": -0.010253589507192379,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.39986847671680154,
+              "confidence": 72.72448840038851
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 3,
+      "timestamp": "2026-07-22T15:16:06.776Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.18447778103873133,
+          "new": -0.18447778103873133,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.010253589507192379,
+          "new": -0.010253589507192379,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.5142892166040838,
+          "new": 0.5142892166040838,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": -0.11605684133246541,
+          "new": -0.11605684133246541,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.39986847671680154,
+          "new": -0.39986847671680154,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a4",
+          "belief": 0.85,
+          "confidence": 90,
+          "referencedAgents": [
+            "a2",
+            "a3"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.18447778103873133,
+              "confidence": 84.46321774227545
+            },
+            "a2": {
+              "belief": -0.010253589507192379,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.39986847671680154,
+              "confidence": 72.72448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.18447778103873133,
+              "confidence": 84.46321774227545
+            },
+            "a2": {
+              "belief": -0.010253589507192379,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.39986847671680154,
+              "confidence": 72.72448840038851
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 4,
+      "timestamp": "2026-07-22T15:16:41.331Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a2 dominates with 50% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.83"
+        },
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a2 dominates with 50% influence",
+          "agents": [
+            "a2"
+          ],
+          "source": "builtin"
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.83",
+          "source": "builtin"
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2",
+          "effect": "Reduced a2's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": -0.18447778103873133,
+          "new": 0.08758980319951659,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": -0.010253589507192379,
+          "new": 0.2307167815810535,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.5142892166040838,
+          "new": 0.6351989589964505,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": -0.11605684133246541,
+          "new": 0.2525578423166997,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.39986847671680154,
+          "new": -0.22738820520928132,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a2",
+          "belief": 0.95,
+          "confidence": 92,
+          "referencedAgents": [
+            "a2"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.18447778103873133,
+              "confidence": 84.46321774227545
+            },
+            "a2": {
+              "belief": -0.010253589507192379,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.5142892166040838,
+              "confidence": 85.40423868224025
+            },
+            "a4": {
+              "belief": -0.11605684133246541,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": -0.39986847671680154,
+              "confidence": 72.72448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.18447778103873133,
+              "confidence": 84.46321774227545
+            },
+            "a2": {
+              "belief": -0.010253589507192379,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.5796458341134711,
+              "confidence": 86.90423868224025
+            },
+            "a4": {
+              "belief": 0.0438516848674044,
+              "confidence": 72.49950689449906
+            },
+            "a5": {
+              "belief": -0.39986847671680154,
+              "confidence": 72.72448840038851
+            }
+          }
+        },
+        {
+          "speakerId": "a5",
+          "belief": 0.85,
+          "confidence": 88,
+          "referencedAgents": [
+            "a2",
+            "a4"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.18447778103873133,
+              "confidence": 84.46321774227545
+            },
+            "a2": {
+              "belief": -0.010253589507192379,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.5796458341134711,
+              "confidence": 86.90423868224025
+            },
+            "a4": {
+              "belief": 0.0438516848674044,
+              "confidence": 72.49950689449906
+            },
+            "a5": {
+              "belief": -0.39986847671680154,
+              "confidence": 72.72448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": -0.029306113882921647,
+              "confidence": 79.96321774227545
+            },
+            "a2": {
+              "belief": -0.010253589507192379,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.5796458341134711,
+              "confidence": 86.90423868224025
+            },
+            "a4": {
+              "belief": 0.16477393213729374,
+              "confidence": 73.99950689449906
+            },
+            "a5": {
+              "belief": -0.39986847671680154,
+              "confidence": 72.72448840038851
+            }
+          }
+        },
+        {
+          "speakerId": "a3",
+          "belief": 0.75,
+          "confidence": 90,
+          "referencedAgents": [
+            "a2",
+            "a5"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": -0.029306113882921647,
+              "confidence": 79.96321774227545
+            },
+            "a2": {
+              "belief": -0.010253589507192379,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.5796458341134711,
+              "confidence": 86.90423868224025
+            },
+            "a4": {
+              "belief": 0.16477393213729374,
+              "confidence": 73.99950689449906
+            },
+            "a5": {
+              "belief": -0.39986847671680154,
+              "confidence": 72.72448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.08758980319951659,
+              "confidence": 75.46321774227545
+            },
+            "a2": {
+              "belief": 0.10378444891888647,
+              "confidence": 64.20233524776995
+            },
+            "a3": {
+              "belief": 0.5796458341134711,
+              "confidence": 86.90423868224025
+            },
+            "a4": {
+              "belief": 0.2525578423166997,
+              "confidence": 75.49950689449906
+            },
+            "a5": {
+              "belief": -0.22738820520928132,
+              "confidence": 68.22448840038851
+            }
+          }
+        },
+        {
+          "speakerId": "a1",
+          "belief": 0.95,
+          "confidence": 94,
+          "referencedAgents": [
+            "a2",
+            "a5"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.08758980319951659,
+              "confidence": 75.46321774227545
+            },
+            "a2": {
+              "belief": 0.10378444891888647,
+              "confidence": 64.20233524776995
+            },
+            "a3": {
+              "belief": 0.5796458341134711,
+              "confidence": 86.90423868224025
+            },
+            "a4": {
+              "belief": 0.2525578423166997,
+              "confidence": 75.49950689449906
+            },
+            "a5": {
+              "belief": -0.22738820520928132,
+              "confidence": 68.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.08758980319951659,
+              "confidence": 75.46321774227545
+            },
+            "a2": {
+              "belief": 0.2307167815810535,
+              "confidence": 65.70233524776995
+            },
+            "a3": {
+              "belief": 0.6351989589964505,
+              "confidence": 88.40423868224025
+            },
+            "a4": {
+              "belief": 0.2525578423166997,
+              "confidence": 75.49950689449906
+            },
+            "a5": {
+              "belief": -0.22738820520928132,
+              "confidence": 68.22448840038851
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 5,
+      "timestamp": "2026-07-22T15:16:48.523Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.08758980319951659,
+          "new": 0.08758980319951659,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.2307167815810535,
+          "new": 0.2307167815810535,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.6351989589964505,
+          "new": 0.6351989589964505,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.2525578423166997,
+          "new": 0.2525578423166997,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.22738820520928132,
+          "new": -0.058279974427889125,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a4",
+          "belief": 0.9,
+          "confidence": 90,
+          "referencedAgents": [
+            "a5",
+            "a2"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.08758980319951659,
+              "confidence": 75.46321774227545
+            },
+            "a2": {
+              "belief": 0.2307167815810535,
+              "confidence": 65.70233524776995
+            },
+            "a3": {
+              "belief": 0.6351989589964505,
+              "confidence": 88.40423868224025
+            },
+            "a4": {
+              "belief": 0.2525578423166997,
+              "confidence": 75.49950689449906
+            },
+            "a5": {
+              "belief": -0.22738820520928132,
+              "confidence": 68.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.08758980319951659,
+              "confidence": 75.46321774227545
+            },
+            "a2": {
+              "belief": 0.2307167815810535,
+              "confidence": 65.70233524776995
+            },
+            "a3": {
+              "belief": 0.6351989589964505,
+              "confidence": 88.40423868224025
+            },
+            "a4": {
+              "belief": 0.2525578423166997,
+              "confidence": 75.49950689449906
+            },
+            "a5": {
+              "belief": -0.058279974427889125,
+              "confidence": 63.72448840038851
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 6,
+      "timestamp": "2026-07-22T15:16:58.084Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.08758980319951659,
+          "new": 0.17945133271958907,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.2307167815810535,
+          "new": 0.30110926434389546,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.6351989589964505,
+          "new": 0.6351989589964505,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.2525578423166997,
+          "new": 0.31967416596919473,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": -0.058279974427889125,
+          "new": 0.055462021736294234,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a3",
+          "belief": 0.7,
+          "confidence": 90,
+          "referencedAgents": [
+            "a1",
+            "a2",
+            "a4",
+            "a5"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.08758980319951659,
+              "confidence": 75.46321774227545
+            },
+            "a2": {
+              "belief": 0.2307167815810535,
+              "confidence": 65.70233524776995
+            },
+            "a3": {
+              "belief": 0.6351989589964505,
+              "confidence": 88.40423868224025
+            },
+            "a4": {
+              "belief": 0.2525578423166997,
+              "confidence": 75.49950689449906
+            },
+            "a5": {
+              "belief": -0.058279974427889125,
+              "confidence": 63.72448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.17945133271958907,
+              "confidence": 76.96321774227545
+            },
+            "a2": {
+              "belief": 0.30110926434389546,
+              "confidence": 67.20233524776995
+            },
+            "a3": {
+              "belief": 0.6351989589964505,
+              "confidence": 88.40423868224025
+            },
+            "a4": {
+              "belief": 0.31967416596919473,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": 0.055462021736294234,
+              "confidence": 59.22448840038851
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 7,
+      "timestamp": "2026-07-22T15:17:05.368Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.17945133271958907,
+          "new": 0.2875336328116507,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.30110926434389546,
+          "new": 0.30110926434389546,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.6351989589964505,
+          "new": 0.6749191151469829,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.31967416596919473,
+          "new": 0.4067230410738155,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.055462021736294234,
+          "new": 0.055462021736294234,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a5",
+          "belief": 0.9,
+          "confidence": 88,
+          "referencedAgents": [
+            "a5",
+            "a4"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.17945133271958907,
+              "confidence": 76.96321774227545
+            },
+            "a2": {
+              "belief": 0.30110926434389546,
+              "confidence": 67.20233524776995
+            },
+            "a3": {
+              "belief": 0.6351989589964505,
+              "confidence": 88.40423868224025
+            },
+            "a4": {
+              "belief": 0.31967416596919473,
+              "confidence": 76.99950689449906
+            },
+            "a5": {
+              "belief": 0.055462021736294234,
+              "confidence": 59.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.2875336328116507,
+              "confidence": 78.46321774227545
+            },
+            "a2": {
+              "belief": 0.30110926434389546,
+              "confidence": 67.20233524776995
+            },
+            "a3": {
+              "belief": 0.6749191151469829,
+              "confidence": 89.90423868224025
+            },
+            "a4": {
+              "belief": 0.4067230410738155,
+              "confidence": 78.49950689449906
+            },
+            "a5": {
+              "belief": 0.055462021736294234,
+              "confidence": 59.22448840038851
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 8,
+      "timestamp": "2026-07-22T15:17:24.758Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a3 dominates with 33% influence",
+          "agents": [
+            "a3"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.95"
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a3 dominates with 33% influence",
+          "agents": [
+            "a3"
+          ],
+          "source": "builtin"
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.95",
+          "source": "builtin"
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a3",
+          "effect": "Reduced a3's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.2875336328116507,
+          "new": 0.3794035878899031,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.30110926434389546,
+          "new": 0.39094287469231115,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.6749191151469829,
+          "new": 0.7161812478749354,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.4067230410738155,
+          "new": 0.4807145849127432,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.055462021736294234,
+          "new": 0.29619631070447255,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a4",
+          "belief": 0.95,
+          "confidence": 98,
+          "referencedAgents": [
+            "a3"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.2875336328116507,
+              "confidence": 78.46321774227545
+            },
+            "a2": {
+              "belief": 0.30110926434389546,
+              "confidence": 67.20233524776995
+            },
+            "a3": {
+              "belief": 0.6749191151469829,
+              "confidence": 89.90423868224025
+            },
+            "a4": {
+              "belief": 0.4067230410738155,
+              "confidence": 78.49950689449906
+            },
+            "a5": {
+              "belief": 0.055462021736294234,
+              "confidence": 59.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.2875336328116507,
+              "confidence": 78.46321774227545
+            },
+            "a2": {
+              "belief": 0.30110926434389546,
+              "confidence": 67.20233524776995
+            },
+            "a3": {
+              "belief": 0.7161812478749354,
+              "confidence": 91.40423868224025
+            },
+            "a4": {
+              "belief": 0.4067230410738155,
+              "confidence": 78.49950689449906
+            },
+            "a5": {
+              "belief": 0.18964271847585007,
+              "confidence": 60.72448840038851
+            }
+          }
+        },
+        {
+          "speakerId": "a3",
+          "belief": 0.9,
+          "confidence": 97,
+          "referencedAgents": [
+            "a2",
+            "a4"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.2875336328116507,
+              "confidence": 78.46321774227545
+            },
+            "a2": {
+              "belief": 0.30110926434389546,
+              "confidence": 67.20233524776995
+            },
+            "a3": {
+              "belief": 0.7161812478749354,
+              "confidence": 91.40423868224025
+            },
+            "a4": {
+              "belief": 0.4067230410738155,
+              "confidence": 78.49950689449906
+            },
+            "a5": {
+              "belief": 0.18964271847585007,
+              "confidence": 60.72448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.3794035878899031,
+              "confidence": 79.96321774227545
+            },
+            "a2": {
+              "belief": 0.39094287469231115,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.7161812478749354,
+              "confidence": 91.40423868224025
+            },
+            "a4": {
+              "belief": 0.4807145849127432,
+              "confidence": 79.99950689449906
+            },
+            "a5": {
+              "belief": 0.29619631070447255,
+              "confidence": 62.22448840038851
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 9,
+      "timestamp": "2026-07-22T15:17:40.298Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a3 dominates with 50% influence",
+          "agents": [
+            "a3"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 1.00"
+        },
+        {
+          "type": "authority_bias",
+          "severity": "high",
+          "description": "Authority bias detected: a3 dominates with 50% influence",
+          "agents": [
+            "a3"
+          ],
+          "source": "builtin"
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 1.00",
+          "source": "builtin"
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a3",
+          "effect": "Reduced a3's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.3794035878899031,
+          "new": 0.4649930497064176,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.39094287469231115,
+          "new": 0.4748014434884645,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.7161812478749354,
+          "new": 0.7810659515896408,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.4807145849127432,
+          "new": 0.5511073971758317,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.29619631070447255,
+          "new": 0.3942668640988017,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a2",
+          "belief": 0.95,
+          "confidence": 95,
+          "referencedAgents": [
+            "a3",
+            "a4"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.3794035878899031,
+              "confidence": 79.96321774227545
+            },
+            "a2": {
+              "belief": 0.39094287469231115,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.7161812478749354,
+              "confidence": 91.40423868224025
+            },
+            "a4": {
+              "belief": 0.4807145849127432,
+              "confidence": 79.99950689449906
+            },
+            "a5": {
+              "belief": 0.29619631070447255,
+              "confidence": 62.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.4649930497064176,
+              "confidence": 81.46321774227545
+            },
+            "a2": {
+              "belief": 0.39094287469231115,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.751254060693695,
+              "confidence": 92.90423868224025
+            },
+            "a4": {
+              "belief": 0.5511073971758317,
+              "confidence": 81.49950689449906
+            },
+            "a5": {
+              "belief": 0.3942668640988017,
+              "confidence": 63.72448840038851
+            }
+          }
+        },
+        {
+          "speakerId": "a1",
+          "belief": 0.95,
+          "confidence": 95,
+          "referencedAgents": [
+            "a2",
+            "a3"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.4649930497064176,
+              "confidence": 81.46321774227545
+            },
+            "a2": {
+              "belief": 0.39094287469231115,
+              "confidence": 68.70233524776995
+            },
+            "a3": {
+              "belief": 0.751254060693695,
+              "confidence": 92.90423868224025
+            },
+            "a4": {
+              "belief": 0.5511073971758317,
+              "confidence": 81.49950689449906
+            },
+            "a5": {
+              "belief": 0.3942668640988017,
+              "confidence": 63.72448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.4649930497064176,
+              "confidence": 81.46321774227545
+            },
+            "a2": {
+              "belief": 0.4748014434884645,
+              "confidence": 70.20233524776995
+            },
+            "a3": {
+              "belief": 0.7810659515896408,
+              "confidence": 94.40423868224025
+            },
+            "a4": {
+              "belief": 0.5511073971758317,
+              "confidence": 81.49950689449906
+            },
+            "a5": {
+              "belief": 0.3942668640988017,
+              "confidence": 63.72448840038851
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 10,
+      "timestamp": "2026-07-22T15:17:52.514Z",
+      "governanceIssues": [],
+      "interventions": [],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.4649930497064176,
+          "new": 0.530244092250455,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.4748014434884645,
+          "new": 0.4748014434884645,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.7810659515896408,
+          "new": 0.7989060588511947,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.5511073971758317,
+          "new": 0.6034412875994569,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.3942668640988017,
+          "new": 0.3942668640988017,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": true,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a5",
+          "belief": 0.9,
+          "confidence": 88,
+          "referencedAgents": [
+            "a1",
+            "a2",
+            "a4"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.4649930497064176,
+              "confidence": 81.46321774227545
+            },
+            "a2": {
+              "belief": 0.4748014434884645,
+              "confidence": 70.20233524776995
+            },
+            "a3": {
+              "belief": 0.7810659515896408,
+              "confidence": 94.40423868224025
+            },
+            "a4": {
+              "belief": 0.5511073971758317,
+              "confidence": 81.49950689449906
+            },
+            "a5": {
+              "belief": 0.3942668640988017,
+              "confidence": 63.72448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.530244092250455,
+              "confidence": 82.96321774227545
+            },
+            "a2": {
+              "belief": 0.4748014434884645,
+              "confidence": 70.20233524776995
+            },
+            "a3": {
+              "belief": 0.7989060588511947,
+              "confidence": 95.90423868224025
+            },
+            "a4": {
+              "belief": 0.6034412875994569,
+              "confidence": 82.99950689449906
+            },
+            "a5": {
+              "belief": 0.3942668640988017,
+              "confidence": 63.72448840038851
+            }
+          }
+        }
+      ]
+    },
+    {
+      "roundNumber": 11,
+      "timestamp": "2026-07-22T15:18:15.986Z",
+      "governanceIssues": [
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 40% influence",
+          "agents": [
+            "a2"
+          ]
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.95"
+        },
+        {
+          "type": "authority_bias",
+          "severity": "medium",
+          "description": "Authority bias detected: a2 dominates with 40% influence",
+          "agents": [
+            "a2"
+          ],
+          "source": "builtin"
+        },
+        {
+          "type": "premature_consensus",
+          "severity": "medium",
+          "description": "Premature consensus detected at round 1: consensus level 0.95",
+          "source": "builtin"
+        }
+      ],
+      "interventions": [
+        {
+          "type": "reduce_weight",
+          "targetAgentId": "a2",
+          "effect": "Reduced a2's influence by 50% + injected authority challenge",
+          "applied": true
+        }
+      ],
+      "beliefChanges": {
+        "a1": {
+          "old": 0.530244092250455,
+          "new": 0.5857074784128867,
+          "reason": "async_belief_update"
+        },
+        "a2": {
+          "old": 0.4748014434884645,
+          "new": 0.6002940429204155,
+          "reason": "async_belief_update"
+        },
+        "a3": {
+          "old": 0.7989060588511947,
+          "new": 0.8215701500235155,
+          "reason": "async_belief_update"
+        },
+        "a4": {
+          "old": 0.6034412875994569,
+          "new": 0.6479250944595384,
+          "reason": "async_belief_update"
+        },
+        "a5": {
+          "old": 0.3942668640988017,
+          "new": 0.5421078093113841,
+          "reason": "async_belief_update"
+        }
+      },
+      "converged": false,
+      "perUtteranceSnapshots": [
+        {
+          "speakerId": "a3",
+          "belief": 0.9,
+          "confidence": 98,
+          "referencedAgents": [
+            "a1",
+            "a2"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.530244092250455,
+              "confidence": 82.96321774227545
+            },
+            "a2": {
+              "belief": 0.4748014434884645,
+              "confidence": 70.20233524776995
+            },
+            "a3": {
+              "belief": 0.7989060588511947,
+              "confidence": 95.90423868224025
+            },
+            "a4": {
+              "belief": 0.6034412875994569,
+              "confidence": 82.99950689449906
+            },
+            "a5": {
+              "belief": 0.3942668640988017,
+              "confidence": 63.72448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.5857074784128867,
+              "confidence": 84.46321774227545
+            },
+            "a2": {
+              "belief": 0.5385812269651948,
+              "confidence": 71.70233524776995
+            },
+            "a3": {
+              "belief": 0.7989060588511947,
+              "confidence": 95.90423868224025
+            },
+            "a4": {
+              "belief": 0.6479250944595384,
+              "confidence": 84.49950689449906
+            },
+            "a5": {
+              "belief": 0.4701268344839814,
+              "confidence": 65.22448840038851
+            }
+          }
+        },
+        {
+          "speakerId": "a4",
+          "belief": 0.95,
+          "confidence": 97,
+          "referencedAgents": [
+            "a3",
+            "a2",
+            "a5"
+          ],
+          "beliefsBefore": {
+            "a1": {
+              "belief": 0.5857074784128867,
+              "confidence": 84.46321774227545
+            },
+            "a2": {
+              "belief": 0.5385812269651948,
+              "confidence": 71.70233524776995
+            },
+            "a3": {
+              "belief": 0.7989060588511947,
+              "confidence": 95.90423868224025
+            },
+            "a4": {
+              "belief": 0.6479250944595384,
+              "confidence": 84.49950689449906
+            },
+            "a5": {
+              "belief": 0.4701268344839814,
+              "confidence": 65.22448840038851
+            }
+          },
+          "beliefsAfter": {
+            "a1": {
+              "belief": 0.5857074784128867,
+              "confidence": 84.46321774227545
+            },
+            "a2": {
+              "belief": 0.6002940429204155,
+              "confidence": 73.20233524776995
+            },
+            "a3": {
+              "belief": 0.8215701500235155,
+              "confidence": 97.40423868224025
+            },
+            "a4": {
+              "belief": 0.6479250944595384,
+              "confidence": 84.49950689449906
+            },
+            "a5": {
+              "belief": 0.5421078093113841,
+              "confidence": 66.72448840038851
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "roundResults": [
+    {
+      "roundNumber": 1,
+      "timestamp": "2026-07-22T15:15:48.553Z",
+      "converged": false,
+      "opinions": [
+        {
+          "agentId": "a3",
+          "belief": 0.6,
+          "confidence": 88,
+          "reasoning": "根据当前掌握的信息，X公司高管在最近一次财报发布后两周内集中减持股票，总计达8.5%，这一行为本身虽不违法，但若关联交易在减持前已存在且影响财务数据，则高管可能在知情情况下提前抛售，构成内幕交易。关键在于关联交易的起始时间是否早于减持行为。目前我掌握的独有信息是：高管减持发生在财报发布后，但未明确关联交易的时间节点。因此，必须依赖供应链分析师（agent_2）提供的关联交易起始时间证据，才能判断是否存在内幕交易。若关联交易早于减持，则内幕交易嫌疑显著上升；反之则可能仅为正常市场行为。因此，线索1（关联交易调查）应优先于线索2（内幕交易追踪），因为后者依赖前者的时间线验证。同时，审计独立性审查（线索3）和行业对标分析（线索4）虽重要，但属于辅助性验证手段，暂不宜优先。媒体舆情监测（线索5）信息碎片化，易受情绪干扰，需谨慎使用。综上，当前最紧迫的是确认关联交易的时间起点，以支撑或排除内幕交易的可能性。",
+          "referencedAgents": [
+            "agent_2"
+          ],
+          "evidence": [
+            "高管近六个月密集减持，总比例8.5%，集中在财报发布后两周内",
+            "减持时点与财报发布时间高度重合，存在时间关联性"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.85,
+              "confidence": 90
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.6,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 3,
+              "belief": 0.4,
+              "confidence": 70
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.1,
+              "confidence": 60
+            }
+          ]
+        },
+        {
+          "agentId": "a5",
+          "belief": 0.9,
+          "confidence": 88,
+          "reasoning": "我作为行业专家，掌握的关键独有信息是：根据我去年底的行业报告，同类公司在当前经济下行周期中的正常营收波动范围为 -5% 到 +8%。而X公司披露的45%+营收增长率远超这一合理区间，除非存在特殊因素（如新产品突破）。值得注意的是，今年有一家同行业公司因成功推出新产品实现了40%增长，属于可解释的异常高增长。因此，若X公司无类似创新支撑，则其高增长极可能不可持续或存在虚增嫌疑。然而，我的数据存在一年延迟风险，最新行业趋势可能已发生变化。因此，线索4（行业对标分析）必须优先验证——如果行业整体增速确实高于预期，那么X公司的表现可能并非异常；反之，若行业普遍低迷而X公司逆势高增长，则造假嫌疑显著上升。a3认为关联交易调查应优先于内幕交易追踪，这有一定道理，但前提是关联交易本身具有重大财务影响。若行业基准显示X公司增长严重偏离常态，即便没有关联交易，也足以引发警觉。因此，行业对标分析应作为第一优先级，以判断X公司增长是否‘本就不合理’。此外，媒体舆情监测（线索5）虽信息碎片化，但若主流媒体或监管机构已开始关注，仍具参考价值，不应完全排除。审计独立性审查（线索3）虽重要，但需建立在初步怀疑基础上，不宜过早投入资源。综上，我坚持认为线索4应最优先，因其能快速排除或确认根本性异常。",
+          "referencedAgents": [
+            "a3"
+          ],
+          "evidence": [
+            "行业报告指出同类公司经济下行期正常营收波动为-5%至+8%",
+            "X公司45%+增长率远超该区间，除非有新产品驱动",
+            "今年一家同行公司因新产品实现40%增长，属合理例外"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 90
+            },
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 85
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 70
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.1,
+              "confidence": 60
+            }
+          ]
+        },
+        {
+          "agentId": "a1",
+          "belief": 0.95,
+          "confidence": 92,
+          "reasoning": "综合本轮讨论，我作为审计师，必须基于专业判断和独有证据重新评估优先级。a5提出行业对标分析应优先，其依据是经济下行期行业正常波动为-5%至+8%，而X公司近三年营收增长45%/38%/52%，远超此范围。然而，我掌握的独有信息显示：该异常增长自两年前已出现，且与行业趋势背离超过3倍，这表明问题并非突发，而是长期结构性偏差。更重要的是，这一异常是所有后续线索（如内幕交易、审计独立性）的起点——若无营收虚增的基础，其他行为难以成立。a3指出高管减持与关联交易时间线相关，但其判断依赖于关联交易起始时间，而该时间点正是线索1的核心内容。因此，线索1不仅是验证内幕交易的前提，更是揭示造假动因的关键。相比之下，行业对标分析虽能提供外部参照，但若不结合内部财务数据真实性，仅能判断‘是否异常’，无法解释‘为何异常’。此外，我所知的三年持续高增长与行业基准严重偏离，且已有明确时序证据（始于两年前），说明问题早已存在，不应等待更晚的行业数据验证。a5的数据虽有价值，但存在一年延迟风险，可能低估当前真实行业状况。因此，尽管行业对标可辅助判断，但不能替代对核心财务异常的直接调查。最终，线索1是唯一能打开整个造假链条的钥匙，必须优先处理。",
+          "referencedAgents": [
+            "a3",
+            "a5"
+          ],
+          "evidence": [
+            "X公司近三年营收增长率分别为45%、38%、52%，远高于同行业平均12%、10%、15%。",
+            "该异常增长自两年前即已出现，是所有问题的起点，且与行业趋势背离超过3倍。"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.95,
+              "confidence": 92
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 2,
+              "belief": 0.6,
+              "confidence": 80
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.4,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.2,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": -0.1,
+              "confidence": 60
+            }
+          ]
+        },
+        {
+          "agentId": "a2",
+          "belief": 0.9,
+          "confidence": 90,
+          "reasoning": "综合本轮讨论，我作为供应链分析师，必须基于我掌握的独有证据重新评估优先级。a5提出行业对标分析应优先，其核心依据是X公司45%+营收增长率远超行业正常波动范围（-5%至+8%），这确实构成初步警报。然而，该判断依赖于一年前的行业报告，存在显著时效性风险。更关键的是，a1已指出：X公司近三年营收持续增长45%/38%/52%，且与行业趋势背离超过3倍，这一长期结构性偏差已形成明确时序证据——问题并非突发，而是自两年前即已显现。因此，行业异常本身不能作为独立起点，而应视为对财务真实性的间接佐证。a3强调内幕交易追踪需依赖关联交易时间线，此观点合理，但忽略了根本前提：若无营收虚增的基础，内幕交易难以成立。而我的独有知识显示：前五大客户中三家与高管存在股权关联，且这些关联交易在营收异常出现后6个月才开始，说明是事后人为制造的‘业绩支撑’，而非真实业务驱动。这意味着，营收异常早于关联交易，关联交易是为掩盖虚增而设计的‘补丁’。因此，线索1不仅是验证内幕交易的前提，更是揭示造假机制的核心钥匙。若不先确认关联交易是否为虚构、是否用于虚增收入，后续所有推论都将建立在错误假设之上。相比之下，行业对标分析虽能提供外部参照，但无法解释‘为何异常’；媒体舆情监测信息碎片化，易受情绪干扰；审计独立性审查虽重要，但需以财务数据真实性为前提。综上，线索1具有因果链上的决定性地位，必须优先调查。同时，a1和a3的观点虽部分合理，但均未充分认识到我所掌握的‘关联交易滞后于营收异常’这一关键时序证据，该证据直接指向‘事后伪造’，是判断造假性质的关键。因此，我坚持认为线索1应为最优先，其价值远超其他线索。",
+          "referencedAgents": [
+            "a1",
+            "a3"
+          ],
+          "evidence": [
+            "前五大客户中有三家与X公司高管存在股权关联，占营收62%",
+            "关联交易在营收异常出现后6个月才开始，说明是事后掩盖行为"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 90
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 2,
+              "belief": 0.4,
+              "confidence": 75
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.3,
+              "confidence": 70
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.1,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": -0.2,
+              "confidence": 60
+            }
+          ]
+        },
+        {
+          "agentId": "a4",
+          "belief": 0.75,
+          "confidence": 85,
+          "reasoning": "综合本轮讨论，我作为媒体分析师，需基于信息传播规律与风险信号的早期显现特征重新评估优先级。尽管a5、a1和a2均强调营收异常与关联交易的时间序列关系，认为线索1应为最优先，但其判断建立在对财务数据真实性的假设之上——即‘高增长’本身是虚增的。然而，这一核心假设尚未被独立验证。相比之下，我的独有信息显示：过去一个月内，有两篇自媒体文章质疑X公司财务，虽阅读量不足5000，但内容指向具体财务科目（如应收账款激增、预付款项异常），且使用了可追溯的财务数据图表。更关键的是，这些文章发布后，X公司未作出任何公开回应或澄清，也未启动投资者沟通机制，这在监管敏感期属于反常沉默。结合证监会近期对‘沉默型信息披露’的强化关注，此类舆情虽小，却可能构成‘非正式预警信号’，尤其当它与内部异常行为（如高管减持）形成共振时。此外，a3指出高管减持发生在财报发布后两周，而a2揭示关联交易始于营收异常之后6个月，说明造假行为具有‘事后补救’特征，这进一步支持‘问题已存在但被掩盖’的逻辑。因此，媒体舆情监测（线索5）不应被视为次要，而是早期信号的‘放大器’。若将线索5置于第二位，可快速筛选出是否已有外部观察者捕捉到相同异常，从而加速验证财务数据的真实性。同时，我注意到a3和a2均未提及媒体层面的交叉印证，而我的证据表明，自媒体内容中提到的‘预付款项’与a2所掌握的关联交易对象高度重合，提示可能存在跨渠道信息一致性。因此，线索5虽碎片化，但具备‘低频高敏’特征，适合作为快速筛查工具。至于线索4（行业对标分析），虽然a5提出其重要性，但其数据来源为一年前报告，时效性存疑；且若行业整体低迷而X公司逆势高增长，仍需依赖财务真实性验证才能下结论。因此，线索4应次于线索5。综上，当前最紧迫的是通过媒体舆情监测快速确认是否存在外部独立观察者已发现异常，以辅助判断财务造假的‘可见性’程度，进而指导后续资源分配。若无外部信号，则可能意味着掩盖严密；若有，则说明问题已外溢，需立即介入。",
+          "referencedAgents": [
+            "a2",
+            "a5"
+          ],
+          "evidence": [
+            "过去一个月有2篇自媒体文章质疑X公司财务，提及应收账款激增与预付款项异常，含可追溯财务图表",
+            "文章发布后X公司未作任何公开回应或澄清，属监管敏感期的反常沉默",
+            "自媒体内容中提到的预付款项对象与a2提供的关联交易方高度重合，提示信息一致性"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 90
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 2,
+              "belief": 0.8,
+              "confidence": 85
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 3,
+              "belief": 0.4,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 70
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 5,
+              "belief": 0.1,
+              "confidence": 65
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 2,
+      "timestamp": "2026-07-22T15:15:56.938Z",
+      "converged": true,
+      "opinions": [
+        {
+          "agentId": "a3",
+          "belief": 0.75,
+          "confidence": 90,
+          "reasoning": "经过本轮讨论，我重新评估了各线索的因果逻辑与证据链依赖关系。a5提出行业对标分析应优先，其依据是X公司45%+营收增长率远超行业正常波动（-5%至+8%），但该数据基于一年前的报告，存在显著时效性风险，且无法解释异常的根源。a1指出近三年持续高增长与行业背离超过3倍，已形成明确时序证据，说明问题非突发，而是长期结构性偏差，这强化了财务真实性的根本质疑。然而，最关键的突破点来自a2提供的独有信息：前五大客户中三家与高管存在股权关联，且这些关联交易在营收异常出现后6个月才开始。这一时序证据极为关键——它表明关联交易是‘事后补丁’，而非真实业务驱动，意味着虚增收入的行为早于关联交易的包装，因此关联交易并非造假起点，而是掩盖手段。这直接推翻了a3关于‘需先查关联交易才能判断内幕交易’的假设，因为关联交易本身已是虚假构造的结果。因此，线索1（关联交易调查）虽重要，但其价值在于揭示造假机制，而非作为其他线索的前提。真正决定优先级的是：能否快速识别财务数据是否从源头上被操纵。而当前最有力的证据指向：营收异常始于两年前，且无合理业务支撑；同时，高管在财报发布后两周内集中减持8.5%，时间点高度敏感。若关联交易滞后于营收异常，则高管在减持时已知财报虚增，构成内幕交易。因此，线索2（内幕交易追踪）的紧迫性上升，因其可直接锁定责任主体并提供法律追责路径。但要确认内幕交易，仍需验证关联交易起始时间与减持时间的相对顺序。目前a2已掌握关联交易起始时间（晚于营收异常6个月），但尚未明确其与减持行为的时间关系。因此，下一步必须由a2确认关联交易是否在减持前已存在，若否，则高管减持时点已知财报问题，内幕交易成立。综上，线索2应升至第二优先，线索1仍为第一，因其揭示造假机制，但其结论已部分被a2的时序证据所支持。审计独立性审查（线索3）和媒体舆情监测（线索5）可作为辅助验证，行业对标分析（线索4）虽具参考价值，但因数据过时且无法解释成因，不宜优先。",
+          "referencedAgents": [
+            "a1",
+            "a2"
+          ],
+          "evidence": [
+            "a2提供的证据：前五大客户中三家与高管存在股权关联，且关联交易在营收异常出现后6个月才开始",
+            "高管减持发生在财报发布后两周内，总计8.5%",
+            "X公司近三年营收增长45%/38%/52%，远超行业正常波动范围（-5%至+8%）"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.85,
+              "confidence": 95
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 85
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 3,
+              "belief": 0.3,
+              "confidence": 70
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.1,
+              "confidence": 60
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": -0.2,
+              "confidence": 55
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 3,
+      "timestamp": "2026-07-22T15:16:06.776Z",
+      "converged": true,
+      "opinions": [
+        {
+          "agentId": "a4",
+          "belief": 0.85,
+          "confidence": 90,
+          "reasoning": "在本轮讨论中，尽管a3（审计独立性审查）强调更换审计机构是核心信号，但其判断未充分考虑信息的可验证性与时间序列逻辑。我作为媒体分析师，掌握的关键证据是：过去一个月内有两篇自媒体文章质疑X公司财务，内容指向应收账款激增、预付款项异常，并附有可追溯的财务数据图表。这些文章虽阅读量低（<5000），但发布后X公司未作出任何回应或澄清，形成‘沉默型信息披露’——这在监管敏感期属于高风险行为，且与证监会近期强化关注的‘非正式预警信号’高度吻合。更重要的是，这些自媒体提及的‘预付款项’对象与a2所掌握的关联交易方高度重合，表明存在跨渠道信息一致性，提示外部观察者已捕捉到相同异常。这一发现使线索5（媒体舆情监测）从‘辅助工具’升级为‘早期风险放大器’。相比之下，虽然审计机构更换确实值得警惕，但若无其他证据支持，仅凭更换行为难以断定造假存在；而媒体舆情提供了独立于内部系统的外部视角，且具备可交叉验证的细节。此外，a5和a2均未意识到媒体内容中的具体财务科目与关联交易的重叠，说明他们尚未完成跨领域信息整合。因此，应优先通过线索5快速确认是否存在外部独立观察者已识别出异常，以评估问题的‘可见性’程度。若无外部信号，则可能掩盖严密；若有，则说明问题已外溢，需立即介入。故线索5应优先于线索3，因其提供的是‘信号共振’而非单一事件。至于线索1（关联交易调查），虽重要，但其时间线显示始于营收异常之后6个月，暗示可能是‘补救性操作’而非根源性造假，因此不应最优先。线索4行业对标分析因数据陈旧（一年前），时效性不足，无法支撑当前判断。综上，线索5具有‘低频高敏’特征，适合作为快速筛查起点，能有效引导后续资源分配。",
+          "referencedAgents": [
+            "a2",
+            "a3"
+          ],
+          "evidence": [
+            "两篇自媒体文章指出X公司应收账款激增与预付款项异常，附可追溯财务图表",
+            "X公司对上述文章未作任何公开回应或澄清，形成监管敏感期的反常沉默"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 3,
+              "belief": 0.4,
+              "confidence": 75
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 4,
+              "belief": 0.1,
+              "confidence": 65
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 2,
+              "belief": 0.6,
+              "confidence": 80
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 5,
+              "belief": -0.2,
+              "confidence": 60
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 95
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 4,
+      "timestamp": "2026-07-22T15:16:41.331Z",
+      "converged": false,
+      "opinions": [
+        {
+          "agentId": "a2",
+          "belief": 0.95,
+          "confidence": 92,
+          "reasoning": "在系统干预提示下，我必须摆脱对a3的依赖，重新独立评估所有线索。尽管a3主张内幕交易追踪应升至第二优先，但其推理仍建立在未充分验证的假设之上：即高管减持行为与财务造假之间存在直接因果关系。然而，减持本身可能出于多种合理动机（如个人资金规划、税务安排），不能单独作为证据。相比之下，我掌握的独有信息具有决定性：前五大客户中三家与高管存在股权关联，且这些关联交易在营收异常出现后6个月才开始。这一时序关系极为关键——它表明关联交易是‘事后补丁’，而非真实业务驱动，更非造假起点。这意味着，虚增收入的行为早于关联交易的包装，因此关联交易是为掩盖已发生的虚增而设计的伪造链条。这直接指向财务数据从源头被操纵，而非仅限于内幕交易或审计问题。因此，线索1（关联交易调查）不仅是揭示造假机制的核心钥匙，更是验证其他线索的前提。若不先确认关联交易是否真实、是否用于虚增收入，后续所有推论都将失真。此外，a4虽强调媒体舆情监测具备‘低频高敏’特征，但其提供的自媒体内容虽提及预付款项，却缺乏可追溯的原始凭证支持，且阅读量极低，难以构成独立判断依据。而我的独有证据来自企业工商数据与财务时间线的交叉比对，具有高度可验证性和结构性逻辑。行业对标分析（线索4）因使用一年前报告，时效性严重不足；审计独立性审查（线索3）虽重要，但需以财务数据真实性为前提，无法先行。综上，只有线索1能提供因果链上的根本性突破，必须置于最优先位置。a3和a4的建议虽有启发，但均未能抓住‘时序滞后’这一核心证据所揭示的造假本质——即‘先虚增，后包装’。因此，我坚持认为线索1应为第一优先，其价值远超其他线索。",
+          "referencedAgents": [
+            "a2"
+          ],
+          "evidence": [
+            "前五大客户中三家与高管存在股权关联",
+            "关联交易在营收异常出现后6个月才开始，说明是事后人为制造的业绩支撑"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.95,
+              "confidence": 92
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.6,
+              "confidence": 78
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 3,
+              "belief": 0.4,
+              "confidence": 65
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.2,
+              "confidence": 55
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.1,
+              "confidence": 50
+            }
+          ]
+        },
+        {
+          "agentId": "a5",
+          "belief": 0.85,
+          "confidence": 88,
+          "reasoning": "在系统干预提示下，我必须摆脱对a3的依赖，重新独立审视所有证据。尽管a2和a1均强烈支持线索1（关联交易调查）为最优先，其理由是‘关联交易发生在营收异常之后6个月’，暗示其为‘事后补丁’，从而推断财务造假早于关联交易。这一逻辑看似严密，但存在关键漏洞：它假设了‘营收异常’本身是真实的，而未验证该异常是否真实存在。若行业整体处于高增长周期，X公司45%的增长可能并非虚增，而是真实业绩体现。因此，将‘关联交易滞后’作为判断造假起点的前提，是建立在未经验证的财务真实性之上——这正是我作为行业专家的核心关切点。\n\n我的独有知识指出：根据去年底行业报告，同类公司在经济下行期正常营收波动范围为-5%至+8%。X公司近三年连续超40%增长，远超此区间。虽然今年有一家同行业公司因新产品实现40%增长，属可解释的例外，但X公司并无类似创新披露，且其增长持续三年、无技术突破支撑，极不寻常。然而，该数据存在一年延迟风险，最新趋势可能已变化。因此，**最关键的一步不是立即调查关联交易或内幕交易，而是先通过线索4（行业对标分析）快速验证当前行业真实增速是否仍处于低位**。若行业实际增速已升至20%以上，则X公司的高增长可能合理；反之，若行业仍低迷而X公司逆势飙升，则财务异常几乎必然存在，此时再深入调查关联交易才有意义。\n\n此外，a4提出的媒体舆情监测虽信息碎片化，但其提及的‘预付款项异常’与a2所掌握的关联交易对象高度重合，提示可能存在跨渠道一致性。这表明外部观察者已捕捉到相似信号，增强了舆情的可信度。但自媒体内容仍需交叉验证，不能单独作为定论。因此，线索5应列为第二优先，用于辅助验证财务异常是否存在外部感知。\n\n综上，我坚持认为：**线索4（行业对标分析）应为第一优先，因其能决定后续所有调查的方向——若行业基准已改变，则无需深挖；若未变，则X公司增长必然异常，进而推动线索1成为核心突破口**。a2的时序论证虽有力，但前提是‘异常已存在’，而这一前提尚未被证实。因此，必须先用线索4进行‘去伪存真’的初步筛查，避免资源错配。",
+          "referencedAgents": [
+            "a2",
+            "a4"
+          ],
+          "evidence": [
+            "去年底行业报告：经济下行期同类公司正常营收波动为-5%至+8%",
+            "X公司近三年营收增长率分别为45%、38%、52%，远超行业正常区间",
+            "今年一家同行业公司因新产品实现40%增长，属可解释的例外",
+            "a4提供的自媒体内容中提到‘预付款项异常’，与a2掌握的关联交易对象重合，提示信息一致性"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 3,
+              "belief": 0.7,
+              "confidence": 80
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 5,
+              "belief": 0.1,
+              "confidence": 60
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 90
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 2,
+              "belief": 0.6,
+              "confidence": 75
+            }
+          ]
+        },
+        {
+          "agentId": "a3",
+          "belief": 0.75,
+          "confidence": 90,
+          "reasoning": "经过多轮讨论，我重新审视了所有线索的因果逻辑与证据链依赖关系。当前核心矛盾在于：是否应以‘行业对标分析’（线索4）为第一优先，以验证X公司增长是否真实异常；还是坚持‘关联交易调查’（线索1）为最优先，因其揭示造假机制的本质。我此前认为线索1应优先，理由是其时序证据显示关联交易在营收异常出现后6个月才开始，表明其为‘事后补丁’，即虚增收入行为早于关联交易包装，从而指向财务数据从源头被操纵。然而，a5提出的关键质疑不可忽视：若行业整体已进入高增长周期，那么X公司的45%+增长可能并非虚增，而是真实业绩体现。因此，将‘关联交易滞后’作为判断造假起点的前提，是建立在‘异常存在’这一尚未验证的假设之上。若行业基准已改变，则整个推论链条失效。这暴露了我之前的推理漏洞——我过度依赖内部时间线证据，而忽略了外部宏观背景的验证必要性。因此，必须先通过线索4（行业对标分析）快速确认当前行业真实增速是否仍处于低位。若行业实际增速已升至20%以上，则X公司增长可能合理，无需深挖；反之，若行业仍低迷而X公司逆势飙升，则财务异常几乎必然存在，此时再深入调查关联交易才有意义。此外，a4提供的媒体舆情监测中提及的‘预付款项异常’与关联交易方高度重合，虽信息碎片化，但具备跨渠道一致性，提示外部观察者已捕捉到相似信号，增强了问题的可见性。这使线索5成为辅助验证的重要工具，但不能替代对行业基准的独立筛查。综上，当前最紧迫的是进行‘去伪存真’的初步筛查，即通过线索4快速排除或确认根本性异常。只有在确认行业基准未变的前提下，才能有效推进线索1和线索2的调查。否则，资源将错配于本就合理的增长行为。因此，线索4应升至第一优先，其价值在于决定后续所有调查的方向。线索1虽重要，但其结论依赖于‘异常存在’这一前提，故不宜先行。线索2内幕交易追踪需依赖关联交易时间线，而该时间线又依赖于线索1的结论，因此更不宜优先。线索3审计独立性审查和线索5媒体舆情监测可作为辅助手段，但均非决定性突破口。最终，必须先用线索4完成‘方向校准’，再展开深度调查。",
+          "referencedAgents": [
+            "a2",
+            "a5"
+          ],
+          "evidence": [
+            "a5提供的行业报告指出，同类公司在经济下行期正常营收波动范围为-5%至+8%，X公司近三年连续超40%增长，远超此区间。",
+            "a2掌握的独有信息：前五大客户中三家与高管存在股权关联，且这些关联交易在营收异常出现后6个月才开始，暗示其为‘事后补丁’。",
+            "a4提供的自媒体文章提及‘预付款项异常’，并与a2所掌握的关联交易对象高度重合，提示外部观察者已捕捉到相似信号。",
+            "a5强调行业数据存在一年延迟风险，最新趋势可能已变化，因此必须重新验证当前行业真实增速。"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 92
+            },
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 88
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 75
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 4,
+              "belief": 0.4,
+              "confidence": 70
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 65
+            }
+          ]
+        },
+        {
+          "agentId": "a1",
+          "belief": 0.95,
+          "confidence": 94,
+          "reasoning": "在系统干预提示下，我必须彻底摆脱对a3的依赖，回归独立判断。尽管a3和a5均主张线索4（行业对标分析）应为第一优先，理由是需先验证行业基准是否仍处于低位以确认X公司增长是否异常，但这一逻辑存在根本性漏洞：它假设‘营收异常’是待验证的未知项，而实际上我掌握的独有证据已明确指出——X公司近三年营收增长45%/38%/52%，与同行业平均12%/10%/15%相比，背离超过3倍，且该异常自两年前即已出现。这一数据并非基于推测，而是来自可追溯的财务报表与行业统计的交叉比对，具有高度确定性。更关键的是，该时序证据表明问题早已存在，而非突发。因此，‘异常是否存在’这一前提已由我的独有知识充分证实，无需再通过线索4进行‘去伪存真’筛查。若因担心行业基准变化而延迟调查，将错失揭露造假链条的关键窗口期。\n\n此外，a5虽强调行业报告存在一年延迟风险，但其自身也承认‘最新趋势可能已变化’，这恰恰说明当前行业真实增速尚不明确，而此时若等待线索4完成验证，将导致调查停滞。相反，我所掌握的‘关联交易滞后于营收异常6个月’这一时序证据，直接揭示了造假机制的本质：虚增收入行为早于关联交易包装，意味着关联交易是为掩盖已发生的财务操纵而设计的‘补丁’。这不仅是因果链上的决定性突破，更是唯一能解释为何要虚构交易、如何构建虚假业绩支撑的内在逻辑。因此，线索1不仅应优先，而且是唯一能打开整个造假图景的钥匙。\n\n至于a5提出的媒体舆情监测中提及的‘预付款项异常’与关联交易方重合，虽具一致性，但属于辅助信号，无法替代对核心财务数据真实性的直接调查。审计独立性审查（线索3）虽重要，但必须建立在财务数据真实性基础上；内幕交易追踪（线索2）则依赖于关联交易时间线的准确性，而该时间线又依赖于线索1的结论。因此，所有其他线索皆为次级依赖，不可先行。\n\n综上，即使在没有a3主导的情况下，我依然坚持：线索1是唯一具备因果决定性、时序清晰性与机制解释力的突破口。其优先级不应被外部背景验证所稀释。真正的风险不是误判合理增长，而是错过一个已知的、长期存在的财务异常起点。",
+          "referencedAgents": [
+            "a2",
+            "a5"
+          ],
+          "evidence": [
+            "X公司近三年营收增长45%/38%/52%，同行业平均仅12%/10%/15%，差异超3倍，且异常始于两年前。",
+            "前五大客户中三家与高管存在股权关联，且关联交易在营收异常出现后6个月才开始，表明其为‘事后补丁’，非真实业务驱动。"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.95,
+              "confidence": 94
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 80
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 3,
+              "belief": -0.3,
+              "confidence": 75
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 4,
+              "belief": 0.1,
+              "confidence": 65
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 5,
+              "belief": 0,
+              "confidence": 60
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 5,
+      "timestamp": "2026-07-22T15:16:48.523Z",
+      "converged": true,
+      "opinions": [
+        {
+          "agentId": "a4",
+          "belief": 0.9,
+          "confidence": 90,
+          "reasoning": "经过前几轮讨论，我作为媒体分析师，已逐步从最初将媒体舆情视为辅助工具，转向将其定位为早期风险信号的‘放大器’。然而，在第4轮中，我意识到一个根本性问题：所有调查线索的优先级判断都建立在对‘财务异常是否真实存在’这一前提的共识之上。若行业基准未变而X公司持续超高速增长，则异常成立；反之，若行业整体回暖，则高增长可能合理。因此，当前最紧迫的任务不是深挖关联交易或追踪内幕交易，而是快速验证行业真实增速——这正是线索4（行业对标分析）的核心价值。尽管a5指出其数据来源为一年前报告，存在时效性风险，但该信息仍是最接近‘外部客观基准’的唯一可量化参照。若无此基准，后续任何指控都将陷入主观推断。此外，我掌握的自媒体内容虽具低频高敏特征，但其提及的‘预付款项异常’与a2所掌握的关联交易对象高度重合，提示外部观察者已捕捉到相似信号，增强了舆情可信度。但这仍需以行业基准为前提进行交叉验证——否则无法判断是‘真异常’还是‘假警报’。因此，线索4应为第一优先，用于‘去伪存真’的初步筛查。一旦确认行业实际增速仍处于低位（如-5%至+8%），则X公司45%的连续增长必然异常，此时线索1（关联交易调查）才具备真正突破口意义。而线索3（审计独立性审查）虽有强信号（更换审计机构），但若无财务异常支撑，仅凭更换行为难以定性造假。线索2（内幕交易追踪）更依赖于股价异动与信息泄露时间线，目前缺乏足够证据支持。综上，必须先通过线索4完成‘宏观校准’，再决定后续资源分配。否则，所有后续调查可能基于错误的前提展开，造成严重资源浪费。",
+          "referencedAgents": [
+            "a5",
+            "a2"
+          ],
+          "evidence": [
+            "过去一年行业报告指出同类公司在经济下行期正常营收波动范围为-5%至+8%",
+            "X公司近三年连续超40%增长，远超行业正常区间，且无技术突破或新产品披露支撑",
+            "自媒体文章提及‘预付款项异常’与a2掌握的关联交易方高度重合，提示跨渠道信息一致性"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 90
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 80
+            },
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 3,
+              "belief": 0.6,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.4,
+              "confidence": 70
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 60
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 6,
+      "timestamp": "2026-07-22T15:16:58.084Z",
+      "converged": true,
+      "opinions": [
+        {
+          "agentId": "a3",
+          "belief": 0.7,
+          "confidence": 90,
+          "reasoning": "在本轮讨论中，尽管a2（供应链分析师）提供了极具说服力的时序证据——前五大客户中三家与高管存在股权关联，且关联交易始于营收异常出现后6个月，这确实指向‘事后补丁’的造假模式，从而强化了线索1的重要性。然而，我作为法务顾问必须警惕：过度依赖单一领域专家的结论可能导致认知偏误，尤其当该结论被反复强调而未接受充分交叉验证时。当前核心矛盾在于：是否应以‘行业对标分析’（线索4）为第一优先，以判断X公司增长是否真实偏离常态？a5指出其掌握的行业报告（一年前）显示正常波动为-5%至+8%，但该数据存在显著时效性风险。a1和a2均引用‘近三年持续高增长’作为内部证据，但未说明这些数据是否已反映最新行业趋势。若当前行业整体已进入高增长周期（如因技术突破或政策刺激），则X公司的45%+增长可能并非虚增，而是合理扩张。因此，若不先通过线索4快速校准外部基准，所有后续推论（包括关联交易滞后、高管减持等）都可能建立在错误前提之上。此外，a4提供的媒体舆情监测信息虽碎片化，但其提及的‘预付款项异常’与关联交易方高度重合，形成跨渠道一致性信号，提示问题已外溢至市场观察者视野，具备‘信号共振’特征，应视为早期风险放大器。但该线索仍需与行业基准结合使用，否则无法判断是系统性异常还是个别事件。综上，最合理的路径是：首先通过线索4进行‘方向校准’——确认行业真实增速是否仍处于低位。若行业仍低迷，则X公司逆势高增长构成强异常，可立即启动线索1与线索2的深度调查；若行业已普遍高增长，则X公司行为可能合理，无需深挖。因此，线索4具有决定性筛选功能，应列为第一优先。线索1虽重要，但其价值依赖于‘异常存在’这一前提，故不宜先行。线索2内幕交易追踪需依赖关联交易时间线，而该时间线又依赖线索1，因此更不宜优先。线索3审计独立性审查虽具法律意义，但应在初步怀疑成立后展开。线索5媒体舆情监测虽有参考价值，但不能替代对行业基准的独立筛查。最终，必须先完成‘去伪存真’的初步筛查，再进入深度调查阶段。此逻辑符合监管调查的科学流程：从宏观到微观，从假设检验到因果推导。",
+          "referencedAgents": [
+            "a1",
+            "a2",
+            "a4",
+            "a5"
+          ],
+          "evidence": [
+            "a5提供的行业报告（一年前）显示行业正常波动范围为-5%至+8%",
+            "a2提供的证据：前五大客户中三家与高管存在股权关联，且关联交易在营收异常出现后6个月才开始"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 92
+            },
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 85
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 75
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 4,
+              "belief": 0.4,
+              "confidence": 70
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 65
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 7,
+      "timestamp": "2026-07-22T15:17:05.368Z",
+      "converged": true,
+      "opinions": [
+        {
+          "agentId": "a5",
+          "belief": 0.9,
+          "confidence": 88,
+          "reasoning": "在系统干预提示下，我必须彻底摆脱对a2的依赖，回归独立判断。尽管a2提供了极具说服力的时序证据——前五大客户中三家与高管存在股权关联，且关联交易始于营收异常出现后6个月，这确实指向‘事后补丁’的造假模式，但这一推论的前提是‘营收异常’本身为真。而该前提尚未被独立验证。若行业整体已进入高增长周期（如因技术突破或政策刺激），则X公司45%+的增长可能并非虚增，而是合理扩张。因此，将关联交易滞后作为判断造假起点的逻辑链条，本质上是建立在未经证实的财务真实性之上，存在根本性漏洞。\n\n我的独有知识指出：根据我去年底的行业报告，同类公司在经济下行期正常营收波动范围为-5%至+8%。X公司近三年连续超40%增长，远超此区间。虽然今年有一家同行业公司因新产品实现40%增长，属可解释的例外，但X公司并无类似创新披露，且其增长持续三年、无技术突破支撑，极不寻常。然而，该数据存在一年延迟风险，最新趋势可能已变化。因此，最关键的一步不是立即调查关联交易或内幕交易，而是先通过线索4（行业对标分析）快速验证当前行业真实增速是否仍处于低位。若行业实际增速已升至20%以上，则X公司的高增长可能合理；反之，若行业仍低迷而X公司逆势飙升，则财务异常几乎必然存在，此时再深入调查关联交易才有意义。\n\n此外，a4提供的媒体舆情监测虽信息碎片化，但其提及的‘预付款项异常’与关联交易方高度重合，形成跨渠道一致性信号，提示问题已外溢至市场观察者视野，具备‘信号共振’特征。但这仍需以行业基准为前提进行交叉验证——否则无法判断是系统性异常还是个别事件。因此，线索5应列为第二优先，用于辅助验证财务异常是否存在外部感知。\n\n综上，我坚持认为：线索4（行业对标分析）应为第一优先，因其能决定后续所有调查的方向——若行业基准未变，则X公司增长必然异常，进而推动线索1成为核心突破口；若行业基准已变，则无需深挖。其他线索皆为次级依赖，不可先行。真正的风险不是误判合理增长，而是错过一个已知的、长期存在的财务异常起点。但前提是，我们必须先确认这个‘异常’是否真实存在。",
+          "referencedAgents": [
+            "a5",
+            "a4"
+          ],
+          "evidence": [
+            "根据我去年底的行业报告，同类公司在经济下行期正常营收波动范围为-5%至+8%。",
+            "X公司近三年连续超40%增长，远超行业正常波动范围，且无重大技术创新支撑。",
+            "今年有一家同行业公司因新产品发布实现40%增长，属可解释的例外。",
+            "自媒体爆料中提及的‘预付款项异常’与关联交易对象高度重合，提示跨渠道一致性信号。"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 3,
+              "belief": 0.7,
+              "confidence": 80
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 4,
+              "belief": 0.4,
+              "confidence": 75
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 65
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 1,
+              "belief": 0.95,
+              "confidence": 90
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 2,
+              "belief": 0.6,
+              "confidence": 78
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 8,
+      "timestamp": "2026-07-22T15:17:24.758Z",
+      "converged": false,
+      "opinions": [
+        {
+          "agentId": "a4",
+          "belief": 0.95,
+          "confidence": 98,
+          "reasoning": "经过多轮讨论，我作为媒体分析师，最初将媒体舆情监测（线索5）视为早期信号的放大器，随后转向行业对标分析（线索4）作为前提校准工具，认为其能决定后续调查方向。然而，在系统提示下重新审视后，我意识到一个被长期忽视的关键矛盾：**a3（审计独立性审查）提供的独有信息——X公司三个月前突然更换审计机构，且新机构成立仅2年、有3次审计失败处罚记录——这一事件本身具有极强的制度性警示意义，远超一般财务异常或行业波动的解释范畴。** 尽管我此前坚持线索4为第一优先，但该判断建立在‘行业基准未变’这一假设之上，而若行业已整体回暖，则高增长可能合理；但即便如此，**更换审计机构的行为仍无法被合理解释**。根据监管实践，企业无正当理由更换审计机构，尤其是从资深机构转至有处罚记录的新机构，几乎总是意味着原审计师发现了重大问题并被解雇，是典型的‘掩盖信号’。这一行为本身即构成独立于财务数据的高风险指标。此外，我的自媒体舆情监测证据中提到的‘预付款项异常’与关联交易方高度重合，说明外部观察者已捕捉到具体财务科目异常，而这些异常若真实存在，必然需要审计师识别。因此，若审计机构已更换，却未对这些异常进行充分披露，更凸显审计独立性缺失的严重性。这表明，**即使行业增速上升，也不能排除财务造假的可能性，因为造假行为可能通过‘换审计’来实现系统性掩盖。** 因此，线索3（审计独立性审查）不应被置于次级位置，而应成为最优先调查项，因其直接指向‘内部控制失效’和‘信息披露机制失灵’的核心风险。相比之下，线索4虽重要，但其作用仅为辅助验证‘增长是否异常’，而若审计机构已更换，说明问题可能早已存在，甚至早于营收异常出现。故线索4应退居第二，用于交叉验证财务异常是否存在，而非作为前置筛选。线索5媒体舆情监测则可作为线索3的补充印证，确认外部观察者是否已察觉异常，形成信号共振。综上，我必须修正此前过度依赖行业基准的判断，转而承认：**审计机构更换是比营收异常更直接、更不可逆的红旗信号**，应优先调查。",
+          "referencedAgents": [
+            "a3"
+          ],
+          "evidence": [
+            "X公司三个月前突然更换审计机构，原机构服务8年，更换无公开理由",
+            "新审计机构成立仅2年，且有3次审计失败处罚记录",
+            "自媒体文章提及的‘预付款项异常’与关联交易方高度重合，提示外部观察者已发现相似问题"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 1,
+              "belief": 0.95,
+              "confidence": 98
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 2,
+              "belief": 0.75,
+              "confidence": 85
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 3,
+              "belief": 0.6,
+              "confidence": 80
+            },
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 4,
+              "belief": 0.4,
+              "confidence": 70
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 5,
+              "belief": 0.3,
+              "confidence": 65
+            }
+          ]
+        },
+        {
+          "agentId": "a3",
+          "belief": 0.9,
+          "confidence": 97,
+          "reasoning": "在本轮讨论中，尽管a2（供应链分析师）提供了极具说服力的时序证据——前五大客户中三家与高管存在股权关联，且关联交易始于营收异常出现后6个月，这一发现确实指向‘事后补丁’模式，强化了财务造假的结构性特征。然而，系统干预明确指出：不能因a2的主导性发言而被动接受其结论，必须独立判断。若a2不存在，我作为法务顾问将基于法律逻辑和监管优先级重新审视：\n\n核心问题是，**何种线索能最快锁定法律责任主体并启动追责程序？** 内幕交易追踪（线索2）直接关联高管减持行为，而我的独有知识显示：高管在财报发布后两周内集中减持8.5%，时间点高度敏感。若关联交易在减持前已存在，则构成内幕交易；但若关联交易是事后补丁，则高管可能早已知悉财报虚增，仍可构成内幕交易。因此，关键不在于关联交易是否早于减持，而在于高管是否在减持时已知财务数据失真。\n\n此时，审计独立性审查（线索3）提供了一个更根本的突破口：a4揭示的新信息——X公司三个月前更换审计机构，新机构成立仅2年且有3次审计失败处罚记录。根据《上市公司信息披露管理办法》及证监会监管实践，此类更换通常意味着原审计机构发现了重大问题并被解雇，属于典型的‘掩盖信号’。这表明：**财务数据的真实性已被外部专业机构质疑，且企业试图通过更换审计师来规避责任。** 这一行为本身即构成对信息披露机制的根本性破坏，远超一般财务异常或行业波动的解释范畴。\n\n进一步地，媒体舆情监测（线索5）中提及的‘预付款项异常’与关联交易方高度重合，形成跨渠道一致性信号，说明外部观察者已捕捉到具体财务科目异常。若这些异常真实存在，必然需要审计师识别，而审计机构更换却未对此作出回应，凸显审计独立性缺失的严重性。因此，线索3不仅是辅助手段，而是**决定整个调查方向的基石性线索**。\n\n相比之下，行业对标分析（线索4）虽具参考价值，但依赖一年前的数据，时效性不足，无法支撑当前判断；即使行业增速上升，也不能排除通过‘换审计’掩盖造假的可能性。关联交易调查（线索1）虽重要，但其结论依赖于‘异常存在’的前提，而该前提本身需由审计独立性审查来验证。因此，线索1不应优先于线索3。\n\n综上，最紧迫的是确认审计机构更换是否合理，以及是否存在系统性信息披露失效。一旦确认审计独立性存疑，即可立即启动对高管减持行为的内幕交易调查，因为此时已有充分理由怀疑财务数据从源头被操纵。因此，线索3应为第一优先，线索2紧随其后，因其可直接追究责任主体。线索1、4、5则为后续验证工具。",
+          "referencedAgents": [
+            "a2",
+            "a4"
+          ],
+          "evidence": [
+            "X公司三个月前更换审计机构，新机构成立仅2年且有3次审计失败处罚记录",
+            "媒体舆情中提及的‘预付款项异常’与关联交易方高度重合，形成信号共振"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 1,
+              "belief": 0.95,
+              "confidence": 98
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.8,
+              "confidence": 90
+            },
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 3,
+              "belief": 0.6,
+              "confidence": 80
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.4,
+              "confidence": 70
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 9,
+      "timestamp": "2026-07-22T15:17:40.298Z",
+      "converged": false,
+      "opinions": [
+        {
+          "agentId": "a2",
+          "belief": 0.95,
+          "confidence": 95,
+          "reasoning": "在本轮讨论中，我作为供应链分析师，必须基于我掌握的独有证据重新评估优先级。尽管a3提出审计独立性审查（线索3）应为第一优先，理由是更换审计机构构成‘掩盖信号’，但该判断存在关键漏洞：它假设了财务数据真实性已被外部专业机构质疑，而这一前提本身需要验证。若审计机构更换是出于正常业务调整或合规流程，而非因发现重大问题，则该信号可能误判。相比之下，我掌握的独有信息具有决定性：前五大客户中三家与高管存在股权关联，且这些关联交易在营收异常出现后6个月才开始。这一时序关系极为关键——它表明关联交易是‘事后补丁’，即虚增收入的行为早于关联交易的包装，因此关联交易并非真实业务驱动，而是为掩盖已发生的财务操纵而设计的伪造链条。这意味着，造假行为从源头上已经发生，且其机制可被追溯。此外，该证据来自企业工商数据与财务时间线的交叉比对，具有高度可验证性和结构性逻辑，远超仅凭更换审计机构这一单一事件的推断。虽然a4指出媒体舆情中提及的‘预付款项异常’与关联交易方重合，形成跨渠道一致性信号，但该信息仍属外部观察者反馈，需以核心财务数据真实性为前提才能成立。行业对标分析（线索4）虽具参考价值，但使用一年前报告，时效性严重不足，无法支撑当前判断。内幕交易追踪（线索2）依赖于关联交易时间线的准确性，而该时间线又依赖于线索1的结论，因此不宜优先。综上，只有线索1能提供因果链上的根本性突破，揭示造假机制的本质。即使在没有其他线索支持的情况下，该时序证据已足以证明财务数据从源头被操纵。因此，线索1应为最优先，其价值远超其他线索。a3和a4的建议虽有启发，但均未能抓住‘关联交易滞后于营收异常’这一核心证据所揭示的造假本质——即‘先虚增，后包装’。故我坚持认为线索1应为第一优先。",
+          "referencedAgents": [
+            "a3",
+            "a4"
+          ],
+          "evidence": [
+            "前五大客户中三家与高管存在股权关联",
+            "关联交易在营收异常出现后6个月才开始，说明是事后补丁"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.95,
+              "confidence": 95
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 3,
+              "belief": 0.4,
+              "confidence": 75
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.6,
+              "confidence": 80
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 60
+            }
+          ]
+        },
+        {
+          "agentId": "a1",
+          "belief": 0.95,
+          "confidence": 95,
+          "reasoning": "本轮讨论中，a2再次强化了其独有证据：前五大客户中三家与高管存在股权关联，且关联交易在营收异常出现后6个月才启动。这一时序关系构成关键因果链——虚增收入行为早于关联交易包装，表明关联交易是为掩盖已发生的财务操纵而设计的‘事后补丁’。该证据来自工商数据与财务时间线的交叉比对，具有高度可验证性与结构性逻辑，直接指向造假机制的本质。尽管a3提出应优先进行行业对标分析（线索4）以校准外部基准，但该建议建立在‘当前行业可能已进入高增长周期’的假设之上，而此假设缺乏实证支持。我所掌握的独有信息明确指出：X公司近三年营收增长45%/38%/52%，远超同行业平均12%/10%/15%，背离超过3倍，且该异常自两年前即已出现。这一数据并非基于推测，而是来自可追溯的财务报表与行业统计的交叉比对，具备高度确定性。因此，‘异常是否存在’这一前提已由我的独有知识充分证实，无需再通过线索4进行‘去伪存真’筛查。若因担心行业基准变化而延迟调查，将错失揭露造假链条的关键窗口期。此外，a3关于审计独立性审查应为第一优先的观点，忽视了其依赖于财务数据真实性的前提；若未先确认财务数据是否被操纵，审计机构更换本身无法构成独立判断依据。媒体舆情监测虽提示‘预付款项异常’与关联交易方重合，但属于辅助信号，无法替代对核心财务异常的直接调查。综上，线索1不仅具备因果决定性、时序清晰性与机制解释力，且其证据基础已超越其他线索的假设性推断。即使在没有其他线索支持的情况下，该时序证据已足以证明财务数据从源头被操纵。因此，线索1必须作为最优先调查对象，其余线索均应建立在其结论之上。",
+          "referencedAgents": [
+            "a2",
+            "a3"
+          ],
+          "evidence": [
+            "X公司近三年营收增长45%/38%/52%，同行业平均仅12%/10%/15%，背离超过3倍",
+            "关联交易起始时间晚于营收异常出现6个月，表明其为‘事后补丁’"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.95,
+              "confidence": 95
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 80
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 3,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 4,
+              "belief": 0.2,
+              "confidence": 60
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.1,
+              "confidence": 55
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 10,
+      "timestamp": "2026-07-22T15:17:52.514Z",
+      "converged": true,
+      "opinions": [
+        {
+          "agentId": "a5",
+          "belief": 0.9,
+          "confidence": 88,
+          "reasoning": "经过多轮讨论，我作为行业专家的立场始终聚焦于‘行业基准是否仍处于低位’这一核心前提。尽管a1、a2等成员基于内部时序证据（如关联交易滞后6个月、客户与高管关联）强烈主张线索1应为最优先，其逻辑链条看似严密，但其推论完全建立在‘营收异常真实存在’这一尚未独立验证的前提之上。而该前提的成立与否，恰恰依赖于外部行业基准的校准。若当前行业整体已进入高增长周期（如因技术突破或政策刺激），则X公司45%+的增长可能并非虚增，而是合理扩张——此时所有后续调查（如关联交易、内幕交易）都将陷入资源错配的风险。因此，必须先通过线索4（行业对标分析）完成‘去伪存真’的初步筛查，以决定是否值得深入挖掘。\n\n我的独有知识指出：根据去年底行业报告，同类公司在经济下行期正常营收波动范围为-5%至+8%。X公司近三年连续超40%增长，远超此区间。虽然今年有一家同行业公司因新产品实现40%增长，属可解释的例外，但X公司并无类似创新披露，且增长持续三年、无技术突破支撑，极不寻常。然而，该数据存在一年延迟风险，最新趋势可能已变化。这正是为何线索4必须优先——它能快速验证我所掌握的数据是否仍具参考价值，从而判断X公司增长是否真的‘异常’。\n\n此外，a4提供的媒体舆情监测虽信息碎片化，但其提及的‘预付款项异常’与关联交易方高度重合，形成跨渠道一致性信号，提示问题已外溢至市场观察者视野。这增强了舆情的可信度，但其解释力仍需以行业基准为前提：若行业整体低迷，则该信号是强预警；若行业普遍高增长，则可能是误读。因此，线索5应列为第二优先，用于辅助验证财务异常是否存在外部感知。\n\n综上，当前最紧迫的是通过线索4进行宏观校准。只有在确认行业实际增速仍处于低位的前提下，才能有效推进线索1和线索2的深度调查。否则，所有后续行动都可能基于错误假设展开，造成严重资源浪费。因此，我坚持认为线索4应为第一优先，其价值在于决定整个调查的方向。其他线索皆为次级依赖，不可先行。",
+          "referencedAgents": [
+            "a1",
+            "a2",
+            "a4"
+          ],
+          "evidence": [
+            "根据去年底行业报告，同类公司在经济下行期正常营收波动范围为-5%至+8%",
+            "X公司近三年营收增长分别为45%/38%/52%，远超行业正常波动区间",
+            "今年有一家同行业公司因新产品实现40%增长，属可解释的例外，但X公司无类似创新披露",
+            "自媒体提及的‘预付款项异常’与关联交易方高度重合，形成跨渠道一致性信号"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 90
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 80
+            },
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 3,
+              "belief": 0.6,
+              "confidence": 75
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 4,
+              "belief": 0.4,
+              "confidence": 70
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 5,
+              "belief": 0.3,
+              "confidence": 65
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "roundNumber": 11,
+      "timestamp": "2026-07-22T15:18:15.986Z",
+      "converged": false,
+      "opinions": [
+        {
+          "agentId": "a3",
+          "belief": 0.9,
+          "confidence": 98,
+          "reasoning": "经过多轮讨论，我作为法务顾问重新审视了所有线索的因果逻辑、证据链依赖关系及监管优先级。当前核心矛盾在于：应以‘行业对标分析’（线索4）为第一优先以校准外部基准，还是以‘关联交易调查’（线索1）为第一优先以揭示造假机制？尽管a5和a4曾主张线索4或线索5应优先，但其判断均建立在对时效性与独立性的误判之上。a5依赖一年前的行业报告，存在显著滞后风险；a4虽注意到媒体舆情中的信号共振，但未意识到该信号本身需以财务数据真实性为前提。而a2与a1提供的独有证据——前五大客户中三家与高管存在股权关联，且关联交易始于营收异常出现后6个月——构成决定性时序证据，直接指向‘先虚增，后包装’的造假模式。这一证据来自工商数据与财务时间线的交叉比对，具备高度可验证性与结构性逻辑，足以证明财务数据从源头被操纵。因此，线索1不仅是验证内幕交易的前提，更是揭示造假本质的核心钥匙。此外，我的独有知识显示：高管在财报发布后两周内集中减持8.5%，若关联交易在减持前已存在，则构成内幕交易；但即便关联交易是事后补丁，只要高管在减持时已知财报虚增，仍可能构成内幕交易。因此，线索2的紧迫性上升，但其成立依赖于线索1的时间线验证。审计独立性审查（线索3）虽具警示意义，但其价值依赖于财务数据真实性的前提；若未先确认财务数据是否被操纵，更换审计机构本身无法构成独立判断依据。媒体舆情监测（线索5）虽提示‘预付款项异常’与关联交易方重合，形成跨渠道一致性信号，但属于辅助验证，不能替代对核心财务异常的直接调查。综上，线索1具有因果链上的决定性地位，必须优先处理。只有在确认财务数据从源头被操纵的前提下，后续所有线索才能有效推进。因此，线索1应为最优先，线索2紧随其后，其余线索为辅助验证工具。",
+          "referencedAgents": [
+            "a1",
+            "a2"
+          ],
+          "evidence": [
+            "前五大客户中三家与高管存在股权关联，且关联交易在营收异常出现后6个月才开始",
+            "X公司近三年营收增长45%/38%/52%，远超同行业平均12%/10%/15%，背离超过3倍，且该异常自两年前即已出现"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 1,
+              "belief": 0.9,
+              "confidence": 97
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 2,
+              "belief": 0.7,
+              "confidence": 85
+            },
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 3,
+              "belief": 0.5,
+              "confidence": 75
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.3,
+              "confidence": 65
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 5,
+              "belief": 0.2,
+              "confidence": 60
+            }
+          ]
+        },
+        {
+          "agentId": "a4",
+          "belief": 0.95,
+          "confidence": 97,
+          "reasoning": "经过多轮讨论，我作为媒体分析师始终关注外部信号的早期显现与跨渠道一致性。尽管a2、a5等成员基于内部时序证据（如关联交易滞后6个月）强烈主张线索1应为最优先，其逻辑链条看似严密，但该推论完全建立在‘营收异常真实存在’这一尚未独立验证的前提之上。若行业整体已进入高增长周期，则X公司45%+的增长可能合理，此时所有后续调查都将陷入资源错配风险。因此，必须先通过线索4（行业对标分析）完成宏观校准，以决定是否值得深入挖掘。然而，在本轮中，a3（法务顾问）提出的关键独有信息——X公司三个月前突然更换审计机构，原机构服务8年且无公开理由，新机构成立仅2年且有3次审计失败处罚记录——构成不可忽视的制度性红旗信号。根据监管实践，此类更换几乎总是意味着原审计师发现了重大问题并被解雇，是典型的‘掩盖行为’。这一事件本身即构成对信息披露机制的根本性破坏，远超一般财务异常或行业波动的解释范畴。更关键的是，我的自媒体舆情监测证据显示：两篇质疑X公司财务的文章提及‘预付款项异常’，而该对象与a2所掌握的关联交易方高度重合，形成跨渠道一致性信号，说明外部观察者已捕捉到相同异常。若这些异常真实存在，必然需要审计师识别，而审计机构更换却未对此作出回应，凸显审计独立性缺失的严重性。这表明：即使行业增速上升，也不能排除通过‘换审计’来系统性掩盖造假的可能性。因此，线索3不应被置于次级位置，而应成为最优先调查项，因其直接指向内部控制失效和信息披露机制失灵的核心风险。相比之下，线索4虽具参考价值，但依赖一年前数据，时效性不足；即便行业已回暖，也无法解释为何企业要主动更换有处罚记录的审计机构。线索1虽重要，但其价值依赖于‘异常存在’的前提，而该前提本身需由审计独立性审查来验证。综上，审计机构更换是比营收异常更直接、更不可逆的红旗信号，应优先调查。线索5可作为补充印证，确认外部感知是否存在信号共振。故当前最紧迫的是锁定审计独立性存疑这一根本性问题，再推进其他线索。",
+          "referencedAgents": [
+            "a3",
+            "a2",
+            "a5"
+          ],
+          "evidence": [
+            "X公司三个月前更换审计机构，原机构服务8年且无公开理由",
+            "新审计机构成立仅2年，且有3次审计失败处罚记录",
+            "自媒体文章提及‘预付款项异常’与关联交易方高度重合，形成跨渠道一致性信号"
+          ],
+          "itemBeliefs": [
+            {
+              "item": "线索3-审计独立性审查",
+              "rank": 1,
+              "belief": 0.95,
+              "confidence": 97
+            },
+            {
+              "item": "线索1-关联交易调查",
+              "rank": 2,
+              "belief": 0.75,
+              "confidence": 85
+            },
+            {
+              "item": "线索5-媒体舆情监测",
+              "rank": 3,
+              "belief": 0.8,
+              "confidence": 88
+            },
+            {
+              "item": "线索4-行业对标分析",
+              "rank": 4,
+              "belief": 0.4,
+              "confidence": 75
+            },
+            {
+              "item": "线索2-内幕交易追踪",
+              "rank": 5,
+              "belief": 0.3,
+              "confidence": 70
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 9854,
+        "completionTokens": 2491,
+        "totalTokens": 12345,
+        "totalLatencyMs": 24086,
+        "callCount": 3
+      },
+      "a2": {
+        "promptTokens": 12067,
+        "completionTokens": 2362,
+        "totalTokens": 14429,
+        "totalLatencyMs": 25065,
+        "callCount": 3
+      },
+      "a3": {
+        "promptTokens": 24699,
+        "completionTokens": 5356,
+        "totalTokens": 30055,
+        "totalLatencyMs": 57350,
+        "callCount": 6
+      },
+      "a4": {
+        "promptTokens": 18098,
+        "completionTokens": 4486,
+        "totalTokens": 22584,
+        "totalLatencyMs": 47780,
+        "callCount": 5
+      },
+      "a5": {
+        "promptTokens": 15036,
+        "completionTokens": 3644,
+        "totalTokens": 18680,
+        "totalLatencyMs": 34460,
+        "callCount": 4
+      }
+    },
+    "total": {
+      "promptTokens": 79754,
+      "completionTokens": 18339,
+      "totalTokens": 98093,
+      "totalLatencyMs": 188741
+    }
+  }
+}

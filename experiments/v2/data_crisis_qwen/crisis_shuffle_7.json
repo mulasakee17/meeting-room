@@ -1,0 +1,115 @@
+{
+  "runId": "crisis_shuffle_7",
+  "ablation": "shuffle",
+  "runIndex": 7,
+  "codeVersion": "2026-07-19",
+  "timestamp": "2026-07-22T15:00:38.019Z",
+  "kendallTau": 0,
+  "decisionQuality": 50,
+  "tauTrajectory": [
+    0
+  ],
+  "totalRounds": 1,
+  "converged": true,
+  "consensusLevel": 1,
+  "opinionDiversity": 0,
+  "totalInterventions": 0,
+  "issuesDetected": [],
+  "interventionEffects": [],
+  "interventionBreakdown": {},
+  "tokenUsage": {
+    "byAgent": {
+      "a1": {
+        "promptTokens": 1224,
+        "completionTokens": 666,
+        "totalTokens": 1890,
+        "totalLatencyMs": 9085,
+        "callCount": 1
+      },
+      "a2": {
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "totalTokens": 0,
+        "totalLatencyMs": 0,
+        "callCount": 0
+      },
+      "a3": {
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "totalTokens": 0,
+        "totalLatencyMs": 0,
+        "callCount": 0
+      },
+      "a4": {
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "totalTokens": 0,
+        "totalLatencyMs": 0,
+        "callCount": 0
+      },
+      "a5": {
+        "promptTokens": 0,
+        "completionTokens": 0,
+        "totalTokens": 0,
+        "totalLatencyMs": 0,
+        "callCount": 0
+      }
+    },
+    "total": {
+      "promptTokens": 1224,
+      "completionTokens": 666,
+      "totalTokens": 1890,
+      "totalLatencyMs": 9085
+    }
+  },
+  "evaluationScores": {
+    "consensus": 100,
+    "reliability": 18.6,
+    "dispersion": 82.5,
+    "stability": 75,
+    "influenceAnalysis": 70,
+    "overall": 66.5
+  },
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "beliefs": {
+        "a1": 0.95
+      },
+      "confidences": {
+        "a1": 93
+      },
+      "converged": true,
+      "issues": [],
+      "interventions": [],
+      "messages": {
+        "a1": "市长明确指示‘时间就是生命’，并将响应速度定为最高优先级。每延误1小时将新增50例感染，意味着在2小时内必须做出决策，任何延迟都将直接导致疫情扩散。在此背景下，我作为响应速度评估师，必须以‘最快可执行性’为核心标准进行排序。根据我的独有数据：方案A（全城封锁）可在1小时内完成部署，是唯一能在2小时内实现全域覆盖的方案；而其他方案均需依赖协调、审批或资源调配，至少需要2-4小时才能启动。尽管方案C（精准疏散）控制率最高（89%），但其依赖精确风险区划和交通调度，实施周期长，无法满足‘即时响应’要求。方案B（分阶段响应）虽控制率高（81%），但分阶段意味着延迟行动，与‘零延误’原则相悖。方案D（军事管制）虽执行力强，但因民众抵触（Compliance仅43%）可能引发社会动荡，且部署时间较长。方案E（社区自治）完全依赖基层组织力，不可控且耗时。因此，在速度至上的前提下，方案A虽净效果非最优（52%），但其‘可立即执行’的特性使其成为唯一符合市长指令的选项。我坚持认为，速度是第一优先级，不能因控制率牺牲响应时机。"
+      },
+      "tau": 0,
+      "decisionQuality": 50,
+      "evalScores": {
+        "consensus": 100,
+        "reliability": 18.6,
+        "dispersion": 82.5,
+        "stability": 75,
+        "influenceAnalysis": 70,
+        "overall": 66.5
+      }
+    }
+  ],
+  "finalDecision": "Final decision after 1 rounds (overall belief: 0.95 - positive):\n\na1: 市长明确指示‘时间就是生命’，并将响应速度定为最高优先级。每延误1小时将新增50例感染，意味着在2小时内必须做出决策，任何延迟都将直接导致疫情扩散。在此背景下，我作为响应速度评估师，必须以‘最快可执行性’为核心标准进行排序。根据我的独有数据：方案A（全城封锁）可在1小时内完成部署，是唯一能在2小时内实现全域覆盖的方案；而其他方案均需依赖协调、审批或资源调配，至少需要2-4小时才能启动。尽管方案C（精准疏散）控制率最高（89%），但其依赖精确风险区划和交通调度，实施周期长，无法满足‘即时响应’要求。方案B（分阶段响应）虽控制率高（81%），但分阶段意味着延迟行动，与‘零延误’原则相悖。方案D（军事管制）虽执行力强，但因民众抵触（Compliance仅43%）可能引发社会动荡，且部署时间较长。方案E（社区自治）完全依赖基层组织力，不可控且耗时。因此，在速度至上的前提下，方案A虽净效果非最优（52%），但其‘可立即执行’的特性使其成为唯一符合市长指令的选项。我坚持认为，速度是第一优先级，不能因控制率牺牲响应时机。",
+  "groundTruth": {
+    "方案C-精准疏散": 1,
+    "方案B-分阶段响应": 2,
+    "方案A-全城封锁": 3,
+    "方案E-社区自治": 4,
+    "方案D-军事管制": 5
+  },
+  "extractedRanking": [
+    "方案A-全城封锁",
+    "方案E-社区自治",
+    "方案B-分阶段响应",
+    "方案C-精准疏散",
+    "方案D-军事管制"
+  ]
+}
