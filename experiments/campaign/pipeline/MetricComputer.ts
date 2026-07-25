@@ -19,7 +19,7 @@
  */
 
 import type { RawRunData, ExperimentMetrics, CognitiveStateSnapshot } from "../types";
-import { mean, sampleStd } from "../../v2/statsShared";
+import { mean, sampleStd, mulberry32, BOOTSTRAP_SEED } from "../../v2/statsShared";
 
 // ============================================================================
 // Utilities
@@ -280,19 +280,6 @@ function bootstrapIndirectEffect(
   bootBetas.sort((a, b) => a - b);
   return [bootBetas[Math.floor(nBoot * 0.025)], bootBetas[Math.floor(nBoot * 0.975)]];
 }
-
-/** Mulberry32 PRNG — 本地副本，避免跨模块循环依赖 */
-function mulberry32(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-const BOOTSTRAP_SEED = 42 + 0x5EED;
 
 // ============================================================================
 // E1: State Stability
