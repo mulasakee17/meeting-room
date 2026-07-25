@@ -1,0 +1,27 @@
+{
+  "experimentId": "e1_stability",
+  "runtimeMode": "cognitive",
+  "sampleSize": 3,
+  "stateStability": {
+    "sigmaSqDeltaB": 0.15935499999999997,
+    "sigmaSqDeltaU": 0.24698278307603863,
+    "stabilityRatio": 0.6452069169167121,
+    "perRunRatios": [
+      0.914563460422552,
+      1.0346410590167983,
+      0.1290620729680701
+    ]
+  },
+  "utilityConsistency": {
+    "consistencyRate": 0.9866666666666667,
+    "consistentCount": 74,
+    "totalCount": 75
+  },
+  "utilityPrediction": {
+    "correlation": 0,
+    "regressionBeta": 0,
+    "r2": 0,
+    "auc": 0.5,
+    "sampleSize": 45
+  }
+}

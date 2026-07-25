@@ -1,0 +1,114 @@
+{
+  "runId": "e1_native_lite_belief_seed44_run0",
+  "experimentId": "e1_native_lite",
+  "runtimeMode": "belief",
+  "seed": 44,
+  "runIndex": 0,
+  "timestamp": "2026-07-24T11:53:50.232Z",
+  "scenario": "ma",
+  "agentCount": 5,
+  "maxRounds": 5,
+  "totalRounds": 5,
+  "converged": false,
+  "finalRanking": [
+    "NeuraTech (AI芯片)",
+    "GreenGrid (智能电网)",
+    "MedVault (医疗数据)",
+    "SkyLink (低轨卫星)",
+    "PureFiber (碳纤维材料)"
+  ],
+  "finalKendallTau": 1,
+  "beliefTrajectory": [
+    {
+      "round": 1,
+      "beliefs": {
+        "a1": 0.2,
+        "a2": 0.6,
+        "a3": 0.65,
+        "a4": 0.3,
+        "a5": -0.1
+      },
+      "confidences": {
+        "a1": 53,
+        "a2": 80,
+        "a3": 80,
+        "a4": 65,
+        "a5": 75
+      }
+    },
+    {
+      "round": 2,
+      "beliefs": {
+        "a1": 0.28,
+        "a2": 0.6,
+        "a3": 0.3,
+        "a4": 0.2,
+        "a5": 0.3
+      },
+      "confidences": {
+        "a1": 58,
+        "a2": 75,
+        "a3": 70,
+        "a4": 68,
+        "a5": 75
+      }
+    },
+    {
+      "round": 3,
+      "beliefs": {
+        "a1": 0.4,
+        "a2": 0.6,
+        "a3": 0.01,
+        "a4": 0.42,
+        "a5": 0.35
+      },
+      "confidences": {
+        "a1": 70,
+        "a2": 78,
+        "a3": 74,
+        "a4": 78,
+        "a5": 85
+      }
+    },
+    {
+      "round": 4,
+      "beliefs": {
+        "a1": 0.36,
+        "a2": 0.65,
+        "a3": 0.55,
+        "a4": 0.4,
+        "a5": 0.36
+      },
+      "confidences": {
+        "a1": 75,
+        "a2": 88,
+        "a3": 83,
+        "a4": 85,
+        "a5": 100
+      }
+    },
+    {
+      "round": 5,
+      "beliefs": {
+        "a1": 0.42,
+        "a2": 0.65,
+        "a3": 0.55,
+        "a4": 0.42,
+        "a5": 0.36
+      },
+      "confidences": {
+        "a1": 86,
+        "a2": 96,
+        "a3": 94,
+        "a4": 100,
+        "a5": 95
+      }
+    }
+  ],
+  "interventions": [],
+  "tokenUsage": {
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0
+  }
+}

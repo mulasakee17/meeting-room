@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-07-24T05:29:14.557Z",
+  "totalExperiments": 1,
+  "totalRuns": 4,
+  "experiments": [
+    {
+      "id": "e1_stability",
+      "hypothesis": "H1",
+      "status": "partial",
+      "runsCompleted": 2,
+      "runsPlanned": 2,
+      "keyResult": "未发现 Utility 稳定性显著优于 Belief (p=0.2445)",
+      "significant": false,
+      "pValue": 0.24447555244475552,
+      "effectSize": null
+    }
+  ],
+  "overallConclusions": [
+    "❌ 未发现 Utility 稳定性显著优于 Belief (p=0.2445)"
+  ]
+}

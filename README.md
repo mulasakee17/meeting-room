@@ -1,6 +1,6 @@
 # SwarmAlpha
 
-> **A research platform for cognitive governance of multi-agent systems — observation, bias detection, intervention, and evaluation as an independent layer above the A2A protocol.**
+> **A research platform for cognitive measurement of multi-agent deliberation — social thermodynamics as a runtime diagnostic layer, with governance intervention as future work.**
 
 [![Tests](https://img.shields.io/badge/tests-310-green)](./test/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
@@ -11,21 +11,24 @@
 
 ## 1. What is SwarmAlpha?
 
-SwarmAlpha is a **research platform for multi-agent cognitive governance**. It does NOT build agents or manage workflows. Instead, it provides a governance layer that observes agent discussions, detects collective cognitive failures, and intervenes — all with **zero additional LLM calls** (mathematics handles everything; LLMs only do perception).
+SwarmAlpha is a **research platform for measuring collective cognitive states in multi-agent deliberation**. It does NOT build agents or manage workflows. Instead, it provides a measurement layer that observes agent discussions, quantifies collective cognitive states, and detects failure modes — all with **zero additional LLM calls** (mathematics handles everything; LLMs only do perception).
+
+**Current focus**: measurement and diagnostics. Governance intervention is implemented and validated at smoke-test level. Our v2.0 interventions (reduce_weight, force_reflection) proved destructive ($\Delta\tau = -0.267$), but v2.1 non-destructive interventions (inject_evidence, rebalance_attention) achieved a significant turnaround ($\Delta\tau = +0.533$). Full-scale validation is in progress.
 
 **Long-term vision**: the governance layer above the [A2A protocol](https://github.com/google/A2A), as described in [AGENT_SOCIETY_VISION.md](AGENT_SOCIETY_VISION.md).
 
 ---
 
-## 2. Core Findings: Governance Boundary Conditions
+## 2. Core Findings: Measurement Reveals Governance Boundary Conditions
 
-After fixing 4 cognitive defects (D1–D4) that broke the governance loop, 169 closed-loop experiments across 2 tasks reveal:
+After fixing 4 cognitive defects (D1–D4) that broke the governance loop, 169 closed-loop experiments across 2 tasks, plus a cognitive governance smoke test, reveal:
 
 | Condition | When Governance Works | When It's Neutral | When It's Harmful |
 |---|---|---|---|
 | **Hard tasks** (Crisis, baseline τ=0.41) | ✅ d=0.92, p=0.005, τ +51% | — | — |
 | **Easy tasks** (Supplier, baseline τ=0.68) | — | ⚠️ d=0.47, p=0.089 (underpowered, 43%) | Ceiling effect: shuffle d=0.09 |
 | **Structural intervention** (shuffle) | ✅ d=1.44 on Crisis (p<0.001) | d=0.09 on Supplier (easy task) | — |
+| **Cognitive governance** (E9 Smoke Test) | — | — | ❌ Δτ = −0.267: reduce_weight suppresses key info, force_reflection backfires |
 | **Procedural intervention** (force_reflection) | ✅ 79.4% effective (27/34 events) | — | ⚠️ Backfire in polarized states (F-decomposition analysis) |
 | **Intervention count** | — | — | r=−0.55 with decision quality (dependency-chain cascades) |
 
@@ -34,6 +37,8 @@ After fixing 4 cognitive defects (D1–D4) that broke the governance loop, 169 c
 1. **False consensus** — consensus-quality correlation r≈−0.10 across all tasks. "High agreement" does not mean "good decision."
 2. **Structural > procedural** — Re-assigning agent knowledge (shuffle d=1.44) dominates in-discussion interventions (governance d=0.92) on hard tasks.
 3. **Task difficulty is the master switch** — Governance effectiveness is bounded by task difficulty (ceiling effect on easy tasks, significant on hard tasks).
+
+**Current priority: intervention stabilization.** The cognitive governance smoke test (E9, N=6 runs) showed that current interventions are destructive. We are replacing `reduce_weight` and `force_reflection` with non-destructive alternatives (`inject_evidence`, `rebalance_attention`, structural `shuffle`) that change information flow rather than belief weights. See [future.md](future.md) for the stabilization roadmap.
 
 > **Historical note**: 120 earlier experiments were collected with a broken governance loop (D1–D4). The prior "governance is ineffective" conclusion was a loop artifact. These data are retained for provenance but explicitly labeled as provisional. The 169 closed-loop runs above are the primary evidence.
 
@@ -88,21 +93,21 @@ if (result.hasIntervention) {
 
 ---
 
-## 4. Governance Runtime — Capabilities
+## 4. Measurement Runtime — Capabilities
 
 | Capability | Description | Status |
 |---|---|---|
 | **7 Bias Detectors** | Echo chamber, authority bias, polarization, premature consensus + 3 MAST detectors (information withholding, ignored input, reasoning-action mismatch) | ✅ Built-in; MAST detectors not yet experimentally triggered |
-| **4 Intervention Strategies** | Reduce weight, force reflection, introduce diversity, continue discussion; ranked by free-energy decomposition F=(1−R)+T·H | ✅ Built-in; diversity & continue disabled by default (low effectiveness) |
+| **4 Intervention Strategies** | Reduce weight, force reflection, introduce diversity, continue discussion; ranked by free-energy decomposition F=(1−R)+T·H | ⚠️ Proof-of-concept only; reduce_weight & force_reflection are destructive in smoke test (Δτ=−0.267); replacement with non-destructive alternatives in progress |
 | **4 Governance Modes** | none / detect-only / full / random-intervene + 5 extended ablation modes (shuffle, full_diversity, etc.) | ✅ Built-in |
-| **Adaptive Thresholds** | Auto-calibrate detection thresholds from task context | 🔧 Implemented, not yet experimentally validated |
-| **Adaptive Dosage** | Intervention strength scales with deviation severity | 🔧 Implemented, not yet experimentally validated |
 | **5-Dimension Evaluation** | Consensus, reliability, dispersion, stability, influence analysis | ✅ Built-in; weights are heuristic |
 | **Cross-Examination Engine** | PRO/CON camps → adversarial debate → verdict synthesis | ✅ Built-in + unit-tested |
 | **Causal Effect Estimation** | Nearest-neighbor trajectory matching + permutation test + bootstrap CI | ✅ Built-in |
 | **Audit Infrastructure** | SHA-256 manifest + third-party verifiable governance trace (detectionMetrics, effectMetrics, parameters) | ✅ Built-in; 1 experiment with full audit fields |
 | **Custom Detector API** | Register new bias detectors without modifying core engine | ✅ Built-in |
 | **Scalable Topology** | Flat → Grouped → Committee discussion structures | 🔧 GroupedTopology implemented, not yet tested |
+| **Adaptive Thresholds** | Auto-calibrate detection thresholds from task context | 🔧 Implemented, not yet experimentally validated |
+| **Adaptive Dosage** | Intervention strength scales with deviation severity | 🔧 Implemented, not yet experimentally validated |
 
 ---
 
@@ -218,6 +223,7 @@ test/                     # 310 automated tests
 - **Not a multi-framework adapter** — All experiments use the built-in `CustomAgent`. AutoGenAdapter is a demo only. CrewAI/LangGraph are removed from roadmap.
 - **Not a safety tool** — Detects cognitive biases, not security threats. Does not prevent agents from executing harmful actions.
 - **Not empirically calibrated** — Adaptive thresholds/dosage exist in code but have zero experimental validation. Evaluation weights are heuristic.
+- **Governance interventions are not production-ready** — Cognitive governance smoke test showed Δτ = −0.267 (governance made decisions worse). Current interventions (reduce_weight, force_reflection) are destructive; replacement with non-destructive alternatives is in progress.
 
 ### Key limitations (see [LIMITATIONS.md](LIMITATIONS.md) for all 25 sections)
 
@@ -230,6 +236,7 @@ test/                     # 310 automated tests
 | MAST detectors (FM-2.4/2.5/2.6) never triggered in experiments | 0 empirical validation | Requires v2 trace experiments with audit fields |
 | 1 experiment with full audit fields (detectionMetrics + effectMetrics) | Audit infrastructure sample insufficient | Needs 10+ new experiments for statistical meaning |
 | `full_reflection` p=0.048 finding was RETRACTED | Obtained under broken loop (D1–D4) | Crisis re-validation: 79.4% effective (27/34), direction reversed |
+| **Cognitive governance interventions destructive** (E9 Smoke Test) | Δτ = −0.267 on Supplier task | Replacing reduce_weight & force_reflection with non-destructive alternatives (inject_evidence, rebalance_attention, structural shuffle) |
 
 ### Academic integrity
 

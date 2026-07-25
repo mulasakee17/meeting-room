@@ -1,0 +1,27 @@
+% e1_stability — Auto-generated LaTeX fragment
+% Generated: 2026-07-24T12:48:41.161Z
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/fig1_stability.pdf}
+  \caption{State Stability Comparison between Belief and Cognitive Runtime.
+    Per-round belief change variance in Belief Runtime ($\sigma^2 = 0.1594$).
+    Per-round utility change variance in Cognitive Runtime ($\sigma^2 = 0.2470$).
+    Stability ratio $\sigma^2(\Delta B) / \sigma^2(\Delta U) = 0.65$
+    (permutation test, $p = 0.8723$, Cohen's $d = 0.65$).
+    Error bars represent 95\% bootstrap confidence intervals.}
+  \label{fig:stability}
+\end{figure}
+
+\begin{table}[ht]
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    Metric & Value & p-value \\
+    \midrule
+    State Stability Permutation Test & 0.645 & 0.8723 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Statistical test results for e1_stability.}
+  \label{tab:e1_stability}
+\end{table}

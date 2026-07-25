@@ -5,6 +5,22 @@ export interface ItemBelief {
   confidence: number;
 }
 
+/**
+ * LLM 原生输出的认知状态（v3.1 Native Cognitive Model）。
+ *
+ * 与旧模型的关键区别：这些值由 LLM 直接自省输出，而非系统从 belief 反推。
+ * - utility: 对每个选项的偏好强度 [-1, 1]
+ * - evidenceCoverage: 自评信息覆盖度 [0, 1]
+ * - evidenceQuality: 自评信息质量 [0, 1]
+ *
+ * Inertia 和 Susceptibility 由系统跨轮次计算，不在此结构中。
+ */
+export interface NativeCognitiveOutput {
+  utility: Record<string, number>;
+  evidenceCoverage: number;
+  evidenceQuality: number;
+}
+
 export interface AgentOpinion {
   agentId: string;
   reasoning: string;
@@ -15,6 +31,8 @@ export interface AgentOpinion {
   referencedAgents: string[];
   /** Per-item preferences (V2). Optional for backward compatibility. */
   itemBeliefs?: ItemBelief[];
+  /** LLM 原生输出的认知状态（v3.1）。仅 native_cognitive 模式填充。 */
+  cognitiveState?: NativeCognitiveOutput;
 }
 
 export interface RoundResult {
@@ -183,11 +201,29 @@ export interface DiscussionConfig {
    * except the target one.
    */
   governanceConfig?: Partial<import("../governance/types").GovernanceConfig>;
-  /**
-   * 可复现性 seed — 传入 GovernanceEngine 用于 introduce_diversity 等随机干预。
-   * 不传时回退到 Math.random() (不可复现)。
-   */
+  /** 可复现性 seed — 传入 GovernanceEngine 用于 introduce_diversity 等随机干预。
+   * 不传时回退到 Math.random() (不可复现)。 */
   seed?: number;
+  /**
+   * 启用 v3.0 Cognitive State Space 模型（Phase 2 验证）。
+   *
+   * 当为 true 时，DiscussionEngine 在每轮 belief 更新后额外运行
+   * cognitive state 更新（Utility / Evidence / Inertia / Confidence）。
+   * LLM prompt 不变，cognitive state 从已有输出中 post-hoc 计算。
+   *
+   * 默认 false（使用旧 scalar belief 模型）。
+   */
+  useCognitiveState?: boolean;
+  /**
+   * Phase 4B: 启用认知状态驱动的治理（Cognitive State Driven Governance）。
+   *
+   * 当为 true 时，NativeCognitiveEngine.applyGovernance() 使用认知检测器
+   * 和认知干预，而非旧 belief-based 治理。要求 useCognitiveState=true
+   * 且 runtimeMode 为 native_cognitive。
+   *
+   * 默认 false（使用旧 belief-based governance）。
+   */
+  useCognitiveGovernance?: boolean;
   /**
    * Agent grouping topology for scalable discussions.
    *

@@ -1,0 +1,160 @@
+{
+  "runId": "e9m_supplier_none_native_cognitive_seed456_run0",
+  "experimentId": "e9m_supplier_none",
+  "runtimeMode": "native_cognitive",
+  "seed": 456,
+  "runIndex": 0,
+  "timestamp": "2026-07-25T14:22:52.291Z",
+  "scenario": "supplier",
+  "agentCount": 5,
+  "maxRounds": 3,
+  "totalRounds": 1,
+  "converged": true,
+  "finalRanking": [
+    "供应商C-精研科技",
+    "供应商B-稳达制造",
+    "供应商E-锐新科技",
+    "供应商A-宏远工业",
+    "供应商D-利通集团"
+  ],
+  "finalKendallTau": 1,
+  "beliefTrajectory": [
+    {
+      "round": 1,
+      "beliefs": {
+        "a1": 0.2544772749301046,
+        "a4": 0.06937971110455693,
+        "a3": 0.26677410872653123,
+        "a5": 0.03979858383536339,
+        "a2": -0.028463669959455706
+      },
+      "confidences": {
+        "a1": 95,
+        "a4": 75,
+        "a3": 95,
+        "a5": 85,
+        "a2": 85
+      }
+    }
+  ],
+  "cognitiveTrajectory": [
+    {
+      "round": 1,
+      "agentId": "a1",
+      "agentName": "Cost Analyst",
+      "utility": {
+        "A": 0.2544772749301046,
+        "B": -0.2544772749301046
+      },
+      "utilityTopChoice": "A",
+      "utilityPreferenceClarity": 0.5089545498602092,
+      "utilityIntensity": 0.3598852135219007,
+      "evidenceCoverage": 0.5,
+      "evidenceQuality": 0.5,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0,
+      "inertiaStrength": 0.5,
+      "confidenceOverall": 0.6313546762336045,
+      "susceptibility": 0.18432266188319774,
+      "belief": 0.2544772749301046,
+      "oldConfidence": 63,
+      "spokeThisRound": false
+    },
+    {
+      "round": 1,
+      "agentId": "a2",
+      "agentName": "Supply Chain Manager",
+      "utility": {
+        "A": -0.028463669959455706,
+        "B": 0.028463669959455706
+      },
+      "utilityTopChoice": "B",
+      "utilityPreferenceClarity": 0.05692733991891141,
+      "utilityIntensity": 0.04025370809157391,
+      "evidenceCoverage": 0.5,
+      "evidenceQuality": 0.5,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0,
+      "inertiaStrength": 0.4,
+      "confidenceOverall": 0.5638880613725632,
+      "susceptibility": 0.26166716317646205,
+      "belief": 0.028463669959455706,
+      "oldConfidence": 56,
+      "spokeThisRound": false
+    },
+    {
+      "round": 1,
+      "agentId": "a3",
+      "agentName": "Quality Engineer",
+      "utility": {
+        "A": 0.26677410872653123,
+        "B": -0.26677410872653123
+      },
+      "utilityTopChoice": "A",
+      "utilityPreferenceClarity": 0.5335482174530625,
+      "utilityIntensity": 0.3772755626510551,
+      "evidenceCoverage": 0.5,
+      "evidenceQuality": 0.5,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0,
+      "inertiaStrength": 0.4,
+      "confidenceOverall": 0.581214097281918,
+      "susceptibility": 0.2512715416308492,
+      "belief": 0.26677410872653123,
+      "oldConfidence": 58,
+      "spokeThisRound": false
+    },
+    {
+      "round": 1,
+      "agentId": "a4",
+      "agentName": "Technical Director",
+      "utility": {
+        "A": 0.06937971110455693,
+        "B": -0.06937971110455693
+      },
+      "utilityTopChoice": "A",
+      "utilityPreferenceClarity": 0.13875942220911386,
+      "utilityIntensity": 0.09811772839759164,
+      "evidenceCoverage": 0.5,
+      "evidenceQuality": 0.5,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0,
+      "inertiaStrength": 0.4,
+      "confidenceOverall": 0.670592152653262,
+      "susceptibility": 0.1976447084080428,
+      "belief": 0.06937971110455693,
+      "oldConfidence": 67,
+      "spokeThisRound": false
+    },
+    {
+      "round": 1,
+      "agentId": "a5",
+      "agentName": "Finance Advisor",
+      "utility": {
+        "A": 0.03979858383536339,
+        "B": -0.03979858383536339
+      },
+      "utilityTopChoice": "A",
+      "utilityPreferenceClarity": 0.07959716767072678,
+      "utilityIntensity": 0.056283697023213536,
+      "evidenceCoverage": 0.5,
+      "evidenceQuality": 0.5,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0,
+      "inertiaStrength": 0.4,
+      "confidenceOverall": 0.5078152746893465,
+      "susceptibility": 0.29531083518639206,
+      "belief": 0.03979858383536339,
+      "oldConfidence": 51,
+      "spokeThisRound": false
+    }
+  ],
+  "thermoHistory": [],
+  "interventions": [],
+  "governanceIssues": [],
+  "tokenUsage": {
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0
+  }
+}

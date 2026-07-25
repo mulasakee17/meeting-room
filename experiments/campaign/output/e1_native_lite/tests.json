@@ -1,0 +1,22 @@
+[
+  {
+    "experimentId": "e1_stability",
+    "testName": "State Stability Permutation Test",
+    "pValue": 0.8723127687231277,
+    "effectSize": 0.6452069169167121,
+    "effectSizeName": "Stability Ratio",
+    "ciLower": 0.1290620729680701,
+    "ciUpper": 1.0346410590167983,
+    "ciLevel": 0.95,
+    "sampleSize": 3,
+    "significant": false,
+    "conclusion": "未发现 Utility 稳定性显著优于 Belief (p=0.8723)",
+    "details": {
+      "sigmaSqDeltaB": 0.15935499999999997,
+      "sigmaSqDeltaU": 0.24698278307603863,
+      "tStatistic": -1.0819598725360797,
+      "cohensD": 0.624669823661079,
+      "nPermutations": 10000
+    }
+  }
+]

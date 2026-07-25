@@ -1,0 +1,571 @@
+{
+  "runId": "e9_smoke_sup_cognitive_native_cognitive_seed123_run0",
+  "experimentId": "e9_smoke_sup_cognitive",
+  "runtimeMode": "native_cognitive",
+  "seed": 123,
+  "runIndex": 0,
+  "timestamp": "2026-07-25T13:31:31.202Z",
+  "scenario": "supplier",
+  "agentCount": 5,
+  "maxRounds": 3,
+  "totalRounds": 3,
+  "converged": false,
+  "finalRanking": [
+    "供应商B-稳达制造",
+    "供应商C-精研科技",
+    "供应商A-宏远工业",
+    "供应商E-锐新科技",
+    "供应商D-利通集团"
+  ],
+  "finalKendallTau": 0.6,
+  "beliefTrajectory": [
+    {
+      "round": 1,
+      "beliefs": {
+        "a1": 0.17235097400844096,
+        "a2": -0.0028106915764510854,
+        "a3": -0.0745250387582928,
+        "a4": 0.21820833147503432,
+        "a5": 0.17057537245564164
+      },
+      "confidences": {
+        "a1": 90,
+        "a2": 90,
+        "a3": 95,
+        "a4": 90,
+        "a5": 85
+      }
+    },
+    {
+      "round": 2,
+      "beliefs": {
+        "a1": 0.07773638260827077,
+        "a2": 0.13421542415376436,
+        "a3": 0.15867356000002503,
+        "a4": 0.009508675596421018,
+        "a5": 0.04222719873011896
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 80,
+        "a3": 85,
+        "a4": 88,
+        "a5": 85
+      }
+    },
+    {
+      "round": 3,
+      "beliefs": {
+        "a1": 0.08977693097621738,
+        "a2": 0.03964779870258203,
+        "a3": 0.017484384594687652,
+        "a4": 0.15535483136817202,
+        "a5": 0.12448448125024604
+      },
+      "confidences": {
+        "a1": 80,
+        "a2": 80,
+        "a3": 85,
+        "a4": 88,
+        "a5": 90
+      }
+    }
+  ],
+  "cognitiveTrajectory": [
+    {
+      "round": 1,
+      "agentId": "a1",
+      "agentName": "Cost Analyst",
+      "utility": {
+        "供应商A-宏远工业": 0.94277865,
+        "供应商B-稳达制造": 0.28338735,
+        "供应商C-精研科技": -0.46677470000000004,
+        "供应商D-利通集团": 0.1741581,
+        "供应商E-锐新科技": -0.7483162000000001
+      },
+      "utilityTopChoice": "供应商A-宏远工业",
+      "utilityPreferenceClarity": 0.6593913,
+      "utilityIntensity": 1.333164195654078,
+      "evidenceCoverage": 0.2,
+      "evidenceQuality": 0.95,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 1,
+      "inertiaStrength": 0.26166,
+      "confidenceOverall": 0.9,
+      "susceptibility": 0.07383399999999998,
+      "belief": 0.94277865,
+      "oldConfidence": 90,
+      "spokeThisRound": true,
+      "rankingTopChoice": "供应商A-宏远工业"
+    },
+    {
+      "round": 1,
+      "agentId": "a2",
+      "agentName": "Supply Chain Manager",
+      "utility": {
+        "供应商A-宏远工业": 0.8490777,
+        "供应商B-稳达制造": 0.28237305,
+        "供应商C-精研科技": -0.19412435,
+        "供应商D-利通集团": -0.5490777,
+        "供应商E-锐新科技": -0.3843316
+      },
+      "utilityTopChoice": "供应商A-宏远工业",
+      "utilityPreferenceClarity": 0.56670465,
+      "utilityIntensity": 1.1347020942354715,
+      "evidenceCoverage": 0.6,
+      "evidenceQuality": 0.95,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 1,
+      "inertiaStrength": 0.21657999999999994,
+      "confidenceOverall": 0.9,
+      "susceptibility": 0.07834199999999998,
+      "belief": 0.8490777,
+      "oldConfidence": 90,
+      "spokeThisRound": true,
+      "rankingTopChoice": "供应商A-宏远工业"
+    },
+    {
+      "round": 1,
+      "agentId": "a3",
+      "agentName": "Quality Engineer",
+      "utility": {
+        "供应商A": -0.95375,
+        "供应商B": 0.0075,
+        "供应商C": 0.86,
+        "供应商D": -0.96,
+        "供应商E": 0.7525000000000001
+      },
+      "utilityTopChoice": "供应商C",
+      "utilityPreferenceClarity": 0.10749999999999993,
+      "utilityIntensity": 1.7712005991699529,
+      "evidenceCoverage": 0.2,
+      "evidenceQuality": 1,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 1,
+      "inertiaStrength": 0.19305999999999998,
+      "confidenceOverall": 0.95,
+      "susceptibility": 0.05,
+      "belief": 0.86,
+      "oldConfidence": 95,
+      "spokeThisRound": true,
+      "rankingTopChoice": "供应商C"
+    },
+    {
+      "round": 1,
+      "agentId": "a4",
+      "agentName": "Technical Director",
+      "utility": {
+        "宏远工业": -0.7363856000000001,
+        "稳达制造": 0.2761446,
+        "精研科技": 0.6443374,
+        "利通集团": -0.460241,
+        "锐新科技": 0.5522892
+      },
+      "utilityTopChoice": "精研科技",
+      "utilityPreferenceClarity": 0.09204819999999991,
+      "utilityIntensity": 1.245204969293377,
+      "evidenceCoverage": 0.4,
+      "evidenceQuality": 0.9,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 1,
+      "inertiaStrength": 0.20481999999999997,
+      "confidenceOverall": 0.9,
+      "susceptibility": 0.07951799999999998,
+      "belief": 0.6443374,
+      "oldConfidence": 90,
+      "spokeThisRound": true,
+      "rankingTopChoice": "精研科技"
+    },
+    {
+      "round": 1,
+      "agentId": "a5",
+      "agentName": "Finance Advisor",
+      "utility": {
+        "供应商A": -0.29490345,
+        "供应商B": 0.5388414,
+        "供应商C": 0.38216207500000005,
+        "供应商D": -0.7439379500000001,
+        "供应商E": -0.5184552
+      },
+      "utilityTopChoice": "供应商B",
+      "utilityPreferenceClarity": 0.15667932499999998,
+      "utilityIntensity": 1.160002335601705,
+      "evidenceCoverage": 0.7,
+      "evidenceQuality": 0.9,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 1,
+      "inertiaStrength": 0.32045999999999997,
+      "confidenceOverall": 0.85,
+      "susceptibility": 0.10193100000000002,
+      "belief": 0.5388414,
+      "oldConfidence": 85,
+      "spokeThisRound": true,
+      "rankingTopChoice": "供应商B"
+    },
+    {
+      "round": 2,
+      "agentId": "a1",
+      "agentName": "Cost Analyst",
+      "utility": {
+        "Company A": 0.159898,
+        "Company B": 0.6997450000000001,
+        "Company C": 0.5157858,
+        "Company D": -0.20401020000000003,
+        "Company E": -0.5238062
+      },
+      "utilityTopChoice": "Company B",
+      "utilityPreferenceClarity": 0.1839592000000001,
+      "utilityIntensity": 1.047491538759679,
+      "evidenceCoverage": 0.7,
+      "evidenceQuality": 0.9,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0.5,
+      "inertiaStrength": 0.19795999999999994,
+      "confidenceOverall": 0.8,
+      "susceptibility": 0.160408,
+      "belief": 0.6997450000000001,
+      "oldConfidence": 80,
+      "spokeThisRound": true,
+      "rankingTopChoice": "Company B"
+    },
+    {
+      "round": 2,
+      "agentId": "a2",
+      "agentName": "Supply Chain Manager",
+      "utility": {
+        "供应商A-宏远工业": 0.6597568,
+        "供应商B-稳达制造": 0.0824696,
+        "供应商C-精研科技": -0.1649392,
+        "供应商D-利通集团": -0.6597568,
+        "供应商E-锐新科技": -0.412348
+      },
+      "utilityTopChoice": "供应商A-宏远工业",
+      "utilityPreferenceClarity": 0.5772872,
+      "utilityIntensity": 1.0366267978483288,
+      "evidenceCoverage": 0.6,
+      "evidenceQuality": 0.95,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0.375,
+      "inertiaStrength": 0.12347999999999995,
+      "confidenceOverall": 0.8,
+      "susceptibility": 0.175304,
+      "belief": 0.6597568,
+      "oldConfidence": 80,
+      "spokeThisRound": true,
+      "rankingTopChoice": "供应商A-宏远工业"
+    },
+    {
+      "round": 2,
+      "agentId": "a3",
+      "agentName": "Quality Engineer",
+      "utility": {
+        "供应商A": -0.519261,
+        "供应商B": 0.519261,
+        "供应商C": 0.346174,
+        "供应商D": -0.692348,
+        "供应商E": 0.0865435
+      },
+      "utilityTopChoice": "供应商B",
+      "utilityPreferenceClarity": 0.173087,
+      "utilityIntensity": 1.070483975131926,
+      "evidenceCoverage": 0.25,
+      "evidenceQuality": 1,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0.7272727272727273,
+      "inertiaStrength": 0.10289999999999998,
+      "confidenceOverall": 0.85,
+      "susceptibility": 0.13456500000000002,
+      "belief": 0.519261,
+      "oldConfidence": 85,
+      "spokeThisRound": true,
+      "rankingTopChoice": "供应商B"
+    },
+    {
+      "round": 2,
+      "agentId": "a4",
+      "agentName": "Technical Director",
+      "utility": {
+        "公司A": -0.62736016,
+        "公司B": 0.7169830400000001,
+        "公司C": 0.53773728,
+        "公司D": -0.7169830400000001,
+        "公司E": 0.35849152000000006
+      },
+      "utilityTopChoice": "公司B",
+      "utilityPreferenceClarity": 0.17924576000000014,
+      "utilityIntensity": 1.3562402743851172,
+      "evidenceCoverage": 0.8,
+      "evidenceQuality": 0.9,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0.625,
+      "inertiaStrength": 0.13523999999999994,
+      "confidenceOverall": 0.88,
+      "susceptibility": 0.10377120000000001,
+      "belief": 0.7169830400000001,
+      "oldConfidence": 88,
+      "spokeThisRound": true,
+      "rankingTopChoice": "供应商B-稳达制造"
+    },
+    {
+      "round": 2,
+      "agentId": "a5",
+      "agentName": "Finance Advisor",
+      "utility": {
+        "Company A": -0.17135675,
+        "Company B": 0.6427134999999999,
+        "Company C": 0.28281405,
+        "Company D": -0.80261295,
+        "Company E": -0.45989945
+      },
+      "utilityTopChoice": "Company B",
+      "utilityPreferenceClarity": 0.35989944999999995,
+      "utilityIntensity": 1.173934673373361,
+      "evidenceCoverage": 0.85,
+      "evidenceQuality": 0.9,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0.5555555555555556,
+      "inertiaStrength": 0.23617999999999997,
+      "confidenceOverall": 0.85,
+      "susceptibility": 0.11457300000000002,
+      "belief": 0.6427134999999999,
+      "oldConfidence": 85,
+      "spokeThisRound": true,
+      "rankingTopChoice": "Company B"
+    },
+    {
+      "round": 3,
+      "agentId": "a1",
+      "agentName": "Cost Analyst",
+      "utility": {
+        "Company A": -0.4507673,
+        "Company B": 0.6507672999999999,
+        "Company C": 0.1179028,
+        "Company D": -0.6507672999999999,
+        "Company E": -0.7478262
+      },
+      "utilityTopChoice": "Company B",
+      "utilityPreferenceClarity": 0.5328645,
+      "utilityIntensity": 1.2741006286405128,
+      "evidenceCoverage": 0.7,
+      "evidenceQuality": 0.9,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0.23076923076923078,
+      "inertiaStrength": 0.10485999999999993,
+      "confidenceOverall": 0.8,
+      "susceptibility": 0.17902799999999996,
+      "belief": 0.6507672999999999,
+      "oldConfidence": 80,
+      "spokeThisRound": true,
+      "rankingTopChoice": "Company B"
+    },
+    {
+      "round": 3,
+      "agentId": "a2",
+      "agentName": "Supply Chain Manager",
+      "utility": {
+        "供应商A-宏远工业": 0.7052500000000002,
+        "供应商B-稳达制造": 0.11425,
+        "供应商C-精研科技": -0.386,
+        "供应商D-利通集团": -0.6765000000000001,
+        "供应商E-锐新科技": -0.47175
+      },
+      "utilityTopChoice": "供应商A-宏远工业",
+      "utilityPreferenceClarity": 0.5910000000000002,
+      "utilityIntensity": 1.15742254060477,
+      "evidenceCoverage": 0.6,
+      "evidenceQuality": 0.95,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0.2727272727272727,
+      "inertiaStrength": 0.05,
+      "confidenceOverall": 0.8,
+      "susceptibility": 0.18999999999999995,
+      "belief": 0.7052500000000002,
+      "oldConfidence": 80,
+      "spokeThisRound": true,
+      "rankingTopChoice": "供应商A-宏远工业"
+    },
+    {
+      "round": 3,
+      "agentId": "a3",
+      "agentName": "Quality Engineer",
+      "utility": {
+        "供应商A-宏远工业": -0.39668749999999997,
+        "供应商B-稳达制造": 0.6038125,
+        "供应商C-精研科技": 0.32518749999999996,
+        "供应商D-利通集团": -0.5429999999999999,
+        "供应商E-锐新科技": 0.23587499999999997
+      },
+      "utilityTopChoice": "供应商B-稳达制造",
+      "utilityPreferenceClarity": 0.278625,
+      "utilityIntensity": 0.9890315634972171,
+      "evidenceCoverage": 0.5,
+      "evidenceQuality": 1,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0.3125,
+      "inertiaStrength": 0.05,
+      "confidenceOverall": 0.85,
+      "susceptibility": 0.14250000000000002,
+      "belief": 0.6038125,
+      "oldConfidence": 85,
+      "spokeThisRound": true,
+      "rankingTopChoice": "供应商B-稳达制造"
+    },
+    {
+      "round": 3,
+      "agentId": "a4",
+      "agentName": "Technical Director",
+      "utility": {
+        "Company A": -0.64015,
+        "Company B": 0.84015,
+        "Company C": 0.36865000000000003,
+        "Company D": -0.7544000000000001,
+        "Company E": 0.2259
+      },
+      "utilityTopChoice": "Company B",
+      "utilityPreferenceClarity": 0.4714999999999999,
+      "utilityIntensity": 1.3680997907682027,
+      "evidenceCoverage": 0.8,
+      "evidenceQuality": 0.9,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0.38461538461538464,
+      "inertiaStrength": 0.05,
+      "confidenceOverall": 0.88,
+      "susceptibility": 0.11399999999999999,
+      "belief": 0.84015,
+      "oldConfidence": 88,
+      "spokeThisRound": true,
+      "rankingTopChoice": "供应商B-稳达制造"
+    },
+    {
+      "round": 3,
+      "agentId": "a5",
+      "agentName": "Finance Advisor",
+      "utility": {
+        "Company A": -0.2085398,
+        "Company B": 0.7658408,
+        "Company C": 0.37651555000000003,
+        "Company D": -0.85516605,
+        "Company E": -0.4701107
+      },
+      "utilityTopChoice": "Company B",
+      "utilityPreferenceClarity": 0.38932524999999996,
+      "utilityIntensity": 1.3130415004285185,
+      "evidenceCoverage": 0.9,
+      "evidenceQuality": 0.9,
+      "evidenceDiversity": 0.5,
+      "evidenceRecentGain": 0.3076923076923077,
+      "inertiaStrength": 0.14601999999999996,
+      "confidenceOverall": 0.9,
+      "susceptibility": 0.08539799999999999,
+      "belief": 0.7658408,
+      "oldConfidence": 90,
+      "spokeThisRound": true,
+      "rankingTopChoice": "Company B"
+    }
+  ],
+  "thermoHistory": [
+    {
+      "round": 1,
+      "R": 0.039035952556318754,
+      "T": 0.21589166735718268,
+      "H": 0.6554587535412855,
+      "F": 1.10247213062957
+    },
+    {
+      "round": 2,
+      "R": 0.039035952556318754,
+      "T": 0.06400000000000006,
+      "H": 0.31091750708257115,
+      "F": 0.9808627678969658
+    },
+    {
+      "round": 3,
+      "R": 0.13502647928207268,
+      "T": 0.010000000000000009,
+      "H": 0.31091750708257115,
+      "F": 0.8680826957887531
+    }
+  ],
+  "interventions": [
+    {
+      "round": 1,
+      "type": "inject_evidence"
+    },
+    {
+      "round": 1,
+      "type": "rebalance_attention"
+    },
+    {
+      "round": 2,
+      "type": "inject_evidence"
+    },
+    {
+      "round": 3,
+      "type": "inject_evidence"
+    },
+    {
+      "round": 3,
+      "type": "rebalance_attention"
+    }
+  ],
+  "governanceIssues": [
+    {
+      "round": 1,
+      "type": "polarization_cognitive",
+      "severity": "high",
+      "description": "Polarization (cognitive): mean pairwise cosine distance=0.88, most distant: a1 vs a3",
+      "agents": [
+        "a1",
+        "a3"
+      ],
+      "suggestedIntervention": "inject_evidence"
+    },
+    {
+      "round": 1,
+      "type": "authority_bias_cognitive",
+      "severity": "medium",
+      "description": "Authority bias (cognitive): inertia concentration=1.34, dominant agent=a5, susceptibility asymmetry=2.04",
+      "agents": [
+        "a5"
+      ],
+      "suggestedIntervention": "rebalance_attention"
+    },
+    {
+      "round": 2,
+      "type": "polarization_cognitive",
+      "severity": "high",
+      "description": "Polarization (cognitive): mean pairwise cosine distance=0.92, most distant: a1 vs a2",
+      "agents": [
+        "a1",
+        "a2"
+      ],
+      "suggestedIntervention": "inject_evidence"
+    },
+    {
+      "round": 3,
+      "type": "polarization_cognitive",
+      "severity": "high",
+      "description": "Polarization (cognitive): mean pairwise cosine distance=0.76, most distant: a2 vs a3",
+      "agents": [
+        "a2",
+        "a3"
+      ],
+      "suggestedIntervention": "inject_evidence"
+    },
+    {
+      "round": 3,
+      "type": "authority_bias_cognitive",
+      "severity": "high",
+      "description": "Authority bias (cognitive): inertia concentration=1.82, dominant agent=a5, susceptibility asymmetry=2.22",
+      "agents": [
+        "a5"
+      ],
+      "suggestedIntervention": "rebalance_attention"
+    }
+  ],
+  "tokenUsage": {
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0
+  }
+}

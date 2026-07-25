@@ -54,6 +54,15 @@ import {
 } from "../constants";
 import type { GovernanceRuntime as GovernanceRuntimeType } from "@/runtime/GovernanceRuntime";
 import type { DiscussionMessage } from "@/runtime/types";
+import {
+  beliefToCognitiveState,
+  updateCognitiveState,
+  utilityFromItemBeliefs,
+  cognitiveStateToBelief,
+  cognitiveStateToConfidence,
+  type AgentCognitiveState,
+  type CognitiveStateUpdateInput,
+} from "../agent/cognitiveState";
 
 
 export interface DiscussionAgent {
@@ -91,6 +100,8 @@ export class DiscussionEngine {
   private crossExaminationResult: CrossExaminationResult | null = null;
   /** 持久 PRNG — random-intervene 模式专用，避免每轮重建导致相同干预 */
   private randomInterveneRng: () => number;
+  /** v3.0: Agent cognitive states (only populated when useCognitiveState=true) */
+  protected cognitiveStates: Map<string, AgentCognitiveState> = new Map();
 
   constructor(config?: Partial<DiscussionConfig>, governanceRuntime?: GovernanceRuntimeType) {
     this.config = {
@@ -160,6 +171,14 @@ export class DiscussionEngine {
       const state = agent.getState();
       agentStates.set(agent.id, { belief: state.belief, confidence: state.confidence });
       this.graphBuilder.addNode(agent.id, agent.name, agent.role, state.belief, state.confidence);
+
+      // v3.0: Initialize cognitive state if enabled
+      if (this.config.useCognitiveState) {
+        this.cognitiveStates.set(agent.id, beliefToCognitiveState(
+          agent.id, agent.name, agent.role,
+          state.belief, state.confidence,
+        ));
+      }
     }
     return agentStates;
   }
@@ -285,6 +304,11 @@ export class DiscussionEngine {
         roundNumber: round,
         payload: { agentStates: Object.fromEntries(agentStates) },
       });
+
+      // -- v3.0 cognitive state update --------------------------------------
+      if (this.config.useCognitiveState) {
+        this.updateCognitiveStatesFromRound(opinions, agents, round);
+      }
 
       // -- governance ------------------------------------------------------
       const governanceResult = this.applyGovernance(round, opinions, agentStates, agents);
@@ -782,6 +806,97 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
         agent.setState(state);
       }
     }
+  }
+
+  // ==========================================================================
+  // v3.0 Cognitive State Update
+  // ==========================================================================
+
+  /**
+   * Update cognitive states for all agents from the current round's opinions.
+   *
+   * Phase 2 implementation: extracts evidence/utility from LLM output,
+   * computes new cognitive state (Evidence → Confidence → Inertia → Utility),
+   * and stores it. Does NOT modify agentStates — the old belief/confidence
+   * path runs independently.
+   */
+  protected updateCognitiveStatesFromRound(
+    opinions: AgentOpinion[],
+    agents: DiscussionAgent[],
+    round: number,
+  ): void {
+    // Build a map of expressed utilities from itemBeliefs
+    const expressedUtilities = new Map<string, ReturnType<typeof utilityFromItemBeliefs>>();
+    for (const op of opinions) {
+      if (op.itemBeliefs && op.itemBeliefs.length > 0) {
+        expressedUtilities.set(op.agentId, utilityFromItemBeliefs(op.itemBeliefs));
+      }
+    }
+
+    // Detect which agents were refuted this round
+    // Simplified: an agent is "refuted" if another agent disagreed with their top choice
+    const refutedAgents = new Set<string>();
+    for (const op of opinions) {
+      if (!op.itemBeliefs || op.itemBeliefs.length === 0) continue;
+      const opTop = op.itemBeliefs.reduce((a, b) => a.rank < b.rank ? a : b).item;
+      for (const other of opinions) {
+        if (other.agentId === op.agentId) continue;
+        if (!other.itemBeliefs || other.itemBeliefs.length === 0) continue;
+        const otherTop = other.itemBeliefs.reduce((a, b) => a.rank < b.rank ? a : b).item;
+        if (otherTop !== opTop && other.referencedAgents?.includes(op.agentId)) {
+          refutedAgents.add(op.agentId);
+        }
+      }
+    }
+
+    for (const agent of agents) {
+      const agentId = agent.id;
+      const opinion = opinions.find(o => o.agentId === agentId);
+      const currentState = this.cognitiveStates.get(agentId);
+
+      if (!currentState) {
+        // Initialize if missing (shouldn't happen, but safety)
+        const state = agent.getState();
+        this.cognitiveStates.set(agentId, beliefToCognitiveState(
+          agentId, agent.name, agent.role, state.belief, state.confidence,
+        ));
+        continue;
+      }
+
+      const spokeThisRound = !!opinion;
+      const wasRefuted = refutedAgents.has(agentId);
+
+      // Build other agent utilities (from itemBeliefs)
+      const otherAgentUtilities: Array<{ agentId: string; utility: ReturnType<typeof utilityFromItemBeliefs> }> = [];
+      for (const [id, util] of expressedUtilities) {
+        if (id !== agentId) {
+          otherAgentUtilities.push({ agentId: id, utility: util });
+        }
+      }
+
+      const input: CognitiveStateUpdateInput = {
+        agentId,
+        agentName: agent.name,
+        agentRole: agent.role,
+        currentState,
+        evidenceStrings: opinion?.evidence || [],
+        itemBeliefs: opinion?.itemBeliefs || [],
+        spokeThisRound,
+        wasRefuted,
+        otherAgentUtilities,
+        roundNumber: round,
+      };
+
+      const newState = updateCognitiveState(input);
+      this.cognitiveStates.set(agentId, newState);
+    }
+  }
+
+  /**
+   * Get all cognitive states (v3.0). Returns empty map if useCognitiveState is false.
+   */
+  getCognitiveStates(): Map<string, AgentCognitiveState> {
+    return new Map(this.cognitiveStates);
   }
 
   private generateFinalDecision(roundResults: RoundResult[]): string {
@@ -1449,6 +1564,8 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     this.governanceEngine.reset();
     // H-Fix: 重置 random-intervene PRNG 到初始 seed 状态，保证跨实验可复现
     this.randomInterveneRng = mulberry32((this.config.seed ?? 42) + 0x5A4D);
+    // v3.0: 重置 cognitive states
+    this.cognitiveStates.clear();
   }
 }
 
@@ -1461,3 +1578,8 @@ export * from "./sensitivityTrace";
 export * from "./influenceUtils";
 export * from "./crossExamination";
 export * from "./topology";
+// NOTE: NativeCognitiveEngine 不在此 barrel 中 re-export。
+// 原因：nativeCognitiveEngine.ts import { DiscussionEngine } from "./index" 会与
+// 此处的 re-export 形成循环依赖，导致 barrel import 时 DiscussionEngine 未初始化
+// (Cannot access 'DiscussionEngine' before initialization)。
+// 消费方请直接 import from "./nativeCognitiveEngine"。

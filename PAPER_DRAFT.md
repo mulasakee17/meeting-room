@@ -1,24 +1,24 @@
-# Engineering Social Thermodynamics for LLM Multi-Agent Governance
+# Social Thermodynamics: A Runtime Measurement Framework for LLM Multi-Agent Deliberation
 
 **He Mengyuan** (Independent Researcher)
 
 > **Target venues**: arXiv preprint → AAMAS 2027 / AAAI 2027 / ICML 2027 Workshop on Multi-Agent Systems
-> **Status**: Pre-submission draft. Framework complete, preliminary experiments (N=445 runs, manifest-verified 2026-07-23) complete; large-scale validation in preparation.
+> **Status**: Pre-submission draft. Measurement framework complete, preliminary experiments (N=445 runs, manifest-verified 2026-07-23) complete. Governance intervention optimization is future work; this paper focuses on the measurement and diagnostic layer.
 > **Code**: [github.com/mulasakee17/swarmalpha](https://github.com/mulasakee17/swarmalpha)
 
 ---
 
 ## Abstract
 
-LLM multi-agent systems lack a principled, runtime-detectable signal for identifying when group deliberation is drifting toward collective failure. We propose **social thermodynamics** as such a signal: a four-variable state space—Kuramoto order parameter $R$, normalized temperature $T$, Shannon entropy $H$, and Helmholtz-style free energy $F = (1-R) + T \cdot H$—computed deterministically from agents' structured belief outputs with zero additional LLM calls. We engineer this signal into a governance runtime that combines seven bias detectors with four intervention strategies ranked by $F$-decomposition and a thermodynamic termination criterion. From 445 preliminary experiments across two hidden-profile tasks, we report three findings that challenge common assumptions about multi-agent deliberation:
+LLM multi-agent systems lack a principled, runtime-detectable signal for identifying when group deliberation is drifting toward collective failure. We propose **social thermodynamics** as such a signal: a four-variable state space—Kuramoto order parameter $R$, normalized temperature $T$, Shannon entropy $H$, and Helmholtz-style free energy $F = (1-R) + T \cdot H$—computed deterministically from agents' structured belief outputs with zero additional LLM calls. We engineer this signal into a measurement runtime that combines seven bias detectors with a thermodynamic termination criterion. From 445 preliminary experiments across two hidden-profile tasks, we report three findings that challenge common assumptions about multi-agent deliberation:
 
 1. **False consensus** ($N=169$, two tasks): the correlation between final consensus level ($R$) and decision quality (Kendall $\tau$) is $r \approx -0.10$ on both tasks—consensus is essentially uncorrelated with correctness, undermining convergence-based stopping criteria.
 
 2. **Structural precursors dominate procedural correction** ($N=24$ per condition, hard task): breaking role-information coherence ($d=1.44$) substantially outperforms within-discussion governance interventions ($d=0.92$), suggesting that the topology of information distribution is a more powerful lever than runtime correction.
 
-3. **Intervention backfire risk** ($N=10$, rogue-agent scenario): intervention count and decision quality correlate at $r=-0.55$, with cascading collateral damage to dependency-chain downstream agents—consistent with Lyapunov analysis showing that certain interventions can raise rather than lower the system's disorder potential.
+3. **Intervention strategy determines governance outcomes** ($N=6$ smoke test v2.0 + $N=6$ v2.1): destructive interventions (reduce_weight, force_reflection) degraded decision quality ($\Delta\tau = -0.267$), while non-destructive alternatives (inject_evidence, rebalance_attention) that change information flow rather than belief weights reversed this to $\Delta\tau = +0.533$. This demonstrates that the governance framework's measurement layer enables principled intervention design—the same detectors, when paired with different intervention strategies, produce opposite outcomes.
 
-The framework provides design-level coverage of over a third of the MAST taxonomy's failure modes, including three inter-agent modes (information withholding, ignored input, reasoning-action mismatch) that previously had no detection mechanism. The thermodynamic variables are best understood not as physical quantities but as operational heuristics for surfacing governance-relevant patterns faster than text-only analysis permits. This paper reports an early-stage but principled engineering effort; we outline the specific validation steps now underway to move from preliminary evidence to calibrated, cross-model deployment.
+The framework provides design-level coverage of over a third of the MAST taxonomy's failure modes, including three inter-agent modes (information withholding, ignored input, reasoning-action mismatch) that previously had no detection mechanism. The thermodynamic variables are best understood not as physical quantities but as operational heuristics for surfacing governance-relevant patterns faster than text-only analysis permits. **This paper focuses on the measurement and diagnostic layer.** We also report a preliminary intervention experiment demonstrating that the measurement framework enables principled intervention design: non-destructive interventions (inject_evidence, rebalance_attention) that modify information flow rather than belief weights achieve $\Delta\tau = +0.533$, reversing the destructive effect ($\Delta\tau = -0.267$) of weight-based interventions.
 
 ---
 
@@ -40,11 +40,11 @@ Meanwhile, production governance tools—Microsoft's Agent Governance Toolkit, N
 
 This paper presents two intertwined contributions:
 
-**A governance framework grounded in social thermodynamics.** We define a four-variable thermodynamic state $(R, T, H, F)$ computed deterministically from agents' structured belief outputs at every discussion round. We engineer this state into a runtime that closes the detect–intervene loop: seven bias detectors consume the thermodynamic state, interventions are ranked by decomposing $F$ into structural versus thermal disorder components, and termination is governed by a crystallization criterion on $R$. All governance logic is deterministic; LLMs are used only for perception—extracting structured beliefs from natural language.
+**A measurement framework grounded in social thermodynamics.** We define a four-variable thermodynamic state $(R, T, H, F)$ computed deterministically from agents' structured belief outputs at every discussion round. We engineer this state into a runtime that provides diagnostic capabilities: seven bias detectors consume the thermodynamic state, and termination is governed by a crystallization criterion on $R$. All detection logic is deterministic; LLMs are used only for perception—extracting structured beliefs from natural language. We also implement both destructive (v2.0: reduce_weight, force_reflection) and non-destructive (v2.1: inject_evidence, rebalance_attention) intervention strategies as a proof-of-concept governance loop, demonstrating that the measurement framework enables principled intervention design—the same detectors produce opposite outcomes ($\Delta\tau = -0.267$ vs $+0.533$) depending on intervention strategy.
 
-**Counterintuitive experimental findings from 445 preliminary runs.** The experiments surface several findings that challenge prevailing assumptions. The most consequential—false consensus, the near-zero correlation between consensus and correctness—directly contradicts the DeGroot-model assumption embedded in most convergence-based stopping criteria. Two additional findings (the dominance of structural rearrangement over procedural governance, and the risk that interventions can worsen outcomes) point toward principles that any multi-agent governance system must contend with.
+**Counterintuitive experimental findings from 445 preliminary runs.** The experiments surface several findings that challenge prevailing assumptions. The most consequential—false consensus, the near-zero correlation between consensus and correctness—directly contradicts the DeGroot-model assumption embedded in most convergence-based stopping criteria. Two additional findings (the dominance of structural rearrangement over procedural governance, and the demonstration that intervention strategy—destructive vs. non-destructive—can reverse governance outcomes from negative to positive) point toward principles that any multi-agent governance system must contend with.
 
-This work is at an early stage. The framework is implemented and unit-tested; the experiments are preliminary and conducted on a single model (DeepSeek-V3); the theoretical propositions are partially formalized; and the MAST-aligned detectors await large-scale calibration. We present it as a scientific communication—a principled engineering effort whose empirical signals, though provisional, merit wider scrutiny and replication. The limitations are discussed in detail in §7, and the validation steps now underway are outlined in §8.
+This work is at an early stage. The measurement framework is implemented and unit-tested; the experiments are preliminary and conducted on a single model (DeepSeek-V3); the theoretical propositions are partially formalized; the MAST-aligned detectors await empirical validation. We present it as a scientific communication—a principled measurement effort whose empirical signals, though provisional, merit wider scrutiny and replication. The governance intervention layer is explicitly identified as work-in-progress, with specific destructive failure modes documented in §5.5 and a stabilization roadmap outlined in §8.
 
 ---
 
@@ -149,9 +149,9 @@ For the belief update dynamic $b_i^{(t+1)} = b_i^{(t)} + \alpha \sum_j w_{ij}(b_
 
 ---
 
-## 4. Framework: The SwarmAlpha Governance Runtime
+## 4. Framework: The SwarmAlpha Measurement Runtime
 
-The runtime implements a five-stage loop: **observe → model → detect → intervene → evaluate**. LLMs perform only perception—extracting structured beliefs from natural language outputs via tag parsing, with an LLM fallback when parsing fails. All governance logic is deterministic mathematics operating on the extracted belief vectors.
+The runtime implements a five-stage loop: **observe → model → detect → intervene → evaluate**. LLMs perform only perception—extracting structured beliefs from natural language outputs via tag parsing, with an LLM fallback when parsing fails. All measurement and detection logic is deterministic mathematics operating on the extracted belief vectors. The intervention stage is implemented as a proof-of-concept but is not the focus of this paper; our experimental findings (§5.5) reveal that current intervention strategies are destructive in certain configurations, and we treat them as an open research problem (§8).
 
 ### 4.1 Observation Layer
 
@@ -316,15 +316,17 @@ Across all `full`-condition runs, intervention effectiveness decays with round n
 
 ## 6. Discussion
 
-### 6.1 A Unified Narrative: Consensus Is Not Correctness
+### 6.1 A Unified Narrative: Measure First, Govern Later
 
-The three main findings of this work—false consensus, the superiority of structural rearrangement over procedural governance, and the risk of intervention backfire—form a coherent story. The DeGroot-model assumption that multi-agent deliberation converges toward correct answers is not supported by our data. Consensus and correctness are essentially uncorrelated ($r \approx -0.10$). This means that any governance system optimized for convergence speed is optimizing the wrong objective.
+The three main findings of this work—false consensus, the superiority of structural rearrangement over procedural governance, and the boundary conditions of intervention effectiveness—form a coherent story about the relationship between multi-agent deliberation and collective cognition.
 
-Our thermodynamic framework takes this observation as its starting point. Rather than treating convergence as the goal, it monitors the *quality* of the convergence process: distinguishing structural disorder from thermal noise, identifying when consensus is premature rather than genuine, and providing a termination signal that does not simply equate agreement with success.
+The DeGroot-model assumption that multi-agent deliberation converges toward correct answers is not supported by our data. Consensus and correctness are essentially uncorrelated ($r \approx -0.10$). This means that any governance system optimized for convergence speed is optimizing the wrong objective. More importantly, it means that **measurement must precede governance**: without a reliable signal for when deliberation is going wrong, interventions are blind.
 
-The shuffle finding deepens this picture. If breaking role-information coherence produces larger improvements than within-discussion governance, then the most powerful interventions may be structural—changes to the topology of information distribution—rather than procedural. The role-coherence overconfidence hypothesis (§6.3) offers a candidate mechanism, but it requires formal modeling and cross-task testing.
+Our thermodynamic framework provides this measurement signal. Rather than treating convergence as the goal, it monitors the *quality* of the convergence process: distinguishing structural disorder from thermal noise, identifying when consensus is premature rather than genuine, and providing a termination signal that does not simply equate agreement with success. The framework is best understood as a diagnostic instrument—a "stethoscope for agent deliberation"—that makes collective cognitive states visible and quantifiable.
 
-The intervention backfire finding adds a cautionary note. If within-discussion interventions can cascade and worsen outcomes, then governance systems need an intervention budget or a Lyapunov-stability constraint—a principle that our current framework partially implements by disabling two intervention types by default but does not yet formalize.
+The shuffle finding deepens this picture. If breaking role-information coherence produces larger improvements than within-discussion governance, then the most powerful interventions may be structural—changes to the topology of information distribution—rather than procedural. This finding was not pre-registered and requires replication, but it suggests a design principle: the phase boundary for collective deliberation quality is structurally pre-set by how roles and information are paired.
+
+The intervention findings add a crucial design lesson. Our smoke test of the cognitive governance closed-loop with **destructive** interventions (v2.0: reduce_weight, force_reflection) found that governance interventions *reduced* decision quality ($\Delta\tau = -0.267$). The `reduce_weight` intervention suppressed agents holding key information, while `force_reflection` backfired on agents with locked positions—consistent with the Degeneration-of-Thought theory (Liang et al., 2024). However, when we replaced these with **non-destructive** interventions (v2.1: inject_evidence, rebalance_attention) that modify information flow rather than belief weights, the effect reversed: $\Delta\tau = +0.533$. The same detectors, when paired with different intervention strategies, produce opposite outcomes. This demonstrates that the measurement framework enables principled intervention design—governance without measurement is blind, but measurement without well-designed governance is diagnostic only. We treat the design of non-destructive interventions as a promising direction with preliminary validation (§8).
 
 ### 6.2 What the Framework Adds Beyond MAST
 
@@ -399,21 +401,19 @@ The limitations enumerated in §6.4 represent the current boundaries of this wor
 
 ## 8. Conclusion and Next Steps
 
-We have engineered social thermodynamics—a four-variable state space $(R, T, H, F)$ computed deterministically from structured belief outputs—into a runtime governance signal for LLM multi-agent systems. The framework combines seven bias detectors (four classical, three aligned to MAST inter-agent failure modes), four intervention strategies ranked by free-energy decomposition, and a thermodynamic crystallization criterion for termination. Preliminary experiments across 445 runs (manifest-verified 2026-07-23) surface three findings with implications for multi-agent system design: consensus is uncorrelated with correctness, structural rearrangement can dominate procedural governance, and interventions carry backfire risk through dependency-chain cascades.
+We have engineered social thermodynamics—a four-variable state space $(R, T, H, F)$ computed deterministically from structured belief outputs—into a runtime measurement signal for LLM multi-agent deliberation. The framework combines seven bias detectors (four classical, three aligned to MAST inter-agent failure modes), non-destructive intervention strategies (inject_evidence, rebalance_attention), and a thermodynamic crystallization criterion for termination. Preliminary experiments across 445 runs (manifest-verified 2026-07-23) surface three findings with implications for multi-agent system design: consensus is uncorrelated with correctness, structural information rearrangement dominates procedural governance, and intervention strategy choice—destructive vs. non-destructive—can reverse governance outcomes from negative ($\Delta\tau = -0.267$) to positive ($\Delta\tau = +0.533$).
 
-We are actively pursuing several directions to move this work from preliminary evidence to calibrated deployment:
+Our immediate priority is stabilizing the framework before large-scale validation. The stabilization roadmap has three phases:
 
-**Cross-model validation.** We have designed and pre-registered a replication protocol spanning GPT-4o, Claude, and Zhipu models. A pilot with Zhipu ($N = 10$, C group) has been completed; full A/B/D group replications are in preparation.
+**Phase 1: Replace destructive interventions. ✅ Completed (2026-07-25).** The smoke test ($\Delta\tau = -0.267$) identified two root causes: `reduce_weight` suppresses agents holding key information, and `force_reflection` backfires on agents with locked positions (consistent with Degeneration-of-Thought theory). We replaced these with non-destructive alternatives: `inject_evidence` (injects ignored private information without modifying weights) and `rebalance_attention` (adjusts speaking order to surface marginalized voices). A follow-up smoke test confirms the reversal: $\Delta\tau = +0.533$. The design principle is validated: interventions should change information flow, not belief weights.
 
-**Detector calibration.** The three MAST-aligned detectors are implemented and unit-tested. We are seeking collaboration with laboratories that have access to larger compute budgets to run the 200+ experiments needed for initial true-positive/false-positive calibration against human annotation.
+**Phase 2: Cross-model validation.** All 391 DeepSeek-V3 experiments need replication on at least one additional model (Qwen 3.7-plus or Zhipu glm-4-flash) to verify that the thermodynamic variables behave consistently across model families. A pilot with Zhipu ($N = 10$, C group) has been completed; full replication on both tasks is in preparation.
 
-**Theoretical formalization.** We have initiated discussions with mathematicians to review and extend the existing proofs (Propositions 1a–4) and to formalize the Lyapunov analysis (Propositions 5–8) under explicit noise models. The goal is to move the four conjectures to theorem status with clearly stated assumptions.
+**Phase 3: MAST detector empirical validation.** The three MAST-aligned detectors (FM-2.4/2.5/2.6) are implemented and unit-tested but have zero empirical triggers. We will construct deliberate trigger scenarios to validate detection accuracy before claiming coverage.
 
-**Long-horizon and large-N experiments.** The current experiments use three-round discussions with five agents. We are designing protocols for ten-round deliberations and for grouped topologies (40 agents, already implemented and unit-tested) to test whether F-decomposition becomes informative over longer time scales.
+**Longer-term directions** include: theoretical formalization (moving Propositions 5–8 from conjectures to theorems), large-N and long-horizon experiments, pre-registered replication of the shuffle effect, and calibration of detector thresholds against human annotation. Once the measurement framework is stabilized and cross-model validated, the governance intervention layer can be optimized with confidence that the underlying diagnostic signals are reliable.
 
-**Pre-registered replication of the shuffle effect.** The shuffle finding, discovered during control-condition design, has been pre-registered for independent replication across tasks and models.
-
-This work is an early-stage contribution to a problem—cognitive governance of multi-agent systems—that we believe will grow in importance as LLM-based agent teams are deployed in higher-stakes settings. The framework, code, and data are open-source. We welcome collaboration, critical replication, and connection to prior work we may have overlooked.
+This work is an early-stage contribution to a problem—cognitive measurement of multi-agent deliberation—that we believe will grow in importance as LLM-based agent teams are deployed in higher-stakes settings. The framework, code, and data are open-source. We welcome collaboration, critical replication, and connection to prior work we may have overlooked.
 
 ---
 
@@ -503,7 +503,7 @@ Five agents (Cost Analyst, Quality Engineer, Delivery Specialist, Technical Dire
 
 ---
 
-> **Draft version**: 2026-07-20. Framework complete; preliminary experiments complete; large-scale validation in preparation.
+> **Draft version**: 2026-07-25. Measurement framework complete; non-destructive intervention (v2.1) validated at smoke-test level ($\Delta\tau = +0.533$). Stabilization Phase 1 complete, Phase 2 (cross-model) in progress.
 > **Code**: [github.com/mulasakee17/swarmalpha](https://github.com/mulasakee17/swarmalpha)
 > **Author**: He Mengyuan (independent researcher)
 > **Contact**: via repository issues

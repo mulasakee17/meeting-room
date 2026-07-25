@@ -5,6 +5,9 @@ export type InterventionType =
   | "reduce_weight"
   | "force_reflection"
   | "continue_discussion"
+  | "inject_evidence"
+  | "rebalance_attention"
+  | "shuffle_knowledge"
   | "none";
 
 export interface Intervention {
@@ -42,6 +45,77 @@ export interface InterventionResult {
   prompt?: string;
   /** Which agents should see this prompt. If empty, all agents see it. */
   promptTargets?: string[];
+  /** Phase 4B: Cognitive state modifications to apply after intervention.
+   *  Maps agentId → partial cognitive state overrides.
+   *  Used by cognitive governance to adjust influence weights, inertia, etc. */
+  cognitiveStateModifications?: Map<string, CognitiveStateModification>;
+}
+
+// ============================================================================
+// Phase 4B: Cognitive State Driven Governance Types
+// ============================================================================
+
+/**
+ * 认知治理状态 — 从 AgentCognitiveState 提取的 governance 输入。
+ *
+ * 每个维度可供检测器消费，干预可修改部分维度（通过 CognitiveStateModification）。
+ */
+export interface CognitiveGovernanceState {
+  agentId: string;
+  utility: {
+    /** 每个选项的效用值 */
+    scores: Record<string, number>;
+    /** 效用最高的选项 */
+    topChoice: string;
+    /** 偏好清晰度 */
+    preferenceClarity: number;
+    /** 偏好强度 */
+    intensity: number;
+  };
+  evidence: {
+    /** 信息覆盖度 */
+    coverage: number;
+    /** 信息质量 */
+    quality: number;
+    /** 信息多样性 */
+    diversity: number;
+  };
+  inertia: {
+    /** 惯性强度 */
+    strength: number;
+  };
+  confidence: {
+    /** 总体确信度 */
+    overall: number;
+  };
+  /** 易感性 susceptibility = (1-ι)(1-c) */
+  susceptibility: number;
+  /** LLM itemBeliefs 中 rank=1 的 item（用于 Utility-Ranking Consistency） */
+  rankingTopChoice?: string;
+}
+
+/**
+ * 认知状态修改 — 干预对 cognitive state 的部分覆写。
+ *
+ * 只包含可被干预修改的维度。未设置的字段保持原值。
+ * 修改在下一轮 buildPrompt 和 updateCognitiveStatesFromRound 中生效。
+ */
+export interface CognitiveStateModification {
+  /** 修改影响权重（用于加权 DeGroot 更新）。
+   *  Maps targetAgentId → newWeight (0=完全屏蔽, 1=正常权重) */
+  influenceWeights?: Record<string, number>;
+  /** 修改惯性强度（乘性因子, 0.5=减半, 1=不变） */
+  inertiaFactor?: number;
+  /** 引导证据多样性：提示 agent 关注哪些维度的证据 */
+  evidenceGuidance?: string[];
+  /** v2.1: 注入 prompt 文本到 agent 的 governance prompt（用于 inject_evidence） */
+  injectPrompt?: string;
+  /** v2.1: 降低发言优先级（用于 rebalance_attention） */
+  lowerSpeakingPriority?: boolean;
+  /** v2.1: 提高发言优先级（用于 rebalance_attention） */
+  higherSpeakingPriority?: boolean;
+  /** v2.1: 触发知识重排（用于 shuffle_knowledge） */
+  shuffleKnowledge?: boolean;
 }
 
 export interface InterventionStrategy {
