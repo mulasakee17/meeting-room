@@ -24,84 +24,6 @@ import type {
 } from "./types";
 
 // ============================================================================
-// Intervention 1: Reduce Influence Weight
-// ============================================================================
-
-/**
- * 降低目标 agent 在加权 DeGroot 更新中的影响力。
- *
- * 机制：设置 influenceWeights[targetAgentId] = β（默认 0.3），
- * 使其他 agent 在更新 utility 时降低对该 agent 的权重。
- *
- * 注意：这只降低权重，不阻止 agent 发言。
- */
-export function applyReduceWeightCognitive(
-  targetAgentId: string,
-  cognitiveStates: Map<string, CognitiveGovernanceState>,
-  factor: number = 0.3,
-): Map<string, CognitiveStateModification> {
-  const modifications = new Map<string, CognitiveStateModification>();
-
-  // 对所有其他 agent 降低对 targetAgentId 的权重
-  for (const [agentId] of cognitiveStates) {
-    if (agentId === targetAgentId) continue;
-    modifications.set(agentId, {
-      influenceWeights: { [targetAgentId]: factor },
-    });
-  }
-
-  return modifications;
-}
-
-// ============================================================================
-// Intervention 2: Adjust Inertia (Force Reflection)
-// ============================================================================
-
-/**
- * 降低目标 agent 的认知惯性（force_reflection 的认知版本）。
- *
- * 机制：设置 inertiaFactor = 0.5，使 agent 更易受他人影响。
- * 只修改 inertia.strength，不修改 confidence（LLM 原生输出）。
- *
- * 注意：这与旧 force_reflection 不同——旧版本通过 prompt 注入实现，
- * 新版本通过修改认知状态参数实现。
- */
-export function applyAdjustInertia(
-  targetAgentId: string,
-  factor: number = 0.5,
-): Map<string, CognitiveStateModification> {
-  const modifications = new Map<string, CognitiveStateModification>();
-  modifications.set(targetAgentId, {
-    inertiaFactor: factor,
-  });
-  return modifications;
-}
-
-// ============================================================================
-// Intervention 3: Guide Evidence Diversity
-// ============================================================================
-
-/**
- * 引导 agent 关注更广泛的证据维度。
- *
- * 机制：为证据贫乏的 agent 设置 evidenceGuidance，
- * 提示其在下一轮关注被忽略的证据维度。
- * 这通过 prompt 实现（在 buildPrompt 中注入），而非伪造证据。
- */
-export function applyEvidenceGuidance(
-  targetAgentIds: string[],
-  evidenceDimensions: string[],
-): Map<string, CognitiveStateModification> {
-  const modifications = new Map<string, CognitiveStateModification>();
-  for (const agentId of targetAgentIds) {
-    modifications.set(agentId, {
-      evidenceGuidance: evidenceDimensions,
-    });
-  }
-  return modifications;
-}
-
-// ============================================================================
 // Intervention 4: Inject Evidence (NEW v2.1)
 // ============================================================================
 
@@ -395,31 +317,6 @@ export function generateCognitiveInterventions(
 // ============================================================================
 // Helpers
 // ============================================================================
-
-function applyReduceWeightCognitiveByIds(
-  targetAgentIds: string[],
-  cognitiveStates: Map<string, CognitiveGovernanceState>,
-  factor: number,
-): Map<string, CognitiveStateModification> {
-  const allMods = new Map<string, CognitiveStateModification>();
-  for (const id of targetAgentIds) {
-    const mods = applyReduceWeightCognitive(id, cognitiveStates, factor);
-    mergeModifications(allMods, mods);
-  }
-  return allMods;
-}
-
-function applyAdjustInertiaByIds(
-  targetAgentIds: string[],
-  factor: number,
-): Map<string, CognitiveStateModification> {
-  const allMods = new Map<string, CognitiveStateModification>();
-  for (const id of targetAgentIds) {
-    const mods = applyAdjustInertia(id, factor);
-    mergeModifications(allMods, mods);
-  }
-  return allMods;
-}
 
 /** 合并两次修改，同一 agent 的修改做深度合并 */
 function mergeModifications(

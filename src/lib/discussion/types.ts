@@ -396,10 +396,3 @@ export interface AgentInfo {
   type: string;
   config?: Record<string, unknown>;
 }
-
-// ============================================================================
-// Backward-compatible aliases (deprecated — remove in v3.0)
-// ============================================================================
-
-/** @deprecated Use {@link InfluenceFactor}. Removed in v3.0. */
-export type CausalFactor = InfluenceFactor;

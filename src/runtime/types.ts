@@ -152,8 +152,6 @@ export interface RuntimeConfig {
   enableAdaptiveDosage?: boolean;
   /** Whether to enable agent dropout sensitivity analysis */
   enableDropoutAnalysis?: boolean;
-  /** @deprecated Use enableDropoutAnalysis */
-  enableCausalTracing?: boolean;
   /** Whether to enable cross-examination */
   enableCrossExamination?: boolean;
   /** 可复现性 seed — 传入 GovernanceEngine 的 mulberry32 PRNG，保证 introduce_diversity 等随机干预可复现 */
