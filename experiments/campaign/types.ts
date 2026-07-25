@@ -212,6 +212,12 @@ export interface ExperimentMetrics {
     tauWithGovernance: number;
     tauWithoutGovernance: number;
     deltaTau: number;
+    /** Bootstrap 原始数据：per-run 配对 τ（治理组 vs 对照组） */
+    _bootstrapData?: {
+      tauGov: number[];
+      tauNoGov: number[];
+      grangerN: number;
+    };
   };
   /** E6: 状态解耦 */
   stateDecoupling?: {
@@ -223,6 +229,11 @@ export interface ExperimentMetrics {
     correlationMatrix?: number[][];
     /** 变量名 */
     variableNames?: string[];
+    /** Bootstrap 原始数据：per-run (cogCorr, belCorr) 配对 */
+    _bootstrapData?: {
+      corrCognitivePerRun: number[];
+      corrBeliefPerRun: number[];
+    };
   };
   /** E7: 检测器准确性 */
   detectorAccuracy?: {
@@ -232,6 +243,12 @@ export interface ExperimentMetrics {
     recallCognitive: number;
     precisionBelief: number;
     recallBelief: number;
+    /** Bootstrap 原始数据：per-run predictions + ground truth */
+    _bootstrapData?: {
+      cognitivePreds: boolean[];
+      beliefPreds: boolean[];
+      groundTruths: boolean[];
+    };
   };
   /** E8: Susceptibility 中介 */
   susceptibilityMediation?: {

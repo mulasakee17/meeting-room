@@ -650,6 +650,11 @@ export function computeE5Governance(
       tauWithGovernance: mean(tauGov),
       tauWithoutGovernance: mean(tauNoGov),
       deltaTau,
+      _bootstrapData: {
+        tauGov,
+        tauNoGov,
+        grangerN: allEvidenceSeq.length,
+      },
     },
   };
 }
@@ -667,8 +672,14 @@ export function computeE6Decoupling(data: RawRunData[]): ExperimentMetrics {
   const bValues: number[] = [];
   const confValues: number[] = [];
 
+  // per-run 相关（用于 Bootstrap）
+  const corrCognitivePerRun: number[] = [];
+  const corrBeliefPerRun: number[] = [];
+
   for (const run of data) {
-    if (!run.cognitiveTrajectory) continue;
+    if (!run.cognitiveTrajectory || run.cognitiveTrajectory.length === 0) continue;
+
+    // 全局聚合（保留原行为）
     for (const snap of run.cognitiveTrajectory) {
       uValues.push(snap.utilityIntensity);
       eValues.push(snap.evidenceCoverage);
@@ -678,9 +689,31 @@ export function computeE6Decoupling(data: RawRunData[]): ExperimentMetrics {
       bValues.push(snap.belief);
       confValues.push(snap.oldConfidence / 100);
     }
+
+    // per-run 计算（需足够样本量）
+    const runU = run.cognitiveTrajectory.map(s => s.utilityIntensity);
+    const runE = run.cognitiveTrajectory.map(s => s.evidenceCoverage);
+    const runI = run.cognitiveTrajectory.map(s => s.inertiaStrength);
+    const runC = run.cognitiveTrajectory.map(s => s.confidenceOverall);
+    const runS = run.cognitiveTrajectory.map(s => s.susceptibility);
+    const runB = run.cognitiveTrajectory.map(s => s.belief);
+    const runConf = run.cognitiveTrajectory.map(s => s.oldConfidence / 100);
+
+    if (runU.length >= 5) {
+      const runCogVars = [runU, runE, runI, runC, runS];
+      let runMaxCog = 0;
+      for (let a = 0; a < runCogVars.length; a++) {
+        for (let b = a + 1; b < runCogVars.length; b++) {
+          const r = Math.abs(pearsonR(runCogVars[a], runCogVars[b]));
+          if (r > runMaxCog) runMaxCog = r;
+        }
+      }
+      corrCognitivePerRun.push(runMaxCog);
+      corrBeliefPerRun.push(Math.abs(pearsonR(runB, runConf)));
+    }
   }
 
-  // Cognitive 相关矩阵
+  // Cognitive 相关矩阵（全局）
   const cogVars = [uValues, eValues, iValues, cValues, sValues];
   const cogNames = ["U", "E", "I", "C", "Λ"];
   let maxCorrCognitive = 0;
@@ -695,7 +728,7 @@ export function computeE6Decoupling(data: RawRunData[]): ExperimentMetrics {
     }
   }
 
-  // Belief 相关
+  // Belief 相关（全局）
   const belR = Math.abs(pearsonR(bValues, confValues));
 
   // VIF（简化：取最大成对相关的 VIF 近似）
@@ -712,6 +745,10 @@ export function computeE6Decoupling(data: RawRunData[]): ExperimentMetrics {
       conditionNumber: computeConditionNumber(cogCorrMatrix),
       correlationMatrix: cogCorrMatrix,
       variableNames: cogNames,
+      _bootstrapData: {
+        corrCognitivePerRun,
+        corrBeliefPerRun,
+      },
     },
   };
 }
@@ -820,6 +857,11 @@ export function computeE7Detector(data: RawRunData[]): ExperimentMetrics {
       recallCognitive: rc,
       precisionBelief: pb,
       recallBelief: rb,
+      _bootstrapData: {
+        cognitivePreds: cognitivePreds.map(p => p.detected),
+        beliefPreds: beliefPreds.map(p => p.detected),
+        groundTruths: groundTruths.map(g => g.present),
+      },
     },
   };
 }

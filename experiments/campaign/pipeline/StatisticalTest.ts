@@ -9,6 +9,90 @@ import type { ExperimentMetrics, TestResult } from "../types";
 import { mean, sampleStd, mulberry32, PERMUTATION_SEED, BOOTSTRAP_SEED } from "../../v2/statsShared";
 
 // ============================================================================
+// 分布函数：F 分布 CDF（用于 E5 Granger 因果精确 p 值）
+// ============================================================================
+
+/** Lanczos 近似 Gamma 函数 */
+function logGamma(x: number): number {
+  const g = 7;
+  const c = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+  ];
+  if (x < 0.5) {
+    // 反射公式：Γ(x)Γ(1-x) = π / sin(πx)
+    return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+  }
+  x -= 1;
+  let a = c[0];
+  const t = x + g + 0.5;
+  for (let i = 1; i < g + 2; i++) a += c[i] / (x + i);
+  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+
+/**
+ * 正则化不完全 Beta 函数 I_x(a,b)
+ * 用连分式展开（Numerical Recipes 风格）
+ */
+function incompleteBeta(x: number, a: number, b: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const lbeta = logGamma(a + b) - logGamma(a) - logGamma(b);
+  const front = Math.exp(lbeta + a * Math.log(x) + b * Math.log(1 - x));
+
+  // 连分式展开
+  function cf(xx: number, aa: number, bb: number): number {
+    const maxIter = 200;
+    const eps = 1e-15;
+    let qab = aa + bb, qap = aa + 1, qam = aa - 1;
+    let c = 1, d = 1 - qab * xx / qap;
+    if (Math.abs(d) < eps) d = eps;
+    d = 1 / d;
+    let h = d;
+    for (let m = 1; m <= maxIter; m++) {
+      const m2 = 2 * m;
+      let aaa = m * (bb - m) * xx / ((qam + m2) * (aa + m2));
+      d = 1 + aaa * d;
+      if (Math.abs(d) < eps) d = eps;
+      c = 1 + aaa / c;
+      if (Math.abs(c) < eps) c = eps;
+      d = 1 / d;
+      h *= d * c;
+      aaa = -(aa + m) * (qab + m) * xx / ((aa + m2) * (qap + m2));
+      d = 1 + aaa * d;
+      if (Math.abs(d) < eps) d = eps;
+      c = 1 + aaa / c;
+      if (Math.abs(c) < eps) c = eps;
+      d = 1 / d;
+      const del = d * c;
+      h *= del;
+      if (Math.abs(del - 1) < eps) break;
+    }
+    return h;
+  }
+
+  // 选择收敛更快的方向
+  if (x < (a + 1) / (a + b + 2)) {
+    return front * cf(x, a, b) / a;
+  } else {
+    return 1 - front * cf(1 - x, b, a) / b;
+  }
+}
+
+/**
+ * F 分布 CDF：P(F <= x | df1, df2)
+ * 利用 F 与 Beta 的关系：若 F ~ F(d1,d2)，则 X = d1*F/(d1*F+d2) ~ Beta(d1/2, d2/2)
+ */
+function fDistributionCDF(x: number, df1: number, df2: number): number {
+  if (x <= 0) return 0;
+  if (!isFinite(x)) return 1;
+  const y = df2 / (df2 + df1 * x);
+  // P(F <= x) = 1 - I_y(df2/2, df1/2) = I_{1-y}(df1/2, df2/2)
+  return incompleteBeta(df1 * x / (df1 * x + df2), df1 / 2, df2 / 2);
+}
+
+// ============================================================================
 // Permutation Test
 // ============================================================================
 
@@ -453,14 +537,43 @@ function testE5(metrics: ExperimentMetrics): TestResult {
   const gm = metrics.governanceMechanism!;
   const deltaTau = gm.deltaTau;
 
-  // 使用 Granger F 值近似 p-value（F 分布）
+  // Granger F 检验：用 F 分布 CDF 计算精确 p 值
+  // F = ((SSR_restricted - SSR_full) / df1) / (SSR_full / df2)
+  // df1 = lag (1), df2 = n - 3 (受限模型 2 参数 + 完整模型 +1)
   const F_EtoU = gm.grangerF_evidenceToUtility;
   const F_UtoE = gm.grangerF_utilityToEvidence;
-  // 简化：F > 4 近似 p < 0.05（单自由度，大样本）
-  const pGranger = F_EtoU > 4 ? 0.01 : (F_EtoU > 2 ? 0.1 : 0.5);
+  const grangerN = gm._bootstrapData?.grangerN ?? 30;
+  const df1 = 1;
+  const df2 = Math.max(grangerN - 3, 1);
+  const pEtoU = 1 - fDistributionCDF(F_EtoU, df1, df2);
+  const pUtoE = 1 - fDistributionCDF(F_UtoE, df1, df2);
+  const pGranger = Math.min(pEtoU, pUtoE);
 
-  // Δτ 的 CI（简化：使用 Bootstrap）
-  const ci = bootstrapCI([deltaTau], 5000);
+  // Δτ 的 Bootstrap CI：对 per-run (tauGov, tauNoGov) 配对重采样
+  const bd = gm._bootstrapData;
+  let ciLower: number, ciUpper: number;
+  if (bd && bd.tauGov.length >= 2 && bd.tauNoGov.length >= 2) {
+    const rng = mulberry32(BOOTSTRAP_SEED);
+    const nBoot = 5000;
+    const n = Math.min(bd.tauGov.length, bd.tauNoGov.length);
+    const bootDeltas: number[] = [];
+    for (let b = 0; b < nBoot; b++) {
+      let sumGov = 0, sumNoGov = 0;
+      for (let i = 0; i < n; i++) {
+        const idx = Math.floor(rng() * n);
+        sumGov += bd.tauGov[idx];
+        sumNoGov += bd.tauNoGov[idx];
+      }
+      bootDeltas.push(sumGov / n - sumNoGov / n);
+    }
+    bootDeltas.sort((a, b) => a - b);
+    ciLower = bootDeltas[Math.floor(nBoot * 0.025)];
+    ciUpper = bootDeltas[Math.floor(nBoot * 0.975)];
+  } else {
+    // 回退：单值，无 CI 信息量
+    ciLower = deltaTau;
+    ciUpper = deltaTau;
+  }
 
   return {
     experimentId: "e5_governance",
@@ -468,8 +581,8 @@ function testE5(metrics: ExperimentMetrics): TestResult {
     pValue: pGranger,
     effectSize: deltaTau,
     effectSizeName: "Δτ",
-    ciLower: ci.lower,
-    ciUpper: ci.upper,
+    ciLower,
+    ciUpper,
     ciLevel: 0.95,
     sampleSize: metrics.sampleSize,
     significant: pGranger < 0.05 && deltaTau > 0,
@@ -479,11 +592,16 @@ function testE5(metrics: ExperimentMetrics): TestResult {
     details: {
       grangerF_evidenceToUtility: F_EtoU,
       grangerF_utilityToEvidence: F_UtoE,
+      grangerP_evidenceToUtility: pEtoU,
+      grangerP_utilityToEvidence: pUtoE,
+      grangerDf1: df1,
+      grangerDf2: df2,
       indirectEffect: gm.indirectEffect,
       mediationRatio: gm.mediationRatio,
       tauWithGovernance: gm.tauWithGovernance,
       tauWithoutGovernance: gm.tauWithoutGovernance,
       deltaTau,
+      bootstrapMethod: "paired resampling of per-run (tauGov, tauNoGov)",
     },
   };
 }
@@ -497,28 +615,39 @@ function testE6(metrics: ExperimentMetrics): TestResult {
   const maxCorrCog = sd.maxCorrCognitive;
   const maxCorrBel = sd.maxCorrBelief;
 
-  // Fisher's z 变换比较两个相关系数
+  // Fisher's z 变换比较两个相关系数（基于全局聚合值）
   const zCog = Math.atanh(Math.min(Math.abs(maxCorrCog), 0.999));
   const zBel = Math.atanh(Math.min(Math.abs(maxCorrBel), 0.999));
   const n = metrics.sampleSize;
   const se = Math.sqrt(2 / (n - 3));
   const zDiff = (zBel - zCog) / (se || 1);
-  // 单侧 p（Bel > Cog）
   const pValue = 1 - normalCDF(Math.abs(zDiff));
 
-  // Bootstrap CI for the difference in correlations
-  const rng = mulberry32(BOOTSTRAP_SEED);
-  const nBoot = 5000;
-  const bootDiffs: number[] = [];
-  const rValues = [maxCorrCog, maxCorrBel];
-  for (let b = 0; b < nBoot; b++) {
-    const bootZCog = Math.atanh(Math.min(0.999, Math.abs(rValues[0] + (rng() - 0.5) * 0.1)));
-    const bootZBel = Math.atanh(Math.min(0.999, Math.abs(rValues[1] + (rng() - 0.5) * 0.1)));
-    bootDiffs.push(Math.tanh(bootZBel) - Math.tanh(bootZCog));
+  // Bootstrap CI：对 per-run (corrCognitive, corrBelief) 配对重采样
+  const bd = sd._bootstrapData;
+  let ciLower: number, ciUpper: number;
+  if (bd && bd.corrCognitivePerRun.length >= 2 && bd.corrBeliefPerRun.length >= 2) {
+    const rng = mulberry32(BOOTSTRAP_SEED);
+    const nBoot = 5000;
+    const m = Math.min(bd.corrCognitivePerRun.length, bd.corrBeliefPerRun.length);
+    const bootDiffs: number[] = [];
+    for (let b = 0; b < nBoot; b++) {
+      let sumCog = 0, sumBel = 0;
+      for (let i = 0; i < m; i++) {
+        const idx = Math.floor(rng() * m);
+        sumCog += bd.corrCognitivePerRun[idx];
+        sumBel += bd.corrBeliefPerRun[idx];
+      }
+      bootDiffs.push(sumBel / m - sumCog / m);
+    }
+    bootDiffs.sort((a, b) => a - b);
+    ciLower = bootDiffs[Math.floor(nBoot * 0.025)];
+    ciUpper = bootDiffs[Math.floor(nBoot * 0.975)];
+  } else {
+    // 回退：基于 Fisher z 的近似 CI
+    ciLower = (maxCorrBel - maxCorrCog) - 1.96 * se;
+    ciUpper = (maxCorrBel - maxCorrCog) + 1.96 * se;
   }
-  bootDiffs.sort((a, b) => a - b);
-  const ciLower = bootDiffs[Math.floor(nBoot * 0.025)];
-  const ciUpper = bootDiffs[Math.floor(nBoot * 0.975)];
 
   return {
     experimentId: "e6_decoupling",
@@ -553,25 +682,48 @@ function testE7(metrics: ExperimentMetrics): TestResult {
   const da = metrics.detectorAccuracy!;
   const f1Cog = da.f1Cognitive;
   const f1Bel = da.f1Belief;
-
-  // 置换检验：比较 Cognitive 和 Belief 的 F1 差异
-  // 使用 bootstrap 检验 F1 差异
   const deltaF1 = f1Cog - f1Bel;
-  const rng = mulberry32(BOOTSTRAP_SEED);
-  const nBoot = 5000;
-  const bootDeltaF1: number[] = [];
 
-  for (let b = 0; b < nBoot; b++) {
-    // 模拟 bootstrap: 对 F1 估计值加噪声
-    const bootF1Cog = Math.max(0, Math.min(1, f1Cog + (rng() - 0.5) * 0.2));
-    const bootF1Bel = Math.max(0, Math.min(1, f1Bel + (rng() - 0.5) * 0.2));
-    bootDeltaF1.push(bootF1Cog - bootF1Bel);
+  // Bootstrap：对 per-run (cognitivePred, beliefPred, groundTruth) 配对重采样，重新计算 F1
+  const bd = da._bootstrapData;
+  let pValue: number;
+  let ciLower: number, ciUpper: number;
+
+  if (bd && bd.cognitivePreds.length >= 2 && bd.groundTruths.length >= 2) {
+    const rng = mulberry32(BOOTSTRAP_SEED);
+    const nBoot = 5000;
+    const n = bd.groundTruths.length;
+    const bootDeltaF1: number[] = [];
+
+    for (let b = 0; b < nBoot; b++) {
+      // 重采样索引
+      const indices: number[] = [];
+      for (let i = 0; i < n; i++) indices.push(Math.floor(rng() * n));
+
+      // 用重采样索引计算 F1
+      const bootF1Cog = computeF1FromBooleans(
+        indices.map(i => bd.cognitivePreds[i]),
+        indices.map(i => bd.groundTruths[i]),
+      );
+      const bootF1Bel = computeF1FromBooleans(
+        indices.map(i => bd.beliefPreds[i]),
+        indices.map(i => bd.groundTruths[i]),
+      );
+      bootDeltaF1.push(bootF1Cog - bootF1Bel);
+    }
+
+    bootDeltaF1.sort((a, b) => a - b);
+    ciLower = bootDeltaF1[Math.floor(nBoot * 0.025)];
+    ciUpper = bootDeltaF1[Math.floor(nBoot * 0.975)];
+    // 双侧 p：ΔF1 <= 0 的比例 × 2
+    const propLeq0 = bootDeltaF1.filter(d => d <= 0).length / nBoot;
+    pValue = Math.min(1, 2 * Math.min(propLeq0, 1 - propLeq0));
+  } else {
+    // 回退：无原始数据，无法做 Bootstrap
+    pValue = 1;
+    ciLower = deltaF1;
+    ciUpper = deltaF1;
   }
-
-  bootDeltaF1.sort((a, b) => a - b);
-  const ciLower = bootDeltaF1[Math.floor(nBoot * 0.025)];
-  const ciUpper = bootDeltaF1[Math.floor(nBoot * 0.975)];
-  const pValue = (bootDeltaF1.filter(d => d <= 0).length + 1) / (nBoot + 1);
 
   return {
     experimentId: "e7_detector",
@@ -597,8 +749,22 @@ function testE7(metrics: ExperimentMetrics): TestResult {
       deltaF1,
       ciLower,
       ciUpper,
+      bootstrapMethod: "paired resampling of per-run (cognitivePred, beliefPred, groundTruth) with F1 recompute",
     },
   };
+}
+
+/** 从布尔数组计算 F1（用于 E7 Bootstrap 重采样） */
+function computeF1FromBooleans(preds: boolean[], truths: boolean[]): number {
+  let tp = 0, fp = 0, fn = 0;
+  for (let i = 0; i < preds.length; i++) {
+    if (preds[i] && truths[i]) tp++;
+    else if (preds[i] && !truths[i]) fp++;
+    else if (!preds[i] && truths[i]) fn++;
+  }
+  const precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+  const recall = tp + fn > 0 ? tp / (tp + fn) : 0;
+  return precision + recall > 0 ? 2 * precision * recall / (precision + recall) : 0;
 }
 
 // ============================================================================
