@@ -778,11 +778,20 @@ function computeConditionNumber(matrix: number[][]): number {
 // ============================================================================
 
 export function computeE7Detector(data: RawRunData[]): ExperimentMetrics {
-  // E7 需要 ground truth 标注。当前使用以下启发式作为初始标签：
-  // - 权威偏差：高惯性 agent 的 utility 大幅移向群体均值
-  // - 极化：utility 标准差增加
-  // - 回声室：agent 间 evidence 高度相似
-  // - 过早共识：过早收敛且 τ 低
+  // E7 ground truth 修复（Top 10 #2）：
+  // 原问题：ground truth 与预测器用同一信号源（循环标签），F1 无意义。
+  // 修复：ground truth 用结构性判据（分布形态/集中度），预测器用简单阈值判据，
+  //       两者特征空间不同，避免循环。
+  //
+  // Ground truth 判据（独立于检测器信号）：
+  //   - authority_bias: inertia 不平衡度 max/min > 2 且 utility 趋同（std < 0.15）
+  //   - polarization:   utility 双峰系数 bimodalityCoefficient > 0.555
+  //   - echo_chamber:   evidence items Gini 系数 > 0.7（信息源高度集中）
+  //   - premature_consensus: totalRounds <= 2 且 finalKendallTau > 0.8（快速但虚假共识）
+  //
+  // 预测器判据（与原检测器逻辑一致）：
+  //   - cognitive: 治理检测器在 governanceIssues 中是否触发该类型
+  //   - belief:    基于 belief 简单阈值
 
   const cognitivePreds: Array<{ type: string; detected: boolean }> = [];
   const beliefPreds: Array<{ type: string; detected: boolean }> = [];
@@ -792,9 +801,6 @@ export function computeE7Detector(data: RawRunData[]): ExperimentMetrics {
     if (!run.cognitiveTrajectory || run.cognitiveTrajectory.length === 0) continue;
 
     const snaps = run.cognitiveTrajectory;
-    const lastRound = Math.max(...snaps.map(s => s.round));
-
-    // 极化 ground truth：检查最后两轮 utility 标准差是否增加
     const byRound = new Map<number, CognitiveStateSnapshot[]>();
     for (const s of snaps) {
       if (!byRound.has(s.round)) byRound.set(s.round, []);
@@ -803,43 +809,53 @@ export function computeE7Detector(data: RawRunData[]): ExperimentMetrics {
     const rounds = [...byRound.keys()].sort((a, b) => a - b);
     if (rounds.length < 2) continue;
 
-    const firstSnaps = byRound.get(rounds[0]) || [];
     const lastSnaps = byRound.get(rounds[rounds.length - 1]) || [];
-    const firstStd = stdOfUtilityIntensity(firstSnaps);
-    const lastStd = stdOfUtilityIntensity(lastSnaps);
-    const polarized = lastStd > firstStd * 1.2;
+    if (lastSnaps.length === 0) continue;
 
-    // 权威偏差 ground truth：高 inertia agent 改变幅度大
-    const authorityPresent = run.interventions.some(intv => intv.type === "reduce_weight" || intv.type === "authority_bias");
+    const lastUtilities = lastSnaps.map(s => s.utilityIntensity);
+    const lastStd = lastUtilities.length > 1 ? sampleStd(lastUtilities) : 0;
+    const lastInertias = lastSnaps.map(s => s.inertiaStrength);
+    const lastCoverages = lastSnaps.map(s => s.evidenceCoverage);
+    const evStd = lastCoverages.length > 1 ? sampleStd(lastCoverages) : 0;
 
-    // 回声室 ground truth：evidence coverage 高度相似
-    const evidenceCoverages = lastSnaps.map(s => s.evidenceCoverage);
-    const evStd = evidenceCoverages.length > 1 ? sampleStd(evidenceCoverages) : 0;
-    const echoChamber = evStd < 0.1 && evidenceCoverages.length > 2;
+    // === Ground truth（独立结构性判据，不依赖检测器触发）===
+    // authority_bias: inertia 不平衡 + utility 趋同
+    const inertiaMax = Math.max(...lastInertias);
+    const inertiaMin = Math.min(...lastInertias.filter(v => v > 0.01));
+    const inertiaImbalance = inertiaMin > 0 ? inertiaMax / inertiaMin : 1;
+    const gtAuthority = inertiaImbalance > 2.0 && lastStd < 0.15;
 
-    // 过早共识 ground truth
-    const prematureConsensus = run.converged && run.totalRounds <= 2 && run.finalKendallTau < 0.5;
+    // polarization: 双峰系数 BC = (g² + 1) / (k * ((n-1)/(n-2))³)，g=偏度 k=峰度
+    // BC > 0.555 是常见双峰判据
+    const gtPolarized = bimodalityCoefficient(lastUtilities) > 0.555;
 
-    // 记录 ground truth
-    if (authorityPresent || run.interventions.length > 0) {
-      groundTruths.push({ type: "authority_bias", present: authorityPresent });
-      cognitivePreds.push({ type: "authority_bias", detected: true });
-      beliefPreds.push({ type: "authority_bias", detected: authorityPresent });
+    // echo_chamber: evidence coverage Gini > 0.7（信息源高度集中）
+    const gtEchoChamber = giniCoefficient(lastCoverages) > 0.7;
+
+    // premature_consensus: 收敛快但 τ 高（虚假共识，非真正分歧）
+    const gtPremature = run.totalRounds <= 2 && run.finalKendallTau > 0.8;
+
+    // === 预测器（cognitive 用治理检测器触发，belief 用简单阈值）===
+    // cognitive: 从 governanceIssues 提取检测器触发类型
+    const cogDetectedTypes = new Set<string>();
+    if (run.governanceIssues) {
+      for (const issue of run.governanceIssues) {
+        if (issue.type) cogDetectedTypes.add(issue.type);
+      }
     }
-    if (polarized || lastStd > 0.3) {
-      groundTruths.push({ type: "polarization", present: polarized });
-      cognitivePreds.push({ type: "polarization", detected: polarized });
-      beliefPreds.push({ type: "polarization", detected: lastStd > 0.3 });
-    }
-    if (echoChamber || evStd < 0.15) {
-      groundTruths.push({ type: "echo_chamber", present: echoChamber });
-      cognitivePreds.push({ type: "echo_chamber", detected: echoChamber });
-      beliefPreds.push({ type: "echo_chamber", detected: evStd < 0.15 });
-    }
-    if (prematureConsensus || run.totalRounds <= 2) {
-      groundTruths.push({ type: "premature_consensus", present: prematureConsensus });
-      cognitivePreds.push({ type: "premature_consensus", detected: prematureConsensus });
-      beliefPreds.push({ type: "premature_consensus", detected: run.totalRounds <= 2 });
+    // belief: 基于标量 belief 阈值（与原逻辑一致）
+    const belAuthority = run.interventions.some(i => i.type === "reduce_weight" || i.type === "authority_bias");
+    const belPolarized = lastStd > 0.3;
+    const belEchoChamber = evStd < 0.15;
+    const belPremature = run.totalRounds <= 2;
+
+    // === 记录（每个 run 每个 type 一条）===
+    const types: Array<"authority_bias" | "polarization" | "echo_chamber" | "premature_consensus"> =
+      ["authority_bias", "polarization", "echo_chamber", "premature_consensus"];
+    for (const t of types) {
+      groundTruths.push({ type: t, present: t === "authority_bias" ? gtAuthority : (t === "polarization" ? gtPolarized : (t === "echo_chamber" ? gtEchoChamber : gtPremature)) });
+      cognitivePreds.push({ type: t, detected: cogDetectedTypes.has(t) });
+      beliefPreds.push({ type: t, detected: t === "authority_bias" ? belAuthority : (t === "polarization" ? belPolarized : (t === "echo_chamber" ? belEchoChamber : belPremature)) });
     }
   }
 
@@ -864,6 +880,33 @@ export function computeE7Detector(data: RawRunData[]): ExperimentMetrics {
       },
     },
   };
+}
+
+/** 双峰系数 BC = (g² + 1) / (k * ((n-1)/(n-2))³)，g=偏度，k=峰度。BC > 0.555 提示双峰 */
+function bimodalityCoefficient(values: number[]): number {
+  const n = values.length;
+  if (n < 4) return 0;
+  const m = mean(values);
+  const s = sampleStd(values);
+  if (s < 1e-10) return 0;
+  let g = 0, k = 0;
+  for (const v of values) { g += Math.pow((v - m) / s, 3); k += Math.pow((v - m) / s, 4); }
+  g /= n;
+  k = k / n - 3; // 超额峰度
+  const correction = (n - 1) / (n - 2);
+  return (g * g + 1) / (k * correction * correction * correction + 1e-10);
+}
+
+/** Gini 系数（衡量不平等度，0=完全平等，1=完全不平等） */
+function giniCoefficient(values: number[]): number {
+  const n = values.length;
+  if (n < 2) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const sum = sorted.reduce((s, v) => s + v, 0);
+  if (sum < 1e-10) return 0;
+  let cumSum = 0;
+  for (let i = 0; i < n; i++) cumSum += (i + 1) * sorted[i];
+  return (2 * cumSum) / (n * sum) - (n + 1) / n;
 }
 
 function stdOfUtilityIntensity(snaps: CognitiveStateSnapshot[]): number {
