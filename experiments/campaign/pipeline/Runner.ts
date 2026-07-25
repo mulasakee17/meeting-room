@@ -399,24 +399,40 @@ export async function runExperiment(
   fs.mkdirSync(experimentOutDir, { recursive: true });
 
   for (const mode of config.runtimeModes) {
-    const modeLabel = mode === "cognitive" ? "Cognitive" : "Belief";
+    const modeLabel = mode === "cognitive" ? "Cognitive" : (mode === "native_cognitive" ? "Native Cognitive" : "Belief");
     console.log(`\n=== ${config.id} [${modeLabel} Runtime] ===`);
 
     for (const seed of config.seeds) {
       for (let i = 0; i < config.runsPerSeed; i++) {
         const runId = `${config.id}_${mode}_seed${seed}_run${i}`;
         const outPath = path.join(experimentOutDir, `${runId}.json`);
+        const errPath = path.join(experimentOutDir, `${runId}.error.json`);
 
-        // 断点续传
+        // 断点续传：校验文件内容有效性
         if (options?.resume && fs.existsSync(outPath)) {
-          if (options.verbose) console.log(`  Skipping ${runId} (already exists)`);
+          let valid = false;
           try {
             const existing = JSON.parse(fs.readFileSync(outPath, "utf-8")) as RawRunData;
-            allData.push(existing);
+            // 有效 RawRunData 必须有 experimentId 且无 error 字段
+            if (existing.experimentId && !(existing as any).error) {
+              allData.push(existing);
+              valid = true;
+              if (options.verbose) console.log(`  Skipping ${runId} (valid)`);
+            }
           } catch {
-            // 文件损坏，重新运行
+            // 文件损坏（JSON 解析失败）
           }
-          continue;
+          if (!valid) {
+            if (options.verbose) console.log(`  Re-running ${runId} (existing file invalid/corrupt)`);
+            try { fs.unlinkSync(outPath); } catch { /* ignore */ }
+          } else {
+            continue;
+          }
+        }
+
+        // 清理旧的 .error.json 文件
+        if (fs.existsSync(errPath)) {
+          try { fs.unlinkSync(errPath); } catch { /* ignore */ }
         }
 
         try {
@@ -424,8 +440,8 @@ export async function runExperiment(
           allData.push(data);
         } catch (err) {
           console.error(`  ERROR in ${runId}:`, err);
-          // 保存错误信息
-          fs.writeFileSync(outPath, JSON.stringify({
+          // 错误 run 写入 .error.json 后缀，避免污染成功文件路径导致 --resume 跳过
+          fs.writeFileSync(errPath, JSON.stringify({
             runId, error: String(err), timestamp: new Date().toISOString(),
           }, null, 2));
         }

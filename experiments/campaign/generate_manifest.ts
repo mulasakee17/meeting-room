@@ -123,7 +123,9 @@ function collectJsonFiles(rootDir: string): string[] {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(fullPath);
-      } else if (entry.isFile() && entry.name.endsWith(".json") && !EXCLUDE_FILES.has(entry.name)) {
+      } else if (entry.isFile() && entry.name.endsWith(".json")
+                 && !entry.name.endsWith(".error.json")
+                 && !EXCLUDE_FILES.has(entry.name)) {
         results.push(fullPath);
       }
     }
