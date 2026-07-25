@@ -26,7 +26,7 @@ import {
 import { ReduceWeightIntervention, IntroduceDiversityIntervention, ForceReflectionIntervention, ContinueDiscussionIntervention } from "./interventions";
 import { computeAdaptiveThresholds, computeCalibrationMetrics, type CalibrationMetrics } from "./adaptiveThresholds";
 import { computeAdaptiveDosage, type DosageContext } from "./adaptiveDosage";
-import { mulberry32, shannonEntropy, socialFreeEnergy, normalizeTemperature } from "../utils/statsUtils";
+import { mulberry32, shannonEntropy, socialFreeEnergy, normalizeTemperature, computeKuramotoOrder } from "../utils/statsUtils";
 import {
   GOVERNANCE_ECHO_CHAMBER_THRESHOLD,
   GOVERNANCE_AUTHORITY_BIAS_THRESHOLD,
@@ -824,22 +824,6 @@ export class GovernanceEngine {
   }
 
   /**
-   * Kuramoto 序参量 R ∈ [0,1]（与 EvaluationEngine 保持一致）
-   * θ = b × (π/2): belief ∈ [-1,1] → angle ∈ [-π/2, π/2]
-   * R = |Σ e^(iθ_j)| / N
-   */
-  private computeKuramotoOrder(beliefs: number[]): number {
-    if (beliefs.length === 0) return 0;
-    const angles = beliefs.map(b => b * Math.PI / 2);
-    let sumReal = 0, sumImag = 0;
-    for (const angle of angles) {
-      sumReal += Math.cos(angle);
-      sumImag += Math.sin(angle);
-    }
-    return Math.sqrt(sumReal * sumReal + sumImag * sumImag) / beliefs.length;
-  }
-
-  /**
    * 社会热力学 F 分解驱动的干预优先级排序
    *
    * F = (1-R) + T·H，其中：
@@ -856,7 +840,7 @@ export class GovernanceEngine {
   ): Intervention[] {
     if (interventions.length <= 1) return interventions;
 
-    const R = this.computeKuramotoOrder(beliefs);
+    const R = computeKuramotoOrder(beliefs);
     const T = normalizeTemperature(this.computeStd(beliefs));
     const H = shannonEntropy(beliefs);
     const structural = 1 - R;       // 结构性无序

@@ -60,69 +60,6 @@ function mockOpinion(
 }
 
 // ============================================================================
-// computeThermoStateFromBeliefs (旧版, backward compat)
-// ============================================================================
-
-describe("MeasurementLayer.computeThermoStateFromBeliefs", () => {
-  let layer: MeasurementLayer;
-
-  beforeEach(() => {
-    layer = new MeasurementLayer();
-  });
-
-  it("空 beliefs 返回全零", () => {
-    const state = layer.computeThermoStateFromBeliefs([]);
-    expect(state).toEqual({ R: 0, T: 0, H: 0, F: 0 });
-  });
-
-  it("完全一致的正信念 → R 接近 1", () => {
-    const state = layer.computeThermoStateFromBeliefs([0.8, 0.8, 0.8, 0.8, 0.8]);
-    expect(state.R).toBeCloseTo(1.0, 1);
-    expect(state.T).toBe(0);
-    expect(state.H).toBe(0);
-  });
-
-  it("完全一致的负信念 → R 接近 1", () => {
-    const state = layer.computeThermoStateFromBeliefs([-0.8, -0.8, -0.8, -0.8, -0.8]);
-    expect(state.R).toBeCloseTo(1.0, 1);
-  });
-
-  it("极端对立的信念 → R 接近 0", () => {
-    const state = layer.computeThermoStateFromBeliefs([1, 1, 1, -1, -1, -1]);
-    expect(state.R).toBeLessThan(0.1);
-    expect(state.H).toBeGreaterThan(0);
-  });
-
-  it("均匀分布 → H 较高", () => {
-    const state = layer.computeThermoStateFromBeliefs([-1, -0.5, 0, 0.5, 1]);
-    expect(state.H).toBeGreaterThan(0.5);
-  });
-
-  it("单元素 → T=0, H=0", () => {
-    const state = layer.computeThermoStateFromBeliefs([0.5]);
-    expect(state.R).toBe(1);
-    expect(state.T).toBe(0);
-    expect(state.H).toBe(0);
-  });
-
-  it("F = (1-R) + T·H 关系成立", () => {
-    const state = layer.computeThermoStateFromBeliefs([-1, 0, 1]);
-    const expectedF = (1 - state.R) + state.T * state.H;
-    expect(state.F).toBeCloseTo(expectedF, 10);
-  });
-
-  it("高方差 → T 高", () => {
-    const state = layer.computeThermoStateFromBeliefs([-1, 1]);
-    expect(state.T).toBeCloseTo(1.0, 0);
-  });
-
-  it("低方差 → T 低", () => {
-    const state = layer.computeThermoStateFromBeliefs([0.5, 0.51, 0.49, 0.5, 0.52]);
-    expect(state.T).toBeLessThan(0.1);
-  });
-});
-
-// ============================================================================
 // computeThermoState (新版, 5 变量语义直译)
 // ============================================================================
 

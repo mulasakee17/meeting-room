@@ -15,7 +15,7 @@ import {
   InfluencePath,
 } from "./types";
 import { EVALUATION_DEFAULT_WEIGHTS } from "../constants";
-import { shannonEntropy, socialFreeEnergy, normalizeTemperature } from "../utils/statsUtils";
+import { shannonEntropy, socialFreeEnergy, normalizeTemperature, computeKuramotoOrder } from "../utils/statsUtils";
 
 export class EvaluationEngine {
   private defaultWeights = EVALUATION_DEFAULT_WEIGHTS;
@@ -96,7 +96,7 @@ export class EvaluationEngine {
     const agreementRate = uniqueDecisions.size === 1 ? 100 :
       100 - (uniqueDecisions.size / agentDecisions.length) * 50;
 
-    const kuramotoOrder = this.computeKuramotoOrder(beliefs);
+    const kuramotoOrder = computeKuramotoOrder(beliefs);
     const trajectory = this.computeConsensusTrajectory(interactionHistory);
 
     // 社会热力学指标：信息熵 H + 自由能 F
@@ -129,7 +129,7 @@ export class EvaluationEngine {
 
       const avgBelief = roundBeliefs.reduce((a, b) => a + b, 0) / roundBeliefs.length;
       const std = Math.sqrt(roundBeliefs.reduce((sum, b) => sum + Math.pow(b - avgBelief, 2), 0) / roundBeliefs.length);
-      const ko = this.computeKuramotoOrder(roundBeliefs);
+      const ko = computeKuramotoOrder(roundBeliefs);
 
       const decisions = round.messages.map(m => m.content.toLowerCase().trim());
       const uniqueDecisions = new Set(decisions);
@@ -779,24 +779,6 @@ export class EvaluationEngine {
            `Strongest dimension: ${dimensionLabels[strongest[0]]} (${strongest[1].score.toFixed(1)}), ` +
            `Weakest dimension: ${dimensionLabels[weakest[0]]} (${weakest[1].score.toFixed(1)}). ` +
            `Focus on improving the weakest dimension.`;
-  }
-
-  private computeKuramotoOrder(beliefs: number[]): number {
-    if (beliefs.length === 0) return 0;
-    // θ = b × (π/2): belief ∈ [-1,1] → angle ∈ [-π/2, π/2]
-    // b=-1 (强反对) → θ=-π/2 (单位圆下方)
-    // b=+1 (强支持) → θ=+π/2 (单位圆上方)
-    // 两者正对，R≈0 (低共识) — 正确反映极化
-    // 旧映射 θ=b×π 使 b=±0.99 在单位圆上几乎重合 (都在(-1,0)附近)，R≈1，误判极化为共识
-    const angles = beliefs.map(b => b * Math.PI / 2);
-    let sumReal = 0;
-    let sumImag = 0;
-    for (const angle of angles) {
-      sumReal += Math.cos(angle);
-      sumImag += Math.sin(angle);
-    }
-    const r = Math.sqrt(sumReal * sumReal + sumImag * sumImag) / beliefs.length;
-    return r;
   }
 
   private semanticSimilarity(a: string, b: string): number {

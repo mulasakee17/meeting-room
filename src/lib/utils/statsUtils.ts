@@ -47,6 +47,31 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
+/**
+ * Kuramoto 序参量 R — 群体共识度（基于标量 beliefs）
+ *
+ * θ = b × (π/2): belief ∈ [-1,1] → angle ∈ [-π/2, π/2]
+ *   b=-1 (强反对) → θ=-π/2 (单位圆下方)
+ *   b=+1 (强支持) → θ=+π/2 (单位圆上方)
+ *   两者正对，R≈0 (低共识) — 正确反映极化
+ * R = |Σ e^(iθ_j)| / N ∈ [0,1]
+ *
+ * 注意：旧映射 θ=b×π 使 b=±0.99 在单位圆上几乎重合 (都在(-1,0)附近)，
+ * R≈1，误判极化为共识。当前 θ=b×π/2 已修复此问题。
+ *
+ * 统一来源：原 evaluation/index.ts:784 与 governance/index.ts:831 的重复实现。
+ */
+export function computeKuramotoOrder(beliefs: number[]): number {
+  if (beliefs.length === 0) return 0;
+  const angles = beliefs.map(b => b * Math.PI / 2);
+  let sumReal = 0, sumImag = 0;
+  for (const angle of angles) {
+    sumReal += Math.cos(angle);
+    sumImag += Math.sin(angle);
+  }
+  return Math.sqrt(sumReal * sumReal + sumImag * sumImag) / beliefs.length;
+}
+
 /** 方差 */
 export function variance(values: number[]): number {
   if (values.length < 2) return 0;

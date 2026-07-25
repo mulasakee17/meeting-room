@@ -154,31 +154,6 @@ export class MeasurementLayer {
   }
 
   /**
-   * 从 agent beliefs 计算热力学状态（旧版，仅用于向后兼容）。
-   *
-   * @deprecated 请使用 computeThermoState() 从 5 变量派生。
-   *   旧版直接从标量 beliefs 计算，丢失了 Utility/Evidence/Confidence 的结构信息。
-   */
-  computeThermoStateFromBeliefs(beliefs: number[]): ThermoState {
-    if (beliefs.length === 0) return { R: 0, T: 0, H: 0, F: 0 };
-
-    const angles = beliefs.map(b => b * Math.PI / 2);
-    let sr = 0, si = 0;
-    for (const a of angles) { sr += Math.cos(a); si += Math.sin(a); }
-    const R = Math.sqrt(sr * sr + si * si) / beliefs.length;
-
-    const mean = beliefs.reduce((a, b) => a + b, 0) / beliefs.length;
-    const std = Math.sqrt(beliefs.reduce((s, v) => s + (v - mean) ** 2, 0) / beliefs.length);
-    const T = normalizeTemperature(std);
-
-    const H = shannonEntropy(beliefs);
-
-    const F = (1 - R) + T * H;
-
-    return { R, T, H, F };
-  }
-
-  /**
    * 计算 Utility 对齐度（R 的子计算）。
    *
    * R = 1 - H_norm(topChoice 分布)
