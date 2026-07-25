@@ -191,8 +191,8 @@ export class NativeCognitiveEngine extends DiscussionEngine {
   constructor(config?: Partial<DiscussionConfig>) {
     super(config);
     // 强制启用 cognitive state 追踪
-    if (!(this as any).config.useCognitiveState) {
-      (this as any).config.useCognitiveState = true;
+    if (!this.config.useCognitiveState) {
+    this.config.useCognitiveState = true;
     }
     this.opinionParser = new NativeCognitiveOpinionParser();
   }
@@ -301,7 +301,7 @@ export class NativeCognitiveEngine extends DiscussionEngine {
 
 Task: ${task}
 
-Round: ${roundNumber}/${(this as any).config.maxRounds}
+Round: ${roundNumber}/${this.config.maxRounds}
 
 ${cognitiveContext}
 

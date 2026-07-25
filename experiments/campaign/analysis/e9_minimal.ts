@@ -77,12 +77,12 @@ async function main() {
   console.log(`Converged: ${result.converged}`);
 
   // 4. Check interventions
-  const roundDataArray = (engine as any).roundDataArray as any[];
+  const roundDataArray = engine.getRoundDataArray();
   let totalInterventions = 0;
   const interventionTypes: Record<string, number> = {};
   const detectorIssues: Record<string, number> = {};
 
-  for (const rd of roundDataArray || []) {
+  for (const rd of roundDataArray) {
     if (rd.interventions && rd.interventions.length > 0) {
       console.log(`\n  Round ${rd.roundNumber}: ${rd.interventions.length} interventions`);
       for (const intv of rd.interventions) {

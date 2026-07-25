@@ -394,6 +394,20 @@ export class DiscussionEngine {
       }));
   }
 
+  /**
+   * 公有访问器：返回每轮 RoundData 的只读副本。
+   *
+   * 用途：实验 pipeline（Runner.ts / e9_minimal.ts）需提取每轮 opinions /
+   * interventions / governanceIssues 用于指标计算，原本通过
+   * `(engine as any).roundDataArray` 穿透 protected 访问控制，破坏封装。
+   * 此方法提供正式的公有访问入口。
+   *
+   * 返回浅拷贝数组，防止外部直接修改内部状态。
+   */
+  getRoundDataArray(): RoundData[] {
+    return [...this.roundDataArray];
+  }
+
   /** Phase 3: assemble the final DiscussionResult. */
   protected buildDiscussionResult(
     roundResults: RoundResult[],

@@ -159,9 +159,9 @@ function extractCognitiveSnapshots(
 
   // 取本轮 opinions，用于提取 LLM 原生 ranking（itemBeliefs rank=1）
   // 用于 Part 3: Utility-Ranking Consistency 验证
-  const roundDataArray = (engine as any).roundDataArray as any[] | undefined;
-  const roundData = roundDataArray?.find(rd => rd.roundNumber === round);
-  const roundOpinions = (roundData?.opinions as any[]) || [];
+  const roundDataArray = engine.getRoundDataArray();
+  const roundData = roundDataArray.find(rd => rd.roundNumber === round);
+  const roundOpinions = roundData?.opinions || [];
 
   for (const [agentId, state] of states) {
     const susc = computeSusceptibility(state.inertia, state.confidence);
@@ -325,7 +325,7 @@ export async function runSingle(
   // 提取干预记录和治理检测结果
   const interventions: Array<{ round: number; type: string; targetAgentId?: string }> = [];
   const governanceIssues: RawRunData["governanceIssues"] = [];
-  for (const rd of (engine as any).roundDataArray || []) {
+  for (const rd of engine.getRoundDataArray()) {
     if (rd.interventions) {
       for (const intv of rd.interventions) {
         interventions.push({
