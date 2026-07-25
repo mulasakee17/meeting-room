@@ -1113,6 +1113,7 @@ export function computeMetrics(
   switch (experimentId) {
     case "e1_stability":
     case "e1_native":
+    case "e1_native_lite":
       metrics = computeE1Stability(beliefData, cognitiveData);
       break;
     case "e2_evidence":

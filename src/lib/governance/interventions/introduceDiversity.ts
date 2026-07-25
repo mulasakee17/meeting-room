@@ -25,9 +25,9 @@ export class IntroduceDiversityIntervention implements InterventionStrategy {
     }
 
     const perturbationAmount = (intervention.parameters?.perturbationAmount as number) || 0.3;
-    // Seeded RNG from intervention parameters (falls back to Math.random if no seed)
-    const seed = intervention.parameters?.seed as number | undefined;
-    const rng = seed !== undefined ? mulberry32(seed) : Math.random;
+    // Seeded RNG from intervention parameters（强制可复现，不再回退 Math.random）
+    const seed = (intervention.parameters?.seed as number | undefined) ?? 0x5EED;
+    const rng = mulberry32(seed);
     const updatedBeliefs = state.agentBeliefs.map(belief => {
       if (targetAgents.includes(belief.agentId)) {
         const perturbation = (rng() - 0.5) * perturbationAmount * 2;

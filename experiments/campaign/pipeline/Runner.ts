@@ -441,6 +441,7 @@ export async function runExperiment(
     byMode: {
       belief: allData.filter(d => d.runtimeMode === "belief").length,
       cognitive: allData.filter(d => d.runtimeMode === "cognitive").length,
+      native_cognitive: allData.filter(d => d.runtimeMode === "native_cognitive").length,
     },
     timestamp: new Date().toISOString(),
   }, null, 2));

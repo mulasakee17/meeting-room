@@ -55,7 +55,7 @@ export class ContinueDiscussionIntervention implements InterventionStrategy {
         return {
           success: true,
           intervention: {
-            ...intervention, applied: true,
+            ...intervention, applied: false,
             effect: `Consensus genuine (${(coverage*100).toFixed(0)}% info coverage). No intervention needed.`,
           },
           stateChanges: {},
