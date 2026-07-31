@@ -1,6 +1,6 @@
 # SwarmAlpha v6：确定性治理 + 语义传感器 —— 混合范式
 
-> **状态**：Phase 2.8 完成 ✅ | 616 tests passed | tsc 零错误 | Pilot A/B 对照完成 | 2026-07-30
+> **状态**：Phase 2.8 完成 ✅ | 630 tests passed | tsc 零错误 | Pilot A/B 对照完成 | 2026-07-31（P0 统计 bug 修复 + 低风险代码清理后）
 > **核心命题**：将 LLM 作为数学治理引擎手中的语义传感器——不是决策者，是工具。这创造了一种新的 MAS 治理架构范式。
 > **前身**：ROADMAP_V5（双层架构）、ROADMAP_V6_OPTIMIZED（验收与优化）
 >

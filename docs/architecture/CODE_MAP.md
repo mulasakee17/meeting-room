@@ -147,7 +147,7 @@
 | [ProgressiveEstimator.ts](../../src/lib/thermodynamics/ProgressiveEstimator.ts) | 468 | I/C/Λ 渐进融合估计器（短对话靠 LLM 自报，长对话靠行为追踪） |
 | [SemanticTool.ts](../../src/lib/thermodynamics/SemanticTool.ts) | 289 | v6 Tier 3 LLM 语义传感器（evidence_dedup/gap_analysis/intervention_generation） |
 | [TerminationDecider.ts](../../src/lib/thermodynamics/TerminationDecider.ts) | 257 | 热力学终止决策器（基于 R/T/H/F 判断异步讨论终止） |
-| [computeDelta.ts](../../src/lib/thermodynamics/computeDelta.ts) | 661 | v6 δ 诊断层（6 个 δ 信号，自适应阈值，不需要 ground truth） |
+| [computeDelta.ts](../../src/lib/thermodynamics/computeDelta.ts) | 661 | v6 δ 诊断层（8 个 δ 信号，自适应阈值，不需要 ground truth） |
 
 ---
 
@@ -315,7 +315,7 @@
 
 ---
 
-## 九、test/ — 测试套件（28 个文件，629 tests passed）
+## 九、test/ — 测试套件（28 个文件，630 tests passed）
 
 | 文件 | 测试模块 |
 |------|---------|

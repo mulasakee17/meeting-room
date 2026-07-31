@@ -57,7 +57,7 @@ SwarmAlpha 是一个 **LLM 多智能体认知治理研究平台**。v6 核心贡
 |------|------|------|
 | 核心代码行数 | **~22,800 行**（src/） | 不含 test/ 和 experiments/ |
 | TypeScript 文件数 | **77**（src/） | |
-| 单元测试 | **616 passed, 3 skipped**（27 文件） | `npx vitest run` |
+| 单元测试 | **630 passed, 3 skipped**（28 文件） | `npx vitest run` |
 | tsc 类型错误 | **0** | `npx tsc --noEmit` |
 | 技术栈 | TypeScript + DeepSeek API + Vitest | |
 | 实验文件总数 | **573 JSON**（v2:487 + lunar:85 + .claude:1） | 含已弃用 lunar |
@@ -487,7 +487,7 @@ class GovernanceRuntime {
 - ❌ "19,500 行代码"（实际 ~22,800 src/，2026-07-30 更新）
 - ❌ "640+ 实验"（实际 573，有效 169）
 - ❌ "4 detectors + 4 interventions"（实际 16 + 3/4）
-- ❌ "310/334/390/470/543 测试"（实际 616 passed, 3 skipped，2026-07-30 实跑）
+- ❌ "310/334/390/470/543 测试"（实际 630 passed, 3 skipped，2026-07-31 实跑）
 - ❌ "False consensus 发现"（p=0.20 不显著）
 
 ---

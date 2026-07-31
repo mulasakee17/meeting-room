@@ -27,7 +27,11 @@
 | 已严格证明命题 | 1a/1b/1c/4/4' | **保留**（FJ 是 DeGroot 推广，命题仍成立） | 数学独立性 |
 | 5 维认知状态 | "待 Phase 3 验证" | "169 runs 无 itemBeliefs，向量层为未来工作" | 子代理审计证实数据缺失 |
 
-**未改变的诚实标注**：169 runs 仍只有标量 belief；R/T/H 仍强耦合；F 仍是加权和而非自由能；5 维认知状态仍未验证。
+**诚实标注（v0.4.3 更新）**：
+- 169 sync runs 仍只有标量 belief（v6 NativeCognitiveEngine 路径才有 5 维认知状态输出）
+- **旧 asyncEngine 路径**的 R/T/H（基于 scalar beliefs）仍强耦合——此路径已 `@deprecated`，仅 fraud 系列向后兼容
+- **新 MeasurementLayer 路径**的 R/T/H（基于认知状态向量）已重写，F=U-T·S 三变量解耦（r=0.274，见 §0.1 验证 3）
+- 5 维认知状态待 v6 全量实验验证（E1-E9 待跑，Pilot A/B 已验证 Δτ=+0.215）
 
 ### 0.1 社会热力学深化验证（2026-07-28，v0.4.1）
 

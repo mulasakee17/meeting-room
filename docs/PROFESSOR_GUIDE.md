@@ -57,7 +57,7 @@
 标量筛查层（RTHF，零成本）→ 向量诊断层（5 维认知状态，根因定位）。95% 轮次无需触发向量层计算。
 
 - **代码**：[MeasurementLayer.ts](../src/lib/thermodynamics/MeasurementLayer.ts)
-- **诚实标注**：R/T/H 强耦合（r(R,T)=-0.96），F 是加权和而非真正自由能
+- **诚实标注**：v6 新路径（MeasurementLayer，基于认知状态向量）已解耦——F=U-T·S 三变量 r=0.274（[THEORY.md §0.1](research/THEORY.md)）。旧 asyncEngine 路径（基于 scalar beliefs）仍耦合 r=-0.96，已 `@deprecated`，仅 fraud 系列向后兼容。
 
 ### 2.4 8 个 δ 一致性诊断信号（v6 新增）
 
@@ -249,7 +249,7 @@ v2.0 破坏性干预（reduce_weight/force_reflection）导致 Δτ=-0.267。v2.
 | `H` | Distribution shape | 分布形状（熵） | `ThermoState.H` |
 | `F` | Disorder index | 操作化综合失序指标 | `ThermoState.F` |
 
-> **诚实标注**：v0.4 理论分析证实 R/T/H 强耦合（r(R,T)=-0.96），F 是加权和而非真正的自由能。见 [THEORY.md §0.1](research/THEORY.md)。
+> **诚实标注**：v6 新路径（MeasurementLayer，基于认知状态向量）F=U-T·S 已解耦（r=0.274）。旧 asyncEngine 路径（scalar beliefs）仍耦合 r=-0.96，已 `@deprecated`。见 [THEORY.md §0.1](research/THEORY.md)。
 
 ### 6.3 δ 诊断信号（8 维，v6 核心创新）
 
@@ -385,8 +385,8 @@ const significant = (ciLower > 0 && ciUpper > 0) || (ciLower < 0 && ciUpper < 0)
 
 | 项目 | 现状 | 风险 | 代码位置 |
 |------|------|------|----------|
-| R/T/H 强耦合 | r(R,T)=-0.96，非正交 | 热力学叙事被削弱 | `MeasurementLayer.ts` |
-| F 是加权和 | 非真正的自由能 | 不能声称热力学类比 | `MeasurementLayer.ts` |
+| 旧路径 R/T/H 强耦合 | asyncEngine 路径 r(R,T)=-0.96，已 `@deprecated` | 仅 fraud 系列受影响，v6 不用 | `asyncEngine.ts` |
+| F 公式已修正 | v6 新路径 F=U-T·S，三变量解耦 r=0.274 | 已解决，无风险 | `MeasurementLayer.ts:240-251` |
 | H5/H6/H9 是 Conjecture | 未全量验证 | 可能不成立 | THEORY.md |
 
 ### 10.2 代码层技术债务
