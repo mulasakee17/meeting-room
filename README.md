@@ -2,7 +2,7 @@
 
 > **A research platform for cognitive measurement of multi-agent deliberation — social thermodynamics as a runtime diagnostic layer, with governance intervention as future work.**
 
-[![Tests](https://img.shields.io/badge/tests-332-green)](./test/)
+[![Tests](https://img.shields.io/badge/tests-630-green)](./test/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 **English** | [中文](./README_CN.md)
@@ -61,7 +61,7 @@ cp .env.local.example .env.local
 ```bash
 npm run demo          # Pure local governance engine demo (no API key)
 npm run dev           # Web UI at http://localhost:3000 (demo mode works offline)
-npm test              # 335 tests (332 passed, 3 network-dependent skipped)
+npm test              # 633 tests (630 passed, 3 network-dependent skipped)
 ```
 
 ### Run Experiments
@@ -182,7 +182,7 @@ src/
 │   ├── llm/              # Multi-provider LLM abstraction
 │   └── utils/            # Shared utilities (PRNG, JSON, stats)
 experiments/v2/           # 573 JSON files (169 closed-loop) + analysis scripts + audit tools
-test/                     # 335 automated tests (332 passed, 3 skipped)
+test/                     # 633 automated tests (630 passed, 3 skipped)
 ```
 
 ### Document Index

@@ -2,7 +2,7 @@
 
 > **文档定位**：为审阅源码的研究者提供高效阅读路径。不重复理论细节，只指路。
 > **维护原则**：以诚实无知为荣——所有妥协、技术债务、未验证假设均明确标注。
-> **更新日期**：2026-07-31
+> **更新日期**：2026-07-31（代码清理与文档校正后）
 
 ---
 
@@ -110,15 +110,15 @@ v2.0 破坏性干预（reduce_weight/force_reflection）导致 Δτ=-0.267。v2.
 
 | 优先级 | 文件 | 行数 | 为什么读 | 阅读重点 |
 |--------|------|------|----------|----------|
-| **P0** | [THEORY.md](research/THEORY.md) | ~600 | 理论基础与可证伪假设 | §0 v0.3→v0.4 变更、Proposition 1a/1b/1c、诚实标注部分 |
+| **P0** | [THEORY.md](research/THEORY.md) | ~760 | 理论基础与可证伪假设 | §0 v0.3→v0.4 变更、Proposition 1a/1b/1c、诚实标注部分 |
 | **P0** | [EXPERIMENT_DESIGN.md](research/EXPERIMENT_DESIGN.md) | ~800 | 实验设计与统计方法 | §6 统计方法、§11 科学战役 E1-E8 |
-| **P0** | [nativeCognitiveEngine.ts](../src/lib/discussion/nativeCognitiveEngine.ts) | ~700 | v3.2 核心引擎，LLM 原生认知输出 | 文件头注释（变量分工）、`applyCognitiveGovernance` |
-| **P0** | [computeDelta.ts](../src/lib/thermodynamics/computeDelta.ts) | ~650 | 8 个 δ 诊断信号（v6 核心创新） | DEFAULTS、SAFETY_MARGINS、adaptiveThreshold |
-| **P0** | [cognitiveDetectors.ts](../src/lib/governance/cognitiveDetectors.ts) | ~450 | 6 个认知偏差检测器 | Echo Chamber（cosine 修复）、Polarization |
-| P1 | [cognitiveState.ts](../src/lib/agent/cognitiveState.ts) | 823 | 5 维认知状态空间定义 | Utility/Evidence/Inertia/Confidence/Susceptibility |
-| P1 | [MeasurementLayer.ts](../src/lib/thermodynamics/MeasurementLayer.ts) | ~500 | 双层测量架构 | RTHF 筛查 → 认知检测器 → δ 诊断 |
+| **P0** | [nativeCognitiveEngine.ts](../src/lib/discussion/nativeCognitiveEngine.ts) | ~800 | v3.2 核心引擎，LLM 原生认知输出 | 文件头注释（变量分工）、`applyCognitiveGovernance` |
+| **P0** | [computeDelta.ts](../src/lib/thermodynamics/computeDelta.ts) | ~660 | 8 个 δ 诊断信号（v6 核心创新） | DEFAULTS、SAFETY_MARGINS、adaptiveThreshold |
+| **P0** | [cognitiveDetectors.ts](../src/lib/governance/cognitiveDetectors.ts) | ~540 | 6 个认知偏差检测器 | Echo Chamber（cosine 修复）、Polarization |
+| P1 | [cognitiveState.ts](../src/lib/agent/cognitiveState.ts) | ~790 | 5 维认知状态空间定义 | Utility/Evidence/Inertia/Confidence/Susceptibility |
+| P1 | [MeasurementLayer.ts](../src/lib/thermodynamics/MeasurementLayer.ts) | ~1490 | 双层测量架构 | RTHF 筛查 → 认知检测器 → δ 诊断 |
 | P1 | [run_all.ts](../experiments/campaign/run_all.ts) | ~360 | 实验流水线入口 | 4 阶段：run → analyze → output → summary |
-| P2 | [StatisticalTest.ts](../experiments/campaign/pipeline/StatisticalTest.ts) | — | Bootstrap 检验实现 | 每个 test 的 Bootstrap 逻辑 |
+| P2 | [StatisticalTest.ts](../experiments/campaign/pipeline/StatisticalTest.ts) | ~1100 | Bootstrap 检验实现 | 每个 test 的 Bootstrap 逻辑 |
 | P2 | [ROADMAP_V6.md](roadmap/ROADMAP_V6.md) | ~1000 | v6 设计与 Pilot 验证 | §3 混合范式架构、Pilot A/B 对照结果 |
 
 **快速判断要不要深读的 3 个问题**：
@@ -269,11 +269,11 @@ v2.0 破坏性干预（reduce_weight/force_reflection）导致 Δτ=-0.267。v2.
 | 检测器 | 检测什么 | 代码位置 |
 |--------|----------|----------|
 | Echo Chamber | 回声室（效用方向趋同） | `cognitiveDetectors.ts` cosine 相似度 |
-| Polarization | 极化（双峰分布） | `cognitiveDetectors.ts` bimodality |
-| Authority Bias | 权威盲从 | `cognitiveDetectors.ts` |
+| Polarization | 极化（效用向量分化） | `cognitiveDetectors.ts` pairwise cosine 距离 |
+| Authority Bias | 权威盲从 | `cognitiveDetectors.ts` 惯性集中度 |
 | Premature Consensus | 过早共识 | `cognitiveDetectors.ts` beliefDispersion |
-| Inertia Concentration | 惯性集中 | `cognitiveDetectors.ts` |
-| Susceptibility | 易感性异常 | `cognitiveDetectors.ts` |
+| Evidence Imbalance | 证据覆盖度不均衡 | `cognitiveDetectors.ts` 基尼系数 |
+| Cognitive Action Mismatch | 推理偏好与排名行动不一致 | `cognitiveDetectors.ts` topChoice 对比 |
 
 ### 6.5 实验缩写
 
@@ -333,14 +333,14 @@ v2.0 破坏性干预（reduce_weight/force_reflection）导致 Δτ=-0.267。v2.
 | E6_decoupling | H6 | 5 维状态解耦 | `e6_decoupling.ts` | 0 | 30 |
 | E7_detector | H7 | 检测器准确性 | `e7_detector.ts` | 0 | 30 |
 | E8_susceptibility | H8 | Susceptibility 中介 | `e8_susceptibility.ts` | 0 | 30 |
-| E9_smoke | — | 链路打通验证 | `e9_cognitive_governance.ts` | 3 | 3 ✅ |
+| E9_smoke | — | 链路打通验证 | `e9_cognitive_governance.ts` | 6 | 6 ✅ |
 | E9_medium | H9 | 中规模验证 | `e9_cognitive_governance.ts` | 6 | 50 |
 | E9_V6_A_none | H9 | 无治理对照 | `e9_cognitive_governance.ts` | 0 | 50 |
 | E9_V6_B_delta | H9 | δ 治理 | `e9_cognitive_governance.ts` | 0 | 50 |
 | E9_V6_C_semantic | H9 | δ + SemanticTool | `e9_cognitive_governance.ts` | 0 | 50 |
-| E9_V6_D_baseline | H9 | 基线对照 | `e9_cognitive_governance.ts` | 0 | 50 |
+| E9_V6_D_OLD | H9 | 基线对照 | `e9_cognitive_governance.ts` | 0 | 50 |
 
-> **状态**：截至 2026-07-31，仅 E1_native_lite（6 runs）和 E9_smoke（3 runs）完成。大规模实验尚未启动。
+> **状态**：截至 2026-07-31，仅 E1_native_lite（6 runs）和 E9_smoke（6 runs，3 seeds × 2 modes）完成。大规模实验尚未启动。
 
 ---
 
@@ -354,14 +354,16 @@ v2.0 破坏性干预（reduce_weight/force_reflection）导致 Δτ=-0.267。v2.
 
 ### 9.1 检验实现位置
 
-| 检验类型 | 文件 | 关键函数 | Bootstrap 样本数 |
+`StatisticalTest.ts` 实际导出的函数：`bootstrapCI`、`permutationTest`、`cohensD`、`holmBonferroni`、`tDistributionCriticalValue`、`runTests`。各实验 E1-E9 的检验逻辑内联在私有 `testE1`…`testE9` 中，由 `runTests` 分发。
+
+| 检验类型 | 文件 | 关键函数 / 位置 | Bootstrap 样本数 |
 |----------|------|----------|------------------|
-| 均值差异 Bootstrap CI | `StatisticalTest.ts` | `bootstrapCI` | 10000 |
-| 比例差异 Bootstrap CI | `StatisticalTest.ts` | `bootstrapProportionCI` | 10000 |
-| 中介效应 Bootstrap | `StatisticalTest.ts` | `bootstrapMediation` | 5000 |
-| Granger 因果（Bonferroni） | `StatisticalTest.ts` | `grangerTest` | per-series F + 合并 p |
-| Fisher z（per-run） | `StatisticalTest.ts` | `fisherZPerRun` | per-run Bootstrap |
-| 置换检验 | `StatisticalTest.ts` | `permutationTest` | 10000 |
+| 均值差异 Bootstrap CI | `StatisticalTest.ts` | `bootstrapCI`（默认 nBoot=5000） | 5000 |
+| 置换检验 | `StatisticalTest.ts` | `permutationTest`（E1/E9 使用） | 10000 |
+| 中介效应 Bootstrap | `MetricComputer.ts` | `bootstrapMediation`（私有，E8 使用） | 5000 |
+| Granger 因果（Bonferroni） | `StatisticalTest.ts:testE5` | 内联 per-series F + Bonferroni 合并 p | per-series |
+| Fisher z（per-run） | `StatisticalTest.ts:testE6` | 内联 per-run Bootstrap CI | per-run |
+| Holm-Bonferroni 校正 | `StatisticalTest.ts` | `holmBonferroni` | — |
 
 ### 9.2 CI 显著性判定规则
 
@@ -407,23 +409,27 @@ const significant = (ciLower > 0 && ciUpper > 0) || (ciLower < 0 && ciUpper < 0)
 | loadExperimentData 重复加载 | `_phase31` 文件污染数据 | runId 去重 |
 | LLM provider 子串匹配 | claude/glm 误分类为 deepseek | `detectLLMProvider` 精确匹配 |
 | applyInterventions 无错误隔离 | 单个异常中断所有干预 | try-catch 隔离 |
+| testE1 空数据假阳性 | ratios=[] 置换循环空转导致 pValue≈0 | n<2 守卫返回 pValue=1 |
+| testE4 CI 单边判定 | ciLower>0 误判跨零区间为显著 | 同号判定 (ciLower>0)===(ciUpper>0)&&ciLower!==0 |
+| mean([]) 返回 0 | 对照组数据缺失导致假阳性 deltaTau | 空数据守卫返回 NaN |
+| CLI 不支持 --key=value | 教授复现命令需手动拆分参数 | 预处理拆分为 --key value |
 
 ---
 
 ## 11. 测试覆盖矩阵
 
-28 个测试文件，629 tests passed（截至 2026-07-31）。
+28 个测试文件，630 tests passed（3 skipped，截至 2026-07-31）。
 
 ### 11.1 核心模块测试
 
 | 模块 | 测试文件 | 测试数 | 覆盖重点 |
 |------|----------|--------|----------|
-| 统计检验 | `statistical-test-significance.test.ts` | ~80 | Bootstrap CI、跨零判定、Bonferroni |
-| 认知检测器 | `cognitive-detectors.test.ts` | ~40 | Echo Chamber cosine、Polarization |
-| δ 诊断 | `compute-delta.test.ts` | ~50 | 8 个 δ 的触发条件 |
-| 认知状态 | `cognitive-state.test.ts` | ~30 | 5 维变量更新规则 |
-| 治理运行时 | `governance-runtime.test.ts` | ~25 | applyInterventions 错误隔离 |
-| LLM providers | `providers.test.ts` | ~20 | detectLLMProvider 分类 |
+| 统计检验 | `statistical-test-significance.test.ts` | 13 | Bootstrap CI、跨零判定、Bonferroni |
+| 认知检测器 | `cognitive-detectors.test.ts` | 45 | Echo Chamber cosine、Polarization |
+| δ 诊断 | `delta-diagnosis.test.ts` | 52 | 8 个 δ 的触发条件 |
+| 认知状态 | `cognitive-state.test.ts` | 35 | 5 维变量更新规则 |
+| 治理运行时 | `governance.test.ts` | 34 | applyInterventions 错误隔离 |
+| LLM providers | `llm-providers.test.ts` | 9 | detectLLMProvider 分类 |
 
 ### 11.2 未覆盖的模块（诚实标注）
 
@@ -440,7 +446,7 @@ const significant = (ciLower > 0 && ciUpper > 0) || (ciLower < 0 && ciUpper < 0)
 ### 12.1 运行测试
 
 ```bash
-# 全量测试（28 文件，629 tests）
+# 全量测试（28 文件，630 tests passed + 3 skipped）
 npx vitest run
 
 # 类型检查

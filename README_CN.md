@@ -3,7 +3,7 @@
 > **多智能体认知治理研究平台——观测、偏差检测、干预、评估，作为 a2a 协议上层的独立治理层。**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-332-green)](./test/)
+[![Tests](https://img.shields.io/badge/tests-630-green)](./test/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 [English](./README.md) | **中文**
@@ -57,7 +57,7 @@ cp .env.local.example .env.local
 ```bash
 npm run demo          # 纯本地治理引擎演示（无需 API key）
 npm run dev           # Web UI http://localhost:3000（demo 模式可离线运行）
-npm test              # 335 测试（332 通过，3 网络依赖跳过）
+npm test              # 633 测试（630 通过，3 网络依赖跳过）
 ```
 
 ### 运行实验
@@ -178,7 +178,7 @@ src/
 │   ├── llm/              # 多提供商 LLM 抽象
 │   └── utils/            # 共享工具（PRNG、JSON、统计）
 experiments/v2/           # 573 个 JSON 文件（169 闭环）+ 分析脚本 + 审计工具
-test/                     # 335 自动化测试（332 通过，3 跳过）
+test/                     # 633 自动化测试（630 通过，3 跳过）
 ```
 
 ### 文档索引

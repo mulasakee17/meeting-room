@@ -11,8 +11,8 @@
 
 | 指标 | 数值 | 验证方法 | 备注 |
 |------|------|---------|------|
-| 测试数 | **616 passed, 3 skipped** | `npx vitest run` | 2026-07-30 实跑确认（27 文件） |
-| 测试文件数 | **27** | `npx vitest run` | |
+| 测试数 | **630 passed, 3 skipped** | `npx vitest run` | 2026-07-31 实跑确认（28 文件） |
+| 测试文件数 | **28** | `npx vitest run` | |
 | tsc 类型错误 | **0** | `npx tsc --noEmit` | 2026-07-30 Phase 2.8 清零 |
 | 核心代码行数 | **~22,800 行**（src/） | `Get-ChildItem src -Recurse *.ts` | 不含 test/ 和 experiments/ |
 | TypeScript 文件数 | **77**（src/） | 文件计数 | |
@@ -235,7 +235,7 @@
 - ❌ "19,500 行代码"（实际 ~22,800 src/，2026-07-30 更新）
 - ❌ "640+ 实验"（实际 573，有效 169）
 - ❌ "4 detectors + 4 interventions"（实际 7 + 3/4）
-- ❌ "310/334/390/470/543 测试"（实际 616 passed, 3 skipped，2026-07-30 实跑）
+- ❌ "310/334/390/470/543 测试"（实际 630 passed, 3 skipped，2026-07-31 实跑）
 - ❌ "False consensus 发现"（r=-0.10, p=0.20 不显著，降级为"探索性观察"）
 
 ### 5.3 F 的诚实定位
