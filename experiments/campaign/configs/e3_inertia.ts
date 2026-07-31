@@ -11,7 +11,7 @@ export const E3_INERTIA: ExperimentConfig = {
   hypothesis: "H3",
   title: "Inertia → Authority Bias — Inertia 能预测权威偏差",
   scenario: "ma",
-  runtimeModes: ["cognitive"],
+  runtimeModes: ["native_cognitive"],
   governanceMode: "detect-only",
   agentCount: 5,
   maxRounds: 5,

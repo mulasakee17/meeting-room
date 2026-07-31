@@ -49,6 +49,8 @@ export interface InterventionResult {
    *  Maps agentId → partial cognitive state overrides.
    *  Used by cognitive governance to adjust influence weights, inertia, etc. */
   cognitiveStateModifications?: Map<string, CognitiveStateModification>;
+  /** 失败原因（success=false 时）。策略抛异常或未注册时填充，用于诊断。 */
+  error?: string;
 }
 
 // ============================================================================
@@ -279,11 +281,23 @@ export interface GovernanceConfig {
   enableIgnoredInputDetection?: boolean;
   /** A3 (MAST FM-2.6)：启用推理-行动不匹配检测（默认 true，但需 messages 带 itemBeliefs/reasoning） */
   enableReasoningActionMismatchDetection?: boolean;
+  /** FC1 (MAST FM-1.2)：启用角色违规检测（默认 true，需注入 agentRoles 才生效） */
+  enableRoleViolationDetection?: boolean;
+  /** FC1 (MAST FM-1.3)：启用步骤重复检测（默认 true） */
+  enableStepRepetitionDetection?: boolean;
+  /** FC3 (MAST FM-3.1)：启用过早终止检测（默认 true） */
+  enablePrematureTerminationDetection?: boolean;
   interventionLevel?: "none" | "light" | "medium" | "heavy";
   echoChamberThreshold?: number;
   authorityBiasThreshold?: number;
   polarizationThreshold?: number;
   prematureConsensusThreshold?: number;
+  /** FC1 (MAST FM-1.2)：角色一致性阈值，agent 发言与 role 关键词重叠度低于此值视为违规（默认 0.15） */
+  roleViolationThreshold?: number;
+  /** FC1 (MAST FM-1.3)：步骤重复阈值，同一 agent 相邻发言相似度高于此值视为重复（默认 0.7） */
+  stepRepetitionThreshold?: number;
+  /** FC3 (MAST FM-3.1)：过早终止证据充分性阈值，发出终止信号但 evidence 数量低于此值视为过早（默认 2） */
+  prematureTerminationEvidenceThreshold?: number;
   maxRounds?: number;
   currentRound?: number;
   /** Override INTERVENTION_REDUCE_WEIGHT_FACTOR (default 0.5) */

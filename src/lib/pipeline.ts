@@ -5,15 +5,137 @@
  * 创建智能体 → 运行交互 → 解析状态 → 构建历史 → 评估 → 治理 → 构建输出
  */
 
-import { adapterRegistry } from "@/lib/adapters";
+import { adapterRegistry, type InteractionResult } from "@/lib/adapters";
 import { EvaluationEngine } from "@/lib/evaluation";
 import { GovernanceEngine } from "@/lib/governance";
+import type { EvaluationResult } from "@/lib/evaluation/types";
+import type { GovernanceResult } from "@/lib/governance/types";
 import type { FrameworkAdapter } from "@/lib/adapters/types";
 import { safeJsonParse } from "@/lib/utils/jsonUtils";
 import { mulberry32 } from "@/lib/utils/statsUtils";
 
 // pipeline 无实验 seed，用固定 seed PRNG 保证 confidence fallback 可复现
 const pipelineFallbackRng = mulberry32(0x5EED);
+
+/**
+ * 降级用空评估/治理结果常量。
+ *
+ * 在 pipeline 的评估或治理阶段抛错时使用。构造为模块级常量而非运行时调用
+ * 空数据 diagnose()，避免降级路径再次触发同一异常。
+ *
+ * 结构与 EvaluationEngine.evaluate([], [], [], "") /
+ * GovernanceEngine.diagnose([], [], []) 的输出一致，已通过 tsx 验证。
+ */
+const DEGRADED_EVALUATION: EvaluationResult = {
+  overallScore: 0,
+  dimensions: {
+    consensus: {
+      score: 0,
+      kuramotoOrder: 0,
+      beliefStd: 0,
+      agreementRate: 0,
+      trajectory: {
+        rounds: [],
+        convergenceSpeed: 0,
+        finalConsensus: 0,
+        consensusChangeRate: 0,
+        volatility: 0,
+        turningPoints: [],
+      },
+      details: "Evaluation degraded",
+    },
+    reliability: {
+      score: 0,
+      crossValidationScore: 0,
+      consistencyScore: 0,
+      roundConsistencyAlpha: null,
+      repeatabilityScore: 0,
+      confidenceInterval: [0, 0],
+      details: "Evaluation degraded",
+    },
+    dispersion: {
+      score: 0,
+      beliefDispersion: 0,
+      confidenceDispersion: 0,
+      roundVariability: 0,
+      details: "Evaluation degraded",
+    },
+    stability: {
+      score: 0,
+      roundConsistency: 0,
+      timeSeriesStability: 0,
+      details: "Evaluation degraded",
+    },
+    influenceAnalysis: {
+      score: 0,
+      attribution: [],
+      giniCoefficient: 0,
+      influencePaths: [],
+      degreeCentrality: {},
+      coMentionCentrality: {},
+      influenceDensity: 0,
+      averagePathLength: 0,
+      influenceDiffusionRate: 0,
+      keyInfluencers: [],
+      details: "Evaluation degraded",
+    },
+  },
+  summary: "Evaluation degraded",
+  grade: "critical",
+};
+
+const DEGRADED_GOVERNANCE: GovernanceResult = {
+  echoChamber: {
+    detected: false,
+    severity: "low",
+    redundantAgents: [],
+    infoRedundancyScore: 0,
+    intervention: { type: "none", applied: false },
+  },
+  authorityBias: {
+    detected: false,
+    severity: "low",
+    influenceRatio: 0,
+    intervention: { type: "none", applied: false },
+  },
+  polarization: {
+    detected: false,
+    severity: "low",
+    groups: [],
+    polarizationIndex: 0,
+    intervention: { type: "none", applied: false },
+  },
+  prematureConsensus: {
+    detected: false,
+    severity: "low",
+    roundNumber: 1,
+    maxRounds: 3,
+    beliefStd: 0,
+    consensusLevel: 0,
+    intervention: { type: "none", applied: false },
+  },
+  informationWithholding: {
+    detected: false,
+    severity: "low",
+    withholdingAgents: [],
+    intervention: { type: "none", applied: false },
+  },
+  ignoredInput: {
+    detected: false,
+    severity: "low",
+    ignoringAgents: [],
+    intervention: { type: "none", applied: false },
+  },
+  reasoningActionMismatch: {
+    detected: false,
+    severity: "low",
+    mismatchAgents: [],
+    intervention: { type: "none", applied: false },
+  },
+  otherIssues: [],
+  summary: "Governance degraded",
+  interventionCount: 0,
+};
 
 // ---- 输入类型 ----------------------------------------------------------------
 
@@ -151,19 +273,33 @@ function buildInteractionHistory(
   }];
 }
 
-function buildTrace(taskId: string, startTime: string) {
+function buildTrace(taskId: string, startTime: string, phaseTimings?: Array<{ phase: PipelineOutput["trace"]["phases"][number]["phase"]; durationMs: number; failed?: boolean; errorMsg?: string }>) {
   const endTime = new Date().toISOString();
   const totalMs = new Date(endTime).getTime() - new Date(startTime).getTime();
   const now = endTime;
+  type PhaseTiming = { phase: PipelineOutput["trace"]["phases"][number]["phase"]; durationMs: number; failed?: boolean; errorMsg?: string };
+  const source: PhaseTiming[] = phaseTimings && phaseTimings.length > 0
+    ? phaseTimings
+    : [
+      { phase: "input", durationMs: 0 },
+      { phase: "interaction", durationMs: totalMs },
+    ];
+  const phases = source.map(p => ({
+    phase: p.phase,
+    timestamp: now,
+    durationMs: p.durationMs,
+    ...(p.failed ? { failed: true, errorMsg: p.errorMsg } : {}),
+  }));
+  const failedPhases = phases.filter((p): p is typeof p & { failed: true; errorMsg: string } => "failed" in p && p.failed === true);
+  const fullLog = failedPhases.length > 0
+    ? `Pipeline executed in ${totalMs}ms with ${failedPhases.length} degraded phase(s): ${failedPhases.map(p => p.phase).join(", ")}`
+    : `Pipeline executed in ${totalMs}ms`;
   return {
     taskId,
     startTime,
     endTime,
-    phases: [
-      { phase: "input" as const, timestamp: startTime, durationMs: 0 },
-      { phase: "execution" as const, timestamp: now, durationMs: totalMs },
-    ],
-    fullLog: `Pipeline executed in ${totalMs}ms`,
+    phases,
+    fullLog,
   };
 }
 
@@ -217,51 +353,86 @@ export async function runSwarmPipeline(
   taskIdPrefix: string = "pipeline"
 ): Promise<PipelineOutput> {
   const startTime = new Date().toISOString();
+  const phaseTimings: Array<{ phase: "input" | "agent_creation" | "interaction" | "evaluation" | "governance" | "output"; durationMs: number; failed?: boolean; errorMsg?: string }> = [];
+
+  // 0. 解析 adapter（失败立即上抛，调用方处理）
   const adapter = adapterRegistry.get(input.provider);
-  // 1. 创建智能体
+
+  // 1. 创建智能体（失败立即上抛——无 agent 后续步骤无法执行）
+  const t0 = Date.now();
   const agentConfigs = buildAgentConfigs(input);
   const agents = await adapter.createAgents(agentConfigs, input.llmConfig);
+  phaseTimings.push({ phase: "agent_creation", durationMs: Date.now() - t0 });
 
-  // 2. 运行交互
+  // 2. 运行交互（失败立即上抛——核心交互，无法降级）
+  const t1 = Date.now();
   const interactionResult = await adapter.runInteraction(agents, input.input);
+  phaseTimings.push({ phase: "interaction", durationMs: Date.now() - t1 });
 
-  // 3. 解析智能体状态
+  // 3. 解析智能体状态（已有 safeJsonParse 保护，不会抛）
   const agentDecisions = parseAgentStates(interactionResult.agentStates);
   const agentInfo = adapter.getAgentInfo(agents);
 
-  // 4. 构建交互历史
+  // 4. 构建交互历史（纯数据变换，不会失败）
   const interactionHistory = buildInteractionHistory(interactionResult, agentDecisions);
 
-  // 5. 评估
-  const evaluationEngine = new EvaluationEngine();
-  const evaluation = evaluationEngine.evaluate(
-    agentDecisions,
-    agentInfo,
-    interactionHistory,
-    interactionResult.finalDecision,
-    input.evaluationConfig
-  );
+  // 5. 评估（防御性 try-catch：评估失败不应阻断管线，降级到默认评分）
+  const t2 = Date.now();
+  let evaluation: ReturnType<EvaluationEngine["evaluate"]>;
+  try {
+    const evaluationEngine = new EvaluationEngine();
+    evaluation = evaluationEngine.evaluate(
+      agentDecisions,
+      agentInfo,
+      interactionHistory,
+      interactionResult.finalDecision,
+      input.evaluationConfig
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    phaseTimings.push({ phase: "evaluation", durationMs: Date.now() - t2, failed: true, errorMsg: msg });
+    // 降级：使用模块级常量，类型安全，避免二次抛错
+    evaluation = { ...DEGRADED_EVALUATION, summary: `Evaluation degraded: ${msg}` };
+  }
+  if (!phaseTimings.find(p => p.phase === "evaluation" && p.failed)) {
+    phaseTimings.push({ phase: "evaluation", durationMs: Date.now() - t2 });
+  }
 
-  // 6. 治理诊断
-  const governanceEngine = new GovernanceEngine();
-  const agentBeliefs = agentDecisions.map(d => ({
-    agentId: d.agentId,
-    belief: d.belief || 0,
-    confidence: d.confidence,
-  }));
-  const messages = interactionResult.messages.map(m => ({
-    agentId: m.agentId,
-    content: m.content,
-    timestamp: m.timestamp,
-  }));
-  const governance = governanceEngine.diagnose(
-    agentBeliefs,
-    messages,
-    agentInfo.map(a => a.id),
-    input.governanceConfig
-  );
+  // 6. 治理诊断（防御性 try-catch：治理失败不应阻断管线，降级到空诊断）
+  const t3 = Date.now();
+  let governance: ReturnType<GovernanceEngine["diagnose"]>;
+  try {
+    const governanceEngine = new GovernanceEngine();
+    const agentBeliefs = agentDecisions.map(d => ({
+      agentId: d.agentId,
+      belief: d.belief || 0,
+      confidence: d.confidence,
+    }));
+    const messages = interactionResult.messages.map(m => ({
+      agentId: m.agentId,
+      content: m.content,
+      timestamp: m.timestamp,
+    }));
+    governance = governanceEngine.diagnose(
+      agentBeliefs,
+      messages,
+      agentInfo.map(a => a.id),
+      input.governanceConfig
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    phaseTimings.push({ phase: "governance", durationMs: Date.now() - t3, failed: true, errorMsg: msg });
+    // 降级：使用模块级常量，类型安全，避免二次抛错
+    governance = { ...DEGRADED_GOVERNANCE, summary: `Governance degraded: ${msg}` };
+  }
+  if (!phaseTimings.find(p => p.phase === "governance" && p.failed)) {
+    phaseTimings.push({ phase: "governance", durationMs: Date.now() - t3 });
+  }
 
   // 7. 构建追踪与输出
-  const trace = buildTrace(`${taskIdPrefix}_${Date.now()}`, startTime);
-  return buildOutput(interactionResult, evaluation, governance, agentInfo, agentDecisions, interactionHistory, trace);
+  const t4 = Date.now();
+  const trace = buildTrace(`${taskIdPrefix}_${Date.now()}`, startTime, phaseTimings);
+  const output = buildOutput(interactionResult, evaluation, governance, agentInfo, agentDecisions, interactionHistory, trace);
+  phaseTimings.push({ phase: "output", durationMs: Date.now() - t4 });
+  return output;
 }

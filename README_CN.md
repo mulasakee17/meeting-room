@@ -3,7 +3,7 @@
 > **多智能体认知治理研究平台——观测、偏差检测、干预、评估，作为 a2a 协议上层的独立治理层。**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-310-green)](./test/)
+[![Tests](https://img.shields.io/badge/tests-332-green)](./test/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 [English](./README.md) | **中文**
@@ -24,15 +24,15 @@ SwarmAlpha 是一个**多智能体认知治理研究平台**。它不创建智�
 
 | 条件 | 治理有效时 | 治理中性时 | 治理有害时 |
 |---|---|---|---|
-| **困难任务**（Crisis，基线 τ=0.41） | ✅ d=0.92，p=0.005，τ +51% | — | — |
-| **简单任务**（Supplier，基线 τ=0.68） | — | ⚠️ d=0.47，p=0.089（功效不足，43%） | 天花板效应：shuffle d=0.09 |
+| **困难任务**（Crisis，基线 τ=0.41） | ✅ d=0.92，p=0.0038，τ +51% | — | — |
+| **简单任务**（Supplier，基线 τ=0.68） | — | ⚠️ d=0.47，p=0.086（功效不足，43%） | 天花板效应：shuffle d=0.09 |
 | **结构干预**（shuffle 洗牌） | ✅ d=1.44（Crisis，p<0.001） | d=0.09（Supplier，简单任务） | — |
 | **过程干预**（force_reflection） | ✅ 79.4% 有效（27/34 次干预） | — | ⚠️ 极化状态下反火（F 分解分析） |
 | **干预次数** | — | — | r=−0.55（依赖链级联反火） |
 
 **三条跨任务发现**（169 次实验，Crisis 80 + Supplier 89）：
 
-1. **虚假共识**——共识-质量相关性 r≈−0.10，跨任务复制。"高共识"不等于"好决策"。
+1. **弱共识-质量相关**——共识-质量相关性 r≈−0.10（p=0.20，不显著，探索性），跨任务方向一致。"高共识"不等于"好决策"。
 2. **结构 > 过程**——重新分配 agent 知识（shuffle d=1.44）优于讨论内治理干预（governance d=0.92）。
 3. **任务难度是总开关**——治理有效性受任务难度约束（简单任务天花板效应，困难任务显著有效）。
 
@@ -57,7 +57,7 @@ cp .env.local.example .env.local
 ```bash
 npm run demo          # 纯本地治理引擎演示（无需 API key）
 npm run dev           # Web UI http://localhost:3000（demo 模式可离线运行）
-npm test              # 310 测试（307 通过，3 网络依赖跳过）
+npm test              # 335 测试（332 通过，3 网络依赖跳过）
 ```
 
 ### 运行实验
@@ -94,7 +94,8 @@ if (result.hasIntervention) {
 | 能力 | 说明 | 状态 |
 |---|---|---|
 | **7 种偏差检测器** | 回声室、权威偏差、极化、过早共识 + 3 种 MAST 检测器（信息隐瞒、输入忽视、推理-行动不一致） | ✅ 内置；MAST 检测器尚未在实验中触发 |
-| **4 种干预策略** | 降权、强制反思、引入多样性、继续讨论；按自由能分解 F=(1−R)+T·H 排序 | ✅ 内置；diversity 和 continue 已默认禁用（低有效性） |
+| **3 种非破坏性干预**（v2.1 active） | inject_evidence、rebalance_attention、shuffle_knowledge — 改变信息流而非信念权重 | ✅ 内置；Δτ=0.000（smoke test, N=6，+0.533 已撤回） |
+| **4 种破坏性干预**（v2.0 deprecated） | reduce_weight、force_reflection、introduce_diversity、continue_discussion — 破坏性（Δτ=−0.267） | ⚠️ 默认禁用 |
 | **4 种治理模式 + 5 种扩展消融** | none / detect-only / full / random-intervene + shuffle / full_diversity 等 | ✅ 内置 |
 | **自适应阈值** | 从任务上下文自动标定检测阈值 | 🔧 已实现，尚未实验验证 |
 | **自适应剂量** | 干预强度随偏差程度缩放 | 🔧 已实现，尚未实验验证 |
@@ -109,7 +110,7 @@ if (result.hasIntervention) {
 
 ## 5. 关键实验证据
 
-**445 次对照实验**（manifest 实测 2026-07-23 校准），2 个任务，3 种条件，9 种治理配置。
+**169 次闭环实验**（manifest 实测 2026-07-23 校准），2 个任务，3 种条件，9 种治理配置。总计 573 个 JSON 文件（含 85 个弃用 lunar_survival + 318 个 broken-loop 溯源）。
 
 ### 双任务对比（主要证据）
 
@@ -119,15 +120,15 @@ if (result.hasIntervention) {
 | **full** τ | 0.617 ± 0.263 | 0.767 ± 0.183 | — |
 | **shuffle** τ | 0.717 ± 0.243 | 0.697 ± 0.204 | 任务依赖 |
 | **治理 Δτ** | **+0.209** | **+0.087** | ✅ 方向一致 |
-| **治理 d** | 0.92（p=0.005） | 0.47（p=0.089） | ✅ 方向一致 |
+| **治理 d** | 0.92（p=0.0038） | 0.47（p=0.086） | ✅ 方向一致 |
 | **功效** | 88% ✅ | 43% ⚠️ | Supplier 需 n=72 达 80% |
 | **共识-质量 r** | −0.137 | −0.107 | ✅ 均 ≈ 0 |
 
-**异步引擎**（热力学终止）：C 组 τ=0.64 vs B 组 τ=0.42，d=1.09，p=0.028。跨模型：智谱 C 组 τ=0.76（+18.8% vs DeepSeek）。
+**异步引擎**（热力学终止）：C 组 τ=0.64 vs B 组 τ=0.42，d=1.09，p=0.028。跨模型：智谱 C 组 τ=0.680（+6.3% vs DeepSeek）。
 
 **结论**：治理在困难任务上提升决策质量（统计确认），在简单任务上方向一致但功效不足，存在明确边界条件——任务难度是总开关。结构重排（shuffle）可优于过程治理。干预次数与决策质量负相关（r=−0.55），提示依赖链反火风险。
 
-> 完整实验数据、统计方法、分干预类型拆解见 [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md)。因果效应估计见 [experiments/v2/causalAnalysis.ts](experiments/v2/causalAnalysis.ts)。
+> 完整实验数据、统计方法、分干预类型拆解见 [TECHNICAL_REPORT.md](docs/archive/paper/TECHNICAL_REPORT.md)（已归档）。因果效应估计见 [experiments/v2/causalAnalysis.ts](experiments/v2/causalAnalysis.ts)。
 
 ---
 
@@ -168,7 +169,7 @@ if (result.hasIntervention) {
 src/
 ├── runtime/              # 可嵌入治理运行时（SDK）
 ├── lib/
-│   ├── governance/       # 7 种偏差检测器 + 4 种干预策略
+│   ├── governance/       # 7 种偏差检测器 + 3 active + 4 deprecated 干预策略
 │   ├── evaluation/       # 五维评分引擎
 │   ├── observation/      # LLM 输出解析
 │   ├── inference/        # 信念演化计算
@@ -176,8 +177,8 @@ src/
 │   ├── analysis/         # 因果效应估计（轨迹匹配）
 │   ├── llm/              # 多提供商 LLM 抽象
 │   └── utils/            # 共享工具（PRNG、JSON、统计）
-experiments/v2/           # 445 次实验 + 分析脚本 + 审计工具
-test/                     # 310 自动化测试
+experiments/v2/           # 573 个 JSON 文件（169 闭环）+ 分析脚本 + 审计工具
+test/                     # 335 自动化测试（332 通过，3 跳过）
 ```
 
 ### 文档索引
@@ -186,27 +187,29 @@ test/                     # 310 自动化测试
 
 | 顺序 | 文档 | 内容 |
 |------|------|------|
-| 第一 | [ONEPAGER.md](ONEPAGER.md) | 3 分钟概览：定位、问题、关键发现 |
-| 第二 | [LIMITATIONS.md](LIMITATIONS.md) | 25 节已知边界——学术诚实 |
-| 第三 | [PAPER_DRAFT.md](PAPER_DRAFT.md) | 学术论文草稿，含 13 项正式发现 |
-| 第四 | [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) | 完整研究报告：设计、D1-D4 批判、贝叶斯重分析 |
+| 第一 | [docs/SOT.md](docs/SOT.md) | 单一真相源——所有经核实的数字 |
+| 第二 | [docs/paper/LIMITATIONS.md](docs/paper/LIMITATIONS.md) | 已知边界——学术诚实 |
+| 第三 | [docs/paper/PAPER_DRAFT.md](docs/paper/PAPER_DRAFT.md) | 学术论文草稿（英文） |
+| 第四 | [docs/paper/PAPER_PROFESSOR_VERSION.md](docs/paper/PAPER_PROFESSOR_VERSION.md) | 学术论文草稿（中文，数字已同步） |
 
 **开发者**：
 
 | 文档 | 内容 |
 |------|------|
-| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | 架构、API 合约、Bug 修复史、扩展指南 |
-| [EXPERIMENT_DESIGN.md](EXPERIMENT_DESIGN.md) | 技术路线：发言意愿公式、DeGroot 更新、统计方法 |
+| [docs/research/EXPERIMENT_DESIGN.md](docs/research/EXPERIMENT_DESIGN.md) | 技术路线：发言意愿公式、DeGroot 更新、统计方法 |
 | [docs/INTEGRATION.md](docs/INTEGRATION.md) | SDK 集成指南 |
+| [docs/GOVERNANCE_DESIGN.md](docs/GOVERNANCE_DESIGN.md) | 治理引擎设计 |
 
 **深度阅读**：
 
 | 文档 | 内容 |
 |------|------|
-| [THEORY.md](THEORY.md) | 理论分析：R、T、H、F 推导，干预不动点分析 |
-| [ROADMAP.md](ROADMAP.md) | 开发路线图、学术 outreach 计划、自评 |
-| [AGENT_SOCIETY_VISION.md](AGENT_SOCIETY_VISION.md) | 长期愿景：agent 社会治理基座 |
-| [PAPER_PROFESSOR_VERSION.md](PAPER_PROFESSOR_VERSION.md) | 教授专用论文版本 |
+| [docs/research/THEORY.md](docs/research/THEORY.md) | 理论分析：R、T、H、F 推导，干预不动点分析 |
+| [docs/roadmap/future.md](docs/roadmap/future.md) | 未来路线图：非破坏性干预稳定化、Phase 3 社会模拟 |
+| [docs/architecture/AGENT_SOCIETY_VISION.md](docs/architecture/AGENT_SOCIETY_VISION.md) | 长期愿景：agent 社会治理基座 |
+| [docs/paper/PAPER_PROFESSOR_VERSION.md](docs/paper/PAPER_PROFESSOR_VERSION.md) | 中文论文版本 |
+
+**归档文档**（历史，位于 `docs/archive/`）：ONEPAGER、PROJECT_STATUS、ROADMAP、ARCHITECTURE_V3、DEVELOPER_GUIDE、THEORY_FREEZE_REPORT、THEORY_VALIDATION_REPORT、EXPERIMENT_READINESS_REPORT、SCIENTIFIC_CAMPAIGN_UNLOCK_REPORT、EXPERIMENTAL_CAMPAIGN_PLAN、paper_audit_report、project_optimization_audit、RESEARCH_PLATFORM_ROADMAP、ARCHITECTURE_FREEZE_REPORT。
 
 ---
 
@@ -214,7 +217,7 @@ test/                     # 310 自动化测试
 
 ### 本项目不宣称
 
-- **不是生产系统**——445 次实验，单组样本量仅 24-30。统计显著性 ≠ 实际可靠性。
+- **不是生产系统**——169 次闭环实验，单组样本量仅 24-30。统计显著性 ≠ 实际可靠性。
 - **不是多框架适配器**——所有实验均基于内置 `CustomAgent`。AutoGenAdapter 仅作演示。CrewAI/LangGraph 已从路线图移除。
 - **不是安全工具**——检测认知偏差，不检测安全威胁。不阻止 agent 执行有害操作。
 - **未经验证校准**——自适应阈值/剂量代码存在但零实验验证。评估权重为启发式。
@@ -223,7 +226,7 @@ test/                     # 310 自动化测试
 
 | 局限 | 影响 | 缓解 |
 |---|---|---|
-| 单模型偏差（391/445 DeepSeek） | 发现可能不泛化 | 54 次跨模型（智谱/Qwen）方向一致 |
+| 单模型偏差（169 闭环全 DeepSeek） | 发现可能不泛化 | 54 次跨模型（智谱/Qwen）方向一致 |
 | 小样本（n=24-30/组） | 统计功效有限 | Supplier 任务 43% 功效；需 n=72 达 80% |
 | 仅 2 个任务 | 任务多样性有限 | 第 3 个任务待实验室执行 |
 | 120 次历史实验治理环路断裂 | 干扰早期结论 | 明确标注为临时性；169 次闭环实验为主要证据 |
@@ -266,7 +269,7 @@ test/                     # 310 自动化测试
 | **D3** | 同步轮流发言 | `Promise.all` → agent 看不到同轮其他人 | 顺序 `for` 循环 |
 | **D4** | 虚构影响网络 | 边从数值差异推断 → 幻影影响图 | 边仅从显式 `referencedAgents` 构建 |
 
-**影响**：120 次历史实验在四个缺陷均存在时收集。状态修改干预从未到达 agent 感知。之前的"治理无效"结论是环路断裂的假象。详见 [TECHNICAL_REPORT.md §2](TECHNICAL_REPORT.md)。
+**影响**：120 次历史实验在四个缺陷均存在时收集。状态修改干预从未到达 agent 感知。之前的"治理无效"结论是环路断裂的假象。详见 [TECHNICAL_REPORT.md §2](docs/archive/paper/TECHNICAL_REPORT.md)（已归档）。
 
 </details>
 
@@ -287,7 +290,7 @@ test/                     # 310 自动化测试
 - **并购 5 轮**：治理 d=+0.41（p=0.36）；**shuffle d=+1.80（p=0.0009）**
 - **`full_reflection` 投资 5 轮**：p=0.048（未校正）——⚠️ 已撤回（断裂环路）
 
-完整消融表格见 [TECHNICAL_REPORT.md §2.5](TECHNICAL_REPORT.md)。
+完整消融表格见 [TECHNICAL_REPORT.md §2.5](docs/archive/paper/TECHNICAL_REPORT.md)（已归档）。
 
 </details>
 
@@ -300,7 +303,7 @@ test/                     # 310 自动化测试
 2. **热力学自适应终止**——系统达结晶态时终止（R>0.85, T<0.22, H<0.42，持续 3 次评估）
 3. **被动聆听**——未发言 agent 通过 DeGroot 平均更新信念
 
-**关键结果**：C 组（热力学终止）τ=0.64 vs B 组（固定轮次）τ=0.42，d=1.09，p=0.028。跨模型验证：智谱 C 组 τ=0.76（+18.8%）。完整演进过程（Phase 1-5）见 [EXPERIMENT_DESIGN.md](EXPERIMENT_DESIGN.md)。
+**关键结果**：C 组（热力学终止）τ=0.64 vs B 组（固定轮次）τ=0.42，d=1.09，p=0.028。跨模型验证：智谱 C 组 τ=0.680（+6.3%）。完整演进过程（Phase 1-5）见 [EXPERIMENT_DESIGN.md](EXPERIMENT_DESIGN.md)。
 
 </details>
 

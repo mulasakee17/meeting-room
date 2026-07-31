@@ -19,6 +19,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 类型定义
@@ -63,7 +64,8 @@ function loadEGroup(): MaliciousResult[] {
   for (const f of fs.readdirSync(DATA_DIR)) {
     if (!f.startsWith("fraud_E_malicious_") || !f.endsWith(".json")) continue;
     try {
-      const data = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), "utf8")) as MaliciousResult;
+      const data = safeJsonParse<MaliciousResult & { terminationReason?: string }>(fs.readFileSync(path.join(DATA_DIR, f), "utf8"));
+      if (!data) { console.warn(`[_verify_all_conclusions] 无法解析 JSON: ${f}`); continue; }
       if (data.governanceTrace && !data.terminationReason?.startsWith("error")) {
         results.push(data);
       }

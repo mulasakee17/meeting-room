@@ -166,13 +166,13 @@ new GovernanceRuntime(config?: Partial<RuntimeConfig>)
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `maxRounds` | `number` | `5` | 最大讨论轮数 |
-| `governanceMode` | `"none" \| "detect-only" \| "random-intervene" \| "full"` | `"full"` | 治理模式 |
+| `governanceMode` | `"none" \| "detect-only" \| "random-intervene" \| "full" \| "cognitive"` | `"full"` | 治理模式（`cognitive` 为 v2.1 非破坏性干预，推荐） |
 | `governanceConfig` | `GovernanceConfig` | 见下 | 偏误检测开关与干预级别 |
 | `enableAdaptiveThresholds` | `boolean` | `false` | 第一轮后自动校准阈值 |
 | `enableAdaptiveDosage` | `boolean` | `false` | 基于历史效果自适应干预强度 |
 | `seed` | `number` | `42` | PRNG 种子，保证 `random-intervene` 等可复现 |
 
-`governanceConfig` 默认开启全部 4 类偏误检测（Echo Chamber / Authority Bias / Polarization / Premature Consensus），干预级别 `medium`。
+`governanceConfig` 默认开启全部 7 个检测器（4 经典：Echo Chamber / Authority Bias / Polarization / Premature Consensus + 3 MAST FC2：Information Withholding / Ignored Input / Reasoning-Action Mismatch），干预级别 `medium`。
 
 ### 3.2 核心方法
 
@@ -214,7 +214,8 @@ runtime.onRoundComplete((event) => {
 | `none` | ❌ | ❌ | 基线对照（无治理） |
 | `detect-only` | ✅ | ❌ | 只测量偏误，不干预 |
 | `random-intervene` | ✅ | ✅ 随机 | 随机干预对照（验证治理效果是否来自**精准**干预而非干预本身） |
-| `full` | ✅ | ✅ 精准 | 完整治理（默认） |
+| `full` | ✅ | ✅ 精准 | v2.0 完整治理（破坏性干预，deprecated） |
+| `cognitive` | ✅ | ✅ 非破坏性 | v2.1 认知治理（`inject_evidence` / `rebalance_attention` / `shuffle_knowledge`，推荐） |
 
 ### 3.5 返回结构
 
@@ -222,12 +223,12 @@ runtime.onRoundComplete((event) => {
 interface GovernanceRoundResult {
   roundNumber: number;
   issues: Array<{
-    type: string;            // "echo_chamber" | "authority_bias" | "polarization" | "premature_consensus"
+    type: string;            // 4 经典："echo_chamber" | "authority_bias" | "polarization" | "premature_consensus"；3 MAST FC2："information_withholding" | "ignored_input" | "reasoning_action_mismatch"
     severity: "low" | "medium" | "high";
     description: string;
     agents?: string[];
   }>;
-  interventions: Intervention[];   // 4 种类型：reduce_weight / introduce_diversity / force_reflection / continue_discussion
+  interventions: Intervention[];   // v2.1 active（3）：inject_evidence / rebalance_attention / shuffle_knowledge；v2.0 deprecated（4）：reduce_weight / introduce_diversity / force_reflection / continue_discussion
   hasIntervention: boolean;
   effectMetrics?: Record<string, number>;   // 包含 "belief_diversity_change" 等
 }
@@ -463,7 +464,7 @@ for (const agent of agents) {
 2. **干预效果评估无偏性**：用 `belief_diversity_change`（std 变化）作为通用效果指标，而非"belief 上升=改善"。`reduce_weight` 类干预期望压制主导 agent，其 belief 下降本应是改善，但旧启发式会误判为恶化（`GovernanceRuntime.ts:380-401`）。
 3. **`reset()` 必须彻底**：`GovernanceRuntime.reset()` 会清空 `governancePrompts / agentKnowledge / eventTracker / roundDataArray / dropoutObservations`，防止跨实验状态泄漏。每个新会话开始前必须调用。
 4. **JSON 解析安全**：从 agent 输出解析 JSON 必须用 `safeJsonParse`（`src/lib/utils/jsonUtils.ts`），不能用原生 `JSON.parse`——`PromptInjector` 曾有 `[GOV]` 标签伪造漏洞。
-5. **实验文件不可修改**：已有的 220 个实验 JSON 文件存储**原始对话文本**，不是提取后的排名。提取逻辑变更不能影响这些文件。
+5. **实验文件不可修改**：已有的 573 个实验 JSON 文件存储**原始对话文本**，不是提取后的排名。提取逻辑变更不能影响这些文件。
 
 ---
 

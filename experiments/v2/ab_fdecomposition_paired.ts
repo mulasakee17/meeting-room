@@ -1,7 +1,7 @@
 /**
  * F 分解 A/B 配对对照实验分析
  *
- * H_F（预注册）：F 分解排序（A 组 full）的 Δτ 显著高于固定排序（B 组 full_fixed）。
+ * H_F（内部假设，无正式预注册）：F 分解排序（A 组 full）的 Δτ 显著高于固定排序（B 组 full_fixed）。
  *
  * 设计：
  *   - A 组：现有 crisis_full_{i}.json（F 分解排序，sortingMode='fdecomposition'）
@@ -22,7 +22,8 @@
  */
 import * as fs from "fs";
 import * as path from "path";
-import { mulberry32 } from "./statsShared";
+import { mean, mulberry32, sampleStd as stdDev, cohensDz } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface Round {
   roundNumber: number;
@@ -39,29 +40,15 @@ interface ExperimentData {
 function loadExperiment(dir: string, filename: string): ExperimentData | null {
   const fp = path.join(dir, filename);
   if (!fs.existsSync(fp)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(fp, "utf8"));
-  } catch {
-    return null;
-  }
+  return safeJsonParse<ExperimentData>(fs.readFileSync(fp, "utf8"));
 }
 
-function mean(xs: number[]): number {
-  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
-}
+// B3: mean 已从 statsShared 导入
 
-function stdDev(xs: number[]): number {
-  if (xs.length < 2) return 0;
-  const m = mean(xs);
-  return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / (xs.length - 1));
-}
+// B3: stdDev 已从 statsShared 导入
 
 /** Cohen's d_z for paired samples: mean(differences) / std(differences) */
-function cohensDz(differences: number[]): number {
-  if (differences.length < 2) return 0;
-  const sd = stdDev(differences);
-  return sd > 0 ? mean(differences) / sd : 0;
-}
+// cohensDz 已从 statsShared 导入（P2 修复：消除本地副本）
 
 /** 配对置换检验：零假设下配对差值的符号可交换 */
 function pairedPermutationTest(differences: number[], nPerms = 10000): number {

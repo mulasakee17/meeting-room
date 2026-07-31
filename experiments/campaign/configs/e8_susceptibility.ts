@@ -11,7 +11,7 @@ export const E8_SUSCEPTIBILITY: ExperimentConfig = {
   hypothesis: "H8",
   title: "Susceptibility Mediation — Λ 完全中介 I → ΔU",
   scenario: "ma",
-  runtimeModes: ["cognitive"],
+  runtimeModes: ["native_cognitive"],
   governanceMode: "none",
   agentCount: 5,
   maxRounds: 5,

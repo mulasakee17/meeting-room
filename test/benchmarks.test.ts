@@ -98,7 +98,7 @@ describe("BenchmarkManager", () => {
   it("should get financial benchmark", () => {
     const benchmark = benchmarkManager.get("financial");
     expect(benchmark).toBeDefined();
-    expect(benchmark.type).toBe("financial");
+    expect(benchmark!.type).toBe("financial");
   });
 
   it("should return undefined for unknown benchmark type", () => {

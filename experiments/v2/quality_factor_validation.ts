@@ -16,6 +16,8 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { mean, sampleStd as stdDev } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 类型定义
@@ -53,15 +55,9 @@ interface MaliciousExperiment {
 // 统计工具
 // ============================================================================
 
-function mean(v: number[]): number {
-  return v.length === 0 ? 0 : v.reduce((a, b) => a + b, 0) / v.length;
-}
+// B3: mean 已从 statsShared 导入
 
-function stdDev(v: number[]): number {
-  if (v.length < 2) return 0;
-  const m = mean(v);
-  return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
+// B3: stdDev 已从 statsShared 导入
 
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
@@ -88,7 +84,11 @@ function loadData(): MaliciousExperiment[] {
      f.startsWith("fraud_F_malicious_content_driven_103") || f.startsWith("fraud_F_malicious_content_driven_104") ||
      f.startsWith("fraud_F_malicious_content_driven_105"))
   );
-  return files.map(f => JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), "utf-8")));
+  return files.map(f => {
+    const parsed = safeJsonParse<MaliciousExperiment>(fs.readFileSync(path.join(DATA_DIR, f), "utf-8"));
+    if (!parsed) { console.warn(`[quality_factor_validation] 无法解析 JSON: ${f}`); return null; }
+    return parsed;
+  }).filter((r): r is MaliciousExperiment => r !== null);
 }
 
 // ============================================================================

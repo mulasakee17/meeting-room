@@ -24,7 +24,8 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { mulberry32, mean, sampleStd, cohensD, PERMUTATION_SEED } from "./statsShared";
+import { mulberry32, mean, sampleStd, cohensD, cohensDz, PERMUTATION_SEED } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 类型定义
@@ -101,7 +102,8 @@ function loadMaliciousGroup(dir: string, group: "E" | "F" | "G"): MaliciousExper
   for (const f of fs.readdirSync(dir)) {
     if (!f.startsWith(`fraud_${group}_`) || !f.endsWith(".json")) continue;
     try {
-      const data = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+      const data = safeJsonParse<MaliciousExperimentResult>(fs.readFileSync(path.join(dir, f), "utf8"));
+      if (!data) { console.warn(`[analyze_malicious] 无法解析 JSON: ${f}`); continue; }
       if (!data.terminationReason?.startsWith("error")) {
         results.push(data);
       }
@@ -117,7 +119,8 @@ function loadBaselineGroup(dir: string): BaselineResult[] {
     // C 组：fraud_C_content_driven_*.json
     if (!f.startsWith("fraud_C_") || !f.endsWith(".json")) continue;
     try {
-      const data = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+      const data = safeJsonParse<MaliciousExperimentResult>(fs.readFileSync(path.join(dir, f), "utf8"));
+      if (!data) { console.warn(`[analyze_malicious] 无法解析 JSON: ${f}`); continue; }
       if (!data.terminationReason?.startsWith("error")) {
         results.push({
           runId: data.runId,
@@ -169,11 +172,7 @@ function pairedPermutationTest(diffs: number[], nPerm = 10000): number {
   return (count + 1) / (nPerm + 1);
 }
 
-function cohensDz(diffs: number[]): number {
-  if (diffs.length < 2) return 0;
-  const sd = sampleStd(diffs);
-  return sd === 0 ? 0 : mean(diffs) / sd;
-}
+// cohensDz 已从 statsShared 导入（P2 修复：消除本地副本）
 
 function pairedCI(diffs: number[]): { lower: number; upper: number } {
   if (diffs.length < 2) return { lower: 0, upper: 0 };
@@ -427,7 +426,7 @@ console.log("\n" + "─".repeat(70));
 console.log("  各组基本信息");
 console.log("─".repeat(70));
 
-const allGroups: { name: string; data: { kendallTau: number; totalUtterances: number; totalRounds: number; converged: boolean }[] }[] = [
+const allGroups: { name: string; data: { kendallTau: number; totalUtterances: number; totalRounds: number; converged?: boolean }[] }[] = [
   { name: "C (基线: 5诚实+治理)", data: groupC },
   { name: "E (单点攻击+治理)", data: groupE },
   { name: "F (单点攻击+无治理)", data: groupF },

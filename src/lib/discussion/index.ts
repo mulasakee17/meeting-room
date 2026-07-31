@@ -21,7 +21,7 @@ import { DecisionTraceBuilder } from "./decisionTrace";
 import { GovernanceEngine, AgentBelief, MessageInfo, GovernanceIssue, Intervention } from "../governance";
 import type { GovernanceConfig } from "../governance/types";
 import { EventTracker } from "./eventTracker";
-import { ObservationLayer, DefaultOpinionParser } from "../observation";
+import { DefaultOpinionParser } from "../observation";
 import { safeJsonParse } from "../utils/jsonUtils";
 import { mulberry32 } from "../utils/statsUtils";
 import { InferenceLayer } from "../inference";
@@ -54,6 +54,9 @@ import {
 } from "../constants";
 import type { GovernanceRuntime as GovernanceRuntimeType } from "@/runtime/GovernanceRuntime";
 import type { DiscussionMessage } from "@/runtime/types";
+// RuntimeContext / CollectiveDecisionState 定义在 src/lib/runtime/types.ts（runtime 内部类型），
+// 不在 src/runtime/types.ts（框架适配层）。makeInferenceContext 需要这两个类型构造 inference 上下文。
+import type { RuntimeContext, CollectiveDecisionState, ExperimentConfig } from "../runtime/types";
 import {
   beliefToCognitiveState,
   updateCognitiveState,
@@ -89,7 +92,6 @@ export class DiscussionEngine {
   protected eventTracker: EventTracker;
   protected config: DiscussionConfig;
   protected roundDataArray: RoundData[] = [];
-  private observationLayer: ObservationLayer;
   private inferenceLayer: InferenceLayer;
   protected opinionParser: OpinionParser;
   private dropoutObservations: Array<{
@@ -124,7 +126,6 @@ export class DiscussionEngine {
     // 持久 PRNG：random-intervene 模式下跨轮保持状态，避免每轮产生相同随机干预
     this.randomInterveneRng = mulberry32((this.config.seed ?? 42) + 0x5A4D);
     this.eventTracker = new EventTracker();
-    this.observationLayer = new ObservationLayer();
     this.inferenceLayer = new InferenceLayer();
     this.opinionParser = new DefaultOpinionParser();
   }
@@ -271,11 +272,16 @@ export class DiscussionEngine {
       ) {
         const crossExamCheck = shouldActivateCrossExamination(opinions);
         if (crossExamCheck.activate) {
-          this.crossExaminationResult = await this.runCrossExamination(
-            opinions, agents, round
-          );
-          // Apply belief shifts from cross-examination to agent states
-          this.applyCrossExaminationShifts(opinions, agentStates);
+          try {
+            this.crossExaminationResult = await this.runCrossExamination(
+              opinions, agents, round
+            );
+            // Apply belief shifts from cross-examination to agent states
+            this.applyCrossExaminationShifts(opinions, agentStates);
+          } catch (err) {
+            // 交叉质证是可选增强，失败时降级为"未执行"，不阻断主讨论
+            console.warn(`[CrossExam] degraded, skipped: ${err instanceof Error ? err.message : err}`);
+          }
         }
       }
 
@@ -305,13 +311,13 @@ export class DiscussionEngine {
         payload: { agentStates: Object.fromEntries(agentStates) },
       });
 
-      // -- v3.0 cognitive state update --------------------------------------
-      if (this.config.useCognitiveState) {
-        this.updateCognitiveStatesFromRound(opinions, agents, round);
-      }
-
       // -- governance ------------------------------------------------------
-      const governanceResult = this.applyGovernance(round, opinions, agentStates, agents);
+      // F1 修复（Phase 2.9）：applyGovernance 必须在 updateCognitiveStatesFromRound 之前，
+      // 这样 pendingCognitiveModifications 在同一轮的 updateCognitiveStatesFromRound 中被消费，
+      // 下一轮 runRound 的 buildPrompt 即可看到干预后的 cognitive state（1 轮生效，而非 2 轮）。
+      // 注：applyGovernance 的 δ 诊断基于上一轮更新后的 cognitive state + 当前轮 opinions，
+      // 1 轮的诊断滞后可接受（cognitive state 变化渐进），但避免了 5 轮讨论中干预仅剩 2-3 轮可用的致命问题。
+      const governanceResult = await this.applyGovernance(round, opinions, agentStates, agents);
       const interventions = governanceResult?.hasIntervention ? governanceResult.interventions : [];
 
       if (governanceResult?.hasIntervention) {
@@ -321,6 +327,11 @@ export class DiscussionEngine {
         });
         this.traceBuilder.addRound(round, opinions, this.memoryManager.getAll(),
           this.graphBuilder.getGraph(), new Map(), interventions);
+      }
+
+      // -- v3.0 cognitive state update (消费 pendingModifications) ----------
+      if (this.config.useCognitiveState) {
+        this.updateCognitiveStatesFromRound(opinions, agents, round);
       }
 
       // -- record round data ------------------------------------------------
@@ -487,9 +498,14 @@ export class DiscussionEngine {
    * internal belief updates.  Previously these were constructed with
    * `{} as any` casts (ghost objects) that would crash if any code
    * path tried to read a field beyond `round.current`.
+   *
+   * NOTE: This context is INCOMPLETE — only `round.current` is guaranteed
+   * to be read by inferenceLayer.infer(). All other fields are typed stubs
+   * to satisfy RuntimeContext's shape; accessing them yields empty collections
+   * or null. Do NOT use this context for evaluation/governance/trace.
    */
-  private makeInferenceContext(roundNumber: number) {
-    const emptyCollectiveState = {
+  private makeInferenceContext(roundNumber: number): RuntimeContext {
+    const emptyCollectiveState: CollectiveDecisionState = {
       agentStates: new Map(),
       interactionGraph: { nodes: [], edges: [] } as InteractionGraph,
       decisionTrace: {
@@ -503,17 +519,35 @@ export class DiscussionEngine {
     };
 
     return {
-      experiment: { id: "", taskId: "", config: {} as any, status: "created" as const, createdAt: "" },
-      session: { id: "", experimentId: "", runtimeContext: undefined as any, status: "initialized" as const, startTime: "" },
-      task: { id: "", description: "", type: "", content: "", status: "submitted" as const, createdAt: "", metadata: {} },
+      // experiment 是桩对象——inferenceLayer.infer() 只读 round.current，不读 experiment.config。
+      // 用 as unknown 断言明确表达：这是不完整桩，不是真实 ExperimentConfig。
+      experiment: { id: "", taskId: "", config: {} as unknown as ExperimentConfig, status: "created", createdAt: "" },
+      // session.runtimeContext has circular reference to RuntimeContext;
+      // undefined is safe because inferenceLayer never reads session.
+      session: { id: "", experimentId: "", runtimeContext: undefined as unknown as RuntimeContext, status: "initialized", startTime: "" },
+      task: { id: "", description: "", type: "", content: "", status: "submitted", createdAt: "", metadata: {} },
       round: { current: roundNumber, max: this.config.maxRounds, startedAt: new Date().toISOString() },
       state: emptyCollectiveState,
       metrics: { evaluation: null, previousEvaluation: null, delta: {}, history: [] },
-      governance: { issues: [], interventions: [], appliedInterventions: [], status: "clean" as const },
+      governance: { issues: [], interventions: [], appliedInterventions: [], status: "clean" },
       agents: { agents: [], states: new Map(), getAgent: () => undefined, getAllStates: () => new Map() },
-      config: { termination: { conditions: [], strategy: "any" as const }, evaluation: {} as any, governance: {} as any },
-      timeline: [] as any[],
-      artifact: {} as any,
+      config: {
+        termination: { conditions: [], strategy: "any" },
+        evaluation: {} as EvaluationConfig,
+        governance: {} as GovernanceConfig,
+      },
+      timeline: [],
+      // artifact 是深层嵌套类型（30+ 字段，6 种 Snapshot），但 inferenceLayer
+      // 只读 round.current，构造完整 artifact 是过度工程。用最小合法对象 + 类型逃逸。
+      artifact: {
+        experimentId: "",
+        task: { id: "", description: "", type: "", content: "", status: "submitted", createdAt: "", metadata: {} },
+        config: { maxRounds: 0, agentCount: 0, agentTypes: [], beliefUpdateStrategy: "", influenceStrategy: "", memoryStrategy: "", terminationConditions: [], evaluationConfig: {} as EvaluationConfig, governanceConfig: {} as GovernanceConfig },
+        snapshots: { rounds: [], states: [], evaluations: [], governances: [], decisions: [] },
+        timeline: [],
+        metadata: { startTime: "", endTime: "", totalRounds: 0, converged: false, elapsedMs: 0 },
+        terminationReason: "",
+      },
     };
   }
 
@@ -604,8 +638,7 @@ export class DiscussionEngine {
 
   /**
    * Observe agents by sending prompts and parsing their responses.
-   * Delegates to the shared DefaultOpinionParser to avoid duplicating
-   * the parseOpinion logic that also lives in ObservationLayer.
+   * Uses the shared opinionParser (DefaultOpinionParser by default).
    */
   protected async observeAgents(
     agents: ObserverAgent[],
@@ -955,7 +988,7 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     agents: DiscussionAgent[],
     /** 异步引擎覆写：currentRound / maxRounds。同步引擎无需传。 */
     governanceConfigOverride?: { currentRound: number; maxRounds: number }
-  ): { hasIntervention: boolean; interventions: Intervention[]; effectMetrics?: Record<string, number>; issues: GovernanceIssue[] } | null {
+  ): { hasIntervention: boolean; interventions: Intervention[]; effectMetrics?: Record<string, number>; issues: GovernanceIssue[] } | Promise<{ hasIntervention: boolean; interventions: Intervention[]; effectMetrics?: Record<string, number>; issues: GovernanceIssue[] }> | null {
     const mode = this.config.governanceMode || "full";
     const effectiveMaxRounds = governanceConfigOverride?.maxRounds ?? this.config.maxRounds;
     const effectiveCurrentRound = governanceConfigOverride?.currentRound ?? round;
@@ -1474,13 +1507,21 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     const { proPrompt, conPrompt } = buildChallengePrompt(proCamp, conCamp, round);
 
     // Send pro prompt to pro agents, con prompt to con agents
-    const responsePromises: Promise<{ agentId: string; camp: "pro" | "con"; response: string }>[] = [];
+    // 每个 promise 内部 catch 返回 null，因此所有 promise 都会 fulfilled（不会 reject）。
+    // 用 Promise.all 即可，后续 filter null 跳过失败的 agent。
+    type CrossExamResponse = { agentId: string; camp: "pro" | "con"; response: string };
+    const responsePromises: Promise<CrossExamResponse | null>[] = [];
 
     for (const member of proCamp.members) {
       const agent = agentMap.get(member.agentId);
       if (agent) {
         responsePromises.push(
-          agent.sendMessage(proPrompt).then(r => ({ agentId: member.agentId, camp: "pro" as const, response: r }))
+          agent.sendMessage(proPrompt)
+            .then<CrossExamResponse>(r => ({ agentId: member.agentId, camp: "pro", response: r }))
+            .catch(err => {
+              console.warn(`[CrossExam] pro agent ${member.agentId} failed: ${err instanceof Error ? err.message : err}`);
+              return null;
+            })
         );
       }
     }
@@ -1489,12 +1530,20 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
       const agent = agentMap.get(member.agentId);
       if (agent) {
         responsePromises.push(
-          agent.sendMessage(conPrompt).then(r => ({ agentId: member.agentId, camp: "con" as const, response: r }))
+          agent.sendMessage(conPrompt)
+            .then<CrossExamResponse>(r => ({ agentId: member.agentId, camp: "con", response: r }))
+            .catch(err => {
+              console.warn(`[CrossExam] con agent ${member.agentId} failed: ${err instanceof Error ? err.message : err}`);
+              return null;
+            })
         );
       }
     }
 
-    const responses = await Promise.all(responsePromises);
+    const settledResults = await Promise.all(responsePromises);
+    const responses: CrossExamResponse[] = settledResults.filter(
+      (r): r is CrossExamResponse => r !== null
+    );
 
     // Parse responses and compute belief shifts
     for (const resp of responses) {

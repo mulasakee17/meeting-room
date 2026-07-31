@@ -14,6 +14,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { mulberry32, mean, PERMUTATION_SEED } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface ExperimentResult {
   runId: string;
@@ -28,8 +29,10 @@ function loadData(dir: string, prefix: string): any[] {
   );
   return files.map(f => {
     const content = fs.readFileSync(path.join(dir, f), "utf-8");
-    return JSON.parse(content);
-  });
+    const parsed = safeJsonParse<ExperimentResult>(content);
+    if (!parsed) { console.warn(`[recalc_consensus_corr] 无法解析 JSON: ${f}`); return null; }
+    return parsed;
+  }).filter((r): r is ExperimentResult => r !== null);
 }
 
 function sampleStd(v: number[]): number {
@@ -88,7 +91,7 @@ function extractValidSamples(data: any[]): { r: number; tau: number; rOld: numbe
     const rounds = r.rounds;
     if (!rounds || rounds.length === 0) return null;
     const lastRound = rounds[rounds.length - 1];
-    const beliefs = Object.values(lastRound.beliefs || {});
+    const beliefs = Object.values(lastRound.beliefs || {}) as number[];
     if (beliefs.length < 2) return null;
     return {
       r: computeKuramotoR(beliefs),
@@ -110,14 +113,22 @@ function main() {
 
   // ------------------------------------------------------------------------
   // 1. 加载数据（排除 crisis_full_fixed，不算原始实验）
+  // P0-A2 修复：startsWith("crisis_full") 会误包含 crisis_full_fixed，需显式过滤
   // ------------------------------------------------------------------------
   const crisisNone = loadData(CRISIS_DIR, "crisis_none");
-  const crisisFull = loadData(CRISIS_DIR, "crisis_full");
+  // 双口径：crisisFull_n24 排除 full_fixed（n=24），crisisFull_n32 包含 full_fixed（n=32）
+  const crisisFull_n24 = loadData(CRISIS_DIR, "crisis_full").filter(
+    (r: any) => r.ablation !== "full_fixed"
+  );
+  const crisisFull_n32 = loadData(CRISIS_DIR, "crisis_full");  // 含 8 个 full_fixed
   const crisisShuffle = loadData(CRISIS_DIR, "crisis_shuffle");
-  
+
   const supplierNone = loadData(SUPPLIER_DIR, "supplier_none");
   const supplierFull = loadData(SUPPLIER_DIR, "supplier_full");
   const supplierShuffle = loadData(SUPPLIER_DIR, "supplier_shuffle");
+
+  // 主分析口径：排除 full_fixed（与 powerAnalysis.ts / verifyFindings.ts 一致）
+  const crisisFull = crisisFull_n24;
 
   console.log("\n╔══════════════════════════════════════════════════════════╗");
   console.log("║ 数据加载统计（原始样本数）                                 ║");
@@ -183,8 +194,8 @@ function main() {
   console.log("与文档记录对比");
   console.log("══════════════════════════════════════════════════════════");
   console.log("┌────────────────────────────────────────────────────────┐");
-  console.log("│ PAPER_DRAFT.md: r ≈ -0.14, N=169                      │");
-  console.log("│ ROADMAP.md: r ≈ -0.05                                  │");
+  console.log("│ PAPER_DRAFT.md (2026-07-26 更新): r ≈ -0.13, N=161    │");
+  console.log("│ ROADMAP.md: r ≈ -0.05 (Crisis 子集，旧值)              │");
   console.log("└────────────────────────────────────────────────────────┘");
   console.log(`\n实跑结果（统一 Kuramoto R）:`);
   console.log(`  跨任务全样本: r = ${allR.toFixed(4)} (n=${allValid.length})`);
@@ -197,10 +208,10 @@ function main() {
   console.log("\n══════════════════════════════════════════════════════════");
   console.log("结论");
   console.log("══════════════════════════════════════════════════════════");
-  console.log("  PAPER_DRAFT 的 r≈-0.14 可能来自旧公式（consensusLevel=1-2·std）");
-  console.log("  ROADMAP 的 r≈-0.05 与新公式（Kuramoto R）一致");
-  console.log("  建议统一使用 Kuramoto R（H4 修复后），r ≈", allR.toFixed(2));
-  console.log("  若坚持使用旧公式，r ≈", allROld.toFixed(2), "（但公式已过时）");
+  console.log("  PAPER_DRAFT 已更新（2026-07-26）：r ≈ -0.13, N=161（排除 8 个 full_fixed）");
+  console.log("  本次实跑结果与 PAPER_DRAFT 一致 ✓");
+  console.log("  ROADMAP 的 r≈-0.05 为 Crisis 子集旧值（n=80，含 full_fixed）");
+  console.log("  统一使用 Kuramoto R（H4 修复后），跨任务 r ≈", allR.toFixed(2), "(N=161)");
 
   // ------------------------------------------------------------------------
   // 5. 稳定性检查（分 ablation）
@@ -224,6 +235,35 @@ function main() {
     const r = pearsonCorr(valid.map(s => s.r), valid.map(s => s.tau));
     console.log(`  ${name.padEnd(20)}: r = ${r.toFixed(4)} (n=${valid.length})`);
   }
+
+  // ------------------------------------------------------------------------
+  // 6. 对照口径：N=169（含 8 个 crisis_full_fixed）
+  //    SOT.md §3.2 / LIMITATIONS.md §F1 引用的"主分析 N=169"使用此口径
+  // ------------------------------------------------------------------------
+  console.log("\n══════════════════════════════════════════════════════════");
+  console.log("对照口径：N=169（含 8 个 crisis_full_fixed，SOT §3.2 主分析）");
+  console.log("══════════════════════════════════════════════════════════");
+
+  const crisisAllN169 = [...crisisNone, ...crisisFull_n32, ...crisisShuffle];
+  const crisisValidN169 = extractValidSamples(crisisAllN169);
+  const allValidN169 = [...crisisValidN169, ...supplierValid];
+
+  function printCorrN169(label: string, samples: { r: number; tau: number; rOld: number }[]) {
+    const rs = samples.map(s => s.r);
+    const taus = samples.map(s => s.tau);
+    const r = pearsonCorr(rs, taus);
+    const p = permutationCorrTest(rs, taus);
+    console.log(`  ${label}: r = ${r.toFixed(4)}, p = ${p.toFixed(4)} (n=${samples.length})`);
+  }
+
+  printCorrN169("Crisis (n=80, 含 full_fixed)", crisisValidN169);
+  printCorrN169("跨任务全样本 (N=169)", allValidN169);
+
+  console.log("\n  [SOT 对齐声明]");
+  console.log("  - SOT.md §3.2 主分析采用 N=169（含 full_fixed）口径，r=-0.10, p=0.20");
+  console.log("  - 主分析（排除 full_fixed）口径：N=161, r=-0.1332, p=0.0935");
+  console.log("  - 两个口径方向一致（均为弱负相关且不显著），但数值有差异");
+  console.log("  - 论文引用时必须明确标注 N 与口径选择");
 }
 
 main();

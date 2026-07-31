@@ -12,7 +12,8 @@
  */
 import * as fs from "fs";
 import * as path from "path";
-import { mulberry32 } from "./statsShared";
+import { mean, mulberry32 } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface Round {
   roundNumber: number;
@@ -108,7 +109,7 @@ function fixedOrder(interventions: Array<{ type: string }>): Array<{ type: strin
 }
 
 function loadExp(fp: string): ExperimentData | null {
-  try { return JSON.parse(fs.readFileSync(fp, "utf8")); } catch { return null; }
+  return safeJsonParse<ExperimentData>(fs.readFileSync(fp, "utf8"));
 }
 
 // ============================================================
@@ -329,9 +330,7 @@ for (const { dir, prefix, task } of dirs) {
   }
 }
 
-function mean(xs: number[]): number {
-  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
-}
+// B3: mean 已从 statsShared 导入
 
 console.log(`  force_reflection 事件总数: ${events.length}`);
 const soleEvents = events.filter(e => e.isSoleIntervention);

@@ -19,7 +19,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { mulberry32, cohensD, mean, PERMUTATION_SEED, BOOTSTRAP_SEED } from "./statsShared";
+import { mulberry32, cohensD, mean, sampleStd, PERMUTATION_SEED, BOOTSTRAP_SEED, loadExperiments } from "./statsShared";
 
 // ============================================================================
 // 类型与数据加载
@@ -32,27 +32,8 @@ interface ExperimentResult {
   decisionQuality: number;
 }
 
-function loadData(dir: string, prefix: string): ExperimentResult[] {
-  const files = fs.readdirSync(dir).filter(
-    f => f.endsWith(".json") && f.startsWith(prefix) && f !== "summary.json"
-  );
-  return files.map(f => {
-    const content = fs.readFileSync(path.join(dir, f), "utf-8");
-    const raw = JSON.parse(content) as ExperimentResult & { error?: string };
-    if (raw.error) return null;
-    return { runId: raw.runId, ablation: raw.ablation, kendallTau: raw.kendallTau, decisionQuality: raw.decisionQuality };
-  }).filter((r): r is ExperimentResult => r !== null);
-}
-
-// ============================================================================
-// 基础统计
-// ============================================================================
-
-function sampleStd(v: number[]): number {
-  if (v.length < 2) return 0;
-  const m = mean(v);
-  return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
+// loadData 已迁移到 statsShared.loadExperiments（支持 ablation 字段过滤，修复 startsWith 污染）
+// B3 修复：sampleStd 已从 statsShared 导入，消除本地重复定义
 
 // ============================================================================
 // 贝叶斯推断（网格近似）
@@ -349,9 +330,9 @@ function permutationTest(a: number[], b: number[], nPerm: number = 10000): numbe
 const DATA_DIR = path.resolve(__dirname, "data_crisis");
 
 function main() {
-  const noneResults = loadData(DATA_DIR, "crisis_none");
-  const fullResults = loadData(DATA_DIR, "crisis_full");
-  const shuffleResults = loadData(DATA_DIR, "crisis_shuffle");
+  const noneResults = loadExperiments(DATA_DIR, "crisis_none", "none");
+  const fullResults = loadExperiments(DATA_DIR, "crisis_full", "full");
+  const shuffleResults = loadExperiments(DATA_DIR, "crisis_shuffle", "shuffle");
 
   console.log("=".repeat(70));
   console.log("贝叶斯重分析：Crisis 任务（2026-07-14，治理环路闭合后）");

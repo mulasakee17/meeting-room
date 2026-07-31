@@ -23,6 +23,7 @@ import {
   TASK_MA, TASK_URBAN,
   EXPERIMENT_PARAMS,
 } from "./config";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // Retry wrapper — handles transient network failures
@@ -333,7 +334,8 @@ async function main() {
 
   for (const file of existingFiles) {
     try {
-      const data = JSON.parse(fs.readFileSync(path.join(dataDir, file), "utf-8"));
+      const data = safeJsonParse<any>(fs.readFileSync(path.join(dataDir, file), "utf-8"));
+      if (!data) { console.warn(`[continue] 无法解析 JSON: ${file}`); continue; }
       // Only include runs with the standard schema (has 'dispersion' field)
       // This excludes the old finish_ma.ts runs that had 'explainability' instead
       if (data.taskId && data.ablation && typeof data.accuracy === "number") {

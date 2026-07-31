@@ -304,7 +304,7 @@ export function validateSwarmRequest(body: SwarmRequestInput): ValidationResult 
   const sanitized: Record<string, unknown> = {};
   
   // 验证新闻
-  const newsResult = validateNews(body.news);
+  const newsResult = validateNews(body.news ?? "");
   if (!newsResult.valid) {
     errors.push(...newsResult.errors);
   } else {
@@ -320,7 +320,7 @@ export function validateSwarmRequest(body: SwarmRequestInput): ValidationResult 
   }
   
   // 验证股票代码
-  const symbolResult = validateStockCode(body.symbol);
+  const symbolResult = validateStockCode(body.symbol ?? "");
   if (!symbolResult.valid) {
     errors.push(...symbolResult.errors);
   } else {

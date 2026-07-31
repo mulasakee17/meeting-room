@@ -18,29 +18,14 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { loadExperiments, mean, cohensD } from "./statsShared";
 import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 统计工具
 // ============================================================================
-function mean(v: number[]): number {
-  return v.length === 0 ? 0 : v.reduce((a, b) => a + b, 0) / v.length;
-}
-
-function stdDev(v: number[]): number {
-  if (v.length < 2) return 0;
-  const m = mean(v);
-  return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
-
-function cohensD(a: number[], b: number[]): number {
-  if (a.length < 2 || b.length < 2) return 0;
-  const ma = mean(a), mb = mean(b);
-  const va = a.reduce((s, v) => s + (v - ma) ** 2, 0) / (a.length - 1);
-  const vb = b.reduce((s, v) => s + (v - mb) ** 2, 0) / (b.length - 1);
-  const sp = Math.sqrt(((a.length - 1) * va + (b.length - 1) * vb) / (a.length + b.length - 2));
-  return sp === 0 ? 0 : (ma - mb) / sp;
-}
+// B3 修复：mean/cohensD 已从 statsShared 导入，消除本地重复定义
+// stdDev 原为本地定义但从未被调用（dead code），已移除
 
 // t 分布临界值表（双侧 α=0.05）
 const T_TABLE_005: Record<number, number> = {
@@ -121,14 +106,7 @@ interface ExperimentResult {
   decisionQuality: number;
 }
 
-function loadData(dataDir: string, prefix: string): ExperimentResult[] {
-  if (!fs.existsSync(dataDir)) return [];
-  const files = fs.readdirSync(dataDir).filter(f => f.endsWith(".json") && f.startsWith(prefix) && f !== "summary.json");
-  return files.map(f => {
-    const content = fs.readFileSync(path.join(dataDir, f), "utf-8");
-    return safeJsonParse<ExperimentResult>(content);
-  }).filter((r): r is ExperimentResult => r !== null && !r.error);
-}
+// loadData 已迁移到 statsShared.loadExperiments（支持 ablation 字段过滤，修复 startsWith 污染）
 
 // ============================================================================
 // 分析
@@ -166,9 +144,9 @@ function main() {
 
   // ===== Crisis =====
   const crisisDir = path.resolve(__dirname, "data_crisis");
-  const crisisFull = loadData(crisisDir, "crisis_full");
-  const crisisNone = loadData(crisisDir, "crisis_none");
-  const crisisShuffle = loadData(crisisDir, "crisis_shuffle");
+  const crisisFull = loadExperiments(crisisDir, "crisis_full", "full");
+  const crisisNone = loadExperiments(crisisDir, "crisis_none", "none");
+  const crisisShuffle = loadExperiments(crisisDir, "crisis_shuffle", "shuffle");
 
   console.log("\n" + "-".repeat(80));
   console.log("  Crisis 任务");
@@ -197,9 +175,9 @@ function main() {
 
   // ===== Supplier =====
   const supplierDir = path.resolve(__dirname, "data_supplier");
-  const supplierFull = loadData(supplierDir, "supplier_full");
-  const supplierNone = loadData(supplierDir, "supplier_none");
-  const supplierShuffle = loadData(supplierDir, "supplier_shuffle");
+  const supplierFull = loadExperiments(supplierDir, "supplier_full", "full");
+  const supplierNone = loadExperiments(supplierDir, "supplier_none", "none");
+  const supplierShuffle = loadExperiments(supplierDir, "supplier_shuffle", "shuffle");
 
   console.log("\n" + "-".repeat(80));
   console.log("  Supplier 任务");

@@ -6,6 +6,25 @@ export interface ItemBelief {
 }
 
 /**
+ * v3.2.1: 结构化 evidence 项——LLM 直接声明证据支持的选项和强度。
+ *
+ * 前沿经验：Structured Outputs（JSON Schema mode）优于 free text + post-hoc parsing。
+ * 旧格式 evidence: string[] 需要 extractEvidenceItems 用 includes 启发式归类，
+ * 无关键词时回退到 top-ranked（噪声源）。新格式由 LLM 直接声明 supports/strength，
+ * 消除归类噪声。
+ *
+ * 后向兼容：旧数据仍用 string[]，新数据同时填充 evidence（string[]）和 structuredEvidence。
+ */
+export interface StructuredEvidenceItem {
+  /** 证据文本内容 */
+  content: string;
+  /** 此证据支持的选项 ID（与 itemBeliefs.item 对齐） */
+  supports: string;
+  /** 证据强度 [0, 1]——LLM 自评此证据对所支持选项的支持程度 */
+  strength: number;
+}
+
+/**
  * LLM 原生输出的认知状态（v3.1 Native Cognitive Model）。
  *
  * 与旧模型的关键区别：这些值由 LLM 直接自省输出，而非系统从 belief 反推。
@@ -33,6 +52,11 @@ export interface AgentOpinion {
   itemBeliefs?: ItemBelief[];
   /** LLM 原生输出的认知状态（v3.1）。仅 native_cognitive 模式填充。 */
   cognitiveState?: NativeCognitiveOutput;
+  /** v3.2.1: 结构化 evidence——LLM 直接声明 supports/strength，消除启发式归类噪声。
+   *  与 evidence 字段并存：evidence 保留 content 字符串数组（后向兼容），
+   *  structuredEvidence 额外提供 supports/strength（新格式）。
+   *  extractEvidenceItems 优先使用 structuredEvidence，无则回退到 evidence 启发式。 */
+  structuredEvidence?: StructuredEvidenceItem[];
 }
 
 export interface RoundResult {
@@ -188,7 +212,7 @@ export interface DiscussionConfig {
    * - "random-intervene": 不检测，随机施加干预
    * - "full": 检测 + 精准干预 (默认)
    */
-  governanceMode?: "none" | "detect-only" | "random-intervene" | "full";
+  governanceMode?: "none" | "detect-only" | "random-intervene" | "full" | "cognitive";
   /**
    * 启用对立阵营交叉质证 (默认 false)。
    * 当 Agent 信念分歧超过阈值时，自动分组正反方进行辩论。
@@ -224,6 +248,20 @@ export interface DiscussionConfig {
    * 默认 false（使用旧 belief-based governance）。
    */
   useCognitiveGovernance?: boolean;
+  /**
+   * v6: 启用 SemanticTool 异步治理路径。
+   *
+   * 当为 true 且 useCognitiveGovernance=true 时，认知治理使用
+   * diagnoseAndSuggest()（async，Tier 1→2→3）而非 diagnoseAndSuggestSync()。
+   * 启用后：
+   *   - Layer 2 evidence 语义去重（SemanticTool evidence_dedup）
+   *   - gap_analysis（从未分享证据中识别关键信息）
+   *   - intervention_generation（上下文感知干预文本）
+   *
+   * 需要 llmConfig（通过 governanceConfig.llmConfig 传入）。
+   * 默认 false（纯数学路径，零 LLM 成本）。
+   */
+  useSemanticTool?: boolean;
   /**
    * Agent grouping topology for scalable discussions.
    *

@@ -6,6 +6,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 const DATA_DIR = path.resolve(__dirname, "data_supplier");
 const files = fs.readdirSync(DATA_DIR).filter(
@@ -14,8 +15,10 @@ const files = fs.readdirSync(DATA_DIR).filter(
 
 const results = files.map(f => {
   const content = fs.readFileSync(path.join(DATA_DIR, f), "utf-8");
-  return JSON.parse(content);
-});
+  const parsed = safeJsonParse(content);
+  if (!parsed) { console.warn(`[generateSupplierSummary] 无法解析 JSON: ${f}`); return null; }
+  return parsed;
+}).filter((r): r is Record<string, unknown> => r !== null);
 
 const summary = {
   task: "核心零部件供应商选择",

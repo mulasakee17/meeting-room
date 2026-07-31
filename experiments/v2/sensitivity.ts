@@ -23,7 +23,8 @@ import { EvaluationEngine } from "../../src/lib/evaluation";
 import type { LLMConfig } from "../../src/lib/llm/providers";
 import { TASK_INVEST } from "./task_invest";
 import type { TaskConfig } from "../lunar_survival/config";
-import { kendallTau } from "./statsShared";
+import { kendallTau, mean, sampleStd as stdDev } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // Types
@@ -137,11 +138,8 @@ function tauToQuality(tau: number): number {
 // Statistics
 // ============================================================================
 
-function mean(v: number[]) { return v.reduce((a, b) => a + b, 0) / v.length; }
-function stdDev(v: number[]) {
-  const m = mean(v);
-  return v.length < 2 ? 0 : Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
+// B3: mean 已从 statsShared 导入
+// B3: stdDev 已从 statsShared 导入
 function cv(v: number[]) { const m = mean(v); return m === 0 ? 0 : stdDev(v) / m; }
 
 // ============================================================================
@@ -285,7 +283,8 @@ async function main() {
         const filename = path.join(DATA_DIR, `${sweep.name}_${value}_${i}.json`);
 
         if (fs.existsSync(filename)) {
-          const cached = JSON.parse(fs.readFileSync(filename, "utf-8")) as SensitivityResult;
+          const cached = safeJsonParse<SensitivityResult>(fs.readFileSync(filename, "utf-8"));
+          if (!cached) { console.warn(`[sensitivity] 无法解析 JSON: ${filename}`); continue; }
           results.push(cached);
           allResults.push(cached);
           console.log(`  ${sweep.name}=${value} [${i + 1}/${PARAMS.runsPerCondition}] (cached) τ=${cached.kendallTau.toFixed(3)} Q=${cached.decisionQuality}`);

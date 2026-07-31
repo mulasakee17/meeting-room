@@ -160,6 +160,8 @@ function main() {
   console.log("=".repeat(70));
 }
 
+// Kendall's τ-a（无 tie 修正）。本脚本中排名为 5 个不同供应商，无 ties，τ-a = τ-b。
+// 如需处理 ties，请改用 statsShared.kendallTau（τ-b）。
 function kendallTau(ranking1: string[], ranking2: string[]): number {
   const n = ranking1.length;
   if (n < 2) return 0;

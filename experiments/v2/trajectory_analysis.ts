@@ -8,6 +8,8 @@
  */
 import * as fs from "fs";
 import * as path from "path";
+import { mean, sampleStd as stdDev } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface ExperimentResult {
   runId: string;
@@ -30,15 +32,15 @@ const DATA_DIR = path.resolve(__dirname, "data_invest");
 function loadGroup(prefix: string): ExperimentResult[] {
   const files = fs.readdirSync(DATA_DIR)
     .filter(f => f.startsWith(`${prefix}_`) && f.endsWith(".json") && f !== "summary.json");
-  return files.map(f => JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), "utf-8")));
+  return files.map(f => {
+    const parsed = safeJsonParse<ExperimentResult>(fs.readFileSync(path.join(DATA_DIR, f), "utf-8"));
+    if (!parsed) { console.warn(`[trajectory_analysis] 无法解析 JSON: ${f}`); return null; }
+    return parsed;
+  }).filter((r): r is ExperimentResult => r !== null);
 }
 
-function mean(v: number[]) { return v.reduce((a, b) => a + b, 0) / v.length; }
-function stdDev(v: number[]) {
-  if (v.length < 2) return 0;
-  const m = mean(v);
-  return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
+// B3: mean 已从 statsShared 导入
+// B3: stdDev 已从 statsShared 导入
 
 function fmt(v: number, digits = 3) {
   return (v >= 0 ? "+" : "") + v.toFixed(digits);

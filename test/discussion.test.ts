@@ -42,7 +42,10 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       const engine = new DiscussionEngine({ maxRounds: 2 });
       const result = await engine.run([agent1, agent2], {
+        id: "test-task",
+        description: "Test task",
         type: "text",
+        createdAt: new Date().toISOString(),
         content: "Test task",
       });
 
@@ -68,7 +71,10 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
       const engine = new DiscussionEngine({ maxRounds: 2 });
       
       return engine.run([agent1], {
+        id: "test-task",
+        description: "Test task",
         type: "text",
+        createdAt: new Date().toISOString(),
         content: "Test task",
       }).then(result => {
         const memory = engine.getMemory();
@@ -84,7 +90,10 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       const engine = new DiscussionEngine({ maxRounds: 2 });
       const result = await engine.run([agent1, agent2], {
+        id: "test-task",
+        description: "Test task",
         type: "text",
+        createdAt: new Date().toISOString(),
         content: "Test task",
       });
 
@@ -104,7 +113,10 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       const engine = new DiscussionEngine({ maxRounds: 3 });
       const result = await engine.run([agent1, agent2, agent3], {
+        id: "test-task",
+        description: "Should we invest in renewable energy?",
         type: "text",
+        createdAt: new Date().toISOString(),
         content: "Should we invest in renewable energy?",
       });
 
@@ -138,7 +150,10 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       const engine = new DiscussionEngine({ maxRounds: 3, convergenceThreshold: 0.1 });
       const result = await engine.run([agent1, agent2], {
+        id: "test-task",
+        description: "Test",
         type: "text",
+        createdAt: new Date().toISOString(),
         content: "Test",
       });
 
@@ -154,7 +169,10 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       const engine = new DiscussionEngine({ maxRounds: 2 });
       await engine.run([agent1, agent2], {
+        id: "test-task",
+        description: "Test task",
         type: "text",
+        createdAt: new Date().toISOString(),
         content: "Test task",
       });
 
@@ -186,7 +204,10 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       const engine = new DiscussionEngine({ maxRounds: 2 });
       await engine.run([agent1, agent2], {
+        id: "test-task",
+        description: "Test",
         type: "text",
+        createdAt: new Date().toISOString(),
         content: "Test",
       });
 
@@ -200,13 +221,16 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       const engine = new DiscussionEngine({ maxRounds: 2 });
       await engine.run([agent1, agent2], {
+        id: "test-task",
+        description: "Test task",
         type: "text",
+        createdAt: new Date().toISOString(),
         content: "Test task",
       });
 
       const trace = engine.getDecisionTrace();
       const builder = new DecisionTraceBuilder();
-      
+
       for (const entry of trace) {
         builder.addRound(entry.roundNumber, [], [], { nodes: [], edges: [] });
       }
@@ -220,13 +244,16 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       const engine = new DiscussionEngine({ maxRounds: 2 });
       await engine.run([agent1], {
+        id: "test-task",
+        description: "Test task",
         type: "text",
+        createdAt: new Date().toISOString(),
         content: "Test task",
       });
 
       const trace = engine.getDecisionTrace();
       const builder = new DecisionTraceBuilder();
-      
+
       for (const entry of trace) {
         builder.addRound(entry.roundNumber, [], [], { nodes: [], edges: [] });
       }
@@ -241,13 +268,90 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       const engine = new DiscussionEngine({ maxRounds: 2 });
       await engine.run([agent1, agent2], {
+        id: "test-task",
+        description: "Test task",
         type: "text",
+        createdAt: new Date().toISOString(),
         content: "Test task",
       });
 
       const summary = engine.summarizeTrace();
       expect(summary.totalRounds).toBeGreaterThan(0);
       expect(summary.totalAgents).toBe(2);
+    });
+  });
+
+  describe("P4: 交叉质证错误降级", () => {
+    it("单个 agent sendMessage 失败时不崩溃，跳过该 agent", async () => {
+      // 4 agent + 高分歧 → 触发交叉质证
+      const agent1 = new MockAgent("agent1", "Agent 1", "Expert", "custom", 0.9, 90);
+      const agent2 = new MockAgent("agent2", "Agent 2", "Expert", "custom", -0.8, 85);
+      const agent3 = new MockAgent("agent3", "Agent 3", "Critic", "custom", 0.85, 80);
+      const agent4 = new MockAgent("agent4", "Agent 4", "Critic", "custom", -0.75, 75);
+
+      // agent4 的 sendMessage 在交叉质证阶段 reject
+      const originalSend = agent4.sendMessage.bind(agent4);
+      let callCount = 0;
+      agent4.sendMessage = (msg: string) => {
+        callCount++;
+        // 第一次 reject（交叉质证触发时）
+        if (callCount > 1) {
+          return Promise.reject(new Error("LLM timeout simulation"));
+        }
+        return originalSend(msg);
+      };
+
+      const engine = new DiscussionEngine({
+        maxRounds: 1,
+        enableCrossExamination: true,
+      });
+
+      // 不应抛错——交叉质证失败应降级
+      const result = await engine.run([agent1, agent2, agent3, agent4], {
+        id: "crossexam-test",
+        description: "Cross examination test",
+        type: "text",
+        createdAt: new Date().toISOString(),
+        content: "Test cross examination degradation",
+      });
+
+      expect(result).toBeDefined();
+      expect(result.finalDecision).toBeDefined();
+    });
+
+    it("所有 agent sendMessage 失败时交叉质证降级为未执行", async () => {
+      const agent1 = new MockAgent("agent1", "Agent 1", "Expert", "custom", 0.9, 90);
+      const agent2 = new MockAgent("agent2", "Agent 2", "Expert", "custom", -0.8, 85);
+      const agent3 = new MockAgent("agent3", "Agent 3", "Critic", "custom", 0.85, 80);
+      const agent4 = new MockAgent("agent4", "Agent 4", "Critic", "custom", -0.75, 75);
+
+      // 所有 agent 第二次调用都 reject
+      for (const agent of [agent1, agent2, agent3, agent4]) {
+        const orig = agent.sendMessage.bind(agent);
+        let count = 0;
+        agent.sendMessage = (msg: string) => {
+          count++;
+          if (count > 1) return Promise.reject(new Error("all fail"));
+          return orig(msg);
+        };
+      }
+
+      const engine = new DiscussionEngine({
+        maxRounds: 1,
+        enableCrossExamination: true,
+      });
+
+      // 不应抛错——所有交叉质证失败应降级
+      const result = await engine.run([agent1, agent2, agent3, agent4], {
+        id: "crossexam-all-fail",
+        description: "All fail test",
+        type: "text",
+        createdAt: new Date().toISOString(),
+        content: "Test all agents fail in cross examination",
+      });
+
+      expect(result).toBeDefined();
+      expect(result.finalDecision).toBeDefined();
     });
   });
 });

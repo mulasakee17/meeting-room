@@ -18,7 +18,8 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { mulberry32 } from "./statsShared";
+import { cohensD, mean, mulberry32, sampleStd as stdDev } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 类型定义
@@ -80,12 +81,10 @@ function loadData(dir: string): ExperimentResult[] {
   if (!fs.existsSync(dir)) return [];
   const files = fs.readdirSync(dir).filter(f => f.endsWith(".json") && f !== "summary.json");
   return files.map(f => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(dir, f), "utf-8"));
-    } catch {
-      return null;
-    }
-  }).filter((r): r is ExperimentResult => r !== null && r.evaluationScores);
+    const parsed = safeJsonParse<ExperimentResult>(fs.readFileSync(path.join(dir, f), "utf-8"));
+    if (!parsed) { console.warn(`[weight_robustness] 无法解析 JSON: ${f}`); return null; }
+    return parsed;
+  }).filter((r): r is ExperimentResult => r !== null && !!r.evaluationScores);
 }
 
 // ============================================================================
@@ -115,24 +114,11 @@ function getGrade(score: number): string {
 // 统计工具
 // ============================================================================
 
-function mean(v: number[]): number {
-  return v.length === 0 ? 0 : v.reduce((a, b) => a + b, 0) / v.length;
-}
+// B3: mean 已从 statsShared 导入
 
-function stdDev(v: number[]): number {
-  if (v.length < 2) return 0;
-  const m = mean(v);
-  return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
+// B3: stdDev 已从 statsShared 导入
 
-function cohensD(a: number[], b: number[]): number {
-  if (a.length < 2 || b.length < 2) return 0;
-  const pooledStd = Math.sqrt(
-    ((a.length - 1) * stdDev(a) ** 2 + (b.length - 1) * stdDev(b) ** 2) /
-    (a.length + b.length - 2)
-  );
-  return pooledStd === 0 ? 0 : (mean(a) - mean(b)) / pooledStd;
-}
+// B3: cohensD 已从 statsShared 导入
 
 /**
  * Wilcoxon 符号秩检验（配对样本非参数检验）

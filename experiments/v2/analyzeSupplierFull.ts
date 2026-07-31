@@ -2,29 +2,25 @@
  * Supplier 任务完整统计分析
  */
 
-import * as fs from "fs";
 import * as path from "path";
-import { mulberry32, cohensD, mean, std, PERMUTATION_SEED } from "./statsShared";
+import { fileURLToPath } from "url";
+import { mulberry32, cohensD, mean, std, PERMUTATION_SEED, loadExperiments } from "./statsShared";
+import type { ExperimentResult } from "./statsShared";
 
-interface ExperimentResult {
-  runId: string;
-  ablation: string;
-  kendallTau: number;
-  decisionQuality: number;
-  tauTrajectory: number[];
-  totalRounds: number;
+interface InterventionEffectLite {
+  round: number;
+  interventionType: string;
+  effective: boolean;
+}
+
+// 局部类型仅声明脚本用到的字段（ExperimentResult 已从 statsShared 导入）
+type LocalExperimentResult = ExperimentResult & {
   converged: boolean;
   consensusLevel: number;
   opinionDiversity: number;
-  totalInterventions: number;
-  interventionEffects: Array<{ round: number; interventionType: string; effective: boolean }>;
+  interventionEffects: InterventionEffectLite[];
   interventionBreakdown: Record<string, number>;
-}
-
-function loadData(dir: string, prefix: string): ExperimentResult[] {
-  const files = fs.readdirSync(dir).filter(f => f.endsWith(".json") && f.startsWith(prefix) && !f.includes("summary"));
-  return files.map(f => JSON.parse(fs.readFileSync(path.join(dir, f), "utf-8")));
-}
+};
 
 function permutationTest(a: number[], b: number[], nPerm = 10000): number {
   const combined = [...a, ...b]; const n1 = a.length; const obsDiff = mean(a) - mean(b);
@@ -42,31 +38,29 @@ function pearsonCorr(x: number[], y: number[]): number {
   return num / Math.sqrt(dx * dy);
 }
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, "data_supplier");
 const CRISIS_DIR = path.resolve(__dirname, "data_crisis");
 
-function loadSummary(dir: string) {
-  const raw = JSON.parse(fs.readFileSync(path.join(dir, "summary.json"), "utf-8"));
-  const results = raw.results as ExperimentResult[];
-  return {
-    none: results.filter(r => r.ablation === "none"),
-    full: results.filter(r => r.ablation === "full"),
-    shuffle: results.filter(r => r.ablation === "shuffle"),
-  };
-}
-
 function main() {
-  const none = loadData(DATA_DIR, "supplier_none");
-  const full = loadData(DATA_DIR, "supplier_full");
-  const shuffle = loadData(DATA_DIR, "supplier_shuffle");
+  // B2 修复：使用 statsShared.loadExperiments 加载，传入 ablation 字段过滤
+  // 原 loadData() 用 startsWith(prefix) 存在污染风险（如 supplier_full_fixed 会被误含）
+  // 原 loadSummary() 依赖 summary.json，但 data_crisis/summary.json 仅含 8 个 full_fixed
+  //   实验，过滤 none/full/shuffle 全部返回空数组，导致 Crisis 对比全为 0/NaN
+  const none = loadExperiments(DATA_DIR, "supplier_none", "none") as LocalExperimentResult[];
+  const full = loadExperiments(DATA_DIR, "supplier_full", "full") as LocalExperimentResult[];
+  const shuffle = loadExperiments(DATA_DIR, "supplier_shuffle", "shuffle") as LocalExperimentResult[];
   const all = [...none, ...full, ...shuffle];
 
-  // 从 summary.json 动态加载 Crisis 数据，避免硬编码
-  const crisis = loadSummary(CRISIS_DIR);
-  const crisisNoneTau = crisis.none.map(r => r.kendallTau);
-  const crisisFullTau = crisis.full.map(r => r.kendallTau);
-  const crisisShuffleTau = crisis.shuffle.map(r => r.kendallTau);
-  const crisisAll = [...crisis.none, ...crisis.full, ...crisis.shuffle];
+  // Crisis 直接从独立 JSON 文件加载（24+24+24），不再依赖不完整的 summary.json
+  const crisisNone = loadExperiments(CRISIS_DIR, "crisis_none", "none") as LocalExperimentResult[];
+  const crisisFull = loadExperiments(CRISIS_DIR, "crisis_full", "full") as LocalExperimentResult[];
+  const crisisShuffle = loadExperiments(CRISIS_DIR, "crisis_shuffle", "shuffle") as LocalExperimentResult[];
+  const crisisNoneTau = crisisNone.map(r => r.kendallTau);
+  const crisisFullTau = crisisFull.map(r => r.kendallTau);
+  const crisisShuffleTau = crisisShuffle.map(r => r.kendallTau);
+  const crisisAll = [...crisisNone, ...crisisFull, ...crisisShuffle];
   const crisisD = cohensD(crisisFullTau, crisisNoneTau);
   const crisisP = permutationTest(crisisFullTau, crisisNoneTau);
   const crisisR = pearsonCorr(crisisAll.map(r => r.consensusLevel), crisisAll.map(r => r.kendallTau));

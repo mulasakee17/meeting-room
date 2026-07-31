@@ -9,6 +9,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 类型定义
@@ -84,6 +85,13 @@ export function cohensD(a: number[], b: number[]): number {
   return sp === 0 ? 0 : (ma - mb) / sp;
 }
 
+/** Cohen's d_z（配对样本效应量，d_z = mean(diffs) / sampleStd(diffs)，含 n<2 guard） */
+export function cohensDz(diffs: number[]): number {
+  if (diffs.length < 2) return 0;
+  const sd = sampleStd(diffs);
+  return sd === 0 ? 0 : mean(diffs) / sd;
+}
+
 // ============================================================================
 // PRNG
 // ============================================================================
@@ -123,10 +131,40 @@ export function loadData(dir: string, prefix: string): ExperimentResult[] {
   );
   return files.map(f => {
     const content = fs.readFileSync(path.join(dir, f), "utf-8");
-    const raw = JSON.parse(content) as ExperimentResult & { error?: string };
+    // 安全解析：损坏的 JSON 文件不再中断整个加载链（项目硬约束：用 safeJsonParse 替代裸 JSON.parse）
+    const raw = safeJsonParse<ExperimentResult & { error?: string }>(content);
+    if (!raw) {
+      console.warn(`[loadData] 跳过无法解析的文件: ${f}`);
+      return null;
+    }
     if (raw.error) return null;
     return raw;
   }).filter((r): r is ExperimentResult => r !== null);
+}
+
+/**
+ * 从目录加载实验结果，按 ablation 字段精确过滤（修复 startsWith 污染）。
+ *
+ * B2 修复：startsWith("crisis_full") 会误包含 crisis_full_fixed 文件，
+ * 导致 n=24 变成 n=32。本函数用 ablation 字段精确过滤。
+ *
+ * @param dir 数据目录
+ * @param prefix 文件名前缀（如 "crisis_full"）
+ * @param ablationFilter 按 ablation 字段过滤（如 "full" 排除 "full_fixed"）
+ * @example
+ *   loadExperiments(dir, "crisis_full", "full")  // 24 个，排除 full_fixed
+ *   loadExperiments(dir, "crisis_none", "none")  // 24 个
+ *   loadExperiments(dir, "crisis_full")           // 32 个（向后兼容，含 fixed）
+ */
+export function loadExperiments(
+  dir: string,
+  prefix: string,
+  ablationFilter?: string,
+): ExperimentResult[] {
+  const all = loadData(dir, prefix);
+  return ablationFilter === undefined
+    ? all
+    : all.filter(r => r.ablation === ablationFilter);
 }
 
 // ============================================================================

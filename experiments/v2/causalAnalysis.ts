@@ -14,6 +14,7 @@ import {
   type ExperimentTrajectory,
   type CausalAnalysisResult,
 } from "../../src/lib/analysis/causalEffect";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 数据加载
@@ -43,7 +44,8 @@ function loadData(dir: string): RawExperiment[] {
   for (const file of files) {
     try {
       const raw = fs.readFileSync(path.join(dir, file), "utf-8");
-      const data = JSON.parse(raw);
+      const data = safeJsonParse<RawExperiment>(raw);
+      if (!data) { console.warn(`[causalAnalysis] 无法解析 JSON: ${file}`); continue; }
       if (data.error) continue; // 跳过失败实验
       results.push(data);
     } catch {

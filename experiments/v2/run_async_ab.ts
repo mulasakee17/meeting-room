@@ -23,6 +23,7 @@ import * as path from "path";
 import dotenv from "dotenv";
 dotenv.config({ path: path.resolve(__dirname, "..", "..", ".env.local") });
 import { CustomAgent } from "../../src/lib/adapters/custom";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 import { DiscussionEngine } from "../../src/lib/discussion";
 import { AsyncDiscussionEngine, type AsyncDiscussionConfig, type DependencyMap, type InfoKeywordsMap, type SpeakMode } from "../../src/lib/discussion/asyncEngine";
 import type { TaskConfig } from "../lunar_survival/config";
@@ -243,7 +244,8 @@ function loadCTerminationUtterances(speakMode?: string, dataDir?: string): numbe
   for (const f of fs.readdirSync(DATA_DIR)) {
     if (f.startsWith("fraud_C_") && f.endsWith(".json")) {
       try {
-        const data = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), "utf8"));
+        const data = safeJsonParse<AsyncExperimentResult>(fs.readFileSync(path.join(DATA_DIR, f), "utf8"));
+        if (!data) { console.warn(`[run_async_ab] 无法解析 JSON: ${f}`); continue; }
         // 排除错误运行的实验
         if (!data.terminationReason?.startsWith("error") && typeof data.totalUtterances === "number") {
           // 按 speakMode 过滤：只读取与 D 组相同 speakMode 的 C 组数据

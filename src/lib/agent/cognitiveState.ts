@@ -68,31 +68,87 @@ export interface Evidence {
   items: EvidenceItem[];
 }
 
-/** Agent 的认知惯性 */
+/**
+ * 行为事件记录——跨轮追踪的离散事件。
+ *
+ * 设计原则：在短讨论（3-5 轮）中，不试图估计连续的认知特质。
+ * 改为记录离散行为事件，随事件累积渐进提高估计置信度。
+ */
+export interface BehaviorEvents {
+  // ── 惯性相关事件 ──
+  /** 被反驳的次数 */
+  timesRefuted: number;
+  /** 被反驳后改变了立场的次数 */
+  timesChangedAfterRefutation: number;
+  /** 自发立场翻转次数（topChoice 改变但非反驳触发） */
+  spontaneousFlips: number;
+
+  // ── 暴露/响应事件（替代旧 Λ）──
+  /** 暴露于新证据的次数（被 inject_evidence 或他人分享独特证据） */
+  timesExposed: number;
+  /** 暴露后 U 向证据方向移动的次数 */
+  timesRespondedAfterExposure: number;
+}
+
+/** Agent 的认知惯性（渐进估计） */
 export interface Inertia {
-  /** 惯性强度 [0, 1] */
+  /** 惯性估计值 [0, 1]。高 = 不容易改变立场 */
+  estimate: number;
+  /** 估计置信度 [0, 1]。行为事件越多越接近 1 */
+  confidence: number;
+  /** 来源权重分解 */
+  sourceWeights: {
+    /** stated_openness 的权重（LLM 自报可说服性） */
+    stated: number;
+    /** 角色先验的权重（关键词匹配） */
+    rolePrior: number;
+    /** 行为事件的权重 */
+    behavioral: number;
+  };
+  /** @deprecated 自 v6 起使用 estimate 替代。保留用于向后兼容 */
   strength: number;
-  /** 惯性来源 */
+  /** @deprecated 自 v6 起使用 sourceWeights 替代 */
   source: {
-    /** 基于证据的惯性：证据越多 → 惯性越高 */
     evidenceBased: number;
-    /** 基于公开表达的惯性：公开发言后更难改变 */
     expressionBased: number;
-    /** 基于角色的惯性 */
     roleBased: number;
   };
-  /** 最近被反驳的次数（降低惯性） */
+  /** @deprecated 自 v6 起使用 BehaviorEvents.timesRefuted 替代 */
   recentRefutations: number;
 }
 
-/** 信心（派生变量，非独立状态） */
+/** 信心（自报 + 行为稳定性交叉验证） */
 export interface Confidence {
-  /** 总体信心 [0, 1] */
+  /** 总体估计值 [0, 1] */
+  estimate: number;
+  /** 估计置信度 [0, 1] */
+  confidence: number;
+  /** LLM 自报 confidence（0-100 → 0-1） */
+  stated: number;
+  /** 行为稳定性：1 - normalized(|ΔU|)。Round 3+ 可用 */
+  stability: number;
+  /** 来源权重 */
+  sourceWeights: {
+    stated: number;
+    stability: number;
+  };
+  /** @deprecated 自 v6 起使用 estimate 替代 */
   overall: number;
-  /** 证据驱动的信心 = f(evidence.quality, evidence.coverage) */
+  /** @deprecated 自 v6 起使用 stated 替代 */
   evidenceBased: number;
-  /** 稳定性驱动的信心 = f(utility 变化历史) — Phase 4 */
+  /** @deprecated 自 v6 起使用 stability 替代 */
   stabilityBased: number;
+}
+
+/** 易感性（暴露事件追踪，替代旧 (1-I)(1-C) 公式） */
+export interface Susceptibility {
+  /** 估计值 [0, 1]。高 = 收到新证据后容易调整偏好 */
+  estimate: number;
+  /** 估计置信度 [0, 1] */
+  confidence: number;
+  /** 是否可用。暴露事件 < 2 → false */
+  usable: boolean;
+  /** @deprecated 自 v6 起：仅记录事件，不再计算公式值 */
 }
 
 /** 完整的 Agent 认知状态 */
@@ -104,10 +160,15 @@ export interface AgentCognitiveState {
   evidence: Evidence;
   inertia: Inertia;
   confidence: Confidence;
+  susceptibility: Susceptibility;
+  /** 行为事件记录 */
+  behaviorEvents: BehaviorEvents;
   /** 本轮是否发言 */
   spokeThisRound: boolean;
   /** 历史 utility 快照（用于计算 stability-based confidence） */
   utilityHistory: Array<{ round: number; scores: Record<OptionId, number> }>;
+  /** LLM 自报的 openness（"你改变立场的可能性有多大？"0-1）。用于 I 的先验 */
+  statedOpenness?: number;
 }
 
 // ============================================================================
@@ -122,7 +183,12 @@ export interface AgentCognitiveState {
  */
 const ROLE_INERTIA_RULES: Array<{ keywords: string[]; inertia: number }> = [
   { keywords: ["expert", "专家", "资深", "senior"], inertia: 0.6 },
+  { keywords: ["director", "总监"], inertia: 0.55 },
   { keywords: ["analyst", "分析师", "分析"], inertia: 0.5 },
+  { keywords: ["assessor", "evaluator", "评估师"], inertia: 0.5 },
+  { keywords: ["engineer", "工程师"], inertia: 0.5 },
+  { keywords: ["consultant", "advisor", "顾问"], inertia: 0.45 },
+  { keywords: ["manager", "经理"], inertia: 0.45 },
   { keywords: ["critic", "批评", "质疑", "审查"], inertia: 0.4 },
   { keywords: ["diplomat", "外交", "协调"], inertia: 0.35 },
   { keywords: ["moderator", "主持人", "协调员", "facilitator"], inertia: 0.3 },
@@ -154,17 +220,56 @@ const REFUTATION_INERTIA_PENALTY = 0.1;
 /** 证据源可靠性默认值 */
 const DEFAULT_SOURCE_RELIABILITY = 0.5;
 
-/** 全局信息池大小（Phase 2: 硬编码，Phase 4: 动态计算） */
+/** 全局信息池大小默认值（v3.2.1: 可通过 updateEvidence config 覆盖） */
 const DEFAULT_GLOBAL_INFO_POOL_SIZE = 10;
 
-/** 总角度/类别数（Phase 2: 硬编码，Phase 4: 动态计算） */
+/** 总类别数默认值（v3.2.1: 可通过 updateEvidence config 覆盖） */
 const DEFAULT_TOTAL_CATEGORIES = 5;
+
+/**
+ * v3.2.1: evidence 计算的可选配置，用于移除硬编码。
+ * - globalInfoPoolSize: 全局信息池大小（所有 agent 独有信息总和）。默认 10。
+ *   V2 任务有 5 agent × 5 方案 = 25 条信息，应传入 25。
+ * - totalCategories: 选项总数。默认 5。
+ *   应从 task config 传入实际选项数。
+ */
+export interface EvidenceConfig {
+  globalInfoPoolSize?: number;
+  totalCategories?: number;
+}
 
 // ============================================================================
 // Factory & Conversion
 // ============================================================================
 
-/** 从旧 belief/confidence 创建最小 cognitive state（向后兼容） */
+/**
+ * 从 itemBeliefs 派生标量立场汇总（ROADMAP_V5: stance as derived summary）。
+ *
+ * 不从 LLM 直接输出标量，而是从 itemBeliefs 计算：
+ *   statedStance = sign(top_option) × |top_score|
+ *
+ * 标量不是"测量值"，而是"汇总统计"——就像 GDP 不是任何一个人的行为，而是经济活动的汇总。
+ * 这解决了标量信念的不可辨识问题：不声称测到了任何内部状态，只声称从 K 维自报偏好中
+ * 计算了一个 1 维汇总。
+ *
+ * @param itemBeliefs LLM 输出的 itemBeliefs 数组
+ * @returns 标量立场汇总 [-1, 1]，若 itemBeliefs 为空则返回 0
+ */
+export function stanceFromItemBeliefs(
+  itemBeliefs: Array<{ item: string; rank: number; belief: number; confidence: number }>,
+): number {
+  if (!itemBeliefs || itemBeliefs.length === 0) return 0;
+  const top = itemBeliefs.reduce((a, b) => a.rank < b.rank ? a : b);
+  const topScore = Math.max(-1, Math.min(1, top.belief));
+  return Math.sign(topScore) * Math.abs(topScore);
+}
+
+/**
+ * 从旧 belief/confidence 创建最小 cognitive state（向后兼容）。
+ *
+ * @deprecated 自 ROADMAP_V5 起，新代码应使用 stanceFromItemBeliefs() 从 itemBeliefs 派生标量。
+ *   此函数仅用于旧实验路径（169 runs）的向后兼容，不应用于新 NativeCognitiveEngine 路径。
+ */
 export function beliefToCognitiveState(
   agentId: string,
   agentName: string,
@@ -174,18 +279,23 @@ export function beliefToCognitiveState(
   options: OptionId[] = ['A', 'B'],
 ): AgentCognitiveState {
   const scores: Record<OptionId, number> = {};
-  // 分配 belief 到第一个选项，其余选项为 0
-  if (options.length >= 2) {
+  // v3.2.1: 改进多选项支持——废弃二选一假设（scores[1] = -belief）。
+  //
+  // 旧实现的问题：对 5 选项任务，把 belief 分配给 options[0]，-belief 给 options[1]，
+  // 其余 0。但 belief 的语义是"整体倾向"，不明确是对哪个选项的倾向。
+  // 强行做二选一假设会扭曲 utility 结构。
+  //
+  // 新实现：第一个选项得 belief，其余选项得 0。承认 scalar belief 信息不足，
+  // 无法构建多选项 utility。应优先使用 itemBeliefs 输入。
+  if (options.length >= 1) {
     scores[options[0]] = belief;
-    scores[options[1]] = -belief;
-    for (let i = 2; i < options.length; i++) {
+    for (let i = 1; i < options.length; i++) {
       scores[options[i]] = 0;
     }
-  } else if (options.length === 1) {
-    scores[options[0]] = belief;
   }
 
-  const topChoice = belief > 0 ? options[0] : options[1] || options[0];
+  // topChoice: belief > 0 倾向 options[0]，belief < 0 倾向 options[1]（若有）
+  const topChoice = belief >= 0 ? options[0] : (options[1] || options[0]);
   const absBelief = Math.abs(belief);
   const sortedScores = Object.values(scores).sort((a, b) => b - a);
   const preferenceClarity = sortedScores.length >= 2
@@ -212,14 +322,34 @@ export function beliefToCognitiveState(
       items: [],
     },
     inertia: {
+      estimate: roleBase,
+      confidence: 0.10,
+      sourceWeights: { stated: 0.5, rolePrior: 0.5, behavioral: 0 },
       strength: roleBase,
       source: { evidenceBased: 0, expressionBased: 0, roleBased: roleBase },
       recentRefutations: 0,
     },
     confidence: {
+      estimate: confidence / 100,
+      confidence: 0.10,
+      stated: confidence / 100,
+      stability: 0.5,
+      sourceWeights: { stated: 1.0, stability: 0 },
       overall: confidence / 100,
       evidenceBased: 0.5,
       stabilityBased: 0.5,
+    },
+    susceptibility: {
+      estimate: 0.5,
+      confidence: 0.05,
+      usable: false,
+    },
+    behaviorEvents: {
+      timesRefuted: 0,
+      timesChangedAfterRefutation: 0,
+      spontaneousFlips: 0,
+      timesExposed: 0,
+      timesRespondedAfterExposure: 0,
     },
     spokeThisRound: false,
     utilityHistory: [],
@@ -262,15 +392,45 @@ export function utilityFromItemBeliefs(
 // Evidence Extraction
 // ============================================================================
 
-/** 从 LLM 输出的 evidence 字符串中提取证据条目 */
+/** 从 LLM 输出的 evidence 字符串中提取证据条目。
+ *
+ * v3.2.1: 支持双格式——优先使用 structuredEvidence（LLM 直接声明 supports/strength），
+ * 无则回退到 evidenceStrings 启发式归类（includes 匹配 + top-ranked 回退）。
+ *
+ * 前沿经验：Structured Outputs 优于 free text + post-hoc parsing。
+ * 新格式由 LLM 直接声明 supports/strength，消除归类噪声。
+ */
 export function extractEvidenceItems(
   evidenceStrings: string[],
   itemBeliefs: Array<{ item: string; rank: number; belief: number; confidence: number }>,
   agentId: string,
   roundNumber: number,
+  /** v3.2.1: 结构化 evidence——LLM 直接声明 supports/strength，消除启发式归类噪声。
+   *  如果提供，优先使用；否则回退到 evidenceStrings 启发式。 */
+  structuredEvidence?: Array<{ content: string; supports: string; strength: number }>,
 ): EvidenceItem[] {
   const items: EvidenceItem[] = [];
 
+  // ── 优先路径：结构化 evidence（无归类噪声）──
+  if (structuredEvidence && structuredEvidence.length > 0) {
+    for (let i = 0; i < structuredEvidence.length; i++) {
+      const se = structuredEvidence[i];
+      if (!se.content || se.content.trim().length === 0) continue;
+      items.push({
+        id: `${agentId}_ev_${roundNumber}_${i}`,
+        content: se.content,
+        supports: se.supports || 'unknown',
+        strength: Math.max(0, Math.min(1, se.strength)),
+        source: agentId,
+        sourceReliability: DEFAULT_SOURCE_RELIABILITY,
+        acquiredAt: roundNumber,
+        shared: false, // v6: 初始为 false，由 markEvidenceSharing() 标记
+      });
+    }
+    return items;
+  }
+
+  // ── 回退路径：启发式归类（旧格式 string[]）──
   // 确定每个 evidence 支持哪个选项：找与 evidence 文本最匹配的选项
   const options = itemBeliefs.map(ib => ib.item);
 
@@ -309,7 +469,7 @@ export function extractEvidenceItems(
       source: agentId,
       sourceReliability: DEFAULT_SOURCE_RELIABILITY,
       acquiredAt: roundNumber,
-      shared: true,
+      shared: false, // v6: 初始为 false，由 markEvidenceSharing() 标记
     });
   }
 
@@ -333,6 +493,7 @@ export function updateEvidence(
   currentEvidence: Evidence,
   newItems: EvidenceItem[],
   roundNumber: number,
+  config?: EvidenceConfig,
 ): Evidence {
   const oldCount = currentEvidence.items.length;
   const allItems = [...currentEvidence.items];
@@ -348,7 +509,11 @@ export function updateEvidence(
     }
   }
 
-  const coverage = Math.min(1, allItems.length / DEFAULT_GLOBAL_INFO_POOL_SIZE);
+  // v3.2.1: 支持从外部传入信息池大小和类别数，移除硬编码
+  const poolSize = config?.globalInfoPoolSize ?? DEFAULT_GLOBAL_INFO_POOL_SIZE;
+  const categories = config?.totalCategories ?? DEFAULT_TOTAL_CATEGORIES;
+
+  const coverage = Math.min(1, allItems.length / poolSize);
 
   const quality = allItems.length > 0
     ? allItems.reduce((s, i) => s + i.sourceReliability, 0) / allItems.length
@@ -356,7 +521,7 @@ export function updateEvidence(
 
   // 多样性：基于 supports 的不同选项数
   const uniqueSupports = new Set(allItems.map(i => i.supports));
-  const diversity = Math.min(1, uniqueSupports.size / DEFAULT_TOTAL_CATEGORIES);
+  const diversity = Math.min(1, uniqueSupports.size / categories);
 
   const recentGain = allItems.length > 0 ? newCount / allItems.length : 0;
 
@@ -385,6 +550,11 @@ export function updateConfidence(
   const overall = 0.7 * evidenceBased + 0.3 * stabilityBased;
 
   return {
+    estimate: Math.max(0, Math.min(1, overall)),
+    confidence: 0.10,
+    stated: Math.max(0, Math.min(1, overall)),
+    stability: stabilityBased,
+    sourceWeights: { stated: 1.0, stability: 0 },
     overall: Math.max(0, Math.min(1, overall)),
     evidenceBased: Math.max(0, Math.min(1, evidenceBased)),
     stabilityBased,
@@ -434,6 +604,7 @@ export function updateInertia(
   strength = Math.max(0.05, Math.min(0.95, strength));
 
   return {
+    ...currentInertia,
     strength,
     source: {
       evidenceBased: Math.max(0, Math.min(1, evidenceBased)),
@@ -536,6 +707,8 @@ export interface CognitiveStateUpdateInput {
   otherAgentUtilities: Array<{ agentId: string; utility: Utility }>;
   /** 轮次 */
   roundNumber: number;
+  /** v3.2.1: evidence 计算配置（移除硬编码）。未提供则用默认值。 */
+  evidenceConfig?: EvidenceConfig;
 }
 
 /**
@@ -547,12 +720,12 @@ export function updateCognitiveState(input: CognitiveStateUpdateInput): AgentCog
   const {
     agentId, agentName, agentRole, currentState,
     evidenceStrings, itemBeliefs, spokeThisRound, wasRefuted,
-    otherAgentUtilities, roundNumber,
+    otherAgentUtilities, roundNumber, evidenceConfig,
   } = input;
 
   // Step 1: Evidence Update
   const newEvidenceItems = extractEvidenceItems(evidenceStrings, itemBeliefs, agentId, roundNumber);
-  const evidence = updateEvidence(currentState.evidence, newEvidenceItems, roundNumber);
+  const evidence = updateEvidence(currentState.evidence, newEvidenceItems, roundNumber, evidenceConfig);
 
   // Step 2: Confidence Update (派生)
   const utilityHistory = [
@@ -582,6 +755,8 @@ export function updateCognitiveState(input: CognitiveStateUpdateInput): AgentCog
     evidence,
     inertia,
     confidence,
+    susceptibility: currentState.susceptibility,
+    behaviorEvents: currentState.behaviorEvents,
     spokeThisRound,
     utilityHistory: utilityHistory.slice(-10), // 只保留最近 10 轮
   };
@@ -591,11 +766,14 @@ export function updateCognitiveState(input: CognitiveStateUpdateInput): AgentCog
 // Susceptibility & Utility Distance (utilities)
 // ============================================================================
 
-/** 计算 susceptibility λ = max((1-ι)(1-c), MIN_SUSCEPTIBILITY) */
+/**
+ * @deprecated 自 v6 起，Λ 不再从公式计算。使用 BehaviorEvents.timesExposed/timesRespondedAfterExposure
+ *   通过 ProgressiveEstimator 估计。此函数保留用于向后兼容测试。
+ */
 export function computeSusceptibility(inertia: Inertia, confidence: Confidence): number {
   return Math.max(
     (1 - inertia.strength) * (1 - confidence.overall),
-    MIN_SUSCEPTIBILITY,
+    0.05,
   );
 }
 

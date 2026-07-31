@@ -13,7 +13,8 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { mulberry32, mean, sampleStd, cohensD, PERMUTATION_SEED } from "./statsShared";
+import { mulberry32, mean, sampleStd, cohensD, cohensDz, PERMUTATION_SEED } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface ExperimentResult {
   runId: string;
@@ -40,7 +41,11 @@ function loadResults(dir: string, group: string): ExperimentResult[] {
     })
     .sort();
 
-  return files.map(f => JSON.parse(fs.readFileSync(path.join(dir, f), "utf-8")) as ExperimentResult);
+  return files.map(f => {
+    const parsed = safeJsonParse<ExperimentResult>(fs.readFileSync(path.join(dir, f), "utf-8"));
+    if (!parsed) { console.warn(`[analyze_cross_model] 无法解析 JSON: ${f}`); return null; }
+    return parsed;
+  }).filter((r): r is ExperimentResult => r !== null);
 }
 
 function stats(vals: number[]) {
@@ -103,11 +108,7 @@ function pairedPermutationTest(diffs: number[], nPerm = 10000): number {
  * Cohen's d_z（配对效应量）= mean(diffs) / sampleStd(diffs)。
  * 与 cohensD（独立样本 pooled std）不同，d_z 反映配对设计的方差缩减收益。
  */
-function cohensDz(diffs: number[]): number {
-  if (diffs.length < 2) return 0;
-  const sd = sampleStd(diffs);
-  return sd === 0 ? 0 : mean(diffs) / sd;
-}
+// cohensDz 已从 statsShared 导入（P2 修复：消除本地副本）
 
 /**
  * 配对差异的 95% CI（t 分布，df = n-1）。
@@ -364,3 +365,192 @@ if (allDS.length > 0 && allZP.length > 0) {
 
 console.log("\n" + "=".repeat(80));
 console.log("分析完成。");
+
+// ==========================================================================
+// P0 扩展：Qwen 跨模型分析（2026-07-26 追加）
+//
+// 动机：data_fraud_qwen/ 和 data_crisis_qwen/ 已跑完但从未做过 τ 跨模型对比。
+// 本 section 补全三模型（DeepSeek + Zhipu + Qwen）对比，揭示方向性矛盾。
+// ==========================================================================
+
+const QW_FRAUD_DIR = path.join(BASE, "data_fraud_qwen");      // Qwen fraud C 组 (n=10)
+const DS_CRISIS_DIR = path.join(BASE, "data_crisis");          // DeepSeek Crisis (none/full/shuffle)
+const QW_CRISIS_DIR = path.join(BASE, "data_crisis_qwen");     // Qwen Crisis (none/full/shuffle)
+
+/**
+ * 加载 Crisis 任务结果（文件名格式：crisis_{ablation}_{runIndex}.json）
+ * τ 字段为 kendallTau，组别字段为 ablation
+ */
+interface CrisisResult {
+  runId: string;
+  ablation: string;
+  runIndex: number;
+  kendallTau: number;
+  decisionQuality: number;
+  totalRounds: number;
+  codeVersion?: string;
+}
+
+function loadCrisisResults(dir: string, ablation: string): CrisisResult[] {
+  if (!fs.existsSync(dir)) return [];
+  const files = fs.readdirSync(dir)
+    .filter(f => f.startsWith(`crisis_${ablation}_`) && f.endsWith(".json") && !f.includes("fixed"))
+    .sort();
+  return files.map(f => {
+    const parsed = safeJsonParse<CrisisResult>(fs.readFileSync(path.join(dir, f), "utf-8"));
+    if (!parsed) { console.warn(`[analyze_cross_model] 无法解析 JSON: ${f}`); return null; }
+    return parsed;
+  }).filter((r): r is CrisisResult => r !== null);
+}
+
+function loadFraudCResults(dir: string): ExperimentResult[] {
+  if (!fs.existsSync(dir)) return [];
+  const files = fs.readdirSync(dir)
+    .filter(f => f.startsWith("fraud_C_content_driven_") && f.endsWith(".json"))
+    .sort();
+  return files.map(f => {
+    const parsed = safeJsonParse<ExperimentResult>(fs.readFileSync(path.join(dir, f), "utf-8"));
+    if (!parsed) { console.warn(`[analyze_cross_model] 无法解析 JSON: ${f}`); return null; }
+    return parsed;
+  }).filter((r): r is ExperimentResult => r !== null);
+}
+
+// ── Section A: Fraud 任务三模型 C 组对比 ──
+console.log("\n\n" + "=".repeat(80));
+console.log("  Qwen 跨模型扩展分析（2026-07-26 追加）");
+console.log("=".repeat(80));
+
+console.log("\n## Section A: Fraud 任务 C 组三模型对比\n");
+
+const dsC = loadFraudCResults(DS_DIR);
+const zpC = loadFraudCResults(ZP_DIR);
+const qwC = loadFraudCResults(QW_FRAUD_DIR);
+
+const fraudCProviders = [
+  { name: "DeepSeek-V3", data: dsC },
+  { name: "Zhipu glm-4-flash", data: zpC },
+  { name: "Qwen", data: qwC },
+];
+
+console.log("| 模型 | n | τ 均值 ± σ | τ=1.0 | τ≥0.8 | 发言数 |");
+console.log("|------|---|-------------|-------|-------|--------|");
+for (const p of fraudCProviders) {
+  if (p.data.length === 0) {
+    console.log(`| ${p.name} | 0 | N/A | - | - | - |`);
+    continue;
+  }
+  const taus = p.data.map(d => d.kendallTau);
+  const utts = p.data.map(d => d.totalUtterances);
+  const s = stats(taus);
+  const us = stats(utts);
+  const tau1 = p.data.filter(d => d.kendallTau === 1).length;
+  const tauGt08 = p.data.filter(d => d.kendallTau >= 0.8).length;
+  console.log(`| ${p.name} | ${s.n} | ${s.mean.toFixed(3)} ± ${s.std.toFixed(3)} | ${tau1}/${s.n} | ${tauGt08}/${s.n} | ${us.mean.toFixed(1)} |`);
+}
+
+// 三模型两两配对检验
+console.log("\n### 两两配对统计检验（按 runIndex 配对）\n");
+const pairs: { label: string; a: ExperimentResult[]; b: ExperimentResult[] }[] = [
+  { label: "Zhipu vs DeepSeek", a: dsC, b: zpC },
+  { label: "Qwen vs DeepSeek", a: dsC, b: qwC },
+  { label: "Qwen vs Zhipu", a: zpC, b: qwC },
+];
+for (const pr of pairs) {
+  const paired = pairByRunIndex(pr.a, pr.b);
+  if (paired.length < 2) {
+    console.log(`- ${pr.label}: 配对数 ${paired.length} < 2，跳过`);
+    continue;
+  }
+  const diffs = paired.map(p => p.b.kendallTau - p.a.kendallTau);
+  const dz = cohensDz(diffs);
+  const p = pairedPermutationTest(diffs);
+  const ci = pairedCI(diffs);
+  console.log(`- **${pr.label}** (n=${paired.length}): Δτ=${mean(diffs) >= 0 ? "+" : ""}${mean(diffs).toFixed(3)} ± ${sampleStd(diffs).toFixed(3)}, d_z=${dz.toFixed(3)} (${interpretD(dz)}), p=${p.toFixed(4)}, 95%CI=[${ci.lower.toFixed(3)}, ${ci.upper.toFixed(3)}]${p < 0.05 ? " ✅显著" : " ⚪不显著"}`);
+}
+
+// ── Section B: Crisis 任务两模型三组对比（核心：治理效应跨模型方向矛盾）──
+console.log("\n## Section B: Crisis 任务两模型三组对比（治理效应跨模型验证）\n");
+
+const crisisAblations = ["none", "full", "shuffle"] as const;
+
+console.log("| 组 | DeepSeek τ | Qwen τ | Δτ (Qwen-DS) | DS 方向 | Qwen 方向 | 方向一致? |");
+console.log("|----|-----------|--------|--------------|---------|-----------|----------|");
+
+const crisisComparisons: { ablation: string; dsTau: number; qwTau: number; dsN: number; qwN: number }[] = [];
+
+for (const ablation of crisisAblations) {
+  const dsData = loadCrisisResults(DS_CRISIS_DIR, ablation);
+  const qwData = loadCrisisResults(QW_CRISIS_DIR, ablation);
+  const dsTau = dsData.length > 0 ? stats(dsData.map(d => d.kendallTau)) : null;
+  const qwTau = qwData.length > 0 ? stats(qwData.map(d => d.kendallTau)) : null;
+
+  if (dsTau && qwTau) {
+    crisisComparisons.push({ ablation, dsTau: dsTau.mean, qwTau: qwTau.mean, dsN: dsTau.n, qwN: qwTau.n });
+    const delta = (qwTau.mean - dsTau.mean).toFixed(3);
+    const deltaPct = ((qwTau.mean / dsTau.mean - 1) * 100).toFixed(1) + "%";
+    console.log(`| ${ablation} | ${dsTau.mean.toFixed(3)} ± ${dsTau.std.toFixed(3)} (n=${dsTau.n}) | ${qwTau.mean.toFixed(3)} ± ${qwTau.std.toFixed(3)} (n=${qwTau.n}) | ${delta} (${deltaPct}) | — | — | — |`);
+  }
+}
+
+// 治理效应方向对比
+console.log("\n### 治理效应方向跨模型对比（核心发现）\n");
+if (crisisComparisons.length >= 2) {
+  const noneC = crisisComparisons.find(c => c.ablation === "none");
+  const fullC = crisisComparisons.find(c => c.ablation === "full");
+  const shuffleC = crisisComparisons.find(c => c.ablation === "shuffle");
+
+  if (noneC && fullC) {
+    const dsGovEffect = fullC.dsTau - noneC.dsTau;
+    const qwGovEffect = fullC.qwTau - noneC.qwTau;
+    console.log(`| 模型 | none τ | full τ | 治理效应 (full-none) | 方向 |`);
+    console.log(`|------|--------|--------|---------------------|------|`);
+    console.log(`| DeepSeek | ${noneC.dsTau.toFixed(3)} | ${fullC.dsTau.toFixed(3)} | ${dsGovEffect >= 0 ? "+" : ""}${dsGovEffect.toFixed(3)} | ${dsGovEffect > 0 ? "✅ 正向（治理有效）" : "❌ 负向"} |`);
+    console.log(`| Qwen | ${noneC.qwTau.toFixed(3)} | ${fullC.qwTau.toFixed(3)} | ${qwGovEffect >= 0 ? "+" : ""}${qwGovEffect.toFixed(3)} | ${qwGovEffect > 0 ? "✅ 正向" : "❌ 负向（治理无效甚至有害）"} |`);
+
+    if (dsGovEffect > 0 && qwGovEffect <= 0) {
+      console.log(`\n> ⚠️ **方向矛盾**：DeepSeek 上治理有效（Δτ=+${dsGovEffect.toFixed(3)}），Qwen 上治理无效甚至略负（Δτ=${qwGovEffect >= 0 ? "+" : ""}${qwGovEffect.toFixed(3)}）。`);
+      console.log(`> 这表明"治理提升决策质量"并非跨模型普适——治理效应受模型能力与任务交互影响。`);
+      console.log(`> 可能解释：Qwen none 组基线已较高（${noneC.qwTau.toFixed(3)} vs DeepSeek ${noneC.dsTau.toFixed(3)}），存在天花板效应；或 Qwen 在无治理下已能自发整合信息。`);
+    } else if (dsGovEffect > 0 && qwGovEffect > 0) {
+      console.log(`\n> ✅ **方向一致**：两模型上治理均正向（DeepSeek +${dsGovEffect.toFixed(3)}, Qwen +${qwGovEffect.toFixed(3)}）。`);
+    }
+  }
+
+  if (noneC && shuffleC) {
+    const dsShuffleEffect = shuffleC.dsTau - noneC.dsTau;
+    const qwShuffleEffect = shuffleC.qwTau - noneC.qwTau;
+    console.log(`\n| 模型 | none τ | shuffle τ | shuffle 效应 (shuffle-none) | 方向 |`);
+    console.log(`|------|--------|-----------|----------------------------|------|`);
+    console.log(`| DeepSeek | ${noneC.dsTau.toFixed(3)} | ${shuffleC.dsTau.toFixed(3)} | ${dsShuffleEffect >= 0 ? "+" : ""}${dsShuffleEffect.toFixed(3)} | ${dsShuffleEffect > 0 ? "✅ 正向" : "❌ 负向"} |`);
+    console.log(`| Qwen | ${noneC.qwTau.toFixed(3)} | ${shuffleC.qwTau.toFixed(3)} | ${qwShuffleEffect >= 0 ? "+" : ""}${qwShuffleEffect.toFixed(3)} | ${qwShuffleEffect > 0 ? "✅ 正向" : "❌ 负向"} |`);
+
+    if (dsShuffleEffect > 0 && qwShuffleEffect > 0) {
+      console.log(`\n> ✅ **shuffle 效应跨模型方向一致**：两模型上 shuffle 均正向（DeepSeek +${dsShuffleEffect.toFixed(3)}, Qwen +${qwShuffleEffect.toFixed(3)}）。结构重排的普适性强于过程治理。`);
+    }
+  }
+}
+
+// Crisis 治理效应配对检验
+console.log("\n### Crisis 治理效应配对统计检验\n");
+for (const ablation of crisisAblations) {
+  const dsData = loadCrisisResults(DS_CRISIS_DIR, ablation);
+  const qwData = loadCrisisResults(QW_CRISIS_DIR, ablation);
+  if (dsData.length < 2 || qwData.length < 2) continue;
+
+  // 按 runIndex 配对
+  const qwMap = new Map(qwData.map(r => [r.runIndex, r]));
+  const paired = dsData
+    .map(d => ({ d, q: qwMap.get(d.runIndex) }))
+    .filter(p => p.q) as { d: CrisisResult; q: CrisisResult }[];
+
+  if (paired.length < 2) continue;
+
+  const diffs = paired.map(p => p.q.kendallTau - p.d.kendallTau);
+  const dz = cohensDz(diffs);
+  const p = pairedPermutationTest(diffs);
+  const ci = pairedCI(diffs);
+  console.log(`- **${ablation} 组** (n=${paired.length} 配对): Δτ(Qwen-DeepSeek)=${mean(diffs) >= 0 ? "+" : ""}${mean(diffs).toFixed(3)} ± ${sampleStd(diffs).toFixed(3)}, d_z=${dz.toFixed(3)} (${interpretD(dz)}), p=${p.toFixed(4)}, 95%CI=[${ci.lower.toFixed(3)}, ${ci.upper.toFixed(3)}]${p < 0.05 ? " ✅显著" : " ⚪不显著"}`);
+}
+
+console.log("\n" + "=".repeat(80));
+console.log("Qwen 跨模型扩展分析完成。");

@@ -1021,19 +1021,31 @@ export class GovernanceEngine {
 
     for (const intervention of interventions) {
       const strategy = this.strategies.get(intervention.type);
-      
+
       if (strategy) {
-        const result = strategy.apply(intervention, state, agentKnowledge);
-        results.push(result);
-        
-        if (result.success && result.stateChanges) {
-          if (result.stateChanges.updatedEdges) {
-            state.interactionGraph = state.interactionGraph || { nodes: [], edges: [] };
-            state.interactionGraph.edges = result.stateChanges.updatedEdges;
+        // 错误隔离：单个干预策略抛异常时不应中断后续干预，
+        // 也不应让状态停留在"部分干预已应用、剩余被跳过"的不一致状态。
+        // 捕获异常 → 记录失败结果 → 继续下一个干预。
+        try {
+          const result = strategy.apply(intervention, state, agentKnowledge);
+          results.push(result);
+
+          if (result.success && result.stateChanges) {
+            if (result.stateChanges.updatedEdges) {
+              state.interactionGraph = state.interactionGraph || { nodes: [], edges: [] };
+              state.interactionGraph.edges = result.stateChanges.updatedEdges;
+            }
+            if (result.stateChanges.updatedBeliefs) {
+              state.agentBeliefs = result.stateChanges.updatedBeliefs;
+            }
           }
-          if (result.stateChanges.updatedBeliefs) {
-            state.agentBeliefs = result.stateChanges.updatedBeliefs;
-          }
+        } catch (err) {
+          console.error(`[Governance] 干预策略 ${intervention.type} 执行异常:`, err);
+          results.push({
+            success: false,
+            intervention: { ...intervention, applied: false },
+            error: err instanceof Error ? err.message : String(err),
+          });
         }
       } else {
         results.push({

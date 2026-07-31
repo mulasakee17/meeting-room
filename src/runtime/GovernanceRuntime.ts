@@ -45,7 +45,21 @@ import type {
   GovernanceIssue,
   Intervention,
   GovernanceState,
+  CognitiveGovernanceState,
+  CognitiveStateModification,
 } from "../lib/governance/types";
+import { generateCognitiveInterventions } from "../lib/governance/cognitiveInterventions";
+import { MeasurementLayer } from "../lib/thermodynamics/MeasurementLayer";
+import { estimateAll } from "../lib/thermodynamics/ProgressiveEstimator";
+import {
+  beliefToCognitiveState,
+  utilityFromItemBeliefs,
+  extractEvidenceItems,
+  updateEvidence,
+  updateConfidence,
+  updateInertia,
+  type AgentCognitiveState,
+} from "../lib/agent/cognitiveState";
 import { EvaluationEngine } from "../lib/evaluation";
 import type { EvaluationResult, AgentDecision, AgentInfo, InteractionRound } from "../lib/evaluation/types";
 import type {
@@ -90,6 +104,10 @@ export class GovernanceRuntime {
   private state: GovernanceRuntimeState;
   /** 持久 PRNG — random-intervene 模式专用，避免每轮重建导致相同干预 */
   private randomInterveneRng: () => number;
+  /** v3.2: MeasurementLayer for cognitive governance mode */
+  private measurementLayer: MeasurementLayer;
+  /** v3.2: Cached cognitive states (built from messages each round) */
+  private cognitiveStates: Map<string, AgentCognitiveState> = new Map();
 
   // Event hooks
   private biasDetectedHandlers: BiasDetectedHandler[] = [];
@@ -117,6 +135,8 @@ export class GovernanceRuntime {
 
     this.governanceEngine = new GovernanceEngine(this.config.governanceConfig, this.config.seed);
     this.evaluationEngine = new EvaluationEngine();
+    // v3.2: MeasurementLayer for cognitive governance (lazy-initialized cognitive states)
+    this.measurementLayer = new MeasurementLayer();
     // 持久 PRNG：random-intervene 模式下跨轮保持状态，避免每轮产生相同随机干预
     this.randomInterveneRng = mulberry32((this.config.seed ?? 42) + 0x5A4D);
 
@@ -199,12 +219,40 @@ export class GovernanceRuntime {
     let hasIntervention = false;
     /** 干预效果指标——由 evaluateEffects 填充，回传给 effectMetrics */
     let effectMetrics: Record<string, number> = {};
+    /** v3.2: Cognitive modifications (only in "cognitive" mode) */
+    let cognitiveModifications: Map<string, CognitiveStateModification> | undefined;
+    /** v3.2: Thermo state (only in "cognitive" mode) */
+    let thermoState: { R: number; T: number; H: number; F: number } | undefined;
 
     switch (this.config.governanceMode) {
       case "none":
         // No detection, no intervention — baseline
         governanceResult = this.createEmptyGovernanceResult();
         break;
+
+      case "cognitive": {
+        // @deprecated since v6: "cognitive" mode is a dead branch.
+        // Runner.ts (experiments/campaign/pipeline/Runner.ts:292-296) translates
+        // "cognitive" → governanceMode="full" + useCognitiveGovernance=true before
+        // constructing the engine, so this case is never reached in experiments.
+        // SDK users should use governanceMode="full" + useCognitiveGovernance=true instead.
+        // Implementation retained for backward compatibility but scheduled for removal.
+        console.warn("[GovernanceRuntime] governanceMode='cognitive' is deprecated. Use governanceMode='full' + useCognitiveGovernance=true instead. This branch will be removed in a future version.");
+        // v3.2: Cognitive governance — non-destructive interventions
+        // Build cognitive states from messages, run cognitive detectors,
+        // generate inject_evidence/rebalance_attention interventions.
+        const cognitiveResult = this.runCognitiveGovernance(
+          messages, roundNumber, agentIds,
+        );
+        governanceResult = cognitiveResult.governanceResult;
+        interventions = cognitiveResult.interventions;
+        hasIntervention = interventions.length > 0;
+        effectMetrics = cognitiveResult.effectMetrics;
+        // Store cognitive modifications for the result
+        cognitiveModifications = cognitiveResult.cognitiveModifications;
+        thermoState = cognitiveResult.thermoState;
+        break;
+      }
 
       case "detect-only":
         // Run detection but don't apply interventions
@@ -373,6 +421,8 @@ export class GovernanceRuntime {
       interventions,
       hasIntervention,
       effectMetrics,
+      cognitiveModifications,
+      thermoState,
     };
   }
 
@@ -581,6 +631,9 @@ export class GovernanceRuntime {
     };
     // H23 修复：重置 GovernanceEngine 运行时状态，防止跨实验校准缓存/干预历史污染
     this.governanceEngine.reset();
+    // v3.2: 重置认知状态和 MeasurementLayer
+    this.cognitiveStates.clear();
+    this.measurementLayer = new MeasurementLayer();
   }
 
   /** Update configuration at runtime. */
@@ -689,9 +742,301 @@ export class GovernanceRuntime {
         beliefStd: 0, consensusLevel: 0,
         intervention: { type: "none", applied: false },
       },
+      informationWithholding: {
+        detected: false, severity: "low", withholdingAgents: [],
+        intervention: { type: "none", applied: false },
+      },
+      ignoredInput: {
+        detected: false, severity: "low", ignoringAgents: [],
+        intervention: { type: "none", applied: false },
+      },
+      reasoningActionMismatch: {
+        detected: false, severity: "low", mismatchAgents: [],
+        intervention: { type: "none", applied: false },
+      },
       otherIssues: [],
       summary: "No governance applied (mode: none)",
       interventionCount: 0,
+    };
+  }
+
+  // ==========================================================================
+  // v3.2: Cognitive Governance (non-destructive interventions)
+  // ==========================================================================
+
+  /**
+   * 运行认知治理：从 messages 构建认知状态 → 运行认知检测器 → 生成非破坏性干预。
+   *
+   * 与旧 "full" 模式的关键区别：
+   * - 使用 6 个认知检测器（基于 Utility/Evidence/Inertia，而非标量 belief）
+   * - 生成非破坏性干预（inject_evidence, rebalance_attention, shuffle_knowledge）
+   * - 不直接修改 agent 的 belief/confidence，只通过 prompt 注入和发言优先级调整
+   * - 计算 R/T/H/F 热力学状态，暴露给外部监控
+   *
+   * 降级策略：
+   * - 若 message 不含 itemBeliefs/cognitiveState → 从 belief/confidence 反推认知状态
+   * - 若无 agentKnowledge → inject_evidence 降级为 evidenceGuidance 提示
+   */
+  private runCognitiveGovernance(
+    messages: DiscussionMessage[],
+    roundNumber: number,
+    agentIds: string[],
+  ): {
+    governanceResult: GovernanceResult;
+    interventions: Intervention[];
+    effectMetrics: Record<string, number>;
+    cognitiveModifications: Map<string, CognitiveStateModification>;
+    thermoState: { R: number; T: number; H: number; F: number };
+  } {
+    // Step 1: Build cognitive states from messages
+    this.buildCognitiveStatesFromMessages(messages, roundNumber);
+
+    // Step 2: Build CognitiveGovernanceState map for detectors
+    const govStateMap = this.buildCognitiveGovernanceStates(agentIds);
+
+    // Step 3: v6 δ 诊断（替代旧 runDetectors）
+    const { delta, suggestions } = this.measurementLayer.diagnoseAndSuggestSync(roundNumber);
+
+    // Step 4: 将 suggestions 转为 issues 格式（兼容 generateCognitiveInterventions）
+    const deltaIssues: GovernanceIssue[] = suggestions.map((s, i) => ({
+      type: s.source as any,
+      severity: "medium" as const,
+      description: s.reason,
+      agents: s.targetAgents,
+      source: "custom" as const,
+      suggestedIntervention: {
+        type: s.type,
+        targetAgents: s.targetAgents,
+        reason: s.reason,
+      },
+      detectedAt: new Date().toISOString(),
+      id: `delta_${roundNumber}_${i}`,
+    }));
+
+    // Step 5: v6 渐进估计（用于置信度感知干预降级）
+    const progressiveEstimates = estimateAll(this.cognitiveStates, roundNumber);
+
+    // Step 6: Generate non-destructive interventions
+    const agentKnowledge = this.config.agentKnowledge;
+    const { interventions, cognitiveModifications } = generateCognitiveInterventions(
+      deltaIssues, govStateMap, this.config.governanceConfig ?? {}, agentKnowledge,
+      progressiveEstimates,
+    );
+
+    // Step 7: Compute thermo state (R/T/H/F)
+    const thermo = this.measurementLayer.computeThermoState();
+
+    // Step 8: Build governance result
+    const governanceResult = this.buildCognitiveGovernanceResult(
+      deltaIssues, interventions, roundNumber,
+    );
+
+    // Step 8: Effect metrics (cognitive mode uses thermo-based metrics)
+    const effectMetrics: Record<string, number> = {
+      thermo_R: thermo.R,
+      thermo_T: thermo.T,
+      thermo_H: thermo.H,
+      thermo_F: thermo.F,
+      cognitive_issues_count: deltaIssues.length,
+      cognitive_interventions_count: interventions.length,
+    };
+
+    return {
+      governanceResult,
+      interventions,
+      effectMetrics,
+      cognitiveModifications,
+      thermoState: thermo,
+    };
+  }
+
+  /**
+   * 从 DiscussionMessage 构建 AgentCognitiveState。
+   *
+   * 优先使用 message 中的 cognitiveState/itemBeliefs（原生模式），
+   * 否则从 belief/confidence 反推（兼容模式）。
+   */
+  private buildCognitiveStatesFromMessages(messages: DiscussionMessage[], roundNumber: number): void {
+    for (const msg of messages) {
+      let state = this.cognitiveStates.get(msg.agentId);
+
+      if (!state) {
+        // 首次见到此 agent：初始化
+        state = beliefToCognitiveState(
+          msg.agentId, msg.agentName, msg.agentRole,
+          msg.belief, msg.confidence,
+        );
+      }
+
+      // 若 message 提供 native cognitiveState，直接采用
+      if (msg.cognitiveState) {
+        if (msg.cognitiveState.utility) {
+          state.utility = {
+            ...state.utility,
+            scores: msg.cognitiveState.utility.scores,
+            topChoice: msg.cognitiveState.utility.topChoice,
+          };
+        }
+        if (msg.cognitiveState.evidenceCoverage !== undefined) {
+          state.evidence = { ...state.evidence, coverage: msg.cognitiveState.evidenceCoverage };
+        }
+        if (msg.cognitiveState.evidenceQuality !== undefined) {
+          state.evidence = { ...state.evidence, quality: msg.cognitiveState.evidenceQuality };
+        }
+      } else if (msg.itemBeliefs && msg.itemBeliefs.length > 0) {
+        // 从 itemBeliefs 提取 Utility
+        state.utility = utilityFromItemBeliefs(msg.itemBeliefs);
+      } else {
+        // 兼容模式：从 belief 反推 Utility（有损但向后兼容）
+        const options = Object.keys(state.utility.scores);
+        if (options.length >= 2) {
+          state.utility.scores[options[0]] = msg.belief;
+          state.utility.scores[options[1]] = -msg.belief;
+          state.utility.topChoice = msg.belief > 0 ? options[0] : options[1];
+        }
+      }
+
+      // 更新 confidence
+      state.confidence = { ...state.confidence, overall: msg.confidence / 100 };
+
+      // 若 message 提供 evidence 字符串，更新 Evidence
+      if (msg.evidence && msg.evidence.length > 0 && msg.itemBeliefs) {
+        const newItems = extractEvidenceItems(msg.evidence, msg.itemBeliefs, msg.agentId, roundNumber);
+        state.evidence = updateEvidence(state.evidence, newItems, roundNumber);
+        state.confidence = updateConfidence(state.evidence, state.utilityHistory);
+      }
+
+      // 更新 Inertia（角色不变，本轮发言）
+      state.inertia = updateInertia(
+        state.inertia, msg.agentRole, true, state.evidence, false,
+      );
+
+      // 记录 utility history
+      state.utilityHistory.push({ round: roundNumber, scores: { ...state.utility.scores } });
+      if (state.utilityHistory.length > 10) state.utilityHistory.shift();
+
+      this.cognitiveStates.set(msg.agentId, state);
+    }
+
+    // 同步到 MeasurementLayer（通过 public API，不用 as any hack）
+    this.measurementLayer.setCognitiveStates(this.cognitiveStates);
+  }
+
+  /**
+   * 从 cognitiveStates 构建 CognitiveGovernanceState map（检测器输入）。
+   */
+  private buildCognitiveGovernanceStates(agentIds: string[]): Map<string, CognitiveGovernanceState> {
+    const result = new Map<string, CognitiveGovernanceState>();
+
+    for (const agentId of agentIds) {
+      const state = this.cognitiveStates.get(agentId);
+      if (!state) continue;
+
+      const susceptibility = Math.max(
+        (1 - state.inertia.strength) * (1 - state.confidence.overall),
+        0.05,
+      );
+
+      result.set(agentId, {
+        agentId,
+        utility: {
+          scores: state.utility.scores,
+          topChoice: state.utility.topChoice,
+          preferenceClarity: state.utility.preferenceClarity,
+          intensity: state.utility.intensity,
+        },
+        evidence: {
+          coverage: state.evidence.coverage,
+          quality: state.evidence.quality,
+          diversity: state.evidence.diversity,
+        },
+        inertia: {
+          strength: state.inertia.strength,
+        },
+        confidence: {
+          overall: state.confidence.overall,
+        },
+        susceptibility,
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * 构建认知治理的 GovernanceResult（兼容旧格式，供外部消费者使用）。
+   */
+  private buildCognitiveGovernanceResult(
+    issues: GovernanceIssue[],
+    interventions: Intervention[],
+    roundNumber: number,
+  ): GovernanceResult {
+    // 将认知 issues 映射到旧 GovernanceResult 格式
+    const hasEchoChamber = issues.some(i => i.type.includes("echo_chamber"));
+    const hasAuthorityBias = issues.some(i => i.type.includes("authority_bias"));
+    const hasPolarization = issues.some(i => i.type.includes("polarization"));
+    const hasPrematureConsensus = issues.some(i => i.type.includes("premature_consensus"));
+
+    return {
+      echoChamber: {
+        detected: hasEchoChamber,
+        severity: hasEchoChamber ? "medium" : "low",
+        redundantAgents: [],
+        infoRedundancyScore: 0,
+        intervention: { type: hasEchoChamber ? "rebalance_attention" : "none", applied: hasEchoChamber },
+      },
+      authorityBias: {
+        detected: hasAuthorityBias,
+        severity: hasAuthorityBias ? "medium" : "low",
+        influenceRatio: 0,
+        intervention: { type: hasAuthorityBias ? "rebalance_attention" : "none", applied: hasAuthorityBias },
+      },
+      polarization: {
+        detected: hasPolarization,
+        severity: hasPolarization ? "high" : "low",
+        groups: [],
+        polarizationIndex: 0,
+        intervention: { type: hasPolarization ? "inject_evidence" : "none", applied: hasPolarization },
+      },
+      prematureConsensus: {
+        detected: hasPrematureConsensus,
+        severity: hasPrematureConsensus ? "medium" : "low",
+        roundNumber,
+        maxRounds: this.config.maxRounds,
+        beliefStd: 0,
+        consensusLevel: 0,
+        intervention: { type: hasPrematureConsensus ? "inject_evidence" : "none", applied: hasPrematureConsensus },
+      },
+      // MAST 检测器（v3.2 cognitive 模式不启用，填空值以兼容 GovernanceResult 类型）
+      informationWithholding: {
+        detected: false,
+        severity: "low",
+        withholdingAgents: [],
+        intervention: { type: "none", applied: false },
+      },
+      ignoredInput: {
+        detected: false,
+        severity: "low",
+        ignoringAgents: [],
+        intervention: { type: "none", applied: false },
+      },
+      reasoningActionMismatch: {
+        detected: false,
+        severity: "low",
+        mismatchAgents: [],
+        intervention: { type: "none", applied: false },
+      },
+      otherIssues: issues.map(i => ({
+        type: i.type,
+        severity: i.severity,
+        description: i.description,
+        agents: i.agents,
+        source: i.source as "builtin" | "custom" | undefined,
+        suggestedIntervention: i.suggestedIntervention,
+        detectionMetrics: i.detectionMetrics,
+      })),
+      summary: `Cognitive governance: ${issues.length} issues, ${interventions.length} non-destructive interventions`,
+      interventionCount: interventions.length,
     };
   }
 

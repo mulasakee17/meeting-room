@@ -11,7 +11,7 @@ export const E4_CONFIDENCE: ExperimentConfig = {
   hypothesis: "H4",
   title: "Confidence Prediction — Confidence 能预测未来观点改变",
   scenario: "ma",
-  runtimeModes: ["cognitive"],
+  runtimeModes: ["native_cognitive"],
   governanceMode: "none",
   agentCount: 5,
   maxRounds: 5,

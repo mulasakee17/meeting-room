@@ -27,13 +27,18 @@ import { GovernanceRuntime } from "../../src/runtime/GovernanceRuntime";
 import type { LLMConfig, LLMProvider } from "../../src/lib/llm/providers";
 import { TASK_MA, type TaskConfig } from "../lunar_survival/config";
 import { TASK_INVEST } from "./task_invest";
-import { TASK_CRISIS } from "./task_crisis";
-import { TASK_SUPPLIER } from "./task_supplier";
+import { TASK_CRISIS, TASK_CRISIS_V2 } from "./task_crisis";
+import { TASK_SUPPLIER, TASK_SUPPLIER_V2 } from "./task_supplier";
 import { mulberry32, cohensD, mean, sampleStd, extractRanking, kendallTau, kuramotoR } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 const TASKS: Record<string, { task: TaskConfig; dataDir: string }> = {
   crisis: { task: TASK_CRISIS, dataDir: "data_crisis" },
   supplier: { task: TASK_SUPPLIER, dataDir: "data_supplier" },
+  // V2 任务（2026-07-26 重构）：显式权重 + 专业身份 initialBias
+  // 旧任务保留，新实验用 V2 数据写入独立目录，不污染旧数据
+  crisis_v2: { task: TASK_CRISIS_V2, dataDir: "data_crisis_v2" },
+  supplier_v2: { task: TASK_SUPPLIER_V2, dataDir: "data_supplier_v2" },
 };
 
 // ============================================================================
@@ -141,7 +146,7 @@ const PARAMS = {
   maxRounds: 3,
   convergenceThreshold: 0.06,
   temperature: 0.2,
-  model: "deepseek-chat",
+  model: "deepseek-v4-flash",
   provider: "deepseek" as const,
   runsPerCondition: 15,
   // 断裂环路修复后重跑：仅 none/full/shuffle 三组即可回答核心研究问题
@@ -153,7 +158,7 @@ const PARAMS = {
 // --count: 本次运行的实验数/cell（默认 PARAMS.runsPerCondition）
 // --mode:  只跑指定 ablation mode（默认跑 PARAMS.ablationModes 全部）
 // --provider: LLM 提供商（默认 deepseek），跨模型验证时用 qwen/openai/zhipu
-// --model: 模型名（默认 deepseek-chat）
+// --model: 模型名（默认 deepseek-v4-flash）
 function parseCliArgs(): { start: number; count: number; mode: string | null; provider: LLMProvider; model: string } {
   const args = process.argv.slice(3);
   let start = 0;
@@ -637,15 +642,22 @@ async function main() {
     for (let i = start; i < start + count; i++) {
       const filename = path.join(DATA_DIR, `${task.id}_${ablation}_${i}.json`);
       if (fs.existsSync(filename)) {
-        const existing = JSON.parse(fs.readFileSync(filename, "utf-8")) as ExperimentResult;
-        // 缓存污染修复：错误占位文件不视为有效缓存，删除后重跑
-        if (existing.error) {
-          console.log(`  [${i - start + 1}/${count}] (cached error, retrying) ${existing.error}`);
-          fs.unlinkSync(filename);
-        } else {
-          allResults.push(existing);
-          console.log(`  [${i - start + 1}/${count}] (cached) τ=${existing.kendallTau.toFixed(3)} | Q=${existing.decisionQuality}`);
-          continue;
+        try {
+          const existing = safeJsonParse<ExperimentResult>(fs.readFileSync(filename, "utf-8"));
+          if (!existing) { console.warn(`[run] 无法解析 JSON: ${filename}`); throw new Error("parse failed"); }
+          // 缓存污染修复：错误占位文件不视为有效缓存，删除后重跑
+          if (existing.error) {
+            console.log(`  [${i - start + 1}/${count}] (cached error, retrying) ${existing.error}`);
+            fs.unlinkSync(filename);
+          } else {
+            allResults.push(existing);
+            console.log(`  [${i - start + 1}/${count}] (cached) τ=${existing.kendallTau.toFixed(3)} | Q=${existing.decisionQuality}`);
+            continue;
+          }
+        } catch (parseErr) {
+          // 文件损坏：JSON 解析失败，删除后重跑（P2 修复：避免单文件损坏导致整批崩溃）
+          console.warn(`  [${i - start + 1}/${count}] (corrupted cache, retrying) ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`);
+          try { fs.unlinkSync(filename); } catch { /* 文件可能已被删除 */ }
         }
       }
       // 错误隔离：单次实验失败不应中止整批
@@ -682,13 +694,22 @@ async function main() {
             // 写入错误占位文件，分析时可识别
             const errorResult: ExperimentResult = {
               task: task.id, ablation, runIndex: i,
+              runId: "",
               codeVersion: "2026-07-19",
               timestamp: new Date().toISOString(),
               finalDecision: `[ERROR] ${errMsg}`,
               rounds: [], totalRounds: 0,
               kendallTau: 0, decisionQuality: 0,
+              converged: false,
+              consensusLevel: 0,
+              opinionDiversity: 0,
               totalInterventions: 0, interventionEffects: [],
+              issuesDetected: [],
+              interventionBreakdown: {},
               ablationConfig: {}, llmSeed: 42 + i,
+              evaluationScores: {},
+              groundTruth: {},
+              extractedRanking: [],
               error: errMsg,
             };
             fs.writeFileSync(filename, JSON.stringify(errorResult, null, 2));

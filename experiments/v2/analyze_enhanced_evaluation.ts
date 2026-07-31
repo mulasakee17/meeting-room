@@ -19,6 +19,7 @@ import * as fs from "fs";
 import * as path from "path";
 import dotenv from "dotenv";
 import { EvaluationEngine } from "../../src/lib/evaluation";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 import type {
   AgentDecision,
   AgentInfo,
@@ -204,7 +205,8 @@ function loadGroupData(group: string): MaliciousExperimentJSON[] {
   for (const file of files) {
     try {
       const raw = fs.readFileSync(path.join(DATA_DIR, file), "utf-8");
-      const data = JSON.parse(raw) as MaliciousExperimentJSON;
+      const data = safeJsonParse<MaliciousExperimentJSON>(raw);
+      if (!data) { console.warn(`[analyze_enhanced_evaluation] 无法解析 JSON: ${file}`); continue; }
       if (data.roundResults && data.roundResults.length > 0) {
         results.push(data);
       }

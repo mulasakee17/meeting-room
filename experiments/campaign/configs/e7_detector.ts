@@ -11,7 +11,7 @@ export const E7_DETECTOR: ExperimentConfig = {
   hypothesis: "H7",
   title: "Detector Accuracy — Cognitive 检测器更准确",
   scenario: "ma",
-  runtimeModes: ["cognitive"],
+  runtimeModes: ["native_cognitive"],
   governanceMode: "detect-only",
   agentCount: 5,
   maxRounds: 5,

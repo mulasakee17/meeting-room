@@ -26,7 +26,8 @@ export function stripCodeFences(text: string): string {
  * 策略：
  * 1. 先尝试直接 JSON.parse
  * 2. 移除 code fences 后再尝试
- * 3. 用正则提取第一个 {...} 块
+ * 3. 用括号配平扫描提取第一个完整 {...} 块
+ *    （非贪婪：遇到第一个配平的 } 即停止，避免贪婪正则过度匹配）
  *
  * @returns 解析后的对象，或 null（解析失败）
  */
@@ -48,17 +49,52 @@ export function safeJsonParse<T = Record<string, unknown>>(text: string): T | nu
     }
   }
 
-  // Strategy 3: extract first {...} block
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  if (match) {
-    try {
-      return JSON.parse(match[0]) as T;
-    } catch {
-      // give up
+  // Strategy 3: 括号配平扫描（替代贪婪正则 /\{[\s\S]*\}/）
+  // 旧正则会从第一个 { 匹配到最后一个 }，导致多个 JSON 对象混杂时过度匹配。
+  // 新实现从第一个 { 开始，跟踪字符串嵌套和花括号深度，遇到配平的 } 即返回。
+  const firstBrace = cleaned.indexOf("{");
+  if (firstBrace !== -1) {
+    const extracted = extractBalancedBraces(cleaned, firstBrace);
+    if (extracted) {
+      try {
+        return JSON.parse(extracted) as T;
+      } catch {
+        // give up
+      }
     }
   }
 
   return null;
+}
+
+/**
+ * 从文本的指定位置开始，用括号配平扫描提取一个完整的 JSON 对象。
+ * 正确处理字符串内的花括号和转义字符。
+ *
+ * @param text 原始文本
+ * @param start 第一个 { 的位置
+ * @returns 提取的 JSON 字符串（含外层花括号），或 null（未配平）
+ */
+function extractBalancedBraces(text: string, start: number): string | null {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (escape) { escape = false; continue; }
+    if (inString) {
+      if (c === "\\") { escape = true; continue; }
+      if (c === '"') inString = false;
+      continue;
+    }
+    if (c === '"') { inString = true; continue; }
+    if (c === "{") depth++;
+    else if (c === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null; // 未配平（截断的 JSON）
 }
 
 /**

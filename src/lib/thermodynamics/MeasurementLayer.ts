@@ -1,15 +1,21 @@
 /**
- * MeasurementLayer — SwarmAlpha v3.0 不变测量层
+ * MeasurementLayer — SwarmAlpha v5 双层测量架构
  *
  * 提供独立于讨论模式、治理策略、拓扑结构的认知状态测量服务：
- * 1. 社会热力学 (R, T, H, F) — 从 agent beliefs 确定性计算
- * 2. 认知状态追踪 (U, E, I, C, S) — 支持 post-hoc 和 LLM 原生两种模式
+ * 1. 群体动态筛查 (R, T, H, F) — 从标量立场汇总确定性计算，零成本异常检测
+ * 2. 认知状态追踪 (U, E, I, C, Λ) — 支持 post-hoc 和 LLM 原生两种模式
  * 3. 认知检测器 (6 个) — 从 cognitive states 检测集体认知偏差
+ * 4. 一致性检测 (δ 系列) — 自报 vs 行为对比，无需 ground truth
  *
  * 关键设计原则:
  * - 零额外 LLM 成本：所有计算基于 agent 已输出的结构化数据
  * - 独立可测试：不依赖任何引擎，可单独单元测试
  * - 模式无感知：不知道讨论是 sync 还是 async，flat 还是 grouped
+ *
+ * 双层架构（ROADMAP_V5）：
+ * - 热力学筛查层（标量）：R/T/H/F 做零成本异常检测，95% 轮次无需触发诊断
+ * - 信息层诊断（向量）：E/U/I/C/Λ 做定向根因定位，仅异常轮次触发
+ * - δ 一致性层：自报 vs 行为对比，检测过早共识、权威集中、异常立场变化
  *
  * 代码来源：
  * - computeThermoState: 从 asyncEngine.ts:833-854 提取
@@ -18,7 +24,6 @@
  * - 检测器运行: 从 NativeCognitiveEngine.applyCognitiveGovernance 提取
  */
 
-import { mulberry32, shannonEntropy, normalizeTemperature } from "../utils/statsUtils";
 import {
   beliefToCognitiveState,
   updateInertia,
@@ -28,6 +33,7 @@ import {
   type AgentCognitiveState,
   type Utility,
   type Evidence,
+  type EvidenceItem,
   type Confidence,
 } from "../agent/cognitiveState";
 import type {
@@ -42,19 +48,85 @@ import {
 } from "../governance/cognitiveDetectors";
 import type { AgentOpinion } from "../discussion/types";
 import type { DiscussionAgent } from "../discussion/index";
+import { computeDeltaDiagnosis, type DeltaConfig, type DeltaDiagnosis } from "./computeDelta";
+import {
+  estimateAll,
+  detectBehaviorEvents,
+  createInitialBehaviorEvents,
+  createInitialSusceptibility,
+  createInitialConfidence,
+  createInitialInertia,
+  type ProgressiveEstimates,
+} from "./ProgressiveEstimator";
+import { semanticConsult, type SemanticConsultRequest } from "./SemanticTool";
+import type { LLMConfig } from "../llm/providers";
+
+// ============================================================================
+// Thermo → δ → Intervention Pipeline Types
+// ============================================================================
+
+/**
+ * δ 触发的干预建议类型。
+ */
+export interface DeltaInterventionSuggestion {
+  /** 干预类型 */
+  type: "inject_evidence" | "rebalance_attention";
+  /** 目标 agent IDs */
+  targetAgents: string[];
+  /** 原因说明 */
+  reason: string;
+  /** 触发此建议的 δ 指标 */
+  source: string;
+}
+
+/**
+ * v6: SemanticTool 审计日志条目
+ * 记录单次 SemanticTool 调用的完整信息，用于 C 组实验论文分析。
+ */
+export interface SemanticAuditEntry {
+  /** 调用轮次 */
+  round: number;
+  /** 任务类型：evidence_dedup | gap_analysis */
+  task: string;
+  /** 触发的 δ 指标（仅 gap_analysis） */
+  triggeredDeltas?: string[];
+  /** 输入项数（evidence_dedup: 待判定的未分享证据数；gap_analysis: 未分享证据的 agent 数） */
+  inputCount: number;
+  /** 返回的 cluster 数（evidence_dedup）或 criticalItems 数（gap_analysis） */
+  outputCount: number;
+  /** 验证通过的 cluster 数（仅 evidence_dedup：supports 一致的 cluster） */
+  validatedClusters?: number;
+  /** 被否决的 cluster 数（仅 evidence_dedup：supports 不一致的 cluster） */
+  rejectedClusters?: number;
+  /** 调用是否成功（false 表示抛出异常或返回 null） */
+  success: boolean;
+  /** 耗时 ms */
+  latencyMs: number;
+  /** 错误信息（success=false 时） */
+  error?: string;
+}
 
 // ============================================================================
 // Thermo State
 // ============================================================================
 
+/**
+ * 群体动态筛查指标（ROADMAP_V5: 操作化启发式，非物理量）。
+ *
+ * R/T/H/F 是零成本筛查信号，从标量立场汇总（statedStance）确定性计算。
+ * 它们不声称热力学自由能——F 是操作化综合失序指标，工程价值在于
+ * 把四维压缩到一个标量便于异常检测。
+ *
+ * R/T/H 在小群体 MAS 中强相关（r=0.917）是结构性特征，而非 bug。
+ */
 export interface ThermoState {
-  /** Kuramoto 序参量 [0, 1] — 群体共识/对齐程度 */
+  /** 方向对齐度 [0, 1] — 群体标量立场的方向一致性 */
   R: number;
-  /** 归一化温度 [0, 1] — 信念在轮次间的波动幅度 */
+  /** 强度分散度 [0, 1] — 标量立场的离散程度 */
   T: number;
-  /** Shannon 熵 [0, 1] — 意见分布的多样性 */
+  /** 分布形状 [0, 1] — 标量立场分布的信息熵 */
   H: number;
-  /** Helmholtz 自由能 F = (1-R) + T·H */
+  /** 操作化综合失序指标 F = (1-R) + T·H */
   F: number;
 }
 
@@ -105,6 +177,13 @@ export class MeasurementLayer {
   /** 待应用的惯性因子（applyPendingModifications 暂存，updateInertia 后消费） */
   private pendingInertiaFactors: Map<string, number> = new Map();
 
+  /**
+   * v6: SemanticTool 审计日志
+   * 记录每次 SemanticTool 调用的 task、round、调用结果、验证通过率、降级情况。
+   * 用于 C 组实验论文分析（Tier 3 触发率、验证通过率、降级率）。
+   */
+  private semanticAuditLog: SemanticAuditEntry[] = [];
+
   // ==========================================================================
   // Social Thermodynamics
   // ==========================================================================
@@ -112,19 +191,27 @@ export class MeasurementLayer {
   /**
    * 从 5 变量认知状态计算热力学状态 (R, T, H, F)。
    *
-   * 语义直译映射（方案 A）：
-   *   R (共识度) ← Utility 对齐度 = 1 - 归一化熵(topChoice 分布)
-   *   T (温度)   ← Confidence 不稳定性 = 1 - mean(stabilityBased)
-   *   H (熵)     ← Evidence 多样性 = shannonEntropy(coverage 分布)
+   * v3.2.1 修正（2026-07-26）：三维度计算全部重写，修复 v3.2 的失真问题。
+   *
+   * 语义映射（v3.2.1）：
+   *   R (共识度) ← Utility 向量平均 cosine 相似度，归一化到 [0,1]
+   *   T (温度)   ← Utility 逐轮 L2 距离的归一化均值（真正反映信念波动）
+   *   H (熵)     ← Evidence items 的 supports 分布的归一化 Shannon 熵
    *   F (自由能) = (1-R) + T·H
    *
-   * 理论依据：
-   * - R 比 Kuramoto on beliefs 更精确：两个 agent 可能 belief 相同
-   *   但效用函数完全不同，topChoice 对齐才代表真正共识。
-   * - T 对应统计力学中温度 = 系统微观状态的不确定性。
-   *   stabilityBased 直接衡量信念跨轮次稳定性。
-   * - H 比 belief binning 更准确：捕获的是信息结构多样性
-   *   而非标量意见分布。
+   * v3.2 → v3.2.1 修正原因：
+   * - R 旧实现用 topChoice 熵，N=5 时只有 0/0.03/0.28/1 几个离散值，分辨率过粗。
+   *   新实现用 cosine 相似度，能捕捉 utility 向量级的细微差异。
+   * - T 旧实现用 1-mean(stabilityBased)，但 stabilityBased 来自 LLM 自报 confidence
+   *   的逐轮差值，LLM 倾向给高 confidence（85-95），导致 T 要么恒≈0，要么因初始值异常跳到 0.5。
+   *   新实现用 utility 向量逐轮 L2 距离，真正反映信念波动。
+   * - H 旧实现用 shannonEntropy(coverage)，但 coverage 受 GLOBAL_INFO_POOL_SIZE=10
+   *   硬编码影响，V2 任务有 25 条信息时 3 轮后 coverage 饱和到 1.0，H 恒=0。
+   *   新实现用 evidence items 的 supports 分布，直接反映证据覆盖的选项多样性。
+   *
+   * 注意：此 R/T/H 与 asyncEngine.ts 的 R/T/H 是不同的实现。
+   * - asyncEngine.ts 基于 scalar beliefs，用于 TerminationDecider 和论文已 claim 的结论。
+   * - 此处基于 5 变量认知状态，用于 NativeCognitiveEngine 和 cognitive 治理模式的机制解释。
    *
    * @returns ThermoState，若 cognitiveStates 为空则返回全零
    */
@@ -132,20 +219,14 @@ export class MeasurementLayer {
     const states = Array.from(this.cognitiveStates.values());
     if (states.length === 0) return { R: 0, T: 0, H: 0, F: 0 };
 
-    // ── R: Utility 对齐度 = 1 - 归一化熵(topChoice 分布) ──
-    const topChoices = states.map(s => s.utility.topChoice).filter(Boolean);
-    const R = this.computeUtilityAlignment(topChoices);
+    // ── R: Utility 向量平均 cosine 相似度（归一化到 [0,1]）──
+    const R = this.computeUtilityAlignment(states);
 
-    // ── T: Confidence 不稳定性 = 1 - mean(stabilityBased) ──
-    const stabilityValues = states.map(s => s.confidence.stabilityBased);
-    const meanStability = stabilityValues.reduce((a, b) => a + b, 0) / stabilityValues.length;
-    const T = Math.max(0, Math.min(1, 1 - meanStability));
+    // ── T: Utility 逐轮 L2 距离的归一化均值 ──
+    const T = this.computeUtilityVolatility(states);
 
-    // ── H: Evidence 多样性 = shannonEntropy(coverage 分布) ──
-    // 注意：coverage 值域为 [0, 1]，必须显式传入 min/max，
-    // 否则 shannonEntropy 默认 min=-1 会导致前 2 个 bin 永远为空，H 被截断。
-    const coverages = states.map(s => s.evidence.coverage);
-    const H = shannonEntropy(coverages, 5, 0, 1);
+    // ── H: Evidence items 的 supports 分布的归一化 Shannon 熵 ──
+    const H = this.computeEvidenceDiversity(states);
 
     // ── F = (1-R) + T·H ──
     const F = (1 - R) + T * H;
@@ -154,34 +235,296 @@ export class MeasurementLayer {
   }
 
   /**
-   * 计算 Utility 对齐度（R 的子计算）。
+   * 计算 Utility 对齐度（R 的子计算）— v3.2.1 重写。
    *
-   * R = 1 - H_norm(topChoice 分布)
-   * - 所有 agent 同一 topChoice → R = 1（完全共识）
-   * - topChoice 均匀分布 → R = 0（完全分歧）
+   * R = (avg_cosine_similarity + 1) / 2
+   * - 所有 agent utility 向量方向一致 → R = 1（完全共识）
+   * - agent utility 向量正交 → R = 0.5（无相关）
+   * - agent utility 向量方向相反 → R = 0（完全分歧）
+   *
+   * 相比 v3.2 的 topChoice 熵：
+   * - 分辨率从 {0, 0.03, 0.28, 1} 提升到连续值
+   * - 能捕捉"topChoice 相同但 utility 结构不同"的情况
+   * - 与 Kuramoto R 的"方向一致"语义对齐
    */
-  private computeUtilityAlignment(topChoices: string[]): number {
-    if (topChoices.length <= 1) return 1;
+  private computeUtilityAlignment(states: AgentCognitiveState[]): number {
+    if (states.length <= 1) return 1;
 
-    const counts = new Map<string, number>();
-    for (const tc of topChoices) {
-      counts.set(tc, (counts.get(tc) ?? 0) + 1);
+    // 收集所有选项（并集），排序以确保向量顺序一致
+    const allOptions = new Set<string>();
+    for (const s of states) {
+      for (const key of Object.keys(s.utility.scores)) {
+        allOptions.add(key);
+      }
+    }
+    const options = Array.from(allOptions).sort();
+    if (options.length === 0) return 1;
+
+    // 提取每个 agent 的 utility 向量（按 options 顺序，缺失项为 0）
+    const vectors = states.map(s =>
+      options.map(opt => s.utility.scores[opt] ?? 0),
+    );
+
+    // 计算所有 agent 对的 cosine 相似度
+    let sumCos = 0;
+    let pairCount = 0;
+    for (let i = 0; i < vectors.length; i++) {
+      for (let j = i + 1; j < vectors.length; j++) {
+        const cos = this.cosineSimilarity(vectors[i], vectors[j]);
+        sumCos += cos;
+        pairCount++;
+      }
     }
 
-    const n = topChoices.length;
-    const k = counts.size;
-    if (k <= 1) return 1;
+    if (pairCount === 0) return 1;
 
-    // 归一化熵: H / log(k)
+    // 归一化到 [0, 1]：(avg_cos + 1) / 2
+    const avgCos = sumCos / pairCount;
+    return (avgCos + 1) / 2;
+  }
+
+  /**
+   * 计算 cosine 相似度（R 的子计算）。
+   * 当任一向量范数为 0 时返回 0（正交，R=0.5）。
+   */
+  private cosineSimilarity(a: number[], b: number[]): number {
+    const len = Math.min(a.length, b.length);
+    if (len === 0) return 0;
+
+    let dot = 0, normA = 0, normB = 0;
+    for (let i = 0; i < len; i++) {
+      dot += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+    }
+
+    const denom = Math.sqrt(normA) * Math.sqrt(normB);
+    return denom === 0 ? 0 : dot / denom;
+  }
+
+  /**
+   * 计算 Utility 波动度（T 的子计算）— v3.2.1 新增。
+   *
+   * T = mean_i( ||u_i(t) - u_i(t-1)|| / (2*sqrt(K)) )
+   *
+   * - 第一轮无历史 → T=0（系统稳定）
+   * - utility 向量逐轮剧烈变化 → T→1（系统高温）
+   * - utility 向量逐轮不变 → T=0（系统冻结）
+   *
+   * 相比 v3.2 的 1-mean(stabilityBased)：
+   * - 不依赖 LLM 自报 confidence（避免 overconfidence 偏差）
+   * - 直接衡量 utility 向量变化幅度（真正的"信念波动"）
+   * - 归一化到 [0,1]：utility ∈ [-1,1]^K，最大 L2 距离 = 2*sqrt(K)
+   */
+  private computeUtilityVolatility(states: AgentCognitiveState[]): number {
+    if (states.length === 0) return 0;
+
+    let totalVolatility = 0;
+    let count = 0;
+
+    for (const state of states) {
+      const history = state.utilityHistory;
+      // H5 修复后：history 最后一项是"本轮更新后"的 scores，
+      // 倒数第二项是"上一轮更新后"的 scores。
+      // 需要至少 2 项历史才能计算波动。
+      if (history.length < 2) continue;
+
+      const currentScores = history[history.length - 1].scores;
+      const prevScores = history[history.length - 2].scores;
+
+      const allKeys = new Set([...Object.keys(currentScores), ...Object.keys(prevScores)]);
+      let sumSq = 0;
+      for (const key of allKeys) {
+        const diff = (currentScores[key] ?? 0) - (prevScores[key] ?? 0);
+        sumSq += diff * diff;
+      }
+      const dist = Math.sqrt(sumSq);
+
+      // 归一化：utility ∈ [-1,1]^K，最大 L2 距离 = 2*sqrt(K)
+      const maxDist = 2 * Math.sqrt(allKeys.size);
+      const normalizedDist = maxDist > 0 ? Math.min(1, dist / maxDist) : 0;
+
+      totalVolatility += normalizedDist;
+      count++;
+    }
+
+    return count > 0 ? totalVolatility / count : 0;
+  }
+
+  /**
+   * 计算 Evidence 多样性（H 的子计算）— v3.2.1 重写。
+   *
+   * H = ShannonEntropy(supports 分布) / log2(|unique supports|)
+   * - 所有 evidence 支持同一选项 → H=0（低多样性，可能回声室）
+   * - evidence 均匀支持所有选项 → H=1（高多样性，信息全面）
+   * - 无 evidence → H=0
+   *
+   * 相比 v3.2 的 shannonEntropy(coverages)：
+   * - 不依赖 GLOBAL_INFO_POOL_SIZE 硬编码（避免 coverage 饱和）
+   * - 直接反映证据覆盖的选项多样性（真正的"信息结构多样性"）
+   * - 对任务规模自适应（无需手动调参）
+   */
+  private computeEvidenceDiversity(states: AgentCognitiveState[]): number {
+    if (states.length === 0) return 0;
+
+    // 收集所有 agent 的 evidence items 的 supports
+    const supportCounts = new Map<string, number>();
+    let totalItems = 0;
+
+    for (const state of states) {
+      for (const item of state.evidence.items) {
+        const supports = item.supports || "unknown";
+        supportCounts.set(supports, (supportCounts.get(supports) ?? 0) + 1);
+        totalItems++;
+      }
+    }
+
+    if (totalItems === 0) return 0; // 无证据
+
+    // 计算 supports 分布的归一化 Shannon 熵
     let entropy = 0;
-    for (const count of counts.values()) {
-      const p = count / n;
-      entropy -= p * Math.log(p);
+    for (const count of supportCounts.values()) {
+      const p = count / totalItems;
+      entropy -= p * Math.log2(p);
     }
-    const maxEntropy = Math.log(k);
-    const normalizedEntropy = maxEntropy > 0 ? entropy / maxEntropy : 0;
+    const maxEntropy = Math.log2(supportCounts.size);
+    return maxEntropy > 0 ? entropy / maxEntropy : 0;
+  }
 
-    return 1 - normalizedEntropy;
+  /**
+   * 计算单个 agent 的 evidence items 多样性（v3.2.1 修复）。
+   *
+   * 与 computeEvidenceDiversity（群体 H 熵）算法一致，但仅对单 agent 的 items 计算。
+   * 用于 updateCognitiveStatesNative 中 evidence.diversity 字段——v3.2 bug 修复：
+   * 旧实现 diversity 恒为 currentState.evidence.diversity（初始 0.5），从未更新。
+   *
+   * - 所有 evidence 支持同一选项 → diversity=0（低多样性，可能回声室）
+   * - evidence 均匀支持多个选项 → diversity→1（高多样性，信息全面）
+   * - 无 evidence → diversity=0
+   */
+  private computeEvidenceDiversityFromItems(items: EvidenceItem[]): number {
+    if (items.length === 0) return 0;
+
+    const supportCounts = new Map<string, number>();
+    for (const item of items) {
+      const supports = item.supports || "unknown";
+      supportCounts.set(supports, (supportCounts.get(supports) ?? 0) + 1);
+    }
+
+    let entropy = 0;
+    for (const count of supportCounts.values()) {
+      const p = count / items.length;
+      entropy -= p * Math.log2(p);
+    }
+    const maxEntropy = Math.log2(supportCounts.size);
+    return maxEntropy > 0 ? entropy / maxEntropy : 0;
+  }
+
+  // ==========================================================================
+  // X/N Variables (ROADMAP_V5: 信息曝光度与新颖度)
+  // ==========================================================================
+  //
+  // 替代旧 E.coverage 指标（需要预定义 GLOBAL_INFO_POOL_SIZE，部署不可行）。
+  // X 和 N 基于集体证据池（CEP）动态计算，无需预定义信息总量。
+  //
+  // 语义：
+  //   X（曝光度）= agent 已接触的证据在集体中的占比（信息传播度量）
+  //   N（新颖度）= 本轮 agent 新增证据的占比（信息觅食效率）
+  //
+
+  /**
+   * 计算集体证据池（Collective Evidence Pool）。
+   *
+   * CEP = 所有 agent 在讨论中已表达的 evidence items 的并集。
+   * 使用 evidence.content 作为去重键。
+   */
+  computeCollectiveEvidencePool(): Set<string> {
+    const cep = new Set<string>();
+    for (const state of this.cognitiveStates.values()) {
+      for (const item of state.evidence.items) {
+        if (item.content) {
+          cep.add(item.content);
+        }
+      }
+    }
+    return cep;
+  }
+
+  /**
+   * 计算信息曝光度 X_i。
+   *
+   * X_i = |agent_i 已接触的证据 ∩ CEP| / |CEP|
+   *
+   * 语义：不是"agent 知道多少"，而是"agent 在集体讨论中听到了多少"。
+   * 高 X 表示 agent 充分接触了集体中的信息；低 X 表示信息隔离。
+   *
+   * @returns X ∈ [0, 1]，若 CEP 为空则返回 0
+   */
+  computeExposure(agentId: string): number {
+    const cep = this.computeCollectiveEvidencePool();
+    if (cep.size === 0) return 0;
+
+    const state = this.cognitiveStates.get(agentId);
+    if (!state) return 0;
+
+    const agentContent = new Set(
+      state.evidence.items.map(item => item.content).filter(Boolean),
+    );
+    const intersection = new Set([...agentContent].filter(x => cep.has(x)));
+    return intersection.size / cep.size;
+  }
+
+  /**
+   * 计算所有 agent 的曝光度均值。
+   */
+  computeMeanExposure(): number {
+    const agentIds = Array.from(this.cognitiveStates.keys());
+    if (agentIds.length === 0) return 0;
+    const sum = agentIds.reduce((s, id) => s + this.computeExposure(id), 0);
+    return sum / agentIds.length;
+  }
+
+  /**
+   * 计算信息新颖度 N_i(t)。
+   *
+   * N_i(t) = 本轮新增去重证据数 / 累计证据数
+   *
+   * 语义：agent 本轮获取了多少"新"信息（此前未接触过的证据）。
+   * 高 N 表示 agent 在积极觅食新信息；低 N 表示信息摄入停滞。
+   *
+   * @param round 当前轮次（用于获取上一轮历史）
+   * @returns N ∈ [0, 1]，首轮默认返回 1
+   */
+  computeNovelty(agentId: string, round: number): number {
+    const state = this.cognitiveStates.get(agentId);
+    if (!state) return 0;
+
+    const prevHistory = this.getCognitiveStateHistory(round - 1);
+    const prevState = prevHistory.get(agentId);
+
+    if (!prevState) return 1; // 首轮：所有证据都是新的
+
+    const prevContent = new Set(
+      prevState.evidence.items.map(item => item.content).filter(Boolean),
+    );
+    const currentContent = new Set(
+      state.evidence.items.map(item => item.content).filter(Boolean),
+    );
+
+    if (currentContent.size === 0) return 0;
+
+    const newItems = [...currentContent].filter(x => !prevContent.has(x));
+    return newItems.length / currentContent.size;
+  }
+
+  /**
+   * 计算所有 agent 的新颖度均值。
+   */
+  computeMeanNovelty(round: number): number {
+    const agentIds = Array.from(this.cognitiveStates.keys());
+    if (agentIds.length === 0) return 0;
+    const sum = agentIds.reduce((s, id) => s + this.computeNovelty(id, round), 0);
+    return sum / agentIds.length;
   }
 
   // ==========================================================================
@@ -191,6 +534,25 @@ export class MeasurementLayer {
   /** 获取当前所有 agent 的认知状态 */
   getCognitiveStates(): Map<string, AgentCognitiveState> {
     return new Map(this.cognitiveStates);
+  }
+
+  /**
+   * v6: 获取 SemanticTool 审计日志（C 组实验论文分析用）。
+   * 包含 evidence_dedup 和 gap_analysis 两种调用的完整记录。
+   */
+  getSemanticAuditLog(): SemanticAuditEntry[] {
+    return [...this.semanticAuditLog];
+  }
+
+  /**
+   * v3.2: 直接设置认知状态（供 GovernanceRuntime cognitive 模式使用）。
+   *
+   * 当外部 runtime 从 DiscussionMessage 构建了认知状态后，
+   * 通过此方法注入到 MeasurementLayer，使检测器和热力学计算能读取。
+   * 注意：会完全替换当前 cognitiveStates。
+   */
+  setCognitiveStates(states: Map<string, AgentCognitiveState>): void {
+    this.cognitiveStates = new Map(states);
   }
 
   /** 获取指定轮次的认知状态快照 */
@@ -253,6 +615,11 @@ export class MeasurementLayer {
       shuffleKnowledge: false,
     };
 
+    // H3 修复（Phase 2.9）：清空上一轮的 governancePrompts，防止跨轮污染。
+    // 上一轮的 prompts 已在本轮 runRound 的 buildPrompt 中被消费，
+    // 此处清空后由 Step 1 的 pendingModifications 生成新一轮的 prompts。
+    this.governancePrompts.clear();
+
     // ── Step 1: 消费 pendingModifications（在更新前，确保当轮生效）──
     if (options.pendingModifications && options.pendingModifications.size > 0) {
       this.applyPendingModifications(options.pendingModifications, result);
@@ -274,7 +641,199 @@ export class MeasurementLayer {
     // ── Step 4: 存储本轮深拷贝快照 ──
     this.storeSnapshot(round);
 
+    // ── Step 5: v6 行为事件检测（驱动 ProgressiveEstimator）──
+    // 必须在状态更新后调用，因为 detectBehaviorEvents 需要读取
+    // 更新后的 utilityHistory 来检测 stance flip 和 exposure response。
+    const refutationMap = new Map<string, boolean>();
+    const refutedAgents = this.detectRefutedAgents(opinions);
+    for (const agent of agents) {
+      refutationMap.set(agent.id, refutedAgents.has(agent.id));
+    }
+
+    const interventionTargets = new Map<string, boolean>();
+    if (options.pendingModifications) {
+      for (const [agentId] of options.pendingModifications) {
+        if (agentId !== "__governance__") {
+          interventionTargets.set(agentId, true);
+        }
+      }
+    }
+
+    detectBehaviorEvents(this.cognitiveStates, round, refutationMap, interventionTargets);
+
+    // ── Step 6: v6 跨 agent evidence 共享标记（Layer 1: 数学匹配）──
+    this.markEvidenceSharing();
+
     return result;
+  }
+
+  /**
+   * Layer 1: 跨 agent evidence 共享标记（纯数学匹配，零成本）。
+   *
+   * 对每个 agent 的每条 evidence，检查其他 agent 的 evidence 中是否存在
+   * content 子串匹配或 Levenshtein 距离接近的条目。
+   * 匹配成功 → shared = true（信息已进入讨论）。
+   * 匹配失败 → shared = false（独有信息，可能被忽视）。
+   *
+   * 局限：同义改写（"财务不稳定" vs "资产负债率高"）会漏检。
+   * Layer 2（SemanticTool）在异步路径中补判这些边缘情况。
+   */
+  markEvidenceSharing(): void {
+    const states = Array.from(this.cognitiveStates.values());
+    if (states.length < 2) return;
+
+    // 收集所有 agent 的 evidence items，按 agent 分组
+    const allItems: Array<{ agentId: string; item: EvidenceItem }> = [];
+    for (const state of states) {
+      for (const item of state.evidence.items) {
+        allItems.push({ agentId: state.agentId, item });
+      }
+    }
+
+    // 对每条 evidence，检查其他 agent 是否有匹配
+    for (const { agentId, item } of allItems) {
+      // 已经标记为 shared 的跳过（之前轮次已匹配）
+      if (item.shared) continue;
+
+      const contentLower = item.content.toLowerCase().trim();
+      if (contentLower.length < 3) {
+        // 太短的文本直接标记为 shared（无法可靠匹配）
+        item.shared = true;
+        continue;
+      }
+
+      for (const other of allItems) {
+        if (other.agentId === agentId) continue; // 不与自己比较
+        if (other.item.id === item.id) continue;
+
+        // H6 修复（Phase 2.9）：supports 一致性验证。
+        // 文本相似但支持不同选项的证据不应被视为"已共享"，
+        // 否则跨选项误判会不可逆地污染 δ_evidence_silence 的输入。
+        if (item.supports && other.item.supports && item.supports !== other.item.supports) {
+          continue;
+        }
+
+        const otherContent = other.item.content.toLowerCase().trim();
+
+        // 匹配策略 1: 子串匹配（一方包含另一方）
+        if (contentLower.includes(otherContent) || otherContent.includes(contentLower)) {
+          item.shared = true;
+          break;
+        }
+
+        // 匹配策略 2: Levenshtein 距离归一化 < 0.3
+        const maxLen = Math.max(contentLower.length, otherContent.length);
+        if (maxLen > 0) {
+          const dist = levenshtein(contentLower, otherContent);
+          const normalized = dist / maxLen;
+          if (normalized < 0.3) {
+            item.shared = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Layer 2: SemanticTool evidence 语义去重（批量补判）。
+   *
+   * 收集 Layer 1 未匹配的 evidence items，一次 LLM 调用批量判断语义等价性。
+   * 确定性验证器：supports 字段不同的对强制否决（防止跨选项误匹配）。
+   * 通过 → shared = true。
+   *
+   * 仅在异步路径（diagnoseAndSuggest）中调用。
+   */
+  async markEvidenceSharingSemantic(llmConfig: LLMConfig, round: number = 0): Promise<void> {
+    const states = Array.from(this.cognitiveStates.values());
+    if (states.length < 2) return;
+
+    // 收集所有未匹配（shared=false）的 evidence items
+    const unsharedItems: Array<{ id: string; content: string; supports: string; agentId: string }> = [];
+    for (const state of states) {
+      for (const item of state.evidence.items) {
+        if (!item.shared) {
+          unsharedItems.push({
+            id: item.id,
+            content: item.content,
+            supports: String(item.supports),
+            agentId: state.agentId,
+          });
+        }
+      }
+    }
+
+    if (unsharedItems.length < 2) return;
+
+    // 调用 SemanticTool evidence_dedup
+    const callStart = Date.now();
+    let result;
+    let success = true;
+    let errorMsg: string | undefined;
+    try {
+      result = await semanticConsult({
+        task: "evidence_dedup",
+        items: unsharedItems.map(i => ({ id: i.id, content: i.content })),
+      }, llmConfig);
+    } catch (err) {
+      success = false;
+      errorMsg = err instanceof Error ? err.message : String(err);
+    }
+    const latencyMs = Date.now() - callStart;
+
+    // 审计日志：记录调用结果
+    const clusters = result?.clusters ?? [];
+    let validatedClusters = 0;
+    let rejectedClusters = 0;
+
+    if (success && clusters.length > 0) {
+      // 构建 item ID → supports 映射，用于验证器
+      const itemSupports = new Map<string, string>();
+      for (const item of unsharedItems) {
+        itemSupports.set(item.id, item.supports);
+      }
+
+      // 遍历 clusters，标记语义等价的 evidence 为 shared
+      for (const cluster of clusters) {
+        if (cluster.itemIds.length < 2) continue;
+
+        // 确定性验证器：同一 cluster 内的 items 必须支持同一选项
+        const supportsSet = new Set<string>();
+        for (const itemId of cluster.itemIds) {
+          const supports = itemSupports.get(itemId);
+          if (supports) supportsSet.add(supports);
+        }
+
+        // 如果 cluster 内 items 支持不同选项，否决整个 cluster
+        if (supportsSet.size > 1) {
+          rejectedClusters++;
+          continue;
+        }
+        validatedClusters++;
+
+        // 标记为 shared
+        for (const itemId of cluster.itemIds) {
+          const [agentId] = itemId.split("_ev_");
+          const state = this.cognitiveStates.get(agentId);
+          if (state) {
+            const item = state.evidence.items.find(i => i.id === itemId);
+            if (item) item.shared = true;
+          }
+        }
+      }
+    }
+
+    this.semanticAuditLog.push({
+      round,
+      task: "evidence_dedup",
+      inputCount: unsharedItems.length,
+      outputCount: clusters.length,
+      validatedClusters,
+      rejectedClusters,
+      success,
+      latencyMs,
+      error: errorMsg,
+    });
   }
 
   // ==========================================================================
@@ -317,23 +876,42 @@ export class MeasurementLayer {
         opinion?.itemBeliefs || [],
         agentId,
         round,
+        opinion?.structuredEvidence,
       );
+      const allItems = [...currentState.evidence.items, ...evidenceItems];
       const evidence: Evidence = {
         coverage: currentState.evidence.coverage,
         quality: currentState.evidence.quality,
-        diversity: currentState.evidence.diversity,
+        // v3.2.1 修复：从 items 的 supports 分布计算，与 native mode 对齐
+        // 旧实现恒为 currentState.evidence.diversity（初始 0.5），从未更新
+        diversity: this.computeEvidenceDiversityFromItems(allItems),
         recentGain: evidenceItems.length > 0
-          ? evidenceItems.length / Math.max(1, currentState.evidence.items.length + evidenceItems.length)
+          ? evidenceItems.length / Math.max(1, allItems.length)
           : 0,
-        items: [...currentState.evidence.items, ...evidenceItems],
+        items: allItems,
       };
 
-      // Confidence: 从 evidence 计算
+      // Confidence: 从 evidence + LLM 自报（shrinkage 校准，与 native 模式一致）
+      // v6 修复：stated 必须是 LLM 自报 confidence（0-100 → 0-1），不能用 evidenceBased。
+      // 否则 δ_confidence_gap（检查 stated >= 0.8）在 evidence 弱时永远不触发，检测器实质失效。
+      const nativeConfidence = opinion?.confidence !== undefined
+        ? opinion.confidence / 100
+        : currentState.confidence.overall;
       const evidenceBased = evidence.quality * evidence.coverage;
+      const stabilityBased = 1 - Math.abs(nativeConfidence - currentState.confidence.overall);
+      // shrinkage：融合系统 evidenceBased 与 LLM rawConfidence，抑制 overconfidence
+      const CALIBRATION_W_SYSTEM = 0.4;
+      const CALIBRATION_W_LLM = 0.6;
+      const calibratedOverall = CALIBRATION_W_SYSTEM * evidenceBased + CALIBRATION_W_LLM * nativeConfidence;
       const confidence: Confidence = {
-        overall: evidenceBased,
-        evidenceBased,
-        stabilityBased: 1 - Math.abs(evidenceBased - currentState.confidence.overall),
+        estimate: Math.max(0, Math.min(1, calibratedOverall)),
+        confidence: 0.10,
+        stated: Math.max(0, Math.min(1, nativeConfidence)),
+        stability: stabilityBased,
+        sourceWeights: { stated: CALIBRATION_W_LLM, stability: CALIBRATION_W_SYSTEM },
+        overall: Math.max(0, Math.min(1, calibratedOverall)),
+        evidenceBased: Math.max(0, Math.min(1, evidenceBased)),
+        stabilityBased,
       };
 
       // Inertia: 系统计算（角色 + 反驳 + 衰减）
@@ -384,9 +962,11 @@ export class MeasurementLayer {
       );
 
       // 组装
+      // H5 修复（Phase 2.9）：追加更新后的 utility.scores 而非更新前的 currentState.utility.scores，
+      // 确保 δ_stance_flip/δ_consistency 检测的是本轮的变化而非上一轮的。
       const utilityHistory = [
         ...currentState.utilityHistory,
-        { round, scores: { ...currentState.utility.scores } },
+        { round, scores: { ...utility.scores } },
       ].slice(-10);
 
       this.cognitiveStates.set(agentId, {
@@ -397,6 +977,8 @@ export class MeasurementLayer {
         evidence,
         inertia,
         confidence,
+        susceptibility: currentState.susceptibility,
+        behaviorEvents: currentState.behaviorEvents,
         spokeThisRound,
         utilityHistory,
       });
@@ -443,25 +1025,50 @@ export class MeasurementLayer {
         opinion?.itemBeliefs || [],
         agentId,
         round,
+        opinion?.structuredEvidence,
       );
+      const allItems = [...currentState.evidence.items, ...evidenceItems];
       const evidence: Evidence = {
         coverage: nativeCS?.evidenceCoverage ?? currentState.evidence.coverage,
         quality: nativeCS?.evidenceQuality ?? currentState.evidence.quality,
-        diversity: currentState.evidence.diversity,
+        // v3.2.1 修复：从 items 的 supports 分布计算，旧实现恒为 currentState.evidence.diversity
+        diversity: this.computeEvidenceDiversityFromItems(allItems),
         recentGain: evidenceItems.length > 0
-          ? evidenceItems.length / Math.max(1, currentState.evidence.items.length + evidenceItems.length)
+          ? evidenceItems.length / Math.max(1, allItems.length)
           : 0,
-        items: [...currentState.evidence.items, ...evidenceItems],
+        items: allItems,
       };
 
-      // ── Confidence: 使用 LLM 原生 confidence（0-100 → 0-1）──
+      // ── Confidence: shrinkage 校准（v3.2.1 新增）──
+      // 前沿经验：RLHF 后的 LLM 普遍 overconfident（GPT-4o-mini 66.7% 错误发生在 >80% confidence）。
+      // 标准 Platt scaling 需要 ground truth 标签，但开放讨论无"正确答案"。
+      // 务实方案：将 LLM 自报 confidence（rawConfidence）与系统客观计算的 evidenceBased
+      // 做加权融合（shrinkage toward system prior），抑制 overconfidence 偏差。
+      //
+      // 公式：overall = w_system * evidenceBased + w_llm * rawConfidence
+      // 默认 w_system=0.4, w_llm=0.6（保留 LLM 元认知信号为主，系统客观信号为辅校准）
+      //
+      // 参考：
+      // - Platt et al. 1999 (Platt scaling)
+      // - Guo et al. 2017 (Temperature scaling)
+      // - Luo et al. 2025 (DACA, unsupervised confidence calibration for PoLMs)
       const nativeConfidence = opinion?.confidence !== undefined
         ? opinion.confidence / 100
         : currentState.confidence.overall;
+      const evidenceBased = evidence.quality * evidence.coverage;
       const stabilityBased = 1 - Math.abs(nativeConfidence - currentState.confidence.overall);
+      // v3.2.1 shrinkage：融合系统 evidenceBased 与 LLM rawConfidence
+      const CALIBRATION_W_SYSTEM = 0.4;
+      const CALIBRATION_W_LLM = 0.6;
+      const calibratedOverall = CALIBRATION_W_SYSTEM * evidenceBased + CALIBRATION_W_LLM * nativeConfidence;
       const confidence: Confidence = {
-        overall: Math.max(0, Math.min(1, nativeConfidence)),
-        evidenceBased: nativeConfidence,
+        estimate: Math.max(0, Math.min(1, calibratedOverall)),
+        confidence: 0.10,
+        stated: Math.max(0, Math.min(1, nativeConfidence)),
+        stability: stabilityBased,
+        sourceWeights: { stated: CALIBRATION_W_LLM, stability: CALIBRATION_W_SYSTEM },
+        overall: Math.max(0, Math.min(1, calibratedOverall)),
+        evidenceBased: Math.max(0, Math.min(1, evidenceBased)),
         stabilityBased,
       };
 
@@ -534,9 +1141,10 @@ export class MeasurementLayer {
       );
 
       // ── 组装 ──
+      // H5 修复（Phase 2.9）：同 native 模式，追加更新后的 utility.scores。
       const utilityHistory = [
         ...currentState.utilityHistory,
-        { round, scores: { ...currentState.utility.scores } },
+        { round, scores: { ...utility.scores } },
       ].slice(-10);
 
       this.cognitiveStates.set(agentId, {
@@ -547,6 +1155,8 @@ export class MeasurementLayer {
         evidence,
         inertia,
         confidence,
+        susceptibility: currentState.susceptibility,
+        behaviorEvents: currentState.behaviorEvents,
         spokeThisRound,
         utilityHistory,
       });
@@ -661,7 +1271,11 @@ export class MeasurementLayer {
     const states: CognitiveGovernanceState[] = [];
 
     for (const [agentId, cs] of this.cognitiveStates) {
-      const susceptibility = computeSusceptibility(cs.inertia, cs.confidence);
+      // v6: 优先使用 ProgressiveEstimator 渐进估计的 susceptibility（基于暴露事件），
+      // 仅在不可用（暴露事件 < 2，短对话冷启动）时回退到旧公式 (1-I)(1-C)。
+      const susceptibility = cs.susceptibility.usable
+        ? cs.susceptibility.estimate
+        : computeSusceptibility(cs.inertia, cs.confidence);
 
       states.push({
         agentId,
@@ -687,6 +1301,263 @@ export class MeasurementLayer {
     }
 
     return states;
+  }
+
+  // ==========================================================================
+  // Thermo → δ → Intervention Pipeline (ROADMAP_V5 闭环)
+  // ==========================================================================
+  //
+  // 双层架构的完整链路：
+  //   1. 热力学筛查（computeThermoState）：R/T/H/F 零成本异常检测
+  //   2. δ 诊断（computeDeltaDiagnosis）：仅异常轮次触发，定位根因
+  //   3. 干预建议（δ triggers → InterventionType 映射）：定向干预
+  //
+  // 与旧 detector 系统（runDetectors）的区别：
+  //   - 旧：6 个检测器独立运行，阈值硬编码，检测"异常"需价值判断
+  //   - 新：5 个 δ 信号检测"矛盾"（对比可观测信号），无需 ground truth
+  //
+
+  /**
+   * 运行 Thermo → δ → 干预 完整诊断链路（v6：集成 ProgressiveEstimator + SemanticTool）。
+   *
+   * 1. 计算热力学状态（R/T/H/F）
+   * 2. 运行 ProgressiveEstimator（I/C/Λ 渐进估计）
+   * 3. 运行 6 信号 δ 诊断（自适应阈值）
+   * 4. δ 根因模糊时 → 调用 SemanticTool（Tier 3）
+   * 5. δ 触发映射为干预建议
+   *
+   * @param round 当前轮次
+   * @param llmConfig LLM 配置（SemanticTool 需要）
+   * @returns δ 诊断结果 + 干预建议列表
+   */
+  async diagnoseAndSuggest(
+    round: number,
+    llmConfig?: LLMConfig,
+  ): Promise<{ thermo: ThermoState; delta: DeltaDiagnosis; suggestions: DeltaInterventionSuggestion[] }> {
+    // ── Layer 2: SemanticTool evidence 语义去重（批量补判 Layer 1 遗漏）──
+    if (llmConfig) {
+      await this.markEvidenceSharingSemantic(llmConfig, round);
+    }
+
+    const states = Array.from(this.cognitiveStates.values());
+    const thermo = this.computeThermoState();
+
+    // ── ProgressiveEstimator: I/C/Λ 渐进估计 ──
+    const estimates = estimateAll(this.cognitiveStates, round);
+
+    // ── 运行 δ 诊断（自适应阈值已在各 δ 函数内处理）──
+    const delta = computeDeltaDiagnosis(states, thermo, estimates);
+
+    // ── δ triggers → 干预建议 ──
+    const suggestions: DeltaInterventionSuggestion[] = this.buildDeltaSuggestions(delta, states, thermo, round);
+
+    // ── Tier 3: 根因模糊 → SemanticTool ──
+    if (this.shouldConsultSemanticTool(delta, round)) {
+      const enhancedSuggestions = await this.consultSemanticTool(delta, states, thermo, round, llmConfig);
+      if (enhancedSuggestions.length > 0) {
+        // C1 修复（Phase 2.9）：合并而非替换。
+        // SemanticTool 主要增强 inject_evidence（信息层干预），
+        // 数学层的 rebalance_attention（结构层干预）必须保留，否则丢失关键干预。
+        const mathLayerKept = suggestions.filter(s => s.type !== "inject_evidence");
+        return { thermo, delta, suggestions: [...mathLayerKept, ...enhancedSuggestions] };
+      }
+    }
+
+    return { thermo, delta, suggestions };
+  }
+
+  /** 判断是否应触发 SemanticTool */
+  private shouldConsultSemanticTool(delta: DeltaDiagnosis, _round: number): boolean {
+    // 条件 1：δ_1d_mask 触发（可能需要语义去重定位信息缺口）
+    if (delta.oneDMask.triggered) return true;
+
+    // 条件 2：多个 δ 同时触发且建议的干预类型冲突
+    const triggeredCount = [
+      delta.polarization, delta.oneDMask, delta.evidenceSilence,
+      delta.confidenceGap, delta.stanceFlip, delta.noResponse,
+    ].filter(d => d.triggered).length;
+    if (triggeredCount >= 3) return true;
+
+    // 条件 3：evidence_silence 触发（可能需要 LLM 判断哪些证据被忽视）
+    if (delta.evidenceSilence.triggered && delta.oneDMask.triggered) return true;
+
+    return false;
+  }
+
+  /** 调用 SemanticTool 获取增强建议 */
+  private async consultSemanticTool(
+    delta: DeltaDiagnosis,
+    states: AgentCognitiveState[],
+    thermo: ThermoState,
+    round: number,
+    llmConfig?: LLMConfig,
+  ): Promise<DeltaInterventionSuggestion[]> {
+    const suggestions: DeltaInterventionSuggestion[] = [];
+
+    // ── 组装未分享证据 ──
+    const unsharedEvidence = states.map(s => ({
+      agent: s.agentName,
+      items: s.evidence.items
+        .filter(i => !i.shared)
+        .map(i => ({ id: i.id, content: i.content })),
+    })).filter(a => a.items.length > 0);
+
+    if (unsharedEvidence.length === 0) return suggestions;
+
+    const deltasTriggered = [
+      delta.oneDMask.triggered ? `δ_1d_mask=${delta.oneDMask.value.toFixed(3)}` : "",
+      delta.evidenceSilence.triggered ? `δ_evidence_silence=${delta.evidenceSilence.value.toFixed(2)}` : "",
+      delta.confidenceGap.triggered ? `δ_confidence_gap` : "",
+    ].filter(Boolean);
+
+    // Gap analysis
+    const callStart = Date.now();
+    let gapResult;
+    let success = true;
+    let errorMsg: string | undefined;
+    try {
+      gapResult = await semanticConsult({
+        task: "gap_analysis",
+        deltasTriggered,
+        groupState: `R=${thermo.R.toFixed(2)}, T=${thermo.T.toFixed(2)}, round=${round}`,
+        unsharedEvidence,
+      }, llmConfig);
+    } catch (err) {
+      success = false;
+      errorMsg = err instanceof Error ? err.message : String(err);
+    }
+    const latencyMs = Date.now() - callStart;
+
+    // 审计日志
+    this.semanticAuditLog.push({
+      round,
+      task: "gap_analysis",
+      triggeredDeltas: deltasTriggered,
+      inputCount: unsharedEvidence.length,
+      outputCount: gapResult?.criticalItems?.length ?? 0,
+      success,
+      latencyMs,
+      error: errorMsg,
+    });
+
+    if (success && gapResult?.criticalItems && gapResult.criticalItems.length > 0) {
+      for (const item of gapResult.criticalItems) {
+        suggestions.push({
+          type: "inject_evidence",
+          targetAgents: item.suggestedRecipients,
+          reason: `SemanticTool: ${item.reason}`,
+          source: "δ_1d_mask→SemanticTool",
+        });
+      }
+    }
+
+    return suggestions;
+  }
+
+  /** 将 δ 触发映射为干预建议（纯数学路径） */
+  private buildDeltaSuggestions(
+    delta: DeltaDiagnosis,
+    _states: AgentCognitiveState[],
+    _thermo: ThermoState,
+    _round: number,
+  ): DeltaInterventionSuggestion[] {
+    const suggestions: DeltaInterventionSuggestion[] = [];
+
+    if (delta.oneDMask.triggered) {
+      suggestions.push({
+        type: "inject_evidence",
+        targetAgents: [],
+        reason: `δ_1d_mask=${delta.oneDMask.value.toFixed(3)}：标量共识掩盖向量分歧，注入差异性证据`,
+        source: "δ_1d_mask",
+      });
+    }
+
+    if (delta.evidenceSilence.triggered) {
+      const silenced = (delta.evidenceSilence as any).silencedAgents ?? [];
+      suggestions.push({
+        type: "rebalance_attention",
+        targetAgents: silenced,
+        reason: `δ_evidence_silence=${delta.evidenceSilence.value.toFixed(2)}：${silenced.join("、")} 的证据被系统性忽视`,
+        source: "δ_evidence_silence",
+      });
+    }
+
+    if (delta.stanceFlip.triggered) {
+      suggestions.push({
+        type: "inject_evidence",
+        targetAgents: [],
+        reason: `δ_stance_flip：多人立场翻转，注入稳定证据`,
+        source: "δ_stance_flip",
+      });
+    }
+
+    if (delta.noResponse.triggered) {
+      const unresponsive = (delta.noResponse as any).unresponsiveAgents ?? [];
+      suggestions.push({
+        type: "rebalance_attention",
+        targetAgents: unresponsive,
+        reason: `δ_no_response：${unresponsive.join("、")} 曾暴露于新证据但未响应`,
+        source: "δ_no_response",
+      });
+    }
+
+    if (delta.polarization.triggered) {
+      suggestions.push({
+        type: "inject_evidence",
+        targetAgents: [],
+        reason: `δ_polarization=${delta.polarization.value.toFixed(3)}：效用极化，注入桥接证据`,
+        source: "δ_polarization",
+      });
+    }
+
+    // H1 修复（Phase 2.9）：补充 3 个未映射的 δ 信号
+    if (delta.confidenceGap.triggered) {
+      const overconfident = delta.confidenceGap.overconfidentAgents ?? [];
+      suggestions.push({
+        type: "inject_evidence",
+        targetAgents: overconfident,
+        reason: `δ_confidence_gap=${delta.confidenceGap.value.toFixed(3)}：${overconfident.join("、")} 自报信心与 U 位置矛盾，注入挑战性证据`,
+        source: "δ_confidence_gap",
+      });
+    }
+
+    if (delta.concentration.triggered) {
+      suggestions.push({
+        type: "rebalance_attention",
+        targetAgents: [],
+        reason: `δ_concentration=${delta.concentration.value.toFixed(2)}：惯性集中在少数 agent 上，重新分配发言权给低惯性 agent`,
+        source: "δ_concentration",
+      });
+    }
+
+    if (delta.consistency.triggered) {
+      suggestions.push({
+        type: "inject_evidence",
+        targetAgents: [],
+        reason: `δ_consistency=${delta.consistency.value.toFixed(1)}：立场变化幅度与惯性预测矛盾，注入稳定证据`,
+        source: "δ_consistency",
+      });
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * @deprecated 自 v6 起使用 diagnoseAndSuggest()。保留用于向后兼容测试。
+   */
+  /** 旧版 diagnoseAndSuggest（同步版本，不使用 ProgressiveEstimator 或 SemanticTool） */
+  diagnoseAndSuggestSync(
+    round: number,
+    config?: DeltaConfig,
+  ): { thermo: ThermoState; delta: DeltaDiagnosis; suggestions: DeltaInterventionSuggestion[] } {
+    const states = Array.from(this.cognitiveStates.values());
+    const thermo = this.computeThermoState();
+    const estimates = estimateAll(this.cognitiveStates, round);
+    const delta = computeDeltaDiagnosis(states, thermo, estimates, config);
+
+    const suggestions = this.buildDeltaSuggestions(delta, states, thermo, round);
+
+    return { thermo, delta, suggestions };
   }
 
   // ==========================================================================
@@ -767,5 +1638,36 @@ export class MeasurementLayer {
     this.influenceWeights.clear();
     this.governancePrompts.clear();
     this.pendingInertiaFactors.clear();
+    this.semanticAuditLog = [];
   }
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/** Levenshtein 距离（编辑距离），用于 evidence 文本模糊匹配。 */
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+
+  const prev = new Array<number>(n + 1);
+  const curr = new Array<number>(n + 1);
+  let dpPrev = prev;
+  let dpCurr = curr;
+
+  for (let j = 0; j <= n; j++) prev[j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    dpCurr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dpCurr[j] = Math.min(dpPrev[j] + 1, dpCurr[j - 1] + 1, dpPrev[j - 1] + cost);
+    }
+    [dpPrev, dpCurr] = [dpCurr, dpPrev];
+  }
+
+  return dpPrev[n];
 }

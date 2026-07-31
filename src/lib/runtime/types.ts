@@ -1,3 +1,20 @@
+/**
+ * Runtime 类型定义——历史残留文档
+ *
+ * 本文件中仅以下 3 个类型仍在生产代码中使用：
+ *   - RuntimeContext         (discussion/index.ts, inference/index.ts, observation/index.ts)
+ *   - CollectiveDecisionState (discussion/index.ts, inference/types.ts, inference/index.ts)
+ *   - ExperimentConfig        (discussion/index.ts，作为桩类型使用)
+ *
+ * 其余类型（ResearchRuntime, PluginRegistry, EventBus, TerminationStrategy,
+ * ResearchArtifact, ResearchReport 等）是 v1/v2 架构遗留的定义。
+ * 对应的实现模块（researchRuntime.ts, scheduler.ts, context.ts, eventBus.ts,
+ * adapters.ts, termination.ts）已在重构中移除（见 index.ts 注释），
+ * 但类型定义保留用于历史参考和类型兼容性。
+ *
+ * 技术债务：这些死类型应在后续重构中清除，但需要逐个验证无引用后才能删除。
+ * 当前生产路径：src/runtime/GovernanceRuntime.ts + src/lib/pipeline.ts
+ */
 import type {
   InteractionGraph,
   DecisionTrace,

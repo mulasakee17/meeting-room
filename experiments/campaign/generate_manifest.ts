@@ -22,6 +22,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 import { execSync } from "child_process";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // 排除文件（派生统计/聚合文件，非原始实验结果）
 const EXCLUDE_FILES = new Set([
@@ -85,7 +86,8 @@ function getGitCommit(): string {
 function extractMetadata(filePath: string): Partial<ManifestEntry> {
   try {
     const raw = fs.readFileSync(filePath, "utf8");
-    const data = JSON.parse(raw);
+    const data = safeJsonParse<any>(raw);
+    if (!data) { console.warn(`[generate_manifest] 无法解析 JSON: ${filePath}`); return {}; }
     const interventions: any[] = data.interventions || [];
     const governanceIssues: any[] = data.governanceIssues || [];
     return {
@@ -158,6 +160,13 @@ function main(): void {
       size: stat.size,
       sha256: sha256Buffer(buf),
       ...meta,
+      hasCognitiveTrajectory: meta.hasCognitiveTrajectory ?? false,
+      hasThermoHistory: meta.hasThermoHistory ?? false,
+      hasInterventions: meta.hasInterventions ?? false,
+      totalInterventions: meta.totalInterventions ?? 0,
+      totalAppliedInterventions: meta.totalAppliedInterventions ?? 0,
+      hasGovernanceIssues: meta.hasGovernanceIssues ?? false,
+      totalGovernanceIssues: meta.totalGovernanceIssues ?? 0,
     });
     totalSize += stat.size;
   }

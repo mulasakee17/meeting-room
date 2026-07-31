@@ -21,6 +21,8 @@ import {
   computeFullAdaptiveConfig,
   type RuntimeSignals,
 } from "../../src/lib/governance/adaptiveThresholds";
+import { mean, std as stdDev } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 数据加载
@@ -34,29 +36,24 @@ function loadDir(dir: string, prefix: string): any[] {
   return fs.readdirSync(full)
     .filter(f => f.endsWith(".json") && f.startsWith(prefix))
     .map(f => {
-      try { return JSON.parse(fs.readFileSync(path.join(full, f), "utf8")); }
-      catch { return null; }
+      const parsed = safeJsonParse(fs.readFileSync(path.join(full, f), "utf8"));
+      if (!parsed) { console.warn(`[adaptive_validation] 无法解析 JSON: ${f}`); }
+      return parsed;
     })
-    .filter(Boolean);
+    .filter((r): r is Record<string, unknown> => r !== null);
 }
 
 // ============================================================================
 // 工具函数
 // ============================================================================
 
-function mean(arr: number[]): number {
-  return arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-}
+// B3: mean 已从 statsShared 导入
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
-function stdDev(arr: number[]): number {
-  if (arr.length < 2) return 0;
-  const m = mean(arr);
-  return Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
-}
+// B3: stdDev 已从 statsShared 导入
 
 // ============================================================================
 // 质量因子计算（参数化版本）
@@ -481,7 +478,7 @@ function main() {
 关键发现：
   1. 质量因子：言行一致权重从 0.40→0.50，EMA α 从 0.30→0.40，均有提升
   2. 治理：polarization 是最有价值的检测信号（阈值降到 0.15 分离度 0.304）
-  3. echoChamber 无分离度（0.000），印证"共识≠正确"（r≈-0.10，n=169）
+  3. echoChamber 无分离度（0.000），印证"共识≠正确"（r≈-0.13，n=161，p=0.09 不显著）
   4. 运行时自适应在质量因子上与网格搜索基线接近（因模拟信号较粗略）
   5. 信念更新系数和发言意愿需要新实验验证（离线无法搜索）
   `);

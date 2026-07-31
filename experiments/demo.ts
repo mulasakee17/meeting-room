@@ -14,11 +14,11 @@ import { GovernanceEngine, AgentBelief, MessageInfo, GovernanceConfig, DetectorR
 
 // ── 1. 构造一个有 authority bias 的群体 ──────────────────────────
 const beliefs: AgentBelief[] = [
-  { agentId: "dominant_agent", belief: 0.95, confidence: 95, timestamp: new Date().toISOString() },
-  { agentId: "follower_1",     belief: 0.90, confidence: 70, timestamp: new Date().toISOString() },
-  { agentId: "follower_2",     belief: 0.88, confidence: 65, timestamp: new Date().toISOString() },
-  { agentId: "dissenter",      belief: 0.30, confidence: 85, timestamp: new Date().toISOString() },
-  { agentId: "undecided",      belief: 0.55, confidence: 40, timestamp: new Date().toISOString() },
+  { agentId: "dominant_agent", belief: 0.95, confidence: 95 },
+  { agentId: "follower_1",     belief: 0.90, confidence: 70 },
+  { agentId: "follower_2",     belief: 0.88, confidence: 65 },
+  { agentId: "dissenter",      belief: 0.30, confidence: 85 },
+  { agentId: "undecided",      belief: 0.55, confidence: 40 },
 ];
 
 // dominant_agent 被 80% 的发言引用 → 权威偏差
@@ -37,7 +37,6 @@ const config: GovernanceConfig = {
   maxRounds: 5,
   authorityBiasThreshold: 0.3,
   sortingMode: "fdecomposition",
-  useAdaptiveDosage: true,
 };
 
 const engine = new GovernanceEngine();
@@ -103,7 +102,6 @@ console.log("\n📈 治理度量:");
 console.log(`   检测问题数: ${result.otherIssues.length}`);
 console.log(`   干预计划数: ${interventions.length}`);
 console.log(`   检测器数量: 7 内置 + 1 自定义 = 8`);
-console.log(`   自适应剂量: ${config.useAdaptiveDosage ? "开" : "关"}`);
 console.log(`   F 分解排序: ${config.sortingMode === "fdecomposition" ? "开" : "关"}`);
 
 console.log("\n" + "═".repeat(60));

@@ -4,6 +4,8 @@
  */
 import * as fs from "fs";
 import * as path from "path";
+import { mean } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 const BASE = path.resolve(process.cwd(), "experiments/v2");
 
@@ -12,17 +14,19 @@ function loadDir(dir: string, prefix: string): any[] {
   if (!fs.existsSync(full)) return [];
   return fs.readdirSync(full)
     .filter(f => f.endsWith(".json") && f.startsWith(prefix))
-    .map(f => { try { return JSON.parse(fs.readFileSync(path.join(full, f), "utf8")); } catch { return null; } })
-    .filter(Boolean);
+    .map(f => {
+      const parsed = safeJsonParse(fs.readFileSync(path.join(full, f), "utf8"));
+      if (!parsed) { console.warn(`[verify_findings_9_10] 无法解析 JSON: ${f}`); }
+      return parsed;
+    })
+    .filter((r): r is Record<string, unknown> => r !== null);
 }
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
-function mean(arr: number[]): number {
-  return arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-}
+// B3: mean 已从 statsShared 导入
 
 function computeConsistency(utteranceBelief: number, actualBelief: number): number {
   return clamp(1 - Math.abs(utteranceBelief - actualBelief) / 2, 0, 1);
@@ -127,9 +131,9 @@ function analyzeGroup(name: string, data: any[]) {
   }
 
   // 恶意 vs 诚实聚合
-  const maliciousCons = maliciousIds.flatMap(id => consistencyByAgent[id] || []);
+  const maliciousCons = maliciousIds.flatMap((id: string) => consistencyByAgent[id] || []);
   const honestCons = Array.from(allAgents).filter(id => !maliciousIds.includes(id)).flatMap(id => consistencyByAgent[id] || []);
-  const maliciousAlign = maliciousIds.flatMap(id => alignmentByAgent[id] || []);
+  const maliciousAlign = maliciousIds.flatMap((id: string) => alignmentByAgent[id] || []);
   const honestAlign = Array.from(allAgents).filter(id => !maliciousIds.includes(id)).flatMap(id => alignmentByAgent[id] || []);
 
   console.log("\n聚合：");

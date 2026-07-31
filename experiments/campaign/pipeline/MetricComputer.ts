@@ -149,7 +149,7 @@ function logisticRegressionAUC(x: number[], y: number[]): { auc: number; oddsRat
 }
 
 /** Granger 因果检验（简化：滞后 1 期的 F 检验） */
-function grangerCausality(x: number[], y: number[], lag: number = 1): number {
+export function grangerCausality(x: number[], y: number[], lag: number = 1): number {
   // x → y: 检验 x 的过去值能否预测 y 的当前值
   const n = x.length;
   if (n < lag + 3) return 0;
@@ -172,13 +172,12 @@ function grangerCausality(x: number[], y: number[], lag: number = 1): number {
     return s + (yi - pred) ** 2;
   }, 0);
 
-  // 完整模型：y = α + β₁*y_{t-1} + β₂*x_{t-1}
-  // 简化：计算 x 对 y 的偏相关
+  // 完整模型：y = α + β₁*y_{t-1} + γ*x_{t-1}
+  // 用 Frisch-Waugh-Lovell (FWL) 残差化：y 和 x 都对 y_{t-1}（含截距）回归取残差，
+  // 再对残差做无截距回归得到 γ。这样 ssResFull 才是真完整模型的残差平方和。
   const resY = yCurr.map((yi, i) => yi - (restricted.beta * yLag[i] + restricted.intercept));
-  const resX = xLag.map((xi, i) => {
-    const mx = mean(xLag);
-    return xi - mx;
-  });
+  const xOnYLag = linearRegressionWithIntercept(yLag, xLag);
+  const resX = xLag.map((xi, i) => xi - (xOnYLag.beta * yLag[i] + xOnYLag.intercept));
   const fullModel = simpleLinearRegression(resX, resY);
   const ssResFull = resY.reduce((s, yi, i) => {
     const pred = fullModel.beta * resX[i];
@@ -188,7 +187,9 @@ function grangerCausality(x: number[], y: number[], lag: number = 1): number {
   const m = n - lag;
   const df1 = 1; // 额外参数数
   const df2 = m - 3; // 残差自由度
-  const F = df2 > 0 ? ((ssResRestricted - ssResFull) / df1) / (ssResFull / df2) : 0;
+  // ssResFull 可能为 0（常数序列/完美拟合）→ 用 eps 保护避免 0/0=NaN
+  const denom = ssResFull / df2;
+  const F = (df2 > 0 && denom > 1e-12) ? ((ssResRestricted - ssResFull) / df1) / denom : 0;
   return Math.max(0, F);
 }
 
@@ -606,7 +607,12 @@ export function computeE5Governance(
   const deltaTau = mean(tauGov) - mean(tauNoGov);
 
   // Granger 因果：Evidence 变化是否先于 Utility 变化
-  const allEvidenceSeq: number[] = [];
+  // v6 修复：按 (run, agent) 分组计算，每条序列单独做 Granger 检验后取均值。
+  // 旧实现把所有 agent、所有 run 的 ΔE/ΔU 拼成两条长序列，破坏了时序假设。
+  const perSeriesF_EtoU: number[] = [];
+  const perSeriesF_UtoE: number[] = [];
+  const perSeriesLengths: number[] = []; // v6.1: 每条序列长度，用于 Fisher 合并 p 值的 df2
+  const allEvidenceSeq: number[] = []; // 仍保留用于回归
   const allUtilitySeq: number[] = [];
 
   for (const run of governedData) {
@@ -618,23 +624,36 @@ export function computeE5Governance(
     }
     for (const [, snaps] of byAgent) {
       snaps.sort((a, b) => a.round - b.round);
+      const evSeq: number[] = [];
+      const uSeq: number[] = [];
       for (let i = 1; i < snaps.length; i++) {
         const prev = snaps[i - 1];
         const curr = snaps[i];
-        allEvidenceSeq.push(curr.evidenceCoverage - prev.evidenceCoverage);
-        allUtilitySeq.push(utilityL2(prev.utility, curr.utility));
+        const dE = curr.evidenceCoverage - prev.evidenceCoverage;
+        const dU = utilityL2(prev.utility, curr.utility);
+        evSeq.push(dE);
+        uSeq.push(dU);
+        allEvidenceSeq.push(dE);
+        allUtilitySeq.push(dU);
+      }
+      // 每条序列单独做 Granger 检验
+      if (evSeq.length >= 4) {
+        perSeriesF_EtoU.push(grangerCausality(evSeq, uSeq));
+        perSeriesF_UtoE.push(grangerCausality(uSeq, evSeq));
+        perSeriesLengths.push(evSeq.length);
       }
     }
   }
 
-  const grangerF_EtoU = grangerCausality(allEvidenceSeq, allUtilitySeq);
-  const grangerF_UtoE = grangerCausality(allUtilitySeq, allEvidenceSeq);
+  // Granger F 取各序列的均值（meta-analysis）
+  const grangerF_EtoU = perSeriesF_EtoU.length > 0 ? mean(perSeriesF_EtoU) : 0;
+  const grangerF_UtoE = perSeriesF_UtoE.length > 0 ? mean(perSeriesF_UtoE) : 0;
 
-  // 间接效应：Evidence → Utility 通过治理
-  // 简化：治理组的 ΔE → ΔU 回归系数
+  // 直接效应：治理组 ΔE → ΔU 的回归系数
+  // 注：这不是真正的中介效应（需要 a×b 路径），而是 Evidence 对 Utility 的直接预测力
   const indirectEffect = simpleLinearRegression(allEvidenceSeq, allUtilitySeq).beta;
 
-  // Bootstrap CI for indirect effect
+  // Bootstrap CI for direct effect
   const indirectCI = bootstrapIndirectEffect(allEvidenceSeq, allUtilitySeq);
 
   return {
@@ -654,6 +673,11 @@ export function computeE5Governance(
         tauGov,
         tauNoGov,
         grangerN: allEvidenceSeq.length,
+        // v6.1: 传递 per-series F 值与序列长度，供 StatisticalTest 用 Fisher 合并 p 值
+        perSeriesF_EtoU: perSeriesF_EtoU,
+        perSeriesF_UtoE: perSeriesF_UtoE,
+        // 每条序列的实际长度（用于 F 分布 df2 = n - 3）
+        perSeriesN: perSeriesLengths,
       },
     },
   };
@@ -835,7 +859,7 @@ export function computeE7Detector(data: RawRunData[]): ExperimentMetrics {
     // premature_consensus: 收敛快但 τ 高（虚假共识，非真正分歧）
     const gtPremature = run.totalRounds <= 2 && run.finalKendallTau > 0.8;
 
-    // === 预测器（cognitive 用治理检测器触发，belief 用简单阈值）===
+    // === 预测器（cognitive 用治理检测器触发，belief 用标量 belief 阈值）===
     // cognitive: 从 governanceIssues 提取检测器触发类型
     const cogDetectedTypes = new Set<string>();
     if (run.governanceIssues) {
@@ -843,11 +867,18 @@ export function computeE7Detector(data: RawRunData[]): ExperimentMetrics {
         if (issue.type) cogDetectedTypes.add(issue.type);
       }
     }
-    // belief: 基于标量 belief 阈值（与原逻辑一致）
-    const belAuthority = run.interventions.some(i => i.type === "reduce_weight" || i.type === "authority_bias");
-    const belPolarized = lastStd > 0.3;
-    const belEchoChamber = evStd < 0.15;
-    const belPremature = run.totalRounds <= 2;
+    // belief: 基于标量 belief 阈值（v6 修复：从 beliefTrajectory 提取真 belief 标量，
+    //   不再用 utilityIntensity/evidenceCoverage 等 cognitive state 变量冒充 belief）
+    const lastBeliefSnap = run.beliefTrajectory?.[run.beliefTrajectory.length - 1];
+    const lastBeliefs = lastBeliefSnap ? Object.values(lastBeliefSnap.beliefs) : [];
+    const lastBeliefStd = lastBeliefs.length > 1 ? sampleStd(lastBeliefs) : 0;
+    const lastConfidences = lastBeliefSnap ? Object.values(lastBeliefSnap.confidences) : [];
+    const lastConfStd = lastConfidences.length > 1 ? sampleStd(lastConfidences) : 0;
+    // belief 框架的检测逻辑（基于标量 belief 分散度/置信度趋同，不依赖 cognitive state）：
+    const belAuthority = lastConfStd < 10 && lastBeliefStd > 0.3;   // 置信度趋同但 belief 分散 → 权威压制
+    const belPolarized = lastBeliefStd > 0.3;                        // belief 标量高度分散
+    const belEchoChamber = lastConfStd < 5;                           // 置信度高度趋同（回声室）
+    const belPremature = run.totalRounds <= 2;                        // 过早结束
 
     // === 记录（每个 run 每个 type 一条）===
     const types: Array<"authority_bias" | "polarization" | "echo_chamber" | "premature_consensus"> =
@@ -882,8 +913,8 @@ export function computeE7Detector(data: RawRunData[]): ExperimentMetrics {
   };
 }
 
-/** 双峰系数 BC = (g² + 1) / (k * ((n-1)/(n-2))³)，g=偏度，k=峰度。BC > 0.555 提示双峰 */
-function bimodalityCoefficient(values: number[]): number {
+/** 双峰系数 BC = (g² + 1) / (k + 3(n-1)²/((n-2)(n-3)))，g=偏度，k=超额峰度。BC > 0.555 提示双峰 (Ellison 1987) */
+export function bimodalityCoefficient(values: number[]): number {
   const n = values.length;
   if (n < 4) return 0;
   const m = mean(values);
@@ -892,9 +923,14 @@ function bimodalityCoefficient(values: number[]): number {
   let g = 0, k = 0;
   for (const v of values) { g += Math.pow((v - m) / s, 3); k += Math.pow((v - m) / s, 4); }
   g /= n;
-  k = k / n - 3; // 超额峰度
-  const correction = (n - 1) / (n - 2);
-  return (g * g + 1) / (k * correction * correction * correction + 1e-10);
+  k = k / n - 3; // 超额峰度 g₂
+  // Ellison 1987 标准公式：BC = (g² + 1) / (g₂ + 3(n-1)²/((n-2)(n-3)))
+  // 分母的加性修正项 3(n-1)²/((n-2)(n-3)) 保证 n≥4 时分母为正
+  const denomCorrection = (n - 2) * (n - 3);
+  const denom = denomCorrection > 0 ? k + 3 * (n - 1) * (n - 1) / denomCorrection : k + 1e-10;
+  // 分母可能为负（platykurtic），但 Ellison 框架下负 BC 无统计意义，返回 0
+  if (denom <= 0) return 0;
+  return (g * g + 1) / denom;
 }
 
 /** Gini 系数（衡量不平等度，0=完全平等，1=完全不平等） */
@@ -1060,7 +1096,7 @@ export function computeE9CognitiveGovernance(
   const governanceMode = parts.slice(2).join("_") || "unknown";
 
   // RTHF 轨迹分析
-  let rthfTrajectory: ExperimentMetrics["cognitiveGovernance"] extends { rthfTrajectory?: infer T } ? T : undefined;
+  let rthfTrajectory: NonNullable<ExperimentMetrics["cognitiveGovernance"]>["rthfTrajectory"];
   if (allThermo.length > 0) {
     const maxRound = Math.max(...allThermo.map(t => t.length));
     const perRound: Array<{ round: number; R: number; T: number; H: number; F: number }> = [];
@@ -1109,6 +1145,93 @@ export function computeE9CognitiveGovernance(
     };
   }
 
+  // ── v6 δ 诊断分析 ──────────────────────────────────────────────
+  // 消费 deltaDiagnosis 数据，验证"δ 驱动"叙事的有效性
+  const DELTA_SIGNALS = [
+    "polarization", "oneDMask", "evidenceSilence", "confidenceGap",
+    "stanceFlip", "noResponse", "concentration", "consistency",
+  ] as const;
+
+  const triggerRates: Record<string, number> = {};
+  const meanConfidenceBySignal: Record<string, number> = {};
+  let totalTriggers = 0;
+  let totalDeltaRounds = 0;
+
+  // φ 系数计算用：δ 是否触发 × 同轮是否有干预
+  let n11 = 0, n10 = 0, n01 = 0, n00 = 0;
+  // Δconvergence 对比：δ 触发轮 vs 非触发轮的群体 belief 方差变化
+  // （用 belief 方差作为收敛代理指标，方差下降 = 收敛改善）
+  const convDeltasOnTrigger: number[] = [];
+  const convDeltasNoTrigger: number[] = [];
+
+  for (const d of data) {
+    if (!d.deltaDiagnosis || d.deltaDiagnosis.length === 0) continue;
+    const deltaRounds = d.deltaDiagnosis;
+    totalDeltaRounds += deltaRounds.length;
+
+    // 逐信号统计触发率
+    for (const sig of DELTA_SIGNALS) {
+      const sigData = deltaRounds.map(r => (r as any)[sig]).filter(x => x !== undefined);
+      const triggered = sigData.filter((s: any) => s.triggered).length;
+      const confs = sigData.filter((s: any) => s.triggered).map((s: any) => s.minConfidence);
+      triggerRates[sig] = (triggerRates[sig] || 0) + triggered;
+      if (confs.length > 0) {
+        meanConfidenceBySignal[sig] = (meanConfidenceBySignal[sig] || 0) + mean(confs);
+      }
+    }
+
+    // 逐轮：δ 触发 × 干预共存 + Δconvergence
+    const interventionRounds = new Set(d.interventions.map(i => i.round));
+    for (let i = 0; i < deltaRounds.length; i++) {
+      const dr = deltaRounds[i];
+      const anyTriggered = DELTA_SIGNALS.some(sig => (dr as any)[sig]?.triggered);
+      const hasIntervention = interventionRounds.has(dr.round);
+      totalTriggers += anyTriggered ? 1 : 0;
+
+      if (anyTriggered && hasIntervention) n11++;
+      else if (anyTriggered && !hasIntervention) n10++;
+      else if (!anyTriggered && hasIntervention) n01++;
+      else n00++;
+
+      // Δconvergence: 相邻轮 belief 方差的变化（方差减小 = 收敛）
+      if (d.beliefTrajectory && i < d.beliefTrajectory.length - 1) {
+        const beliefs1 = Object.values(d.beliefTrajectory[i]?.beliefs || {});
+        const beliefs2 = Object.values(d.beliefTrajectory[i + 1]?.beliefs || {});
+        if (beliefs1.length >= 2 && beliefs2.length >= 2) {
+          const dConv = sampleStd(beliefs1) - sampleStd(beliefs2); // 正值 = 收敛改善
+          if (anyTriggered) convDeltasOnTrigger.push(dConv);
+          else convDeltasNoTrigger.push(dConv);
+        }
+      }
+    }
+  }
+
+  // 归一化触发率
+  for (const sig of DELTA_SIGNALS) {
+    triggerRates[sig] = totalDeltaRounds > 0 ? triggerRates[sig] / totalDeltaRounds : 0;
+    if (meanConfidenceBySignal[sig] !== undefined) {
+      // meanConfidenceBySignal 累加了多次 run 的均值，需要除以 run 数
+      meanConfidenceBySignal[sig] = meanConfidenceBySignal[sig] / Math.max(1, data.length);
+    }
+  }
+
+  // φ 系数 = (n11*n00 - n10*n01) / sqrt((n11+n10)(n01+n00)(n11+n01)(n10+n00))
+  const phiDenom = Math.sqrt((n11 + n10) * (n01 + n00) * (n11 + n01) * (n10 + n00));
+  const deltaInterventionPhi = phiDenom > 0 ? (n11 * n00 - n10 * n01) / phiDenom : 0;
+
+  // δ 触发轮 vs 非触发轮的 Δconvergence 均值差
+  const tauDeltaOnTrigger = convDeltasOnTrigger.length > 0 && convDeltasNoTrigger.length > 0
+    ? mean(convDeltasOnTrigger) - mean(convDeltasNoTrigger)
+    : 0;
+
+  const deltaDiagnosis = totalDeltaRounds > 0 ? {
+    triggerRates,
+    totalTriggers,
+    deltaInterventionPhi,
+    tauDeltaOnTrigger,
+    meanConfidenceBySignal,
+  } : undefined;
+
   return {
     experimentId,
     runtimeMode: "native_cognitive",
@@ -1125,6 +1248,7 @@ export function computeE9CognitiveGovernance(
       governanceMode,
       scenario,
       rthfTrajectory,
+      deltaDiagnosis,
     },
   };
 }
@@ -1137,7 +1261,7 @@ export function computeGlobalMetrics(data: RawRunData[]): ExperimentMetrics["glo
   const tauValues = data.map(d => d.finalKendallTau);
   const roundValues = data.map(d => d.totalRounds);
 
-  // 按 seed 分组计算 reproducibility
+  // 按 seed 分组计算 reproducibility 和 robustness
   const bySeed = new Map<number, number[]>();
   for (const d of data) {
     if (!bySeed.has(d.seed)) bySeed.set(d.seed, []);
@@ -1145,23 +1269,79 @@ export function computeGlobalMetrics(data: RawRunData[]): ExperimentMetrics["glo
   }
   const withinSeedStds = [...bySeed.values()].map(vals => sampleStd(vals));
 
-  // 极化：τ 值分布的双峰性（简化：标准差/均值）
   const tauMean = mean(tauValues);
   const tauStd = sampleStd(tauValues);
-  const polarization = tauMean !== 0 ? tauStd / Math.abs(tauMean) : 0;
 
-  // 多样性：τ 的变异系数
-  const diversity = tauMean !== 0 ? tauStd / Math.abs(tauMean) : 0;
+  // 极化：τ 值分布的双峰系数 BC = (g² + 1) / (k * ((n-1)/(n-2))³)
+  // BC > 0.555 表明分布呈双峰（群体分化为两个阵营）
+  const polarization = bimodalityCoefficient(tauValues);
 
-  // Calibration：信度-准确度相关性（简化：用 τ 的稳健性近似）
-  const calibration = Math.abs(tauMean) > 0.001 ? 1 - tauStd / Math.abs(tauMean) : 0;
+  // 多样性：Evidence Jaccard 补集——跨 run 末轮 evidence items 的平均不重叠度
+  // 衡量不同实验 run 之间信息覆盖的差异程度（高 = 信息来源多样，低 = 信息同质化）
+  let diversity = 0;
+  const lastRoundEvidenceSets = data
+    .map(d => {
+      if (!d.itemBeliefsTrajectory || d.itemBeliefsTrajectory.length === 0) return null;
+      const lastRound = Math.max(...d.itemBeliefsTrajectory.map(t => t.round));
+      const items = new Set<string>();
+      for (const t of d.itemBeliefsTrajectory) {
+        if (t.round === lastRound) {
+          for (const ib of t.itemBeliefs) items.add(ib.item);
+        }
+      }
+      return items;
+    })
+    .filter((s): s is Set<string> => s !== null && s.size > 0);
+
+  if (lastRoundEvidenceSets.length >= 2) {
+    let totalJaccardDist = 0;
+    let pairCount = 0;
+    for (let i = 0; i < lastRoundEvidenceSets.length; i++) {
+      for (let j = i + 1; j < lastRoundEvidenceSets.length; j++) {
+        const a = lastRoundEvidenceSets[i];
+        const b = lastRoundEvidenceSets[j];
+        const intersection = [...a].filter(x => b.has(x)).length;
+        const union = a.size + b.size - intersection;
+        totalJaccardDist += union > 0 ? 1 - intersection / union : 0;
+        pairCount++;
+      }
+    }
+    diversity = pairCount > 0 ? totalJaccardDist / pairCount : 0;
+  }
+
+  // Robustness：按 seed 分组的 within-seed CV 的均值
+  // 衡量相同 seed 下实验结果的稳定性（低 CV = 高稳健性，取 1-CV 使方向一致）
+  const withinSeedCVs = [...bySeed.values()]
+    .filter(vals => vals.length >= 2)
+    .map(vals => {
+      const m = mean(vals);
+      return m !== 0 ? sampleStd(vals) / Math.abs(m) : 0;
+    });
+  const robustness = withinSeedCVs.length > 0
+    ? Math.max(0, 1 - mean(withinSeedCVs))
+    : 0;
+
+  // Calibration：末轮 confidence 与 finalKendallTau 的 Pearson 相关
+  // 衡量 agent 自报信心与实际决策准确度的一致性
+  const confTauPairs: Array<[number, number]> = [];
+  for (const d of data) {
+    if (!d.cognitiveTrajectory || d.cognitiveTrajectory.length === 0) continue;
+    const lastSnaps = d.cognitiveTrajectory
+      .filter(s => s.round === Math.max(...d.cognitiveTrajectory!.map(c => c.round)));
+    if (lastSnaps.length === 0) continue;
+    const meanConf = mean(lastSnaps.map(s => s.confidenceOverall));
+    confTauPairs.push([meanConf, d.finalKendallTau]);
+  }
+  const calibration = confTauPairs.length >= 3
+    ? pearsonR(confTauPairs.map(p => p[0]), confTauPairs.map(p => p[1]))
+    : 0;
 
   return {
     consensusQuality: mean(tauValues),
     polarization,
     diversity,
     convergence: mean(roundValues),
-    robustness: Math.abs(tauMean) > 0.001 ? tauStd / Math.abs(tauMean) : 0,
+    robustness,
     reproducibility: mean(withinSeedStds),
     calibration,
     governanceGain: 0, // 由 E5 单独计算

@@ -41,6 +41,17 @@ export interface DiscussionMessage {
   reasoning?: string;
   /** Round number this message belongs to */
   roundNumber: number;
+  // ── v3.2: Cognitive state fields (optional, for cognitive governance) ──
+  /** Per-item beliefs (for ranking tasks); enables Utility-based governance */
+  itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>;
+  /** Evidence strings extracted from the message (enables Evidence tracking) */
+  evidence?: string[];
+  /** Native cognitive state output (when framework tracks it natively) */
+  cognitiveState?: {
+    utility?: { scores: Record<string, number>; topChoice: string };
+    evidenceCoverage?: number;
+    evidenceQuality?: number;
+  };
 }
 
 /**
@@ -109,6 +120,14 @@ export interface GovernanceRoundResult {
   hasIntervention: boolean;
   /** Metrics about the intervention effects */
   effectMetrics?: Record<string, number>;
+  // ── v3.2: Cognitive governance outputs (only in "cognitive" mode) ──
+  /** Cognitive state modifications for external framework to apply.
+   *  Maps agentId → modifications (injectPrompt, speakingPriority, etc.).
+   *  External framework should read these and adjust agent prompts/order accordingly. */
+  cognitiveModifications?: Map<string, import("../lib/governance/types").CognitiveStateModification>;
+  /** Social thermodynamics state for this round (R/T/H/F).
+   *  Enables external monitoring without running the full measurement layer. */
+  thermoState?: { R: number; T: number; H: number; F: number };
 }
 
 /** Result from processing a full multi-agent discussion. */
@@ -140,8 +159,10 @@ export interface GovernanceSessionResult {
 export interface RuntimeConfig {
   /** Maximum discussion rounds */
   maxRounds: number;
-  /** Governance mode */
-  governanceMode: "none" | "detect-only" | "random-intervene" | "full";
+  /** Governance mode.
+   *  v3.2: "cognitive" enables non-destructive cognitive governance
+   *  (MeasurementLayer + cognitive detectors + inject_evidence/rebalance_attention). */
+  governanceMode: "none" | "detect-only" | "random-intervene" | "full" | "cognitive";
   /** Governance detection & intervention config */
   governanceConfig?: GovernanceConfig;
   /** Evaluation config */
@@ -156,6 +177,10 @@ export interface RuntimeConfig {
   enableCrossExamination?: boolean;
   /** 可复现性 seed — 传入 GovernanceEngine 的 mulberry32 PRNG，保证 introduce_diversity 等随机干预可复现 */
   seed?: number;
+  // ── v3.2: Cognitive governance options ──
+  /** Agent private knowledge (for inject_evidence intervention).
+   *  Maps agentId → list of private knowledge strings. */
+  agentKnowledge?: Map<string, string[]>;
 }
 
 // ============================================================================

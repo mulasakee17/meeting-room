@@ -150,7 +150,7 @@ function mapStatusToErrorType(status: number): { type: LLMErrorType; isRetryable
 // 解析 LLM 响应
 function parseLLMResponse(content: string, provider: string): LLMResponse {
   // 1. Use safeJsonParse (handles code fences + regex extraction)
-  const parsed = safeJsonParse<{ emotion?: number; belief?: number; reasoning?: string; analysis?: string }>(content);
+  const parsed = safeJsonParse<{ emotion?: number; belief?: number; reasoning?: string; analysis?: string; content?: string }>(content);
 
   if (parsed) {
     // Accept either {emotion, reasoning} OR {belief, reasoning} as fallback
@@ -856,3 +856,31 @@ export const availableModels: Record<LLMProvider, string[]> = {
   qwen: ["qwen-flash", "qwen-plus", "qwen-max", "qwen-turbo"],
   local: ["llama3", "mistral", "qwen2"],
 };
+
+/**
+ * 从模型名推断 LLM 提供商。
+ *
+ * 优先精确匹配 availableModels；若未找到则按已知前缀 fallback。
+ * 这替代了旧代码中 `model.includes("gpt") ? "openai" : "deepseek"` 的脆弱分类，
+ * 该分类会将 claude/glm/qwen 等模型错误地归为 deepseek。
+ *
+ * @param model 模型名（如 "gpt-4o-mini", "deepseek-v4-flash", "glm-4-flash"）
+ * @returns 匹配的 LLMProvider；未知模型默认 deepseek（本项目主提供商）
+ */
+export function detectLLMProvider(model: string): LLMProvider {
+  // 1. 精确匹配 availableModels
+  for (const [provider, models] of Object.entries(availableModels)) {
+    if (models.includes(model)) {
+      return provider as LLMProvider;
+    }
+  }
+  // 2. 前缀 fallback（处理 availableModels 列表中没有的新模型名）
+  const lower = model.toLowerCase();
+  if (lower.startsWith("gpt") || lower.startsWith("o1") || lower.startsWith("o3") || lower.startsWith("o4")) return "openai";
+  if (lower.startsWith("claude")) return "anthropic";
+  if (lower.startsWith("deepseek")) return "deepseek";
+  if (lower.startsWith("glm")) return "zhipu";
+  if (lower.startsWith("qwen")) return "qwen";
+  // 3. 默认 deepseek（本项目主提供商）
+  return "deepseek";
+}

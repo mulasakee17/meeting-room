@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { mulberry32, cohensD, mean, sampleStd, PERMUTATION_SEED, BOOTSTRAP_SEED } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface ExperimentResult {
   runId: string; ablation: string; runIndex: number;
@@ -21,8 +22,8 @@ function loadData(dir: string): ExperimentResult[] {
   if (!fs.existsSync(dir)) return [];
   const files = fs.readdirSync(dir).filter(f => f.endsWith(".json") && f !== "summary.json");
   const results = files.map(f =>
-    JSON.parse(fs.readFileSync(path.join(dir, f), "utf-8"))
-  );
+    safeJsonParse<ExperimentResult & { error?: string }>(fs.readFileSync(path.join(dir, f), "utf-8"))
+  ).filter((r): r is ExperimentResult & { error?: string } => r !== null);
   // 过滤掉错误实验（run.ts 错误隔离写入的占位文件）
   const valid = results.filter(r => !r.error);
   if (valid.length < results.length) {

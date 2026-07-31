@@ -39,3 +39,19 @@ next-env.d.ts
 
 # logs
 *.log
+
+# experiment output data (regenerable, not version-controlled)
+experiments/campaign/output/
+experiments/campaign/pilot_output/
+experiments/v2/data*/
+experiments/v2/results/
+experiments/v2/audit_report.json
+
+# IDE / tool caches
+.claude/
+*.claude/
+.project
+.history/
+
+# audit reports (local, not for review)
+PROJECT_AUDIT_REPORT.md

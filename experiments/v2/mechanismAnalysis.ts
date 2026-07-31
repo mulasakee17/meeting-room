@@ -19,7 +19,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { mulberry32, cohensD, mean, sampleStd, PERMUTATION_SEED } from "./statsShared";
+import { mulberry32, cohensD, mean, sampleStd, PERMUTATION_SEED, loadExperiments } from "./statsShared";
 import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
@@ -122,13 +122,12 @@ function tCI(samples: number[], alpha = 0.05): [number, number] {
 // ============================================================================
 // 数据加载
 // ============================================================================
-function loadData(dataDir: string, prefix: string, task: string): ExperimentResult[] {
-  if (!fs.existsSync(dataDir)) return [];
-  const files = fs.readdirSync(dataDir).filter(f => f.endsWith(".json") && f.startsWith(prefix) && f !== "summary.json");
-  return files.map(f => {
-    const content = fs.readFileSync(path.join(dataDir, f), "utf-8");
-    return safeJsonParse<ExperimentResult>(content);
-  }).filter((r): r is ExperimentResult => r !== null && !r.error);
+function loadData(dataDir: string, prefix: string, ablation?: string): ExperimentResult[] {
+  // B2 修复：使用 statsShared.loadExperiments 加载，支持 ablation 字段过滤
+  // 注意：原 task 参数未在加载逻辑中使用（仅 buildInterventionRecords 用作标签），已移除
+  // 类型 cast：local ExperimentResult 的 rounds/tauTrajectory 等为必填，statsShared 中为可选，
+  // 但实际数据文件均含这些字段，cast 安全
+  return loadExperiments(dataDir, prefix, ablation) as unknown as ExperimentResult[];
 }
 
 // ============================================================================
@@ -331,15 +330,15 @@ function main() {
   const crisisDir = path.resolve(__dirname, "data_crisis");
   const supplierDir = path.resolve(__dirname, "data_supplier");
 
-  // Crisis
-  const crisisFull = loadData(crisisDir, "crisis_full", "crisis");
-  const crisisNone = loadData(crisisDir, "crisis_none", "crisis");
+  // Crisis（B2 修复：传入 ablation 过滤器，避免 startsWith 污染）
+  const crisisFull = loadData(crisisDir, "crisis_full", "full");
+  const crisisNone = loadData(crisisDir, "crisis_none", "none");
   const crisisRecords = buildInterventionRecords(crisisFull, "crisis");
   const crisisBaseline = buildBaselineDeltaTau([...crisisFull, ...crisisNone]);
 
   // Supplier
-  const supplierFull = loadData(supplierDir, "supplier_full", "supplier");
-  const supplierNone = loadData(supplierDir, "supplier_none", "supplier");
+  const supplierFull = loadData(supplierDir, "supplier_full", "full");
+  const supplierNone = loadData(supplierDir, "supplier_none", "none");
   const supplierRecords = buildInterventionRecords(supplierFull, "supplier");
   const supplierBaseline = buildBaselineDeltaTau([...supplierFull, ...supplierNone]);
 

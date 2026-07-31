@@ -35,22 +35,34 @@ import type {
   DiscussionConfig,
   DiscussionMemoryEntry,
   NativeCognitiveOutput,
+  StructuredEvidenceItem,
 } from "./types";
 import type { GovernanceIssue, Intervention } from "../governance/types";
 import { safeJsonParse } from "../utils/jsonUtils";
 import {
   type AgentCognitiveState,
+  stanceFromItemBeliefs,
 } from "../agent/cognitiveState";
 import type { OpinionParser } from "../observation";
 import {
   generateCognitiveInterventions,
 } from "../governance/cognitiveInterventions";
+import { estimateAll } from "../thermodynamics/ProgressiveEstimator";
 import type {
   CognitiveGovernanceState,
   CognitiveStateModification,
 } from "../governance/types";
 import { MeasurementLayer, type ThermoState } from "../thermodynamics/MeasurementLayer";
 import { mulberry32 } from "../utils/statsUtils";
+import type { LLMConfig } from "../llm/providers";
+
+/** v6: 治理结果类型（同步和异步路径共用） */
+type GovernanceResult = {
+  hasIntervention: boolean;
+  interventions: Intervention[];
+  effectMetrics?: Record<string, number>;
+  issues: GovernanceIssue[];
+};
 
 // ============================================================================
 // Native Cognitive Opinion Parser
@@ -103,11 +115,56 @@ class NativeCognitiveOpinionParser implements OpinionParser {
         };
       }
 
+      // v3.2.1: 结构化 evidence 解析——支持 LLM 输出 {content, supports, strength} 对象数组
+      // 前沿经验：Structured Outputs 优于 free text + post-hoc parsing。
+      // 双格式支持：
+      //   - 旧格式 evidence: ["字符串A", "字符串B"] → 启发式归类（includes 匹配）
+      //   - 新格式 evidence: [{content, supports, strength}] → 直接使用，无归类噪声
+      // 新格式同时填充 evidence（string[]，content）和 structuredEvidence（结构化）
+      let evidence: string[] = [];
+      let structuredEvidence: StructuredEvidenceItem[] | undefined;
+      if (Array.isArray(parsed.evidence)) {
+        const hasObjects = parsed.evidence.some((e: unknown) => typeof e === "object" && e !== null);
+        if (hasObjects) {
+          // 新格式：结构化 evidence 对象数组
+          const items: StructuredEvidenceItem[] = [];
+          const contents: string[] = [];
+          for (const e of parsed.evidence) {
+            if (typeof e === "object" && e !== null) {
+              const eo = e as Record<string, unknown>;
+              const content = typeof eo.content === "string" ? eo.content : "";
+              const supports = typeof eo.supports === "string" ? eo.supports : "";
+              const strength = typeof eo.strength === "number"
+                ? Math.max(0, Math.min(1, eo.strength))
+                : 0.5;
+              if (content) {
+                items.push({ content, supports, strength });
+                contents.push(content);
+              }
+            } else if (typeof e === "string") {
+              // 混合格式：数组中既有对象又有字符串，字符串保留到 evidence
+              contents.push(e);
+            }
+          }
+          evidence = contents;
+          structuredEvidence = items.length > 0 ? items : undefined;
+        } else {
+          // 旧格式：纯字符串数组
+          evidence = parsed.evidence.filter((e: unknown) => typeof e === "string");
+        }
+      }
+
       return {
         agentId,
         reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : "No reasoning provided",
-        evidence: Array.isArray(parsed.evidence) ? parsed.evidence : [],
-        belief: typeof parsed.belief === "number" ? Math.max(-1, Math.min(1, parsed.belief)) : currentBelief,
+        evidence,
+        // ROADMAP_V5: belief 不再作为 LLM 直接输出，改为从 itemBeliefs 派生 statedStance。
+        // 保留向后兼容：若 LLM 仍输出 belief，使用它；否则从 itemBeliefs 计算。
+        belief: typeof parsed.belief === "number"
+          ? Math.max(-1, Math.min(1, parsed.belief))
+          : (Array.isArray(parsed.itemBeliefs) && parsed.itemBeliefs.length > 0
+            ? stanceFromItemBeliefs(parsed.itemBeliefs)
+            : currentBelief),
         confidence: typeof parsed.confidence === "number" ? Math.max(0, Math.min(100, parsed.confidence)) : currentConfidence,
         nextOpinion: typeof parsed.nextOpinion === "string" ? parsed.nextOpinion : "",
         referencedAgents: Array.isArray(parsed.referencedAgents) ? parsed.referencedAgents : [],
@@ -124,6 +181,7 @@ class NativeCognitiveOpinionParser implements OpinionParser {
             }))
           : undefined,
         cognitiveState,
+        structuredEvidence,
       };
     } catch (err) {
       console.warn(`[NativeCognitiveEngine] Agent ${agentId} response parse failed:`, err instanceof Error ? err.message : err);
@@ -188,6 +246,17 @@ export class NativeCognitiveEngine extends DiscussionEngine {
    */
   private pendingShuffleKnowledge = false;
 
+  /**
+   * v6: LLM 配置，用于 SemanticTool 异步路径。
+   * 实验脚本通过 setLlmConfig() 注入。
+   */
+  private llmConfig: LLMConfig | null = null;
+
+  /** v6: 设置 LLM 配置（SemanticTool 异步路径需要） */
+  setLlmConfig(config: LLMConfig): void {
+    this.llmConfig = config;
+  }
+
   constructor(config?: Partial<DiscussionConfig>) {
     super(config);
     // 强制启用 cognitive state 追踪
@@ -210,6 +279,14 @@ export class NativeCognitiveEngine extends DiscussionEngine {
   /** 获取热力学历史（RTHF 逐轮轨迹） */
   getThermoHistory(): Array<{ round: number } & ThermoState> {
     return this.thermoHistory;
+  }
+
+  /**
+   * v6: 获取 SemanticTool 审计日志（C 组实验论文分析用）。
+   * 仅 useSemanticTool=true 时有数据；B 组（同步路径）返回空数组。
+   */
+  getSemanticAuditLog() {
+    return this.measurementLayer.getSemanticAuditLog();
   }
 
   // ==========================================================================
@@ -312,7 +389,10 @@ Analyze the task and the previous discussion (if any). Provide your opinion with
 Respond in JSON format:
 {
   "reasoning": "Your detailed analysis...",
-  "evidence": ["evidence1", "evidence2"],
+  "evidence": [
+    {"content": "evidence text", "supports": "Company A", "strength": 0.8},
+    {"content": "evidence text", "supports": "Company B", "strength": 0.6}
+  ],
   "confidence": 0 to 100,
   "cognitiveState": {
     "utility": {"Company A": 0.8, "Company B": 0.2},
@@ -332,7 +412,12 @@ Field explanations:
   - utility: your preference strength for each option (-1=strongly oppose, 1=strongly support)
   - evidenceCoverage: how much of the total available information you think you have (0=none, 1=complete)
   - evidenceQuality: how reliable you think your information is (0=unreliable, 1=highly reliable)
-- itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
+- itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.
+- evidence: structured evidence items (v3.2.1). Each item MUST include:
+  - content: the evidence text
+  - supports: which option (from itemBeliefs) this evidence supports
+  - strength: how strongly this evidence supports that option (0=weak, 1=strong)
+  This structured format eliminates ambiguity in evidence classification.`;
   }
 
   // ==========================================================================
@@ -393,7 +478,7 @@ Field explanations:
     agentStates: Map<string, { belief: number; confidence: number }>,
     agents: DiscussionAgent[],
     governanceConfigOverride?: { currentRound: number; maxRounds: number },
-  ): { hasIntervention: boolean; interventions: Intervention[]; effectMetrics?: Record<string, number>; issues: GovernanceIssue[] } | null {
+  ): GovernanceResult | Promise<GovernanceResult> | null {
     const mode = this.config.governanceMode || "full";
     const effectiveMaxRounds = governanceConfigOverride?.maxRounds ?? this.config.maxRounds;
     const effectiveCurrentRound = governanceConfigOverride?.currentRound ?? round;
@@ -403,8 +488,15 @@ Field explanations:
       return super.applyGovernance(round, opinions, agentStates, agents, governanceConfigOverride);
     }
 
-    // "full" mode with useCognitiveGovernance: 使用认知治理
-    if (this.config.useCognitiveGovernance) {
+    // "cognitive" mode 或 "full" mode with useCognitiveGovernance: 使用 δ 驱动认知治理
+    // Phase 2.9 修复：governanceMode="cognitive" 也应触发认知治理路径，
+    // 之前仅检查 useCognitiveGovernance 标志，导致 B 组（governanceMode="cognitive"）
+    // 走了父类旧路径，δ 诊断结果未生成任何干预。
+    if (mode === "cognitive" || this.config.useCognitiveGovernance) {
+      // v6: useSemanticTool=true → 异步路径（Tier 1→2→3，含 SemanticTool）
+      if (this.config.useSemanticTool) {
+        return this.applyCognitiveGovernanceAsync(round, opinions, agents, effectiveCurrentRound, effectiveMaxRounds);
+      }
       return this.applyCognitiveGovernance(round, opinions, agents, effectiveCurrentRound, effectiveMaxRounds);
     }
 
@@ -413,10 +505,10 @@ Field explanations:
   }
 
   /**
-   * 认知治理主流程。
+   * 认知治理主流程（v6：δ 驱动，同步路径）。
    *
-   * v3.2 变更：检测器运行委托给 MeasurementLayer.runDetectors()，
-   * 不再直接调用 runCognitiveDetectors。
+   * 使用 diagnoseAndSuggestSync（同步，纯数学路径）。
+   * SemanticTool 异步路径通过 GovernanceRuntime.runCognitiveGovernance() 单独提供。
    */
   private applyCognitiveGovernance(
     _round: number,
@@ -425,31 +517,147 @@ Field explanations:
     currentRound: number,
     maxRounds: number,
   ): { hasIntervention: boolean; interventions: Intervention[]; issues: GovernanceIssue[] } {
-    // Step 1-2: 使用 MeasurementLayer 运行认知检测器
+    // v6：δ 驱动诊断
+    try {
+      const { suggestions } = this.measurementLayer.diagnoseAndSuggestSync(currentRound);
+
+      if (suggestions.length > 0) {
+        const govConfig = this.config.governanceConfig ?? {};
+        const statesMap = this.buildGovernanceStateMap(opinions);
+
+        const issues: GovernanceIssue[] = suggestions.map((s, i) => ({
+          type: s.source as any,
+          severity: "medium" as const,
+          description: s.reason,
+          agents: s.targetAgents,
+          source: "custom" as const,
+          suggestedIntervention: {
+            type: s.type,
+            targetAgents: s.targetAgents,
+            reason: s.reason,
+          },
+          detectedAt: new Date().toISOString(),
+          id: `delta_${currentRound}_${i}`,
+        }));
+
+        // v6：渐进估计用于置信度感知干预降级
+        const progressiveEstimates = estimateAll(
+          this.measurementLayer.getCognitiveStates(), currentRound,
+        );
+
+        const { interventions, cognitiveModifications } = generateCognitiveInterventions(
+          issues,
+          statesMap,
+          govConfig,
+          this.agentKnowledge,
+          progressiveEstimates,
+        );
+
+        this.pendingCognitiveModifications = cognitiveModifications;
+
+        return {
+          hasIntervention: interventions.length > 0,
+          interventions,
+          issues,
+        };
+      }
+
+      return { hasIntervention: false, interventions: [], issues: [] };
+    } catch (err) {
+      console.warn(`[NativeCognitiveEngine] δ diagnosis failed, falling back to detectors: ${err instanceof Error ? err.message : err}`);
+    }
+
+    // 降级：旧检测器路径
     const govConfig = this.config.governanceConfig ?? {};
     const detectionResult = this.measurementLayer.runDetectors(
       currentRound, maxRounds, govConfig,
     );
-
-    // Step 3: 生成认知干预（需要 CognitiveGovernanceState map）
     const statesMap = this.buildGovernanceStateMap(opinions);
-
+    const progressiveEstimates = estimateAll(
+      this.measurementLayer.getCognitiveStates(), currentRound,
+    );
     const { interventions, cognitiveModifications } = generateCognitiveInterventions(
       detectionResult.issues,
       statesMap,
       govConfig,
-      this.agentKnowledge,  // 传递 agent 私有知识供 inject_evidence 使用
+      this.agentKnowledge,
+      progressiveEstimates,
     );
-
-    // Step 4: 存储认知状态修改（下一轮 updateCognitiveStatesFromRound 中消费）
     this.pendingCognitiveModifications = cognitiveModifications;
 
-    // 记录干预（用于 roundData）
     return {
       hasIntervention: interventions.length > 0,
       interventions,
       issues: detectionResult.issues,
     };
+  }
+
+  /**
+   * v6 认知治理异步路径（含 SemanticTool Tier 3）。
+   *
+   * 与 applyCognitiveGovernance 的区别：
+   * - 使用 diagnoseAndSuggest()（async）而非 diagnoseAndSuggestSync()
+   * - SemanticTool evidence_dedup（Layer 2 语义去重）
+   * - SemanticTool gap_analysis（信息缺口识别）
+   * - SemanticTool intervention_generation（上下文感知干预文本）
+   */
+  private async applyCognitiveGovernanceAsync(
+    _round: number,
+    opinions: AgentOpinion[],
+    agents: DiscussionAgent[],
+    currentRound: number,
+    _maxRounds: number,
+  ): Promise<{ hasIntervention: boolean; interventions: Intervention[]; issues: GovernanceIssue[] }> {
+    try {
+      const { suggestions } = await this.measurementLayer.diagnoseAndSuggest(
+        currentRound, this.llmConfig ?? undefined,
+      );
+
+      if (suggestions.length > 0) {
+        const govConfig = this.config.governanceConfig ?? {};
+        const statesMap = this.buildGovernanceStateMap(opinions);
+
+        const issues: GovernanceIssue[] = suggestions.map((s, i) => ({
+          type: s.source as any,
+          severity: "medium" as const,
+          description: s.reason,
+          agents: s.targetAgents,
+          source: "custom" as const,
+          suggestedIntervention: {
+            type: s.type,
+            targetAgents: s.targetAgents,
+            reason: s.reason,
+          },
+          detectedAt: new Date().toISOString(),
+          id: `delta_semantic_${currentRound}_${i}`,
+        }));
+
+        const progressiveEstimates = estimateAll(
+          this.measurementLayer.getCognitiveStates(), currentRound,
+        );
+
+        const { interventions, cognitiveModifications } = generateCognitiveInterventions(
+          issues,
+          statesMap,
+          govConfig,
+          this.agentKnowledge,
+          progressiveEstimates,
+        );
+
+        this.pendingCognitiveModifications = cognitiveModifications;
+
+        return {
+          hasIntervention: interventions.length > 0,
+          interventions,
+          issues,
+        };
+      }
+
+      return { hasIntervention: false, interventions: [], issues: [] };
+    } catch (err) {
+      console.warn(`[NativeCognitiveEngine] SemanticTool diagnosis failed, falling back to sync: ${err instanceof Error ? err.message : err}`);
+      return this.applyCognitiveGovernance(_round, opinions, agents, currentRound, _maxRounds);
+    }
   }
 
   /**
@@ -556,7 +764,7 @@ Field explanations:
    * 如果 agentKnowledge 为空或只有 1 个 agent，则不做任何操作。
    */
   private applyShuffleKnowledge(agents: import("../observation").ObserverAgent[]): void {
-    const knowledge = (this as any).agentKnowledge as Map<string, string[]> | undefined;
+    const knowledge = this.agentKnowledge;
     if (!knowledge || knowledge.size < 2) return;
 
     // 只对参与讨论的 agent 进行轮转

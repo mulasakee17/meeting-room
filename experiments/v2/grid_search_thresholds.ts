@@ -19,6 +19,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 类型定义
@@ -76,10 +77,11 @@ function loadDir(dir: string, prefix: string): ExperimentData[] {
   return fs.readdirSync(full)
     .filter(f => f.endsWith(".json") && f.startsWith(prefix))
     .map(f => {
-      try { return JSON.parse(fs.readFileSync(path.join(full, f), "utf8")); }
-      catch { return null; }
+      const parsed = safeJsonParse<ExperimentData>(fs.readFileSync(path.join(full, f), "utf8"));
+      if (!parsed) { console.warn(`[grid_search_thresholds] 无法解析 JSON: ${f}`); }
+      return parsed;
     })
-    .filter(Boolean) as ExperimentData[];
+    .filter((r): r is ExperimentData => r !== null);
 }
 
 // ============================================================================
@@ -536,7 +538,7 @@ function gridSearchGovernance(): void {
 
   // 分任务分析
   console.log("\n分任务分离度对比（prematureConsensus 阈值=0.35）：\n");
-  for (const [taskName, taskData] of [["Crisis", crisisData], ["Supplier", supplierData]] as [string, ExperimentData[]]) {
+  for (const [taskName, taskData] of [["Crisis", crisisData], ["Supplier", supplierData]] as [string, ExperimentData[]][]) {
     const taskSignals = extractSignals(taskData);
     const taskTaus = taskSignals.map(s => s.tau).sort((a, b) => a - b);
     const taskMedian = taskTaus[Math.floor(taskTaus.length / 2)];

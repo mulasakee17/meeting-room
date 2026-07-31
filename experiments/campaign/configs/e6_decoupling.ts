@@ -11,7 +11,7 @@ export const E6_DECOUPLING: ExperimentConfig = {
   hypothesis: "H6",
   title: "State Decoupling — 五维变量相互独立",
   scenario: "ma",
-  runtimeModes: ["cognitive"],
+  runtimeModes: ["native_cognitive"],
   governanceMode: "none",
   agentCount: 5,
   maxRounds: 5,

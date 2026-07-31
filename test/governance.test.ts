@@ -9,7 +9,6 @@ describe("GovernanceEngine", () => {
       agentId: `agent_${i}`,
       belief,
       confidence: 70 + (i * 7) % 25,  // deterministic: 70, 77, 84, 91, 73, ...
-      timestamp: new Date().toISOString(),
     }));
   };
 
@@ -171,11 +170,11 @@ describe("GovernanceEngine", () => {
 
   it("should cluster agents by belief into groups", () => {
     const beliefs = [
-      { agentId: "agent_0", belief: 0.1, confidence: 80, timestamp: new Date().toISOString() },
-      { agentId: "agent_1", belief: 0.2, confidence: 80, timestamp: new Date().toISOString() },
-      { agentId: "agent_2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-      { agentId: "agent_3", belief: 0.8, confidence: 80, timestamp: new Date().toISOString() },
-      { agentId: "agent_4", belief: 0.9, confidence: 80, timestamp: new Date().toISOString() },
+      { agentId: "agent_0", belief: 0.1, confidence: 80 },
+      { agentId: "agent_1", belief: 0.2, confidence: 80 },
+      { agentId: "agent_2", belief: 0.5, confidence: 80 },
+      { agentId: "agent_3", belief: 0.8, confidence: 80 },
+      { agentId: "agent_4", belief: 0.9, confidence: 80 },
     ];
     
     const result = engine.detectPolarization(beliefs, {
@@ -235,11 +234,11 @@ describe("GovernanceEngine", () => {
     // 故修正后 force_reflection 评分 = thermal*(1-structural) = 0.390*0.214 = 0.083（极化时降权），
     // reduce_weight 评分 = thermal = 0.390 → reduce_weight 应排在前面。
     const beliefs: AgentBelief[] = [
-      { agentId: "a1", belief: -1.0, confidence: 80, timestamp: new Date().toISOString() },
-      { agentId: "a2", belief: -0.9, confidence: 80, timestamp: new Date().toISOString() },
-      { agentId: "a3", belief:  0.9, confidence: 80, timestamp: new Date().toISOString() },
-      { agentId: "a4", belief:  1.0, confidence: 80, timestamp: new Date().toISOString() },
-      { agentId: "a5", belief: -0.95, confidence: 80, timestamp: new Date().toISOString() },
+      { agentId: "a1", belief: -1.0, confidence: 80 },
+      { agentId: "a2", belief: -0.9, confidence: 80 },
+      { agentId: "a3", belief:  0.9, confidence: 80 },
+      { agentId: "a4", belief:  1.0, confidence: 80 },
+      { agentId: "a5", belief: -0.95, confidence: 80 },
     ];
     const messages = createMockMessagesWithRefs(15, "a3");
     const config: GovernanceConfig = {
@@ -252,7 +251,7 @@ describe("GovernanceEngine", () => {
       maxRounds: 5,
     };
 
-    const { interventions } = engine.diagnoseAndIntervene(beliefs, messages, agentIds, config);
+    const { interventions } = engine.diagnoseAndIntervene(beliefs, messages, agentIds, undefined, config);
 
     // 非守卫断言：必须同时触发两种干预，否则测试失败（避免空过）
     const types = interventions.map(i => i.type);
@@ -270,11 +269,11 @@ describe("GovernanceEngine", () => {
     // 故 introduce_diversity 不会触发——此测试只验证 no-op 安全性，
     // 不验证 introduce_diversity 优先级（该验证需真实 LLM 消息，留实验室）。
     const beliefs: AgentBelief[] = [
-      { agentId: "a1", belief: 0.8, confidence: 90, timestamp: new Date().toISOString() },
-      { agentId: "a2", belief: 0.82, confidence: 90, timestamp: new Date().toISOString() },
-      { agentId: "a3", belief: 0.79, confidence: 90, timestamp: new Date().toISOString() },
-      { agentId: "a4", belief: 0.81, confidence: 90, timestamp: new Date().toISOString() },
-      { agentId: "a5", belief: 0.8, confidence: 90, timestamp: new Date().toISOString() },
+      { agentId: "a1", belief: 0.8, confidence: 90 },
+      { agentId: "a2", belief: 0.82, confidence: 90 },
+      { agentId: "a3", belief: 0.79, confidence: 90 },
+      { agentId: "a4", belief: 0.81, confidence: 90 },
+      { agentId: "a5", belief: 0.8, confidence: 90 },
     ];
     const messages = createMockMessages(10, "a1");
     const config: GovernanceConfig = {
@@ -285,10 +284,10 @@ describe("GovernanceEngine", () => {
       interventionLevel: "medium",
       currentRound: 2,
       maxRounds: 5,
-      disabledInterventions: [],
+      disabledInterventions: ["introduce_diversity", "continue_discussion"],
     };
 
-    const { interventions } = engine.diagnoseAndIntervene(beliefs, messages, agentIds, config);
+    const { interventions } = engine.diagnoseAndIntervene(beliefs, messages, agentIds, undefined, config);
 
     // 单一干预时排序应不改变结果（返回原数组）
     expect(interventions.length).toBeLessThanOrEqual(1);
@@ -305,9 +304,9 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.4: 检测 agent evidence 为空但他人有 evidence", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a3", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
+        { agentId: "a3", belief: 0.5, confidence: 80 },
       ];
       const messages: MessageInfo[] = [
         { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), evidence: ["e1", "e2"] },
@@ -328,8 +327,8 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.4: 所有 agent 都有 evidence 时不检测", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
       ];
       const messages: MessageInfo[] = [
         { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), evidence: ["e1"] },
@@ -347,8 +346,8 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.4: V1 数据（无 evidence 字段）安全降级为 notDetected", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
       ];
       const messages: MessageInfo[] = [
         { agentId: "a1", content: "msg1", timestamp: new Date().toISOString() },
@@ -365,8 +364,8 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.4: 禁用检测器时返回 notDetected", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
       ];
       const messages: MessageInfo[] = [
         { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), evidence: ["e1"] },
@@ -385,9 +384,9 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.5: 检测被引用 ≥2 次但未回引的 agent", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a3", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
+        { agentId: "a3", belief: 0.5, confidence: 80 },
       ];
       // a2 和 a3 都引用 a1，但 a1 不引用任何人
       const messages: MessageInfo[] = [
@@ -408,9 +407,9 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.5: agent 被引用但自己也引用他人时不检测", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a3", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
+        { agentId: "a3", belief: 0.5, confidence: 80 },
       ];
       // a1 被引用但自己也引用 a2 → 不算 ignoring
       const messages: MessageInfo[] = [
@@ -429,8 +428,8 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.5: V1 数据（无 referencedAgents 字段）安全降级", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
       ];
       const messages: MessageInfo[] = [
         { agentId: "a1", content: "msg1", timestamp: new Date().toISOString() },
@@ -449,8 +448,8 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.6: 检测 rank=1 的 item belief 不是最高且差距 >0.3", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
       ];
       // a1: rank=1 的 item 是 "A" 但 belief=0.2，而 "B" rank=2 但 belief=0.8（差距 0.6 > 0.3）→ mismatch
       const messages: MessageInfo[] = [
@@ -482,8 +481,8 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.6: rank 和 belief 一致时不检测", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
       ];
       const messages: MessageInfo[] = [
         {
@@ -512,7 +511,7 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.6: 差距 ≤0.3 时不检测（避免误报）", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
       ];
       // rank=1 belief=0.4，rank=2 belief=0.5，差距 0.1 ≤ 0.3 → 不检测
       const messages: MessageInfo[] = [
@@ -535,8 +534,8 @@ describe("GovernanceEngine", () => {
 
     it("FM-2.6: V1 数据（无 itemBeliefs 字段）安全降级", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
       ];
       const messages: MessageInfo[] = [
         { agentId: "a1", content: "msg1", timestamp: new Date().toISOString() },
@@ -555,9 +554,9 @@ describe("GovernanceEngine", () => {
 
     it("diagnose() 返回的 GovernanceResult 包含 3 个新字段", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a3", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
+        { agentId: "a3", belief: 0.5, confidence: 80 },
       ];
       const messages: MessageInfo[] = [
         { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), evidence: ["e1"], referencedAgents: [] },
@@ -582,9 +581,9 @@ describe("GovernanceEngine", () => {
 
     it("diagnoseAndIntervene() 为 FM-2.4 触发 force_reflection 干预", () => {
       const beliefs: AgentBelief[] = [
-        { agentId: "a1", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a2", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-        { agentId: "a3", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
+        { agentId: "a1", belief: 0.5, confidence: 80 },
+        { agentId: "a2", belief: 0.5, confidence: 80 },
+        { agentId: "a3", belief: 0.5, confidence: 80 },
       ];
       const messages: MessageInfo[] = [
         { agentId: "a1", content: "msg1", timestamp: new Date().toISOString(), evidence: ["e1"], referencedAgents: [] },
@@ -633,9 +632,9 @@ describe("GovernanceEngine", () => {
       maxRounds: 5,
     };
     const beliefs: AgentBelief[] = [
-      { agentId: "agent_0", belief: 0.5, confidence: 80, timestamp: new Date().toISOString() },
-      { agentId: "agent_1", belief: 0.6, confidence: 80, timestamp: new Date().toISOString() },
-      { agentId: "agent_2", belief: 0.4, confidence: 80, timestamp: new Date().toISOString() },
+      { agentId: "agent_0", belief: 0.5, confidence: 80 },
+      { agentId: "agent_1", belief: 0.6, confidence: 80 },
+      { agentId: "agent_2", belief: 0.4, confidence: 80 },
     ];
     const messages: MessageInfo[] = [
       { agentId: "agent_0", content: "msg0", timestamp: new Date().toISOString() },

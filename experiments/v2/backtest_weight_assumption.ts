@@ -13,7 +13,8 @@
  */
 import * as fs from "fs";
 import * as path from "path";
-import { mulberry32 } from "./statsShared";
+import { mean, mulberry32, cohensD } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface Round {
   roundNumber: number;
@@ -26,6 +27,7 @@ interface ExperimentData {
   rounds: Round[];
   kendallTau: number;
   tauTrajectory?: number[];
+  ablation?: string;
 }
 
 function kuramoto(beliefs: Record<string, number>): number {
@@ -69,22 +71,22 @@ function loadExperiments(dir: string, prefix: string): ExperimentData[] {
   for (const f of fs.readdirSync(dir)) {
     if (f.startsWith(prefix) && f.endsWith(".json")) {
       try {
-        results.push(JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")));
+        const data = safeJsonParse<ExperimentData>(fs.readFileSync(path.join(dir, f), "utf8"));
+        if (!data) { console.warn(`[backtest_weight_assumption] 无法解析 JSON: ${f}`); continue; }
+        results.push(data);
       } catch { /* skip */ }
     }
   }
   return results;
 }
 
-function mean(xs: number[]): number {
-  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
-}
+// B3: mean 已从 statsShared 导入
 
 // 主分析
 const crisisDir = path.join(__dirname, "data_crisis");
 const supplierDir = path.join(__dirname, "data_supplier");
 
-const crisis = loadExperiments(crisisDir, "crisis_full_");
+const crisis = loadExperiments(crisisDir, "crisis_full_").filter(r => r.ablation !== "full_fixed");
 const supplier = loadExperiments(supplierDir, "supplier_full_");
 const all = [...crisis, ...supplier];
 
@@ -179,14 +181,8 @@ if (structuralEvents.length >= 3 && thermalEvents.length >= 3) {
   console.log(`  (p<0.05 -> 两组 Delta-tau 差异显著)`);
 }
 
-// Cohen's d
-function cohensD(a: number[], b: number[]): number {
-  const ma = mean(a), mb = mean(b);
-  const va = a.length > 1 ? a.reduce((s, x) => s + (x - ma) ** 2, 0) / (a.length - 1) : 0;
-  const vb = b.length > 1 ? b.reduce((s, x) => s + (x - mb) ** 2, 0) / (b.length - 1) : 0;
-  const pooled = Math.sqrt((va + vb) / 2);
-  return pooled > 0 ? (ma - mb) / pooled : 0;
-}
+// Cohen's d 已从 statsShared 导入（P2 修复：消除本地副本）
+
 if (structuralEvents.length >= 2 && thermalEvents.length >= 2) {
   const d = cohensD(
     structuralEvents.map(e => e.deltaTau),

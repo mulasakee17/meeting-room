@@ -11,7 +11,7 @@ export const E5_GOVERNANCE: ExperimentConfig = {
   hypothesis: "H5",
   title: "Governance Mechanism — 治理通过 Evidence 发挥作用",
   scenario: "ma",
-  runtimeModes: ["cognitive"],
+  runtimeModes: ["native_cognitive"],
   governanceMode: "diversity_only",
   agentCount: 5,
   maxRounds: 5,

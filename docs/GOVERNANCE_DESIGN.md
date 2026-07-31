@@ -1,6 +1,6 @@
 # 治理引擎架构设计：闭合"自定义检测器→干预"断裂
 
-> 状态：**已落地**（2026-07-22 设计 + 实现完成，310 测试 307 通过 3 网络超时，零回归）
+> 状态：**已落地**（2026-07-22 设计 + 实现完成，435 passed, 3 skipped，零回归）
 > 性质：架构决策记录（ADR），记录"为什么要改、怎么改、不改什么"
 > 关联：LIMITATIONS.md §19 已标记"自定义检测器无法触发干预"为已修复
 
@@ -41,7 +41,7 @@ export interface DetectorResult {
 
 ### 2.3 约束
 
-- `InterventionType` 是 5 值闭合联合（[types.ts:3-8](../src/lib/governance/types.ts)，H8 有意设计）：`introduce_diversity | reduce_weight | force_reflection | continue_discussion | none`。自定义检测器只能建议已有的 4 种干预，不引入新类型。
+- `InterventionType` 是 8 值闭合联合（[types.ts:3-11](../src/lib/governance/types.ts)，H8 有意设计）：`introduce_diversity | reduce_weight | force_reflection | continue_discussion | inject_evidence | rebalance_attention | shuffle_knowledge | none`。自定义检测器只能建议已有的 7 种干预（3 active + 4 deprecated），不引入新类型。
 - 已有 `strategies: Map<InterventionType, InterventionStrategy>`（[index.ts:52](../src/lib/governance/index.ts)）和 `customDetectors: Map<string, BiasDetector>`（[index.ts:54](../src/lib/governance/index.ts)）两个注册表可复用，**无需新建注册表**。
 
 ---
@@ -50,7 +50,7 @@ export interface DetectorResult {
 
 ### 3.1 设计原则
 
-- **向后兼容**：新增字段均为可选，现有 4 个内置检测器走强类型字段路径，不受影响
+- **向后兼容**：新增字段均为可选，现有 7 个内置检测器（4 经典 + 3 MAST）走强类型字段路径，不受影响
 - **不动 7 个 if**：避免破坏 303 测试，降低回归风险
 - **复用现有 dosage 逻辑**：自定义检测器的干预走与内置检测器相同的 `computeAdaptiveDosage` 路径
 - **保留观测模式**：自定义检测器可不带 `suggestedIntervention`，仅记录不触发干预（用于纯诊断场景）
@@ -188,7 +188,7 @@ for (const issue of result.otherIssues) {
 |---|---|---|
 | 接口扩展 vs 映射表重构 | 接口扩展（方案 A） | 谨慎重构、低风险、向后兼容 |
 | suggestedIntervention 必填 vs 可选 | 可选 | 保留纯观测模式，不强制所有自定义检测器都触发干预 |
-| 是否引入新 InterventionType | 否 | H8 闭合联合是有意设计，自定义检测器复用现有 4 种干预 |
+| 是否引入新 InterventionType | 否 | H8 闭合联合是有意设计，自定义检测器复用现有 7 种干预（3 active + 4 deprecated） |
 | dosage 逻辑复用 vs 独立 | 复用 `computeAdaptiveDosage` | 保证自定义与内置干预的剂量逻辑一致 |
 | 是否同步做方案 B | 否 | 留作演进，等教授反馈或开源需求 |
 

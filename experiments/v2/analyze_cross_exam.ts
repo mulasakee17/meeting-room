@@ -18,6 +18,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { mean, sampleStd, cohensD, mulberry32, PERMUTATION_SEED } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // 类型
@@ -59,8 +60,10 @@ function loadGroup(group: string, dataDir: string): CrossExamResult[] {
   );
   return files.map(f => {
     const content = fs.readFileSync(path.join(dir, f), "utf-8");
-    return JSON.parse(content) as CrossExamResult;
-  });
+    const parsed = safeJsonParse<CrossExamResult>(content);
+    if (!parsed) { console.warn(`[analyze_cross_exam] 无法解析 JSON: ${f}`); return null; }
+    return parsed;
+  }).filter((r): r is CrossExamResult => r !== null);
 }
 
 // ============================================================================

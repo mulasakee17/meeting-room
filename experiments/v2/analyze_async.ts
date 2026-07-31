@@ -19,6 +19,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { mulberry32, cohensD, mean, sampleStd, PERMUTATION_SEED } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface AsyncExperimentResult {
   runId: string;
@@ -41,7 +42,8 @@ function loadGroup(dir: string, group: string): AsyncExperimentResult[] {
   for (const f of fs.readdirSync(dir)) {
     if (f.startsWith(`fraud_${group}_`) && f.endsWith(".json")) {
       try {
-        const data = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+        const data = safeJsonParse<AsyncExperimentResult>(fs.readFileSync(path.join(dir, f), "utf8"));
+        if (!data) { console.warn(`[analyze_async] 无法解析 JSON: ${f}`); continue; }
         if (!data.terminationReason?.startsWith("error")) {
           results.push(data);
         }

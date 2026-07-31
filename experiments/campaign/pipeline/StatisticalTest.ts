@@ -299,11 +299,11 @@ function testE2(metrics: ExperimentMetrics): TestResult {
     // p-value: 有多少比例的 bootstrap ΔR² ≤ 0
     pValue = (bootDeltaR2.filter(d => d <= 0).length + 1) / (nBoot + 1);
   } else {
-    // 无 bootstrap 数据时，使用单样本 t 检验
+    // 无 bootstrap 数据时：无法计算有效 p-value，返回 1.0（不显著）而非虚假的硬编码值
     const ci = bootstrapCI([deltaR2], nBoot);
     ciLower = ci.lower;
     ciUpper = ci.upper;
-    pValue = deltaR2 > 0.05 ? 0.01 : 0.5;
+    pValue = 1.0;
   }
 
   return {
@@ -492,9 +492,13 @@ function testE4(metrics: ExperimentMetrics): TestResult {
     bootBetas.sort((a, b) => a - b);
     ciLower = bootBetas[Math.floor(nBoot * 0.025)];
     ciUpper = bootBetas[Math.floor(nBoot * 0.975)];
-    // 双尾：β₁ 的 CI 是否跨越 0
-    const zeroCrosses = ciLower <= 0 && ciUpper >= 0;
-    pValue = zeroCrosses ? (bootBetas.filter(b => Math.abs(b) >= Math.abs(beta1Cog)).length + 1) / (nBoot + 1) : 0.001;
+    // p 值：Bootstrap 分布中与观测值异号（跨越 0）的比例
+    // 修复：原实现用 |b| >= |β_obs| 比例法，但这测试的是"观测值在 bootstrap 分布中的极端性"，
+    //       而非 H₀: β=0。当 β_obs≈2.0 且 bootstrap 居中于 2.0 时，约一半样本 |b|≥2.0 → p≈0.5（错误地不显著）。
+    //       正确做法（与 E8 一致）：计算 bootstrap 样本跨越 0 的比例，(count+1)/(n+1) 校正避免 p=0。
+    pValue = (bootBetas.filter(b => {
+      return (beta1Cog >= 0 && b <= 0) || (beta1Cog < 0 && b >= 0);
+    }).length + 1) / (nBoot + 1);
   } else {
     pValue = 1;
     ciLower = beta1Cog;
@@ -537,20 +541,55 @@ function testE5(metrics: ExperimentMetrics): TestResult {
   const gm = metrics.governanceMechanism!;
   const deltaTau = gm.deltaTau;
 
-  // Granger F 检验：用 F 分布 CDF 计算精确 p 值
-  // F = ((SSR_restricted - SSR_full) / df1) / (SSR_full / df2)
-  // df1 = lag (1), df2 = n - 3 (受限模型 2 参数 + 完整模型 +1)
+  // Granger 因果检验：v6.1 修复 per-series F 与 df2 错配
+  // 旧实现：F 取 per-series 均值，但 df2 用聚合 grangerN（allEvidenceSeq.length），
+  //         导致 F 统计量与自由度不匹配，p 值严重偏低（假阳性）。
+  // 新实现：对每条序列单独计算 p 值（df2 = 序列长度 - 3），
+  //         再用 Bonferroni 合并（min(p_i) × k）控制 family-wise error。
+  const bd = gm._bootstrapData;
+  const df1 = 1;
+  // 声明在 if/else 外部，确保 return 语句可访问（修复原 else 块内 const 导致的作用域 bug）
   const F_EtoU = gm.grangerF_evidenceToUtility;
   const F_UtoE = gm.grangerF_utilityToEvidence;
-  const grangerN = gm._bootstrapData?.grangerN ?? 30;
-  const df1 = 1;
-  const df2 = Math.max(grangerN - 3, 1);
-  const pEtoU = 1 - fDistributionCDF(F_EtoU, df1, df2);
-  const pUtoE = 1 - fDistributionCDF(F_UtoE, df1, df2);
-  const pGranger = Math.min(pEtoU, pUtoE);
+  let pGranger: number;
+  let pEtoU: number;
+  let pUtoE: number;
+  let df2: number;
+  let grangerMethod: string;
+
+  if (bd && bd.perSeriesF_EtoU && bd.perSeriesF_UtoE && bd.perSeriesN &&
+      bd.perSeriesF_EtoU.length > 0) {
+    // 对每条序列计算双向 p 值
+    const allPValues: number[] = [];
+    let minP_EtoU = 1, minP_UtoE = 1;
+    for (let i = 0; i < bd.perSeriesF_EtoU.length; i++) {
+      const df2_i = Math.max((bd.perSeriesN[i] ?? 4) - 3, 1);
+      const pEtoU_i = 1 - fDistributionCDF(bd.perSeriesF_EtoU[i], df1, df2_i);
+      const pUtoE_i = 1 - fDistributionCDF(bd.perSeriesF_UtoE[i], df1, df2_i);
+      allPValues.push(pEtoU_i, pUtoE_i);
+      minP_EtoU = Math.min(minP_EtoU, pEtoU_i);
+      minP_UtoE = Math.min(minP_UtoE, pUtoE_i);
+    }
+    // Bonferroni 合并：min(p) × k，上限 1
+    const k = allPValues.length;
+    pGranger = Math.min(1, Math.min(...allPValues) * k);
+    // 代表性值用于报告（取 per-series 最小 p 值和首条序列的 df2）
+    pEtoU = minP_EtoU;
+    pUtoE = minP_UtoE;
+    df2 = Math.max((bd.perSeriesN[0] ?? 4) - 3, 1);
+    grangerMethod = "per-series Bonferroni";
+  } else {
+    // 回退：无 per-series 数据，用聚合值（旧逻辑，标注为近似）
+    const grangerN = bd?.grangerN ?? 30;
+    df2 = Math.max(grangerN - 3, 1);
+    pEtoU = 1 - fDistributionCDF(F_EtoU, df1, df2);
+    pUtoE = 1 - fDistributionCDF(F_UtoE, df1, df2);
+    pGranger = Math.min(pEtoU, pUtoE);
+    grangerMethod = "aggregate (fallback)";
+  }
 
   // Δτ 的 Bootstrap CI：对 per-run (tauGov, tauNoGov) 配对重采样
-  const bd = gm._bootstrapData;
+  // bd 已在上方 Granger 段声明
   let ciLower: number, ciUpper: number;
   if (bd && bd.tauGov.length >= 2 && bd.tauNoGov.length >= 2) {
     const rng = mulberry32(BOOTSTRAP_SEED);
@@ -596,6 +635,7 @@ function testE5(metrics: ExperimentMetrics): TestResult {
       grangerP_utilityToEvidence: pUtoE,
       grangerDf1: df1,
       grangerDf2: df2,
+      grangerMethod,
       indirectEffect: gm.indirectEffect,
       mediationRatio: gm.mediationRatio,
       tauWithGovernance: gm.tauWithGovernance,
@@ -615,43 +655,57 @@ function testE6(metrics: ExperimentMetrics): TestResult {
   const maxCorrCog = sd.maxCorrCognitive;
   const maxCorrBel = sd.maxCorrBelief;
 
-  // Fisher's z 变换比较两个相关系数（基于全局聚合值）
-  const zCog = Math.atanh(Math.min(Math.abs(maxCorrCog), 0.999));
-  const zBel = Math.atanh(Math.min(Math.abs(maxCorrBel), 0.999));
-  const n = metrics.sampleSize;
-  const se = Math.sqrt(2 / (n - 3));
-  const zDiff = (zBel - zCog) / (se || 1);
-  const pValue = 1 - normalCDF(Math.abs(zDiff));
-
-  // Bootstrap CI：对 per-run (corrCognitive, corrBelief) 配对重采样
+  // v6.1 修复：Fisher z 检验的独立性违反
+  // 旧实现用全局聚合相关 + se=sqrt(2/(n-3))，n=sampleSize（snapshot 数，可能数百），
+  // 但相关系数本身聚合所有 run 所有轮，观测独立性被违反，se 严重低估，p 值偏小。
+  // 新实现：主推断用 per-run 配对 Bootstrap CI；Fisher z 仅作回退（小样本时）。
   const bd = sd._bootstrapData;
+  const hasBootstrap = bd && bd.corrCognitivePerRun.length >= 2 && bd.corrBeliefPerRun.length >= 2;
   let ciLower: number, ciUpper: number;
-  if (bd && bd.corrCognitivePerRun.length >= 2 && bd.corrBeliefPerRun.length >= 2) {
+  let pValue: number;
+  let zDiff: number | undefined;
+  const n = metrics.sampleSize;
+
+  if (hasBootstrap) {
+    // 主推断：per-run 配对 Bootstrap（尊重 run 间独立性）
     const rng = mulberry32(BOOTSTRAP_SEED);
     const nBoot = 5000;
-    const m = Math.min(bd.corrCognitivePerRun.length, bd.corrBeliefPerRun.length);
+    const m = Math.min(bd!.corrCognitivePerRun.length, bd!.corrBeliefPerRun.length);
     const bootDiffs: number[] = [];
     for (let b = 0; b < nBoot; b++) {
       let sumCog = 0, sumBel = 0;
       for (let i = 0; i < m; i++) {
         const idx = Math.floor(rng() * m);
-        sumCog += bd.corrCognitivePerRun[idx];
-        sumBel += bd.corrBeliefPerRun[idx];
+        sumCog += bd!.corrCognitivePerRun[idx];
+        sumBel += bd!.corrBeliefPerRun[idx];
       }
       bootDiffs.push(sumBel / m - sumCog / m);
     }
     bootDiffs.sort((a, b) => a - b);
     ciLower = bootDiffs[Math.floor(nBoot * 0.025)];
     ciUpper = bootDiffs[Math.floor(nBoot * 0.975)];
+    // Bootstrap p 值：Δ|r| <= 0 的比例 × 2（双侧）
+    const propLeq0 = bootDiffs.filter(d => d <= 0).length / nBoot;
+    pValue = Math.min(1, 2 * Math.min(propLeq0, 1 - propLeq0));
   } else {
-    // 回退：基于 Fisher z 的近似 CI
+    // 回退：Fisher z（仅当 per-run 数据不足时）
+    const zCog = Math.atanh(Math.min(Math.abs(maxCorrCog), 0.999));
+    const zBel = Math.atanh(Math.min(Math.abs(maxCorrBel), 0.999));
+    const se = Math.sqrt(2 / Math.max(n - 3, 1));
+    zDiff = (zBel - zCog) / (se || 1);
+    pValue = 1 - normalCDF(Math.abs(zDiff));
     ciLower = (maxCorrBel - maxCorrCog) - 1.96 * se;
     ciUpper = (maxCorrBel - maxCorrCog) + 1.96 * se;
   }
 
+  // 显著性：Bootstrap CI 不跨 0，或 Fisher z p < 0.05（回退）
+  const significant = hasBootstrap
+    ? (ciLower > 0) === (ciUpper > 0) && ciLower !== 0 && ciUpper !== 0
+    : pValue < 0.05;
+
   return {
     experimentId: "e6_decoupling",
-    testName: "State Decoupling (Fisher's z)",
+    testName: "State Decoupling (Bootstrap Δ|r|)" ,
     pValue,
     effectSize: maxCorrBel - maxCorrCog,
     effectSizeName: "Δ|r|",
@@ -659,8 +713,8 @@ function testE6(metrics: ExperimentMetrics): TestResult {
     ciUpper,
     ciLevel: 0.95,
     sampleSize: n,
-    significant: pValue < 0.05,
-    conclusion: pValue < 0.05
+    significant,
+    conclusion: significant
       ? `Cognitive State 变量间最大相关性 (${maxCorrCog.toFixed(3)}) 显著低于 Belief 模型 (${maxCorrBel.toFixed(3)}, p=${pValue.toFixed(4)})`
       : `Cognitive State 解耦性未显著优于 Belief (p=${pValue.toFixed(4)})`,
     details: {
@@ -668,6 +722,7 @@ function testE6(metrics: ExperimentMetrics): TestResult {
       maxCorrBelief: maxCorrBel,
       vifMax: sd.vifMax,
       fisherZ: zDiff,
+      inferenceMethod: hasBootstrap ? "per-run paired bootstrap" : "fisher-z fallback",
       ciLower,
       ciUpper,
     },
@@ -854,8 +909,11 @@ function testE8(metrics: ExperimentMetrics): TestResult {
     ciUpper,
     ciLevel: 0.95,
     sampleSize: metrics.sampleSize,
-    significant: pValue < 0.05 && ciLower > 0 !== ciUpper > 0,
-    conclusion: pValue < 0.05
+    // 中介效应 a×b 显著：CI 两端同号（不跨越 0）
+    // 修复：原 `ciLower > 0 !== ciUpper > 0` 因运算符优先级解析为 XOR，
+    // 把"CI 跨 0（不显著）"误判为"显著"。改为同号判定。
+    significant: pValue < 0.05 && (ciLower > 0) === (ciUpper > 0) && ciLower !== 0 && ciUpper !== 0,
+    conclusion: pValue < 0.05 && (ciLower > 0) === (ciUpper > 0) && ciLower !== 0 && ciUpper !== 0
       ? `Susceptibility 显著中介 Inertia → Utility 变化 (a×b=${indirectEffect.toFixed(4)}, ${(mediationRatio * 100).toFixed(1)}% mediation, p=${pValue.toFixed(4)})`
       : `Susceptibility 中介效应不显著 (a×b=${indirectEffect.toFixed(4)}, p=${pValue.toFixed(4)})`,
     details: {
@@ -943,17 +1001,21 @@ function tDistributionCDF(t: number, df: number): number {
   return normalCDF(x);
 }
 
-/** t-distribution critical value */
-function tDistributionCriticalValue(df: number, alpha: number): number {
+/** t-distribution critical value (双侧 α=0.05，单侧 α=0.975) */
+export function tDistributionCriticalValue(df: number, alpha: number): number {
   if (df <= 0) return 1.96;
   if (df > 30) return 1.96;
-  // 简化查表
+  // 完整 t 分布临界值表（双侧 α=0.05），消除原表 df=11-14 等缺口返回 2.0 的 CI 偏窄 bug
   const table: Record<number, number> = {
     1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
     6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
-    15: 2.131, 20: 2.086, 25: 2.060, 30: 2.042,
+    11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145,
+    15: 2.131, 16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093,
+    20: 2.086, 21: 2.080, 22: 2.074, 23: 2.069, 24: 2.064,
+    25: 2.060, 26: 2.056, 27: 2.052, 28: 2.048, 29: 2.045,
+    30: 2.042,
   };
-  return table[df] ?? 2.0;
+  return table[df] ?? 1.96;
 }
 
 // ============================================================================

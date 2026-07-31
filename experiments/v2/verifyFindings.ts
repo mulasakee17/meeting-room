@@ -12,7 +12,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { mulberry32, mean, PERMUTATION_SEED } from "./statsShared";
+import { mulberry32, mean, sampleStd, cohensD, PERMUTATION_SEED, loadExperiments } from "./statsShared";
 
 interface ExperimentResult {
   runId: string;
@@ -22,21 +22,8 @@ interface ExperimentResult {
   rounds: Array<{ roundNumber: number; beliefs: Record<string, number> }>;
 }
 
-function loadData(dir: string, prefix: string): any[] {
-  const files = fs.readdirSync(dir).filter(
-    f => f.endsWith(".json") && f.startsWith(prefix) && f !== "summary.json"
-  );
-  return files.map(f => {
-    const content = fs.readFileSync(path.join(dir, f), "utf-8");
-    return JSON.parse(content);
-  });
-}
-
-function sampleStd(v: number[]): number {
-  if (v.length < 2) return 0;
-  const m = mean(v);
-  return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
-}
+// loadData 已迁移到 statsShared.loadExperiments（支持 ablation 字段过滤，修复 startsWith 污染）
+// B3 修复：sampleStd 已从 statsShared 导入，消除本地重复定义
 
 function pearsonCorr(x: number[], y: number[]): number {
   const mx = mean(x), my = mean(y);
@@ -89,9 +76,9 @@ function pairedPermutationTest(before: number[], after: number[], nPerm: number 
 const DATA_DIR = path.resolve(__dirname, "data_crisis");
 
 function main() {
-  const none = loadData(DATA_DIR, "crisis_none");
-  const full = loadData(DATA_DIR, "crisis_full");
-  const shuffle = loadData(DATA_DIR, "crisis_shuffle");
+  const none = loadExperiments(DATA_DIR, "crisis_none", "none");
+  const full = loadExperiments(DATA_DIR, "crisis_full", "full");
+  const shuffle = loadExperiments(DATA_DIR, "crisis_shuffle", "shuffle");
   const all = [...none, ...full, ...shuffle];
 
   console.log("=".repeat(70));
@@ -137,7 +124,7 @@ function main() {
 
   // 分条件计算
   console.log("\n分条件：");
-  for (const [label, data] of [["none", none], ["full", full], ["shuffle", shuffle]]) {
+  for (const [label, data] of [["none", none], ["full", full], ["shuffle", shuffle]] as [string, any][]) {
     const valid = data.filter((r: any) => {
       const rounds = r.rounds;
       return rounds && rounds.length > 0 && Object.values(rounds[rounds.length - 1].beliefs || {}).length >= 2;
@@ -229,6 +216,16 @@ function main() {
   const fullGain = fullMean - noneMean;
   const coverage = totalGap > 0 ? fullGain / totalGap : 0;
 
+  // P0-B1 修复：计算实际的 Cohen's d 和置换检验 p 值（替代原硬编码 d=1.82, p=0.0002）
+  const shuffleVsNoneD = cohensD(
+    shuffle.map((r: any) => r.kendallTau),
+    none.map((r: any) => r.kendallTau)
+  );
+  const shuffleVsNoneP = permutationTest(
+    shuffle.map((r: any) => r.kendallTau),
+    none.map((r: any) => r.kendallTau)
+  );
+
   console.log(`
   none τ:    ${noneMean.toFixed(3)}
   full τ:    ${fullMean.toFixed(3)}
@@ -266,7 +263,7 @@ function main() {
   → 对治理系统设计有直接指导：必须持续干预，不能期望一次性改进。
   → 新颖性高，统计确定性强。
 
-【发现 3】Shuffle 方法学：分离信息整合与社会影响（d=1.82，p=0.0002）
+【发现 3】Shuffle 方法学：分离信息整合与社会影响（d=${shuffleVsNoneD.toFixed(2)}，p=${shuffleVsNoneP.toFixed(4)}）
   → 方法论贡献。用信息打乱对照精确测量信息整合的理论上限。
   → 为评估治理效果提供了绝对参照系（上限比例 ${(coverage * 100).toFixed(0)}%）。
   → 新颖性中高，统计确定性最强。

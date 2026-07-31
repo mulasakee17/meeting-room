@@ -22,6 +22,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { mean, sampleStd, cohensD, mulberry32, PERMUTATION_SEED } from "../../v2/statsShared";
 import type { RawRunData } from "../types";
+import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // Configuration
@@ -82,7 +83,8 @@ function loadE9Data(): Map<string, RawRunData[]> {
     for (const file of files) {
       try {
         const content = fs.readFileSync(path.join(rawDir, file), "utf-8");
-        const parsed = JSON.parse(content);
+        const parsed = safeJsonParse<any>(content);
+        if (!parsed) { console.warn(`[e9_cross_comparison] 无法解析 JSON: ${file}`); continue; }
         if (parsed.runId && !parsed.error) {
           runs.push(parsed as RawRunData);
         }

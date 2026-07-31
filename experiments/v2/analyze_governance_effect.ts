@@ -19,6 +19,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { mean, sampleStd } from "./statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface ExperimentResult {
   runId: string;
@@ -43,7 +44,8 @@ function loadGroup(dir: string, prefix: string): ExperimentResult[] {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir)
     .filter(f => f.startsWith(prefix) && f.endsWith(".json"))
-    .map(f => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")))
+    .map(f => safeJsonParse<ExperimentResult>(fs.readFileSync(path.join(dir, f), "utf8")))
+    .filter((r): r is ExperimentResult => r !== null)
     .filter(r => !r.terminationReason?.startsWith("error"))
     .sort((a, b) => a.runIndex - b.runIndex);
 }

@@ -352,7 +352,7 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
       // 必须根据实际终止模式计算有效的 maxRounds，否则 premature consensus
       // 检测的 roundProgress 永远是假值（始终 1/3=0.33），导致检测断裂。
       const effectiveMaxRounds = this.getEffectiveMaxRounds();
-      const governanceResult = this.applyGovernance(
+      const governanceResult = await this.applyGovernance(
         evalCycle, allOpinions, agentStates, agents,
         { currentRound: evalCycle, maxRounds: effectiveMaxRounds }
       );
@@ -829,25 +829,50 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
     }
   }
 
-  /** 计算热力学状态 (R, T, H) */
+  /**
+   * 计算热力学状态 (R, T, H)
+   *
+   * 重要语义说明（2026-07-28 修订，与实际计算对齐）：
+   *
+   * 本函数基于 scalar `beliefs: number[]` 计算 R/T/H，三个变量都是
+   * "同一轮内 agent 间信念分散度" 的不同变换，而非三个独立的热力学维度：
+   *   - R：信念角度对齐度（Kuramoto 序参量，分散度的反面）
+   *   - T：信念数值的归一化标准差（同轮内空间分散度，非"轮次间波动"）
+   *   - H：信念直方图的归一化 Shannon 熵（同轮内分布分散度，非"信息多样性"）
+   *
+   * 实证（N=259, 8 个数据源）：r((1-R), T·H) = 0.9175（强正相关），
+   * 证伪了此前文档中"F 公式两分量正交"的声明。详见 LIMITATIONS.md 与
+   * docs/analyses/thermodynamic_correlation_analysis.md。
+   *
+   * 与 MeasurementLayer.ts 的区别：MeasurementLayer 基于 5 维认知状态
+   * （utility 向量 / evidence items / utilityHistory）计算 R/T/H，语义独立
+   * 性更好，但仅用于 cognitive 治理模式（当前为死代码，未在真实实验触发）。
+   * 本函数的输出才是 TerminationDecider 和 thermoHistory 落盘的实际数据。
+   */
   private computeThermoState(beliefs: number[]): { R: number; T: number; H: number } {
     if (beliefs.length === 0) return { R: 0, T: 0, H: 0 };
 
-    // Kuramoto R
+    // R — Kuramoto 序参量：把 belief∈[-1,1] 映射到角度 θ=b·π/2，
+    // 计算所有 agent 在单位圆上的平均向量长度。R=1 表示信念方向完全对齐。
     const angles = beliefs.map(b => b * Math.PI / 2);
     let sr = 0, si = 0;
     for (const a of angles) { sr += Math.cos(a); si += Math.sin(a); }
     const R = Math.sqrt(sr * sr + si * si) / beliefs.length;
 
-    // T (归一化)
+    // T — 同轮内 agent 间信念数值的归一化总体标准差。
     // 注：使用总体方差（N）而非样本方差（N-1）。这是设计选择：将全部 agent 视为总体。
     // 阈值 crystallT=0.22 等基于此方差标定。改用 N-1 会使 T 增大 ~11.8%（N=5），
     // 需重新标定阈值 + 重跑异步实验。详见 LIMITATIONS.md。
+    // 语义澄清：T 度量的是"同轮内 agent 间信念分散度"，不是"轮次间波动幅度"——
+    // 早期文档中"轮次间波动"的描述与本实现不符，已在 TECHNICAL_REPORT.md 修订。
     const mean = beliefs.reduce((a, b) => a + b, 0) / beliefs.length;
     const std = Math.sqrt(beliefs.reduce((s, v) => s + (v - mean) ** 2, 0) / beliefs.length);
     const T = normalizeTemperature(std);
 
-    // H (Shannon, 5 bins, 归一化)
+    // H — 同轮内信念数值直方图的归一化 Shannon 熵（5 bins, [-1,1]）。
+    // 语义澄清：H 度量的是"信念数值分布的分散度"，与 T 同源（都是分散度度量），
+    // 不是"证据/信息多样性"——早期文档中"信息多样性"的描述与本实现不符。
+    // 真正的"信息多样性"需要基于 evidence items 计算（见 MeasurementLayer.ts）。
     const H = shannonEntropy(beliefs);
 
     return { R, T, H };

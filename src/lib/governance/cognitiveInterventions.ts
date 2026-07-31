@@ -22,6 +22,7 @@ import type {
   GovernanceConfig,
   Intervention,
 } from "./types";
+import type { ProgressiveEstimates } from "../thermodynamics/ProgressiveEstimator";
 
 // ============================================================================
 // Intervention 4: Inject Evidence (NEW v2.1)
@@ -157,6 +158,8 @@ export function generateCognitiveInterventions(
   config?: GovernanceConfig,
   /** 可选：agent 私有知识，用于 inject_evidence */
   agentKnowledge?: Map<string, string[]>,
+  /** v6：渐进估计结果，用于置信度感知的干预降级 */
+  progressiveEstimates?: Map<string, ProgressiveEstimates>,
 ): {
   interventions: Intervention[];
   cognitiveModifications: Map<string, CognitiveStateModification>;
@@ -169,6 +172,9 @@ export function generateCognitiveInterventions(
     "reduce_weight", "force_reflection", "introduce_diversity", "continue_discussion",
   ]);
 
+  /** 置信度阈值：低于此值时降级更具针对性的干预 */
+  const CONFIDENCE_THRESHOLD = 0.30;
+
   for (const issue of issues) {
     const suggestedType = issue.suggestedIntervention?.type;
     if (!suggestedType || suggestedType === "none") continue;
@@ -176,59 +182,138 @@ export function generateCognitiveInterventions(
 
     switch (issue.type) {
       case "echo_chamber_cognitive": {
-        // rebalance_attention: 让冗余 agent 降低发言优先级，其他 agent 提高
+        // 默认：rebalance_attention
+        // 降级：若 I 置信度不足 → inject_evidence
         const redundantAgents = issue.suggestedIntervention?.targetAgents ?? [];
         const allAgentIds = [...cognitiveStates.keys()];
         const marginalizedAgents = allAgentIds.filter(id => !redundantAgents.includes(id));
-        const mods = applyRebalanceAttention(redundantAgents, marginalizedAgents);
-        mergeModifications(allModifications, mods);
-        interventions.push({
-          type: "rebalance_attention",
-          targetAgents: redundantAgents.length > 0 ? redundantAgents : undefined,
-          effect: "Rebalance speaking order: surface marginalized voices to break echo chamber",
-          applied: true,
-          parameters: {
-            mechanism: "rebalance_attention",
-            dominantAgents: redundantAgents,
-            marginalizedAgents,
-            reason: issue.suggestedIntervention?.reason,
-          },
-        });
+
+        const minInertiaConf = getMinConfidence(
+          progressiveEstimates, redundantAgents, "inertia",
+        );
+
+        if (minInertiaConf < CONFIDENCE_THRESHOLD) {
+          // 降级：rebalance_attention → inject_evidence（对目标 agent 范围更广）
+          const allTargets = [...new Set([...redundantAgents, ...marginalizedAgents])];
+          const mods = applyInjectEvidence(allTargets, cognitiveStates, agentKnowledge);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "inject_evidence",
+            targetAgents: allTargets.length > 0 ? allTargets : undefined,
+            effect: `[degraded: I.conf=${minInertiaConf.toFixed(2)}] Inject evidence to break echo chamber`,
+            applied: true,
+            parameters: {
+              mechanism: "inject_evidence",
+              degradedFrom: "rebalance_attention",
+              reason: `Inertia estimate confidence too low (${minInertiaConf.toFixed(2)} < ${CONFIDENCE_THRESHOLD})`,
+              ...issue.suggestedIntervention?.reason ? { originalReason: issue.suggestedIntervention.reason } : {},
+            },
+          });
+        } else {
+          const mods = applyRebalanceAttention(redundantAgents, marginalizedAgents);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "rebalance_attention",
+            targetAgents: redundantAgents.length > 0 ? redundantAgents : undefined,
+            effect: "Rebalance speaking order: surface marginalized voices to break echo chamber",
+            applied: true,
+            parameters: {
+              mechanism: "rebalance_attention",
+              dominantAgents: redundantAgents,
+              marginalizedAgents,
+              reason: issue.suggestedIntervention?.reason,
+            },
+          });
+        }
         break;
       }
 
       case "polarization_cognitive": {
         const targetAgents = issue.suggestedIntervention?.targetAgents ?? [];
-        const mods = applyInjectEvidence(targetAgents, cognitiveStates, agentKnowledge);
-        mergeModifications(allModifications, mods);
-        interventions.push({
-          type: "inject_evidence",
-          targetAgents: targetAgents.length > 0 ? targetAgents : undefined,
-          effect: "Inject ignored private evidence of polarized agents to bridge opinion gap",
-          applied: true,
-          parameters: {
-            mechanism: "inject_evidence",
-            targetAgents,
-            reason: issue.suggestedIntervention?.reason,
-          },
-        });
+        const minConfidenceConf = getMinConfidence(
+          progressiveEstimates, targetAgents, "confidence",
+        );
+
+        if (minConfidenceConf < CONFIDENCE_THRESHOLD) {
+          // 降级：inject_evidence → 仅 evidenceGuidance（无针对性注入）
+          const mods = new Map<string, CognitiveStateModification>();
+          for (const agentId of targetAgents) {
+            mods.set(agentId, {
+              evidenceGuidance: ["evidence_coverage", "evidence_diversity", "alternative_perspectives"],
+            });
+          }
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "inject_evidence",
+            targetAgents: targetAgents.length > 0 ? targetAgents : undefined,
+            effect: `[degraded: C.conf=${minConfidenceConf.toFixed(2)}] Evidence guidance only (no targeted injection)`,
+            applied: true,
+            parameters: {
+              mechanism: "evidence_guidance",
+              degradedFrom: "inject_evidence",
+              reason: `Confidence estimate confidence too low (${minConfidenceConf.toFixed(2)} < ${CONFIDENCE_THRESHOLD})`,
+              ...issue.suggestedIntervention?.reason ? { originalReason: issue.suggestedIntervention.reason } : {},
+            },
+          });
+        } else {
+          const mods = applyInjectEvidence(targetAgents, cognitiveStates, agentKnowledge);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "inject_evidence",
+            targetAgents: targetAgents.length > 0 ? targetAgents : undefined,
+            effect: "Inject ignored private evidence of polarized agents to bridge opinion gap",
+            applied: true,
+            parameters: {
+              mechanism: "inject_evidence",
+              targetAgents,
+              reason: issue.suggestedIntervention?.reason,
+            },
+          });
+        }
         break;
       }
 
       case "premature_consensus_cognitive": {
         // 向所有 agent 注入证据多样性引导
+        // 此干预影响范围广，使用 C 置信度检查
         const allIds = [...cognitiveStates.keys()];
-        const mods = applyInjectEvidence(allIds, cognitiveStates, agentKnowledge);
-        mergeModifications(allModifications, mods);
-        interventions.push({
-          type: "inject_evidence",
-          effect: "Inject diverse evidence to prevent premature consensus lock-in",
-          applied: true,
-          parameters: {
-            mechanism: "inject_evidence",
-            reason: issue.suggestedIntervention?.reason,
-          },
-        });
+        const minConfidenceConf = getMinConfidence(
+          progressiveEstimates, allIds, "confidence",
+        );
+
+        if (minConfidenceConf < CONFIDENCE_THRESHOLD) {
+          // 降级：仅 evidenceGuidance
+          const mods = new Map<string, CognitiveStateModification>();
+          for (const agentId of allIds) {
+            mods.set(agentId, {
+              evidenceGuidance: ["evidence_coverage", "evidence_diversity"],
+            });
+          }
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "inject_evidence",
+            effect: `[degraded: C.conf=${minConfidenceConf.toFixed(2)}] Evidence guidance only to prevent premature consensus`,
+            applied: true,
+            parameters: {
+              mechanism: "evidence_guidance",
+              degradedFrom: "inject_evidence",
+              reason: `Confidence estimate confidence too low (${minConfidenceConf.toFixed(2)} < ${CONFIDENCE_THRESHOLD})`,
+              ...issue.suggestedIntervention?.reason ? { originalReason: issue.suggestedIntervention.reason } : {},
+            },
+          });
+        } else {
+          const mods = applyInjectEvidence(allIds, cognitiveStates, agentKnowledge);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "inject_evidence",
+            effect: "Inject diverse evidence to prevent premature consensus lock-in",
+            applied: true,
+            parameters: {
+              mechanism: "inject_evidence",
+              reason: issue.suggestedIntervention?.reason,
+            },
+          });
+        }
         break;
       }
 
@@ -236,38 +321,89 @@ export function generateCognitiveInterventions(
         const dominantAgents = issue.suggestedIntervention?.targetAgents ?? [];
         const allAgentIds = [...cognitiveStates.keys()];
         const marginalizedAgents = allAgentIds.filter(id => !dominantAgents.includes(id));
-        const mods = applyRebalanceAttention(dominantAgents, marginalizedAgents);
-        mergeModifications(allModifications, mods);
-        interventions.push({
-          type: "rebalance_attention",
-          targetAgents: dominantAgents.length > 0 ? dominantAgents : undefined,
-          effect: "Rebalance speaking order: let marginalized agents speak before dominant agent",
-          applied: true,
-          parameters: {
-            mechanism: "rebalance_attention",
-            dominantAgents,
-            marginalizedAgents,
-            reason: issue.suggestedIntervention?.reason,
-          },
-        });
+
+        const minInertiaConf = getMinConfidence(
+          progressiveEstimates, dominantAgents, "inertia",
+        );
+
+        if (minInertiaConf < CONFIDENCE_THRESHOLD) {
+          // 降级：rebalance_attention → inject_evidence
+          const allTargets = [...new Set([...dominantAgents, ...marginalizedAgents])];
+          const mods = applyInjectEvidence(allTargets, cognitiveStates, agentKnowledge);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "inject_evidence",
+            targetAgents: allTargets.length > 0 ? allTargets : undefined,
+            effect: `[degraded: I.conf=${minInertiaConf.toFixed(2)}] Inject evidence to counter authority bias`,
+            applied: true,
+            parameters: {
+              mechanism: "inject_evidence",
+              degradedFrom: "rebalance_attention",
+              reason: `Inertia estimate confidence too low (${minInertiaConf.toFixed(2)} < ${CONFIDENCE_THRESHOLD})`,
+              ...issue.suggestedIntervention?.reason ? { originalReason: issue.suggestedIntervention.reason } : {},
+            },
+          });
+        } else {
+          const mods = applyRebalanceAttention(dominantAgents, marginalizedAgents);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "rebalance_attention",
+            targetAgents: dominantAgents.length > 0 ? dominantAgents : undefined,
+            effect: "Rebalance speaking order: let marginalized agents speak before dominant agent",
+            applied: true,
+            parameters: {
+              mechanism: "rebalance_attention",
+              dominantAgents,
+              marginalizedAgents,
+              reason: issue.suggestedIntervention?.reason,
+            },
+          });
+        }
         break;
       }
 
       case "evidence_imbalance": {
         const targetAgents = issue.suggestedIntervention?.targetAgents ?? [];
-        const mods = applyInjectEvidence(targetAgents, cognitiveStates, agentKnowledge);
-        mergeModifications(allModifications, mods);
-        interventions.push({
-          type: "inject_evidence",
-          targetAgents: targetAgents.length > 0 ? targetAgents : undefined,
-          effect: "Inject private evidence of evidence-poor agents into discussion",
-          applied: true,
-          parameters: {
-            mechanism: "inject_evidence",
-            targetAgents,
-            reason: issue.suggestedIntervention?.reason,
-          },
-        });
+        const minConfidenceConf = getMinConfidence(
+          progressiveEstimates, targetAgents, "confidence",
+        );
+
+        if (minConfidenceConf < CONFIDENCE_THRESHOLD) {
+          // 降级：inject_evidence → 仅 evidenceGuidance
+          const mods = new Map<string, CognitiveStateModification>();
+          for (const agentId of targetAgents) {
+            mods.set(agentId, {
+              evidenceGuidance: ["evidence_coverage", "evidence_diversity"],
+            });
+          }
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "inject_evidence",
+            targetAgents: targetAgents.length > 0 ? targetAgents : undefined,
+            effect: `[degraded: C.conf=${minConfidenceConf.toFixed(2)}] Evidence guidance only for evidence-poor agents`,
+            applied: true,
+            parameters: {
+              mechanism: "evidence_guidance",
+              degradedFrom: "inject_evidence",
+              reason: `Confidence estimate confidence too low (${minConfidenceConf.toFixed(2)} < ${CONFIDENCE_THRESHOLD})`,
+              ...issue.suggestedIntervention?.reason ? { originalReason: issue.suggestedIntervention.reason } : {},
+            },
+          });
+        } else {
+          const mods = applyInjectEvidence(targetAgents, cognitiveStates, agentKnowledge);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "inject_evidence",
+            targetAgents: targetAgents.length > 0 ? targetAgents : undefined,
+            effect: "Inject private evidence of evidence-poor agents into discussion",
+            applied: true,
+            parameters: {
+              mechanism: "inject_evidence",
+              targetAgents,
+              reason: issue.suggestedIntervention?.reason,
+            },
+          });
+        }
         break;
       }
 
@@ -275,19 +411,43 @@ export function generateCognitiveInterventions(
         const targetAgents = issue.suggestedIntervention?.targetAgents ?? [];
         const allAgentIds = [...cognitiveStates.keys()];
         const others = allAgentIds.filter(id => !targetAgents.includes(id));
-        const mods = applyRebalanceAttention(targetAgents, others);
-        mergeModifications(allModifications, mods);
-        interventions.push({
-          type: "rebalance_attention",
-          targetAgents: targetAgents.length > 0 ? targetAgents : undefined,
-          effect: "Rebalance speaking order: let mismatched agents reconsider their position",
-          applied: true,
-          parameters: {
-            mechanism: "rebalance_attention",
-            targetAgents,
-            reason: issue.suggestedIntervention?.reason,
-          },
-        });
+
+        const minInertiaConf = getMinConfidence(
+          progressiveEstimates, targetAgents, "inertia",
+        );
+
+        if (minInertiaConf < CONFIDENCE_THRESHOLD) {
+          // 降级：rebalance_attention → inject_evidence
+          const allTargets = [...new Set([...targetAgents, ...others])];
+          const mods = applyInjectEvidence(allTargets, cognitiveStates, agentKnowledge);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "inject_evidence",
+            targetAgents: allTargets.length > 0 ? allTargets : undefined,
+            effect: `[degraded: I.conf=${minInertiaConf.toFixed(2)}] Inject evidence for mismatched agents`,
+            applied: true,
+            parameters: {
+              mechanism: "inject_evidence",
+              degradedFrom: "rebalance_attention",
+              reason: `Inertia estimate confidence too low (${minInertiaConf.toFixed(2)} < ${CONFIDENCE_THRESHOLD})`,
+              ...issue.suggestedIntervention?.reason ? { originalReason: issue.suggestedIntervention.reason } : {},
+            },
+          });
+        } else {
+          const mods = applyRebalanceAttention(targetAgents, others);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "rebalance_attention",
+            targetAgents: targetAgents.length > 0 ? targetAgents : undefined,
+            effect: "Rebalance speaking order: let mismatched agents reconsider their position",
+            applied: true,
+            parameters: {
+              mechanism: "rebalance_attention",
+              targetAgents,
+              reason: issue.suggestedIntervention?.reason,
+            },
+          });
+        }
         break;
       }
 
@@ -297,21 +457,179 @@ export function generateCognitiveInterventions(
         const targetAgents = issue.suggestedIntervention?.targetAgents ?? [];
         const allIds = [...cognitiveStates.keys()];
         const marginalized = allIds.filter(id => !targetAgents.includes(id));
-        const mods = applyRebalanceAttention(targetAgents, marginalized);
-        mergeModifications(allModifications, mods);
-        interventions.push({
-          type: "rebalance_attention",
-          targetAgents: targetAgents.length > 0 ? targetAgents : undefined,
-          effect: "Rebalance speaking order to break echo chamber",
-          applied: true,
-          parameters: { mechanism: "rebalance_attention", reason: issue.suggestedIntervention?.reason },
-        });
+
+        const minInertiaConf = getMinConfidence(
+          progressiveEstimates, targetAgents, "inertia",
+        );
+
+        if (minInertiaConf < CONFIDENCE_THRESHOLD) {
+          const allTargets = [...new Set([...targetAgents, ...marginalized])];
+          const mods = applyInjectEvidence(allTargets, cognitiveStates, agentKnowledge);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "inject_evidence",
+            targetAgents: allTargets.length > 0 ? allTargets : undefined,
+            effect: `[degraded: I.conf=${minInertiaConf.toFixed(2)}] Inject evidence to break echo chamber`,
+            applied: true,
+            parameters: {
+              mechanism: "inject_evidence",
+              degradedFrom: "rebalance_attention",
+              reason: `Inertia estimate confidence too low (${minInertiaConf.toFixed(2)} < ${CONFIDENCE_THRESHOLD})`,
+            },
+          });
+        } else {
+          const mods = applyRebalanceAttention(targetAgents, marginalized);
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "rebalance_attention",
+            targetAgents: targetAgents.length > 0 ? targetAgents : undefined,
+            effect: "Rebalance speaking order to break echo chamber",
+            applied: true,
+            parameters: { mechanism: "rebalance_attention", reason: issue.suggestedIntervention?.reason },
+          });
+        }
+        break;
+      }
+
+      // ── v6: δ 诊断 issues（δ_1d_mask, δ_polarization, δ_evidence_silence, δ_stance_flip,
+      //        δ_confidence_gap, δ_no_response, δ_concentration, δ_consistency）──
+      // δ 诊断生成的 issue.type 以 "δ_" 开头，suggestedIntervention.type 指定干预类型。
+      // 此 default 分支根据 suggestedIntervention.type 分发到 inject_evidence / rebalance_attention，
+      // 并应用与旧检测器 case 相同的置信度感知降级。
+      default: {
+        if (!issue.type.startsWith("δ_")) break;
+
+        const suggestedType = issue.suggestedIntervention?.type;
+        if (!suggestedType || suggestedType === "none") break;
+
+        const targetAgents = issue.suggestedIntervention?.targetAgents
+          ?? issue.agents
+          ?? [];
+        // 空目标列表 → 全体 agent
+        const effectiveTargets = targetAgents.length > 0
+          ? targetAgents
+          : [...cognitiveStates.keys()];
+        const marginalized = [...cognitiveStates.keys()].filter(
+          id => !effectiveTargets.includes(id),
+        );
+
+        const minInertiaConf = getMinConfidence(
+          progressiveEstimates, effectiveTargets, "inertia",
+        );
+
+        if (suggestedType === "inject_evidence") {
+          if (disabledTypes.has("inject_evidence")) break;
+
+          // 置信度不足时降级为 evidenceGuidance（无针对性注入）
+          if (minInertiaConf < CONFIDENCE_THRESHOLD) {
+            const mods = applyInjectEvidence(effectiveTargets, cognitiveStates, agentKnowledge);
+            mergeModifications(allModifications, mods);
+            interventions.push({
+              type: "inject_evidence",
+              targetAgents: effectiveTargets,
+              effect: `[degraded: I.conf=${minInertiaConf.toFixed(2)}] ${issue.type}: inject evidence (low confidence)`,
+              applied: true,
+              parameters: {
+                mechanism: "inject_evidence",
+                degradedFrom: "inject_evidence",
+                deltaSource: issue.type,
+                reason: issue.suggestedIntervention?.reason
+                  ?? `Inertia confidence too low (${minInertiaConf.toFixed(2)} < ${CONFIDENCE_THRESHOLD})`,
+              },
+            });
+          } else {
+            const mods = applyInjectEvidence(effectiveTargets, cognitiveStates, agentKnowledge);
+            mergeModifications(allModifications, mods);
+            interventions.push({
+              type: "inject_evidence",
+              targetAgents: effectiveTargets,
+              effect: `${issue.type}: inject evidence`,
+              applied: true,
+              parameters: {
+                mechanism: "inject_evidence",
+                deltaSource: issue.type,
+                reason: issue.suggestedIntervention?.reason,
+              },
+            });
+          }
+        } else if (suggestedType === "rebalance_attention") {
+          if (disabledTypes.has("rebalance_attention")) break;
+
+          // 置信度不足时降级为 inject_evidence
+          if (minInertiaConf < CONFIDENCE_THRESHOLD) {
+            const allTargets = [...new Set([...effectiveTargets, ...marginalized])];
+            const mods = applyInjectEvidence(allTargets, cognitiveStates, agentKnowledge);
+            mergeModifications(allModifications, mods);
+            interventions.push({
+              type: "inject_evidence",
+              targetAgents: allTargets,
+              effect: `[degraded: I.conf=${minInertiaConf.toFixed(2)}] ${issue.type}: inject evidence (from rebalance)`,
+              applied: true,
+              parameters: {
+                mechanism: "inject_evidence",
+                degradedFrom: "rebalance_attention",
+                deltaSource: issue.type,
+                reason: `Inertia confidence too low (${minInertiaConf.toFixed(2)} < ${CONFIDENCE_THRESHOLD})`,
+              },
+            });
+          } else {
+            const mods = applyRebalanceAttention(effectiveTargets, marginalized);
+            mergeModifications(allModifications, mods);
+            interventions.push({
+              type: "rebalance_attention",
+              targetAgents: effectiveTargets,
+              effect: `${issue.type}: rebalance attention`,
+              applied: true,
+              parameters: {
+                mechanism: "rebalance_attention",
+                deltaSource: issue.type,
+                reason: issue.suggestedIntervention?.reason,
+              },
+            });
+          }
+        }
         break;
       }
     }
   }
 
   return { interventions, cognitiveModifications: allModifications };
+}
+
+// ============================================================================
+// Confidence-Aware Helpers
+// ============================================================================
+
+/**
+ * 获取指定 agent 集合中某个估计维度的最小置信度。
+ *
+ * @param estimates 渐进估计结果 map
+ * @param agentIds 目标 agent ID 列表
+ * @param dimension 估计维度："inertia" | "confidence" | "susceptibility"
+ * @returns 最小置信度（若无 estimates 则返回 1.0——不降级）
+ */
+function getMinConfidence(
+  estimates: Map<string, ProgressiveEstimates> | undefined,
+  agentIds: string[],
+  dimension: "inertia" | "confidence" | "susceptibility",
+): number {
+  if (!estimates || estimates.size === 0 || agentIds.length === 0) {
+    return 1.0; // 无数据 → 不降级
+  }
+
+  let min = 1.0;
+  for (const id of agentIds) {
+    const est = estimates.get(id);
+    if (!est) continue;
+    let conf: number;
+    switch (dimension) {
+      case "inertia": conf = est.inertia.confidence; break;
+      case "confidence": conf = est.confidence.confidence; break;
+      case "susceptibility": conf = est.susceptibility.confidence; break;
+    }
+    if (conf < min) min = conf;
+  }
+  return min;
 }
 
 // ============================================================================

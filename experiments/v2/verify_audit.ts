@@ -35,6 +35,7 @@ import {
   GOVERNANCE_POLARIZATION_THRESHOLD,
   GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD,
 } from "../../src/lib/constants";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface ManifestEntry {
   filename: string;
@@ -144,8 +145,12 @@ function verifyAuditFields(filePath: string): AuditCheck {
 
   let data: any;
   try {
-    data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    data = safeJsonParse<any>(fs.readFileSync(filePath, "utf8"));
   } catch {
+    result.anomalies.push("JSON parse error");
+    return result;
+  }
+  if (!data) {
     result.anomalies.push("JSON parse error");
     return result;
   }
@@ -194,7 +199,8 @@ function main(): void {
     process.exit(1);
   }
 
-  const manifest: Manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  const manifest = safeJsonParse<Manifest>(fs.readFileSync(manifestPath, "utf8"));
+  if (!manifest) { console.error("[verify_audit] 无法解析 manifest JSON"); process.exit(1); }
   console.log(`清单生成时间: ${manifest.generatedAt}`);
   console.log(`清单文件总数: ${manifest.totalFiles}`);
   console.log("");

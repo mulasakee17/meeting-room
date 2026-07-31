@@ -10,7 +10,7 @@
 
 export type RuntimeMode = "belief" | "cognitive" | "native_cognitive";
 export type GovernanceMode = "none" | "detect-only" | "full" | "diversity_only" | "cognitive";
-export type ScenarioId = "ma" | "crisis" | "supplier" | "invest" | "er_triage" | "fraud";
+export type ScenarioId = "ma" | "crisis" | "supplier" | "invest" | "er_triage" | "fraud" | "university";
 export type LLMProvider = "qwen" | "gpt4o" | "deepseek";
 
 export interface ExperimentConfig {
@@ -42,6 +42,10 @@ export interface ExperimentConfig {
   isMain: boolean;
   /** 额外说明 */
   description: string;
+  /** v6: 是否启用 SemanticTool 异步路径（C 组实验专用）。
+   *  true → NativeCognitiveEngine 走 applyCognitiveGovernanceAsync（Tier 1→2→3 含 LLM 语义传感器）。
+   *  false 或未设置 → 走同步 applyCognitiveGovernance（纯数学 Tier 1→2）。 */
+  useSemanticTool?: boolean;
 }
 
 // ============================================================================
@@ -64,6 +68,8 @@ export interface CognitiveStateSnapshot {
   inertiaStrength: number;
   confidenceOverall: number;
   susceptibility: number;
+  /** ROADMAP_V5: 从 itemBeliefs 派生的标量立场汇总（stated stance） */
+  statedStance: number;
   belief: number;
   oldConfidence: number;
   spokeThisRound: boolean;
@@ -99,20 +105,42 @@ export interface RawRunData {
   /** 热力学轨迹（RTHF 逐轮快照，仅 native_cognitive 模式） */
   thermoHistory?: Array<{
     round: number;
-    /** Kuramoto 序参量 [0, 1] */
+    /** 方向对齐度 [0, 1] */
     R: number;
-    /** 归一化温度 [0, 1] */
+    /** 强度分散度 [0, 1] */
     T: number;
-    /** Shannon 熵 [0, 1] */
+    /** 分布形状 [0, 1] */
     H: number;
-    /** Helmholtz 自由能 */
+    /** 操作化综合失序指标 */
     F: number;
+  }>;
+  /** ROADMAP_V5/v6: δ 一致性诊断（每轮 deltaDiagnosis，仅 native_cognitive 模式）
+   *  v6 更新：与 DeltaDiagnosis 接口对齐（8 个 δ 信号）。 */
+  deltaDiagnosis?: Array<{
+    round: number;
+    polarization: { value: number; triggered: boolean; explanation: string; minConfidence: number; effectiveThreshold: number };
+    oneDMask: { value: number; triggered: boolean; explanation: string; minConfidence: number; effectiveThreshold: number };
+    evidenceSilence: { value: number; triggered: boolean; explanation: string; minConfidence: number; effectiveThreshold: number; silencedAgents: string[] };
+    confidenceGap: { value: number; triggered: boolean; explanation: string; minConfidence: number; effectiveThreshold: number; overconfidentAgents: string[] };
+    stanceFlip: { value: number; triggered: boolean; explanation: string; minConfidence: number; effectiveThreshold: number; flippedAgents: string[] };
+    noResponse: { value: number; triggered: boolean; explanation: string; minConfidence: number; effectiveThreshold: number; unresponsiveAgents: string[] };
+    concentration: { value: number; triggered: boolean; explanation: string; minConfidence: number; effectiveThreshold: number };
+    consistency: { value: number; triggered: boolean; explanation: string; minConfidence: number; effectiveThreshold: number };
+    summary: string;
   }>;
   /** 干预记录 */
   interventions: Array<{
     round: number;
     type: string;
     targetAgentId?: string;
+    /** v6: 完整目标 agent 列表（generateCognitiveInterventions 使用） */
+    targetAgents?: string[];
+    /** v6: 干预效果描述（含降级信息） */
+    effect?: string;
+    /** v6: 是否实际应用 */
+    applied?: boolean;
+    /** v6: 干预参数（含 deltaSource, degradedFrom, mechanism 等） */
+    parameters?: Record<string, unknown>;
   }>;
   /** 治理检测结果（每轮检测到的问题） */
   governanceIssues: Array<{
@@ -128,7 +156,75 @@ export interface RawRunData {
     promptTokens: number;
     completionTokens: number;
     totalTokens: number;
+    /** Per-agent token 使用明细（用于干预成本分析） */
+    byAgent?: Record<string, {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+      totalLatencyMs: number;
+      callCount: number;
+    }>;
+    /** 总延迟（毫秒） */
+    totalLatencyMs?: number;
   };
+  /**
+   * ROADMAP_V5: 逐轮逐 agent 的 itemBeliefs 原始数据（K 维偏好向量）。
+   *
+   * 用于 Hidden Anchors 锚点恢复、偏好向量演化分析、Friedkin-Johnsen 模型拟合。
+   * 每个元素是 (round, agentId, agentName) → itemBeliefs[] 的映射。
+   */
+  itemBeliefsTrajectory?: Array<{
+    round: number;
+    agentId: string;
+    agentName: string;
+    itemBeliefs: Array<{
+      item: string;
+      rank: number;
+      belief: number;
+      confidence: number;
+    }>;
+  }>;
+  /**
+   * 逐轮完整 opinion 数据（含 reasoning、evidence、referencedAgents）。
+   *
+   * 用于定性分析：信息传播路径追踪、社会网络分析、引用模式分析。
+   * 注意：此字段较大（含完整推理文本），仅在需要深度回溯时使用。
+   */
+  roundOpinions?: Array<{
+    round: number;
+    opinions: Array<{
+      agentId: string;
+      agentName: string;
+      itemBeliefs: Array<{
+        item: string;
+        rank: number;
+        belief: number;
+        confidence: number;
+      }>;
+      reasoning?: string;
+      evidence?: string[];
+      referencedAgents?: string[];
+      /** 该 agent 本轮是否发言 */
+      spoke: boolean;
+    }>;
+  }>;
+  /**
+   * v6: SemanticTool 审计日志（C 组实验论文分析用）。
+   * 记录每次 SemanticTool 调用的 task、round、输入输出、验证通过率、降级情况。
+   * 仅 useSemanticTool=true（C 组）时有数据；A/B/D 组为 undefined 或空数组。
+   */
+  semanticAuditLog?: Array<{
+    round: number;
+    task: string;
+    triggeredDeltas?: string[];
+    inputCount: number;
+    outputCount: number;
+    validatedClusters?: number;
+    rejectedClusters?: number;
+    success: boolean;
+    latencyMs: number;
+    error?: string;
+  }>;
 }
 
 // ============================================================================
@@ -206,6 +302,7 @@ export interface ExperimentMetrics {
   governanceMechanism?: {
     grangerF_evidenceToUtility: number;
     grangerF_utilityToEvidence: number;
+    /** 直接效应：ΔE → ΔU 回归系数（非中介效应 a×b 路径） */
     indirectEffect: number;
     indirectEffectCI: [number, number];
     mediationRatio: number;
@@ -217,6 +314,11 @@ export interface ExperimentMetrics {
       tauGov: number[];
       tauNoGov: number[];
       grangerN: number;
+      /** v6.1: per-series Granger F 值（按 run×agent 分组），用于 Fisher 合并 p 值 */
+      perSeriesF_EtoU?: number[];
+      perSeriesF_UtoE?: number[];
+      /** 每条序列的有效长度（n-3 用于 df2），用于 F 分布 CDF */
+      perSeriesN?: number[];
     };
   };
   /** E6: 状态解耦 */
@@ -252,6 +354,7 @@ export interface ExperimentMetrics {
   };
   /** E8: Susceptibility 中介 */
   susceptibilityMediation?: {
+    /** 直接效应：ΔE → ΔU 回归系数（非中介效应 a×b 路径） */
     indirectEffect: number;
     indirectEffectCI: [number, number];
     directEffect: number;
@@ -298,6 +401,19 @@ export interface ExperimentMetrics {
       fDrift: number;
       /** 平均 RTHF 逐轮轨迹 */
       perRound: Array<{ round: number; R: number; T: number; H: number; F: number }>;
+    };
+    /** v6 δ 诊断分析 */
+    deltaDiagnosis?: {
+      /** 各 δ 信号的触发率 (triggered=true 的轮次占比) */
+      triggerRates: Record<string, number>;
+      /** δ 触发总次数 */
+      totalTriggers: number;
+      /** δ 触发与同轮干预的相关性 (φ系数) */
+      deltaInterventionPhi: number;
+      /** δ 触发轮次 vs 非触发轮次的 Δτ 均值差 */
+      tauDeltaOnTrigger: number;
+      /** 各 δ 信号触发时的平均 minConfidence */
+      meanConfidenceBySignal: Record<string, number>;
     };
   };
   /** 全局指标 */

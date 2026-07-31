@@ -23,6 +23,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // 排除目录（备份/已知坏数据）
 const EXCLUDE_DIRS = new Set([
@@ -70,7 +71,8 @@ function sha256Buffer(buf: Buffer): string {
 function extractMetadata(filePath: string): Partial<ManifestEntry> {
   try {
     const raw = fs.readFileSync(filePath, "utf8");
-    const data = JSON.parse(raw);
+    const data = safeJsonParse<any>(raw);
+    if (!data) { console.warn(`[generate_manifest] 无法解析 JSON: ${filePath}`); return {}; }
     const trace: any[] = data.governanceTrace || [];
     const hasAuditFields = trace.some(r =>
       (r.governanceIssues || []).some((i: any) => i.detectionMetrics)
@@ -124,6 +126,11 @@ function main(): void {
         size: stat.size,
         sha256: sha256Buffer(buf),
         ...meta,
+        hasGovernanceTrace: meta.hasGovernanceTrace ?? false,
+        governanceTraceRounds: meta.governanceTraceRounds ?? 0,
+        totalIssues: meta.totalIssues ?? 0,
+        totalAppliedInterventions: meta.totalAppliedInterventions ?? 0,
+        hasAuditFields: meta.hasAuditFields ?? false,
       });
       totalSize += stat.size;
     }

@@ -31,14 +31,6 @@ function stdPop(values: number[]): number {
   return Math.sqrt(values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length);
 }
 
-/** 计算两个集合的 Jaccard 相似度 */
-function jaccardSimilarity<T>(a: Set<T>, b: Set<T>): number {
-  if (a.size === 0 && b.size === 0) return 0;
-  const intersection = new Set([...a].filter(x => b.has(x)));
-  const union = new Set([...a, ...b]);
-  return intersection.size / union.size;
-}
-
 /** 计算两个效用向量的 cosine 距离 */
 function cosineDistance(
   a: Record<string, number>,
@@ -99,18 +91,20 @@ export function detectEchoChamberCognitive(
   const coverageVariance = stdPop(coverages);
   const diversityMean = diversities.reduce((s, v) => s + v, 0) / diversities.length;
 
-  // 计算所有 agent 对的平均 Jaccard（基于 utility 的 topChoice 分布）
-  let jaccardSum = 0;
+  // 计算所有 agent 对的平均效用方向相似度（基于 utility 向量的 cosine 相似度）
+  // 修复：原实现用 Jaccard(选项键集合)，在所有 agent 考虑相同选项但立场相反时
+  //   仍返回 1.0（误报为回声室）。改用 cosine 相似度衡量"效用方向是否趋同"：
+  //   方向一致 → 接近 1（回声室信号）；方向相反 → 接近 -1 → clamp 到 0（不算回声室）
+  let utilityOverlapSum = 0;
   let pairCount = 0;
   for (let i = 0; i < states.length; i++) {
     for (let j = i + 1; j < states.length; j++) {
-      const optsA = new Set(Object.keys(states[i].utility.scores));
-      const optsB = new Set(Object.keys(states[j].utility.scores));
-      jaccardSum += jaccardSimilarity(optsA, optsB);
+      const cosSim = 1 - cosineDistance(states[i].utility.scores, states[j].utility.scores);
+      utilityOverlapSum += Math.max(0, cosSim);
       pairCount++;
     }
   }
-  const jaccardOverlap = pairCount > 0 ? jaccardSum / pairCount : 0;
+  const jaccardOverlap = pairCount > 0 ? utilityOverlapSum / pairCount : 0;
 
   const echoScore = 0.3 * (1 - coverageVariance) + 0.3 * (1 - diversityMean) + 0.4 * jaccardOverlap;
   const threshold = config?.echoChamberThreshold ?? 0.75;
@@ -151,7 +145,8 @@ export interface PolarizationCognitiveResult {
  * 使用 pairwise cosine distance 避免 k-means 在小样本（n=5）下的不稳定性。
  * 信号：效用向量之间的平均 cosine 距离。
  *
- * 阈值：默认 0.15（与旧检测器一致，基于分离度最大化）
+ * 阈值：默认 0.25（实时治理路径，比 computeDelta 的 0.15 更保守，
+ *   避免实时干预误报；computeDelta 用于 δ 诊断分析层，需要更敏感）
  */
 export function detectPolarizationCognitive(
   states: CognitiveGovernanceState[],
@@ -241,7 +236,10 @@ export function detectPrematureConsensusCognitive(
   }
   const utilityConsensus = pairCount > 0 ? totalSim / pairCount : 0;
 
-  // 信念离散度：从 utility 分数计算
+  // 信念离散度：所有 agent 的 utility scores 的总体标准差
+  // 语义：衡量群体效用分布的离散度（低 → 只考虑少数选项 → 过早共识风险）
+  // 注意：utility scores ∈ [-1, 1]（nativeCognitiveEngine 第 103 行 clamp），
+  //   故 stdPop ∈ [0, 1]，Math.min(1, ...) 是防御性保护
   const allScores: number[] = [];
   for (const s of states) {
     allScores.push(...Object.values(s.utility.scores));
@@ -250,8 +248,10 @@ export function detectPrematureConsensusCognitive(
 
   const roundProgress = maxRounds > 0 ? round / maxRounds : 0;
 
-  // 综合得分：早期轮次 + 高效用共识 + 低离散 → 过早共识
-  const score = roundProgress * utilityConsensus * (1 - Math.min(1, beliefDispersion));
+  // 综合得分：(1-轮次进度) × 高效用共识 × (1-低离散) → 过早共识
+  // 修复：原公式 roundProgress × ... 在早期轮次削弱信号，与直觉相反
+  // 正确逻辑：早期轮次（roundProgress 低）应放大信号，晚期轮次（roundProgress 高）应缩小信号
+  const score = (1 - roundProgress) * utilityConsensus * (1 - Math.min(1, beliefDispersion));
   const threshold = config?.prematureConsensusThreshold ?? 0.55;
 
   return {
@@ -488,27 +488,10 @@ export function runCognitiveDetectors(
   // 构建 issue 列表
   const issues: GovernanceIssue[] = [];
 
-  if (echoChamber.detected) {
-    issues.push({
-      type: "echo_chamber_cognitive",
-      severity: echoChamber.severity,
-      description: `Echo chamber (cognitive): info redundancy=${echoChamber.infoRedundancyScore.toFixed(2)}, ` +
-        `coverage variance=${echoChamber.evidenceCoverageVariance.toFixed(2)}, ` +
-        `diversity mean=${echoChamber.evidenceDiversityMean.toFixed(2)}`,
-      agents: echoChamber.redundantAgents,
-      source: "custom",
-      suggestedIntervention: {
-        type: "rebalance_attention",
-        targetAgents: echoChamber.redundantAgents,
-        reason: "Cognitive echo chamber detected: evidence diversity is low, rebalancing speaking order to surface marginalized voices",
-      },
-      detectionMetrics: {
-        infoRedundancyScore: echoChamber.infoRedundancyScore,
-        evidenceCoverageVariance: echoChamber.evidenceCoverageVariance,
-        evidenceDiversityMean: echoChamber.evidenceDiversityMean,
-      },
-    });
-  }
+  // Echo Chamber 检测器已禁用（分离度为 0.000，无判别力）。
+  // 其功能由统一诊断层的 δ_exposure + Evidence Imbalance 替代。
+  // 函数保留但不再生成 issue，避免浪费计算资源触发无效干预。
+  // if (echoChamber.detected) { ... }
 
   if (polarization.detected) {
     issues.push({

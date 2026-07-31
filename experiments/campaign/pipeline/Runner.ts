@@ -11,6 +11,7 @@ import { CustomAgent } from "../../../src/lib/adapters/custom";
 import { DiscussionEngine, type DiscussionAgent } from "../../../src/lib/discussion";
 import { NativeCognitiveEngine } from "../../../src/lib/discussion/nativeCognitiveEngine";
 import type { LLMConfig } from "../../../src/lib/llm/providers";
+import { detectLLMProvider } from "../../../src/lib/llm/providers";
 import type { ExperimentConfig, RawRunData, CognitiveStateSnapshot, RuntimeMode } from "../types";
 import {
   extractRanking,
@@ -21,8 +22,12 @@ import {
   computeSusceptibility,
   cognitiveStateToBelief,
   cognitiveStateToConfidence,
+  stanceFromItemBeliefs,
   type AgentCognitiveState,
 } from "../../../src/lib/agent/cognitiveState";
+import { computeDeltaDiagnosis } from "../../../src/lib/thermodynamics/computeDelta";
+import { estimateAll } from "../../../src/lib/thermodynamics/ProgressiveEstimator";
+import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
 
 // ============================================================================
 // Scenario Loading
@@ -50,6 +55,10 @@ function loadScenario(scenarioId: string): { task: any; dataDir: string } {
     case "er_triage": {
       const { TASK_ER_TRIAGE } = require("../../v2/task_er_triage");
       return { task: TASK_ER_TRIAGE, dataDir: "data_er_triage" };
+    }
+    case "university": {
+      const { TASK_UNIVERSITY } = require("../tasks/task_university");
+      return { task: TASK_UNIVERSITY, dataDir: "data_university" };
     }
     default:
       throw new Error(`Unknown scenario: ${scenarioId}`);
@@ -139,7 +148,55 @@ function createAgents(
 // Cognitive State Extraction
 // ============================================================================
 
-/** 从 DiscussionEngine 提取本轮 cognitive state 快照 */
+/** 从 agents 数组收集 token 使用统计（对应 Top 10 #9） */
+function collectTokenUsage(agents: DiscussionAgent[]): {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  byAgent: Record<string, {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    totalLatencyMs: number;
+    callCount: number;
+  }>;
+  totalLatencyMs: number;
+} {
+  const byAgent: Record<string, {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    totalLatencyMs: number;
+    callCount: number;
+  }> = {};
+  let totalPrompt = 0, totalCompletion = 0, totalLatency = 0;
+
+  for (const agent of agents) {
+    const customAgent = agent as unknown as CustomAgent;
+    if (customAgent.getUsageStats) {
+      const stats = customAgent.getUsageStats();
+      byAgent[agent.id] = {
+        promptTokens: stats.promptTokens,
+        completionTokens: stats.completionTokens,
+        totalTokens: stats.totalTokens,
+        totalLatencyMs: stats.totalLatencyMs,
+        callCount: stats.callCount,
+      };
+      totalPrompt += stats.promptTokens;
+      totalCompletion += stats.completionTokens;
+      totalLatency += stats.totalLatencyMs;
+    }
+  }
+
+  return {
+    promptTokens: totalPrompt,
+    completionTokens: totalCompletion,
+    totalTokens: totalPrompt + totalCompletion,
+    byAgent,
+    totalLatencyMs: totalLatency,
+  };
+}
+
 function extractCognitiveSnapshots(
   engine: DiscussionEngine,
   round: number,
@@ -164,7 +221,12 @@ function extractCognitiveSnapshots(
   const roundOpinions = roundData?.opinions || [];
 
   for (const [agentId, state] of states) {
-    const susc = computeSusceptibility(state.inertia, state.confidence);
+    // v6: 优先使用 ProgressiveEstimator 渐进估计的 susceptibility（基于暴露事件），
+    // 与 MeasurementLayer.buildDetectorInput 保持一致。
+    // 仅在不可用（冷启动，暴露事件 < 2）时回退到旧公式 (1-I)(1-C)。
+    const susc = state.susceptibility.usable
+      ? state.susceptibility.estimate
+      : computeSusceptibility(state.inertia, state.confidence);
 
     // 提取该 agent 的 LLM 原生 ranking top（rank=1 的 item）
     const agentOpinion = roundOpinions.find(o => o.agentId === agentId);
@@ -185,6 +247,9 @@ function extractCognitiveSnapshots(
       inertiaStrength: state.inertia.strength,
       confidenceOverall: state.confidence.overall,
       susceptibility: susc,
+      statedStance: agentOpinion?.itemBeliefs
+        ? stanceFromItemBeliefs(agentOpinion.itemBeliefs)
+        : cognitiveStateToBelief(state),
       belief: cognitiveStateToBelief(state),
       oldConfidence: cognitiveStateToConfidence(state),
       spokeThisRound: state.spokeThisRound,
@@ -215,7 +280,7 @@ export async function runSingle(
   const useNativeCognitive = runtimeMode === "native_cognitive";
 
   const llmConfig: LLMConfig = {
-    provider: config.llmModel.includes("gpt") ? "openai" as any : "deepseek" as any,
+    provider: detectLLMProvider(config.llmModel),
     model: config.llmModel,
     temperature: config.temperature,
   };
@@ -223,13 +288,19 @@ export async function runSingle(
   const { agents, knowledge } = createAgents(scenario.task, config.agentCount, llmConfig, seed);
 
   // Phase 4B: "cognitive" governance mode → "full" + useCognitiveGovernance
-  const useCognitiveGovernance = config.governanceMode === "cognitive";
+  // diversity_only: 启用认知治理，但只保留 evidence imbalance + cognitive action mismatch 检测器
+  // 修复前：diversity_only 禁用所有经典检测器但不启用 useCognitiveGovernance，
+  //         导致静默降级为无治理（学术诚信风险）。
+  // 修复后：diversity_only 启用 useCognitiveGovernance，认知检测器全开（6 个），
+  //         但通过 govConfig 明确意图——这是当前架构下的最小修复。
+  //         完整修复需要新增 enableEvidenceImbalanceDetection 开关（架构性改动，推迟）。
+  const useCognitiveGovernance = config.governanceMode === "cognitive" || config.governanceMode === "diversity_only";
   const govMode: "none" | "detect-only" | "full" =
     config.governanceMode === "diversity_only" || config.governanceMode === "cognitive"
       ? "full"
       : (config.governanceMode as "none" | "detect-only" | "full");
 
-  // 治理配置：diversity_only 禁用旧检测器；cognitive 使用默认全检测器
+  // 治理配置：diversity_only 禁用旧检测器（保留认知检测器）；cognitive 使用默认全检测器
   const govConfig = config.governanceMode === "diversity_only"
     ? {
         enableEchoChamberDetection: false,
@@ -239,21 +310,38 @@ export async function runSingle(
       }
     : undefined;
 
-  const engine = useNativeCognitive
-    ? new NativeCognitiveEngine({
-        maxRounds: config.maxRounds,
-        governanceMode: govMode,
-        seed,
-        useCognitiveGovernance,
-        governanceConfig: govConfig,
-      })
-    : new DiscussionEngine({
-        maxRounds: config.maxRounds,
-        governanceMode: govMode,
-        seed,
-        useCognitiveState: useCognitive,
-        governanceConfig: govConfig,
-      });
+  if (config.governanceMode === "diversity_only") {
+    console.warn(
+      `[Runner] diversity_only 模式：已启用 useCognitiveGovernance，将运行 6 个认知检测器（含 evidence imbalance + cognitive action mismatch）。` +
+      `注意：完整 diversity_only 语义需新增 enableEvidenceImbalanceDetection 开关。`
+    );
+  }
+
+  let engine: NativeCognitiveEngine | DiscussionEngine;
+  if (useNativeCognitive) {
+    const nativeEngine = new NativeCognitiveEngine({
+      maxRounds: config.maxRounds,
+      governanceMode: govMode,
+      seed,
+      useCognitiveGovernance,
+      // v6 Phase 2.8: 传递 useSemanticTool 开关，C 组启用异步路径（Tier 1→2→3 含 SemanticTool）
+      useSemanticTool: config.useSemanticTool ?? false,
+      governanceConfig: govConfig,
+    });
+    // v6 Phase 2.8: useSemanticTool=true 时注入 LLM 配置，供 SemanticTool 异步路径调用
+    if (config.useSemanticTool) {
+      nativeEngine.setLlmConfig(llmConfig);
+    }
+    engine = nativeEngine;
+  } else {
+    engine = new DiscussionEngine({
+      maxRounds: config.maxRounds,
+      governanceMode: govMode,
+      seed,
+      useCognitiveState: useCognitive,
+      governanceConfig: govConfig,
+    });
+  }
 
   // 设置 agent knowledge 用于 governance 信息层干预
   if (knowledge.size > 0) {
@@ -317,21 +405,54 @@ export async function runSingle(
 
   // 提取热力学轨迹（RTHF，仅 native_cognitive 模式）
   let thermoHistory: RawRunData["thermoHistory"] | undefined;
+  let semanticAuditLog: RawRunData["semanticAuditLog"] | undefined;
   if (useNativeCognitive) {
     const nativeEngine = engine as NativeCognitiveEngine;
     thermoHistory = nativeEngine.getThermoHistory();
+    // v6: 提取 SemanticTool 审计日志（C 组实验论文分析用）
+    semanticAuditLog = nativeEngine.getSemanticAuditLog();
+  }
+
+  // ROADMAP_V5: 计算 δ 一致性诊断（仅 native_cognitive 模式）
+  let deltaDiagnosis: RawRunData["deltaDiagnosis"] | undefined;
+  if (useNativeCognitive && thermoHistory) {
+    deltaDiagnosis = [];
+    const nativeEngine = engine as NativeCognitiveEngine;
+    for (let r = 1; r <= result.totalRounds; r++) {
+      const states = nativeEngine.getCognitiveStateHistory(r) as Map<string, AgentCognitiveState>;
+      const thermo = thermoHistory.find(t => t.round === r);
+      if (states.size > 0 && thermo) {
+        const estimates = estimateAll(states, r);
+        const diagnosis = computeDeltaDiagnosis(Array.from(states.values()), thermo, estimates);
+        deltaDiagnosis.push({ round: r, ...diagnosis });
+      }
+    }
   }
 
   // 提取干预记录和治理检测结果
-  const interventions: Array<{ round: number; type: string; targetAgentId?: string }> = [];
+  // v6: 保存完整 Intervention 信息（targetAgents, effect, parameters, applied），
+  // 用于论文中干预效果分析和降级率统计
+  const interventions: Array<{
+    round: number;
+    type: string;
+    targetAgentId?: string;
+    targetAgents?: string[];
+    effect?: string;
+    applied?: boolean;
+    parameters?: Record<string, unknown>;
+  }> = [];
   const governanceIssues: RawRunData["governanceIssues"] = [];
   for (const rd of engine.getRoundDataArray()) {
     if (rd.interventions) {
-      for (const intv of rd.interventions) {
+      for (const intv of rd.interventions as any[]) {
         interventions.push({
           round: rd.roundNumber,
-          type: (intv as any).type || "unknown",
-          targetAgentId: (intv as any).targetAgentId,
+          type: intv.type || "unknown",
+          targetAgentId: intv.targetAgentId,
+          targetAgents: intv.targetAgents,
+          effect: intv.effect,
+          applied: intv.applied,
+          parameters: intv.parameters,
         });
       }
     }
@@ -347,6 +468,50 @@ export async function runSingle(
         });
       }
     }
+  }
+
+  // ROADMAP_V5: 提取 itemBeliefs 轨迹（K 维偏好向量，Hidden Anchors 锚点恢复核心数据）
+  const itemBeliefsTrajectory: RawRunData["itemBeliefsTrajectory"] = [];
+  const roundOpinions: RawRunData["roundOpinions"] = [];
+  for (const rd of engine.getRoundDataArray()) {
+    const roundNum = rd.roundNumber;
+    const roundOpinionEntries: NonNullable<RawRunData["roundOpinions"]>[number] =
+      { round: roundNum, opinions: [] };
+
+    for (const op of rd.opinions) {
+      // itemBeliefs 轨迹
+      if (op.itemBeliefs && op.itemBeliefs.length > 0) {
+        itemBeliefsTrajectory.push({
+          round: roundNum,
+          agentId: op.agentId,
+          agentName: (op as any).agentName || op.agentId,
+          itemBeliefs: op.itemBeliefs.map(ib => ({
+            item: ib.item,
+            rank: ib.rank,
+            belief: ib.belief,
+            confidence: ib.confidence,
+          })),
+        });
+      }
+
+      // 完整 opinion（含 reasoning、evidence、referencedAgents）
+      roundOpinionEntries.opinions.push({
+        agentId: op.agentId,
+        agentName: (op as any).agentName || op.agentId,
+        itemBeliefs: (op.itemBeliefs || []).map(ib => ({
+          item: ib.item,
+          rank: ib.rank,
+          belief: ib.belief,
+          confidence: ib.confidence,
+        })),
+        reasoning: op.reasoning,
+        evidence: op.evidence,
+        referencedAgents: op.referencedAgents,
+        spoke: true,
+      });
+    }
+
+    roundOpinions.push(roundOpinionEntries as any);
   }
 
   const rawData: RawRunData = {
@@ -366,13 +531,13 @@ export async function runSingle(
     beliefTrajectory,
     cognitiveTrajectory,
     thermoHistory,
+    deltaDiagnosis,
     interventions,
     governanceIssues,
-    tokenUsage: {
-      promptTokens: 0,
-      completionTokens: 0,
-      totalTokens: 0,
-    },
+    tokenUsage: collectTokenUsage(agents),
+    itemBeliefsTrajectory,
+    roundOpinions,
+    semanticAuditLog,
   };
 
   // 保存原始数据
@@ -412,9 +577,9 @@ export async function runExperiment(
         if (options?.resume && fs.existsSync(outPath)) {
           let valid = false;
           try {
-            const existing = JSON.parse(fs.readFileSync(outPath, "utf-8")) as RawRunData;
+            const existing = safeJsonParse<RawRunData>(fs.readFileSync(outPath, "utf-8"));
             // 有效 RawRunData 必须有 experimentId 且无 error 字段
-            if (existing.experimentId && !(existing as any).error) {
+            if (existing && existing.experimentId && !(existing as any).error) {
               allData.push(existing);
               valid = true;
               if (options.verbose) console.log(`  Skipping ${runId} (valid)`);
@@ -478,13 +643,33 @@ export function loadExperimentData(
   if (!fs.existsSync(rawDir)) return [];
 
   const files = fs.readdirSync(rawDir).filter(f => f.endsWith(".json") && f !== "raw_summary.json");
+  // 排序：标准命名文件（<exp_id>_<mode>_seed<X>_run<Y>.json）排在前面，
+  // 确保去重时保留标准版而非旧版残留（如 _phase31 后缀文件）。
+  // 这些 _phase31 文件是 Phase 3.1 阶段的旧输出，与当前数据结构可能不一致，
+  // 且与标准文件共享同一 runId，会导致重复数据污染 metrics 计算。
+  files.sort((a, b) => {
+    const aIsStandard = /^.+_seed\d+_run\d+\.json$/.test(a);
+    const bIsStandard = /^.+_seed\d+_run\d+\.json$/.test(b);
+    if (aIsStandard && !bIsStandard) return -1;
+    if (!aIsStandard && bIsStandard) return 1;
+    return a.localeCompare(b);
+  });
+
   const data: RawRunData[] = [];
+  const seenRunIds = new Set<string>();
 
   for (const file of files) {
     try {
       const content = fs.readFileSync(path.join(rawDir, file), "utf-8");
-      const parsed = JSON.parse(content);
+      const parsed = safeJsonParse<any>(content);
+      if (!parsed) { console.warn(`[Runner] 无法解析 JSON: ${file}`); continue; }
       if (parsed.runId && !parsed.error) {
+        // 去重：同一 runId 的多个文件（如 _phase31.json 旧版残留）只保留第一个
+        if (seenRunIds.has(parsed.runId)) {
+          console.warn(`[Runner] 跳过重复 runId=${parsed.runId} 的文件: ${file}`);
+          continue;
+        }
+        seenRunIds.add(parsed.runId);
         data.push(parsed as RawRunData);
       }
     } catch {

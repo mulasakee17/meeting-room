@@ -18,12 +18,13 @@ import dotenv from "dotenv";
 dotenv.config({ path: path.resolve(__dirname, "..", "..", ".env.local") });
 
 import { runExperiment, loadExperimentData } from "./pipeline/Runner";
-import { computeMetrics, computeE1Stability, computeE2Evidence, computeE6Decoupling, computeE9CognitiveGovernance } from "./pipeline/MetricComputer";
+import { computeMetrics } from "./pipeline/MetricComputer";
 import { runTests } from "./pipeline/StatisticalTest";
 import { generateFigures } from "./pipeline/FigureGenerator";
 import { generateReport } from "./pipeline/ReportGenerator";
 import { summarizeCampaign } from "./pipeline/CampaignSummarizer";
 import type { ExperimentConfig, ExperimentMetrics, TestResult, RawRunData } from "./types";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 // 导入所有主实验配置
 import { E1_STABILITY, E1_VALIDATION_CROSS_TASK, E1_VALIDATION_AGENT_COUNT, E1_VALIDATION_CROSS_MODEL, E1_VALIDATION_TEMPERATURE } from "./configs/e1_stability";
@@ -173,22 +174,11 @@ function analyzeExperiments(
 
     console.log(`\n  Analyzing ${expId} (${data.length} runs)...`);
 
-    // 分离 Belief 和 Cognitive 数据
-    // H-Fix: cognitiveData 必须包含 native_cognitive，否则 E1 Native 分析拿到空数据
-    const beliefData = data.filter(d => d.runtimeMode === "belief");
-    const cognitiveData = data.filter(d => d.runtimeMode === "cognitive" || d.runtimeMode === "native_cognitive");
-
-    let metrics: ExperimentMetrics;
-
-    if (expId.startsWith("e1")) {
-      metrics = computeE1Stability(beliefData, cognitiveData);
-    } else if (expId.startsWith("e2")) {
-      metrics = computeE2Evidence(cognitiveData);
-    } else if (expId.startsWith("e6")) {
-      metrics = computeE6Decoupling(cognitiveData);
-    } else {
-      metrics = computeMetrics(expId, data);
-    }
+    // 统一通过 computeMetrics 分发：它内部按 expId 调用对应的专用计算函数
+    // （computeE1Stability / computeE2Evidence / computeE6Decoupling 等），
+    // 并统一附加 metrics.global（全局指标）。
+    // 旧代码直接调用专用函数，跳过了 metrics.global 赋值，导致 E1/E2/E6 报告缺失全局数据。
+    const metrics = computeMetrics(expId, data);
 
     allMetrics.push(metrics);
 
@@ -334,10 +324,12 @@ async function main() {
       const testsPath = path.join(OUTPUT_DIR, config.id, "tests.json");
 
       if (fs.existsSync(metricsPath)) {
-        allMetrics.push(JSON.parse(fs.readFileSync(metricsPath, "utf-8")));
+        const metrics = safeJsonParse<ExperimentMetrics>(fs.readFileSync(metricsPath, "utf-8"));
+        if (metrics) allMetrics.push(metrics);
       }
       if (fs.existsSync(testsPath)) {
-        allTests.push(...JSON.parse(fs.readFileSync(testsPath, "utf-8")));
+        const tests = safeJsonParse<TestResult[]>(fs.readFileSync(testsPath, "utf-8"));
+        if (tests) allTests.push(...tests);
       }
     }
 

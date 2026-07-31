@@ -11,7 +11,7 @@ export const E2_EVIDENCE: ExperimentConfig = {
   hypothesis: "H2",
   title: "Evidence Explanatory Power — Evidence 能解释 Opinion Change",
   scenario: "ma",
-  runtimeModes: ["cognitive"],
+  runtimeModes: ["native_cognitive"],
   governanceMode: "none",
   agentCount: 5,
   maxRounds: 5,

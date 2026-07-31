@@ -81,6 +81,7 @@ function generateMockData(): void {
               inertiaStrength,
               confidenceOverall,
               susceptibility,
+              statedStance: belief,
               belief,
               oldConfidence: confidences[agentId],
               spokeThisRound: rng() > 0.3,

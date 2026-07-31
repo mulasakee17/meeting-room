@@ -79,7 +79,7 @@ function createMockContext(round: number = 1): RuntimeContext {
         influences: [],
         causalGraph: { nodes: [], edges: [] },
         summary: { totalRounds: 0, finalDecision: "", consensusLevel: 0 },
-      },
+      } as any,
     },
     metrics: {
       evaluation: null,
@@ -99,12 +99,12 @@ function createMockContext(round: number = 1): RuntimeContext {
       add: () => {},
       remove: () => {},
       count: () => 0,
-    },
+    } as any,
     config: {
       loggingLevel: "info",
       maxConcurrentAgents: 10,
       timeout: 30000,
-    },
+    } as any,
     timeline: [],
     artifact: {
       experimentId: "exp-001",

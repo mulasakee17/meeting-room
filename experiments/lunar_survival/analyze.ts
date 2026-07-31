@@ -7,6 +7,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { mulberry32, cohensD } from "../v2/statsShared";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 const DATA_DIR = path.resolve(__dirname, "data", "raw");
 const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith(".json"));
@@ -18,7 +19,11 @@ interface Run {
   interventions: number; issuesDetected: string[];
 }
 
-const runs = files.map(f => JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), "utf-8")) as Run);
+const runs = files.map(f => {
+  const parsed = safeJsonParse<Run>(fs.readFileSync(path.join(DATA_DIR, f), "utf-8"));
+  if (!parsed) { console.warn(`[analyze] 无法解析 JSON: ${f}`); return null; }
+  return parsed;
+}).filter((r): r is Run => r !== null);
 
 // ── Group by task + ablation ──────────────────────────────────────────
 type Group = { taskId: string; ablation: string; accuracies: number[] };

@@ -11,6 +11,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface EResult {
   runId: string;
@@ -40,7 +41,8 @@ function loadEGroup(): EResult[] {
   for (const f of fs.readdirSync(dir)) {
     if (!f.startsWith("fraud_E_") || !f.endsWith(".json")) continue;
     try {
-      const data = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+      const data = safeJsonParse<EResult>(fs.readFileSync(path.join(dir, f), "utf8"));
+      if (!data) { console.warn(`[analyze_e_depth] 无法解析 JSON: ${f}`); continue; }
       if (!data.terminationReason?.startsWith("error")) results.push(data);
     } catch { /* skip */ }
   }

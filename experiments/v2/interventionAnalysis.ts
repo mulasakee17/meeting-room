@@ -12,6 +12,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { loadExperiments } from "./statsShared";
 
 // ============================================================================
 // 类型定义
@@ -50,6 +51,15 @@ interface ExperimentResult {
   interventionEffects: InterventionEffect[];
   interventionBreakdown: Record<string, number>;
   rounds: RoundRecord[];
+  tokenUsage?: {
+    byAgent: Record<string, {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+      totalLatencyMs: number;
+      callCount: number;
+    }>;
+  };
 }
 
 // 干预级别记录（每个原始干预一条，而非每个目标一条）
@@ -134,13 +144,14 @@ function calcInterventionCost(type: string, numRecipients: number): { inputToken
 // 数据加载与重建
 // ============================================================================
 
-function loadData(dataDir: string, prefix: string): ExperimentResult[] {
-  const files = fs.readdirSync(dataDir).filter(f => f.endsWith(".json") && f.startsWith(prefix));
-  return files.map(f => {
-    const content = fs.readFileSync(path.join(dataDir, f), "utf-8");
-    const raw = JSON.parse(content) as ExperimentResult;
+function loadData(dataDir: string, prefix: string, ablation?: string): ExperimentResult[] {
+  // B2 修复：使用 statsShared.loadExperiments 加载，支持 ablation 字段过滤
+  // 类型 cast：local ExperimentResult 的 rounds/interventionEffects 等为必填，
+  // statsShared 中为可选，但实际数据文件均含这些字段，cast 安全
+  const results = loadExperiments(dataDir, prefix, ablation) as unknown as ExperimentResult[];
 
-    // Rebuild interventionEffects from rounds if stored data is incomplete
+  // Rebuild interventionEffects from rounds if stored data is incomplete
+  for (const raw of results) {
     if (raw.interventionEffects.length < raw.totalInterventions) {
       const rebuilt: InterventionEffect[] = [];
       for (let i = 0; i < raw.rounds.length; i++) {
@@ -165,9 +176,9 @@ function loadData(dataDir: string, prefix: string): ExperimentResult[] {
       }
       raw.interventionEffects = rebuilt;
     }
+  }
 
-    return raw;
-  });
+  return results;
 }
 
 // ============================================================================
@@ -463,8 +474,8 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, "data_crisis");
 
 function main() {
-  const fullResults = loadData(DATA_DIR, "crisis_full");
-  const noneResults = loadData(DATA_DIR, "crisis_none");
+  const fullResults = loadData(DATA_DIR, "crisis_full", "full");
+  const noneResults = loadData(DATA_DIR, "crisis_none", "none");
   console.log(`加载 ${fullResults.length} 个 full 模式 + ${noneResults.length} 个 none 模式实验结果`);
 
   analyze(fullResults, noneResults);

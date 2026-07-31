@@ -16,6 +16,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { safeJsonParse } from '../../src/lib/utils/jsonUtils';
 
 interface RunData {
   runId: string;
@@ -79,7 +80,8 @@ function loadAllRuns(): { runs: RunData[]; byTask: Record<string, RunData[]> } {
     for (const file of files) {
       try {
         const raw = fs.readFileSync(path.join(fullDir, file), 'utf8');
-        const data = JSON.parse(raw) as RunData;
+        const data = safeJsonParse<RunData>(raw);
+        if (!data) { console.warn(`[detector_validation] 无法解析 JSON: ${file}`); continue; }
         // 跳过 detect-only 模式（这些 run 不触发干预，但仍记录检测）
         // 实际上 detect-only 也有 issuesDetected，保留
         allRuns.push(data);
