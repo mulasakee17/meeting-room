@@ -1,3 +1,15 @@
+/**
+ * InferenceLayer — 信念推理层
+ *
+ * **@deprecated for v6 path**（v0.4.3 标注）
+ * 此模块实现**成对扰动 DeGroot**（`b(t+1)=b(t)+Σw·Δ`），仅在旧 `DiscussionEngine.updateBeliefs`
+ * 路径中使用。v6 的 `NativeCognitiveEngine` 走 `native_cognitive` 模式，Utility 由 LLM 原生输出，
+ * **不调用此模块**。保留用于向后兼容。
+ *
+ * 理论说明：严格 FJ `b(t+1)=α·b_group+(1-α)·b(0)` 仅作为解释性镜头，
+ * 见 THEORY.md §0 "FJ 模型的适用层级说明"。
+ */
+
 import type { StateDelta, EdgeDelta, InfluenceCalculation, InferenceConfig, InfluenceCalculator, BeliefInferrer } from "./types";
 import type { AgentOpinion, InteractionGraph, InteractionEdge, InfluenceType } from "../discussion/types";
 import type { CollectiveDecisionState, RuntimeContext } from "../runtime/types";

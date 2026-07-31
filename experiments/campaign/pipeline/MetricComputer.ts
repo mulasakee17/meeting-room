@@ -604,7 +604,11 @@ export function computeE5Governance(
   // 计算治理对最终决策质量的影响
   const tauGov = governedData.map(d => d.finalKendallTau);
   const tauNoGov = ungovernedData.map(d => d.finalKendallTau);
-  const deltaTau = mean(tauGov) - mean(tauNoGov);
+  // P0 守卫：对照组缺失时 mean([]) = 0 会制造虚假正效应
+  // 修复前：deltaTau = mean(tauGov) - 0 = mean(tauGov)，把治理组自身的 τ 当成治理增益
+  const deltaTau = (governedData.length === 0 || ungovernedData.length === 0)
+    ? 0
+    : mean(tauGov) - mean(tauNoGov);
 
   // Granger 因果：Evidence 变化是否先于 Utility 变化
   // v6 修复：按 (run, agent) 分组计算，每条序列单独做 Granger 检验后取均值。

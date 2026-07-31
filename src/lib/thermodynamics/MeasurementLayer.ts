@@ -197,7 +197,7 @@ export class MeasurementLayer {
    *   R (共识度) ← Utility 向量平均 cosine 相似度，归一化到 [0,1]
    *   T (温度)   ← Utility 逐轮 L2 距离的归一化均值（真正反映信念波动）
    *   H (熵)     ← Evidence items 的 supports 分布的归一化 Shannon 熵
-   *   F (自由能) = (1-R) + T·H
+   *   F (修正自由能) = U - T·S
    *
    * v3.2 → v3.2.1 修正原因：
    * - R 旧实现用 topChoice 熵，N=5 时只有 0/0.03/0.28/1 几个离散值，分辨率过粗。
@@ -208,6 +208,15 @@ export class MeasurementLayer {
    * - H 旧实现用 shannonEntropy(coverage)，但 coverage 受 GLOBAL_INFO_POOL_SIZE=10
    *   硬编码影响，V2 任务有 25 条信息时 3 轮后 coverage 饱和到 1.0，H 恒=0。
    *   新实现用 evidence items 的 supports 分布，直接反映证据覆盖的选项多样性。
+   *
+   * v0.4.3 修正自由能（F 解耦）：
+   * - 旧 F=(1-R)+T·H 与 R/T/H 强耦合（验证 r=0.917），无法独立解释承诺失序度。
+   * - 新 F=U-T·S 三变量解耦（验证 r=0.274）：
+   *   U = 平均效用强度（‖u_i‖ 的均值，衡量群体偏好清晰度）
+   *   T = Utility 波动度（已计算）
+   *   S = H = 证据多样性熵（已计算）
+   * - F 不参与任何决策阈值（TerminationDecider/δ 诊断都不读 F），仅用于诊断分析。
+   *   因此本替换不影响运行路径，只让诊断指标更可解释。
    *
    * 注意：此 R/T/H 与 asyncEngine.ts 的 R/T/H 是不同的实现。
    * - asyncEngine.ts 基于 scalar beliefs，用于 TerminationDecider 和论文已 claim 的结论。
@@ -228,8 +237,18 @@ export class MeasurementLayer {
     // ── H: Evidence items 的 supports 分布的归一化 Shannon 熵 ──
     const H = this.computeEvidenceDiversity(states);
 
-    // ── F = (1-R) + T·H ──
-    const F = (1 - R) + T * H;
+    // ── F = U - T·S（v0.4.3 修正自由能，三变量解耦）──
+    // U: 平均效用强度 = mean(‖u_i‖)，归一化到 [0,1]（每维已 clamp 到 [-1,1]，
+    //    L2 范数上限为 √K，除以 √K 归一化）
+    const K = states[0]?.utility.scores ? Object.keys(states[0].utility.scores).length : 1;
+    const sqrtK = Math.sqrt(Math.max(1, K));
+    const U = states.reduce((sum, s) => {
+      const scores = Object.values(s.utility.scores);
+      const norm = Math.sqrt(scores.reduce((ss, v) => ss + v * v, 0));
+      return sum + norm / sqrtK;
+    }, 0) / states.length;
+    const S = H; // S = 证据多样性熵（复用 H）
+    const F = U - T * S;
 
     return { R, T, H, F };
   }

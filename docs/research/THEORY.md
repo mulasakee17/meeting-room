@@ -4,6 +4,15 @@
 
 > **状态**：v0.4（2026-07-28）。理论框架从 DeGroot 升级为 Friedkin-Johnsen（FJ），belief 本体重定义为"承诺度"（Commitment Strength）。所有数字以 [SOT.md](../SOT.md) 为准。命题分为已严格证明（Proposition）与经验猜想（Conjecture）两类。引用代码事实以现场实现为准。
 
+> **FJ 模型的适用层级说明（v0.4.3 补丁）**：
+> - FJ `b(t+1)=α·b_group+(1-α)·b(0)` 是**解释性镜头**，不是 v6 代码实现目标。
+> - v6 的 `native_cognitive` 模式中，**Utility 由 LLM 原生输出**，系统不施加 FJ 公式。
+>   FJ 的价值在于解释 agent 偏演化的锚定行为（§7.5 的 posthoc 近似），而非作为代码更新规则。
+> - 旧 `DiscussionEngine`（[src/lib/discussion/index.ts:806](../../src/lib/discussion/index.ts#L806)）的 `InferenceLayer`
+>   实现的是**成对扰动 DeGroot**（`b(t+1)=b(t)+Σw·Δ`），保留用于向后兼容。
+> - 严格 FJ 仅在 `asyncEngine.ts` 路径中讨论（§7.1-§7.5），**不适用于 v6 sync 实验路径**。
+> - **结论**：v6 实验不依赖 FJ 公式，FJ 仅作为理论分析框架。代码实现路径见 §11。
+
 ---
 
 ## 0. v0.3 → v0.4 变更摘要
@@ -441,6 +450,17 @@ $$
 > - 根因：R/T/H 都派生自同一 `beliefs[]` 数组（`asyncEngine.ts:401-402`），是"承诺失序度"的不同投影
 >
 > **不再声称**："3 维热力学状态空间"、"F 两分量正交"、"社会自由能"。
+
+**v0.4.3 修正自由能（F 解耦）**：
+
+> 上述强耦合问题在 v0.4.3 代码层已修复（[MeasurementLayer.ts:240-251](../../src/lib/thermodynamics/MeasurementLayer.ts#L240-L251)）：
+> - 旧 F = (1-R) + T·H 已替换为 **F = U - T·S**（修正自由能）
+> - U = 平均效用强度（mean ‖u_i‖），独立于 R/T/H
+> - S = H（证据多样性熵复用）
+> - 三变量解耦后 r 降到 0.274（验证数据见 v0.4.1 分析脚本）
+> - **F 不参与任何决策阈值**（TerminationDecider 和 δ 诊断都不读 F），仅用于诊断分析
+>
+> 注意：asyncEngine.ts 路径仍用旧 F（向后兼容），仅 MeasurementLayer（v6 路径）用新 F。
 >
 > **保留**：F 作为工程诊断指标，R/T/H 分别对终止判定有不同敏感度（命题 3）。
 

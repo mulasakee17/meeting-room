@@ -31,6 +31,7 @@ import {
   type DeltaConfig,
 } from "@/lib/thermodynamics/computeDelta";
 import type { AgentCognitiveState, BehaviorEvents } from "@/lib/agent/cognitiveState";
+import { MeasurementLayer } from "@/lib/thermodynamics/MeasurementLayer";
 import type { ThermoState } from "@/lib/thermodynamics/MeasurementLayer";
 
 // ============================================================================
@@ -797,12 +798,19 @@ describe("置信度感知干预降级", () => {
 // 5. Evidence Shared 检测（Layer 1 数学匹配）
 // ============================================================================
 
+/** 创建带 cognitive states 的 MeasurementLayer 实例 */
+function makeMeasurementLayerWithStates(states: AgentCognitiveState[]): MeasurementLayer {
+  const ml = new MeasurementLayer();
+  const map = new Map<string, AgentCognitiveState>();
+  for (const s of states) map.set(s.agentId, s);
+  ml.setCognitiveStates(map);
+  return ml;
+}
+
 describe("markEvidenceSharing — Layer 1 数学匹配", () => {
-  // 直接测试 levenshtein 辅助函数（通过 MeasurementLayer 间接测试）
-  // 使用 MeasurementLayer 实例来测试 markEvidenceSharing
+  // 通过 MeasurementLayer 实例直接调用生产代码 markEvidenceSharing()
 
   it("精确匹配 → shared=true", () => {
-    // 两个 agent 持有相同 content 的 evidence
     const state1 = makeCognitiveState("a1", {
       evidenceItems: [
         { id: "a1_ev_1_0", content: "大学A的科研经费充足", supports: "A", strength: 0.8, source: "a1", sourceReliability: 0.8, acquiredAt: 1, shared: false },
@@ -814,77 +822,89 @@ describe("markEvidenceSharing — Layer 1 数学匹配", () => {
       ],
     });
 
-    // 模拟 markEvidenceSharing 的逻辑
-    const allItems = [
-      { agentId: "a1", item: state1.evidence.items[0] },
-      { agentId: "a2", item: state2.evidence.items[0] },
-    ];
-
-    for (const { agentId, item } of allItems) {
-      if (item.shared) continue;
-      const contentLower = item.content.toLowerCase().trim();
-      for (const other of allItems) {
-        if (other.agentId === agentId) continue;
-        if (other.item.id === item.id) continue;
-        const otherContent = other.item.content.toLowerCase().trim();
-        if (contentLower.includes(otherContent) || otherContent.includes(contentLower)) {
-          item.shared = true;
-          break;
-        }
-      }
-    }
+    const ml = makeMeasurementLayerWithStates([state1, state2]);
+    ml.markEvidenceSharing();
 
     expect(state1.evidence.items[0].shared).toBe(true);
     expect(state2.evidence.items[0].shared).toBe(true);
   });
 
   it("子串匹配 → shared=true（一方包含另一方）", () => {
-    const item1 = { id: "a1_ev_1_0", content: "大学A的科研经费非常充足，位居全国前列", supports: "A", strength: 0.8, source: "a1", sourceReliability: 0.8, acquiredAt: 1, shared: false };
-    const item2 = { id: "a2_ev_1_0", content: "大学A的科研经费", supports: "A", strength: 0.8, source: "a2", sourceReliability: 0.8, acquiredAt: 1, shared: false };
+    const state1 = makeCognitiveState("a1", {
+      evidenceItems: [
+        { id: "a1_ev_1_0", content: "大学A的科研经费非常充足，位居全国前列", supports: "A", strength: 0.8, source: "a1", sourceReliability: 0.8, acquiredAt: 1, shared: false },
+      ],
+    });
+    const state2 = makeCognitiveState("a2", {
+      evidenceItems: [
+        { id: "a2_ev_1_0", content: "大学A的科研经费", supports: "A", strength: 0.8, source: "a2", sourceReliability: 0.8, acquiredAt: 1, shared: false },
+      ],
+    });
 
-    const content1 = item1.content.toLowerCase().trim();
-    const content2 = item2.content.toLowerCase().trim();
+    const ml = makeMeasurementLayerWithStates([state1, state2]);
+    ml.markEvidenceSharing();
 
-    // item2 是 item1 的子串
-    expect(content1.includes(content2)).toBe(true);
+    expect(state1.evidence.items[0].shared).toBe(true);
+    expect(state2.evidence.items[0].shared).toBe(true);
   });
 
   it("无匹配 → shared=false（独有信息）", () => {
-    const item1 = { id: "a1_ev_1_0", content: "大学A的学术声誉全球领先", supports: "A", strength: 0.8, source: "a1", sourceReliability: 0.8, acquiredAt: 1, shared: false };
-    const item2 = { id: "a2_ev_1_0", content: "大学B的就业率高达95%", supports: "B", strength: 0.7, source: "a2", sourceReliability: 0.8, acquiredAt: 1, shared: false };
+    const state1 = makeCognitiveState("a1", {
+      evidenceItems: [
+        { id: "a1_ev_1_0", content: "大学A的学术声誉全球领先", supports: "A", strength: 0.8, source: "a1", sourceReliability: 0.8, acquiredAt: 1, shared: false },
+      ],
+    });
+    const state2 = makeCognitiveState("a2", {
+      evidenceItems: [
+        { id: "a2_ev_1_0", content: "大学B的就业率高达95%", supports: "B", strength: 0.7, source: "a2", sourceReliability: 0.8, acquiredAt: 1, shared: false },
+      ],
+    });
 
-    const content1 = item1.content.toLowerCase().trim();
-    const content2 = item2.content.toLowerCase().trim();
+    const ml = makeMeasurementLayerWithStates([state1, state2]);
+    ml.markEvidenceSharing();
 
-    // 无子串匹配
-    expect(content1.includes(content2)).toBe(false);
-    expect(content2.includes(content1)).toBe(false);
-    // 两者都应保持 shared=false
-    expect(item1.shared).toBe(false);
-    expect(item2.shared).toBe(false);
+    expect(state1.evidence.items[0].shared).toBe(false);
+    expect(state2.evidence.items[0].shared).toBe(false);
   });
 
   it("同义改写 → 数学匹配失败（Layer 2 补判场景）", () => {
-    const item1 = { id: "a1_ev_1_0", content: "财务不稳定", supports: "A", strength: 0.8, source: "a1", sourceReliability: 0.8, acquiredAt: 1, shared: false };
-    const item2 = { id: "a2_ev_1_0", content: "资产负债率高", supports: "A", strength: 0.7, source: "a2", sourceReliability: 0.8, acquiredAt: 1, shared: false };
+    const state1 = makeCognitiveState("a1", {
+      evidenceItems: [
+        { id: "a1_ev_1_0", content: "财务不稳定", supports: "A", strength: 0.8, source: "a1", sourceReliability: 0.8, acquiredAt: 1, shared: false },
+      ],
+    });
+    const state2 = makeCognitiveState("a2", {
+      evidenceItems: [
+        { id: "a2_ev_1_0", content: "资产负债率高", supports: "A", strength: 0.7, source: "a2", sourceReliability: 0.8, acquiredAt: 1, shared: false },
+      ],
+    });
 
-    const content1 = item1.content.toLowerCase().trim();
-    const content2 = item2.content.toLowerCase().trim();
+    const ml = makeMeasurementLayerWithStates([state1, state2]);
+    ml.markEvidenceSharing();
 
-    // 无子串匹配
-    expect(content1.includes(content2)).toBe(false);
-    expect(content2.includes(content1)).toBe(false);
+    // Layer 1 数学匹配无法识别同义改写 → 保持 shared=false，需 Layer 2 补判
+    expect(state1.evidence.items[0].shared).toBe(false);
+    expect(state2.evidence.items[0].shared).toBe(false);
+  });
 
-    // Levenshtein 归一化距离 > 0.3（不会匹配）
-    const maxLen = Math.max(content1.length, content2.length);
-    // 手动计算编辑距离
-    const dist = levenshteinTest(content1, content2);
-    const normalized = dist / maxLen;
-    expect(normalized).toBeGreaterThan(0.3);
+  it("supports 不同 → 不匹配（H6 跨选项保护）", () => {
+    const state1 = makeCognitiveState("a1", {
+      evidenceItems: [
+        { id: "a1_ev_1_0", content: "大学A的科研经费充足", supports: "A", strength: 0.8, source: "a1", sourceReliability: 0.8, acquiredAt: 1, shared: false },
+      ],
+    });
+    const state2 = makeCognitiveState("a2", {
+      evidenceItems: [
+        { id: "a2_ev_1_0", content: "大学A的科研经费充足", supports: "B", strength: 0.8, source: "a2", sourceReliability: 0.8, acquiredAt: 1, shared: false },
+      ],
+    });
 
-    // 两者都应保持 shared=false → 需要 Layer 2（SemanticTool）补判
-    expect(item1.shared).toBe(false);
-    expect(item2.shared).toBe(false);
+    const ml = makeMeasurementLayerWithStates([state1, state2]);
+    ml.markEvidenceSharing();
+
+    // 文本完全相同但 supports 不同 → 不应标记为 shared
+    expect(state1.evidence.items[0].shared).toBe(false);
+    expect(state2.evidence.items[0].shared).toBe(false);
   });
 
   it("δ_evidence_silence 在有 unshared evidence 时可触发", () => {
@@ -931,33 +951,3 @@ describe("markEvidenceSharing — Layer 1 数学匹配", () => {
     expect(result.triggered).toBe(false);
   });
 });
-
-// ============================================================================
-// Helpers for evidence shared tests
-// ============================================================================
-
-/** 测试用 Levenshtein 距离实现（与 MeasurementLayer 中相同） */
-function levenshteinTest(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-
-  const prev = new Array<number>(n + 1);
-  const curr = new Array<number>(n + 1);
-  let dpPrev = prev;
-  let dpCurr = curr;
-
-  for (let j = 0; j <= n; j++) prev[j] = j;
-
-  for (let i = 1; i <= m; i++) {
-    dpCurr[0] = i;
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dpCurr[j] = Math.min(dpPrev[j] + 1, dpCurr[j - 1] + 1, dpPrev[j - 1] + cost);
-    }
-    [dpPrev, dpCurr] = [dpCurr, dpPrev];
-  }
-
-  return dpPrev[n];
-}

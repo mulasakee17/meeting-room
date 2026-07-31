@@ -19,7 +19,7 @@ dotenv.config({ path: path.resolve(__dirname, "..", "..", ".env.local") });
 
 import { runExperiment, loadExperimentData } from "./pipeline/Runner";
 import { computeMetrics } from "./pipeline/MetricComputer";
-import { runTests } from "./pipeline/StatisticalTest";
+import { runTests, holmBonferroni } from "./pipeline/StatisticalTest";
 import { generateFigures } from "./pipeline/FigureGenerator";
 import { generateReport } from "./pipeline/ReportGenerator";
 import { summarizeCampaign } from "./pipeline/CampaignSummarizer";
@@ -88,7 +88,18 @@ interface CliOptions {
 }
 
 function parseArgs(): CliOptions {
-  const args = process.argv.slice(2);
+  // 预处理：将 --key=value 拆分为 --key value，统一两种写法
+  const rawArgs = process.argv.slice(2);
+  const args: string[] = [];
+  for (const a of rawArgs) {
+    const eqIdx = a.indexOf("=");
+    if (eqIdx > 0 && a.startsWith("--")) {
+      args.push(a.slice(0, eqIdx), a.slice(eqIdx + 1));
+    } else {
+      args.push(a);
+    }
+  }
+
   const opts: CliOptions = { analyzeOnly: false, figuresOnly: false, resume: false, verbose: false };
 
   for (let i = 0; i < args.length; i++) {
@@ -200,6 +211,30 @@ function analyzeExperiments(
       const sig = test.significant ? "✅" : "❌";
       console.log(`    ${sig} ${test.testName}: p=${test.pValue.toFixed(4)}, ${test.effectSizeName}=${test.effectSize.toFixed(3)}`);
     }
+  }
+
+  // 批量 Holm-Bonferroni 校正（跨实验多重比较）
+  // 修复前：runTests 内的校正因 results.length 永远 ≤ 1 而成为死代码
+  // 修复后：在 analyzeExperiments 批量层应用，覆盖所有实验的假设检验
+  // 注意：用 AND 逻辑保留原始显著性判定（E4/E5 的 CI 同号检查不能被覆盖）
+  if (allTests.length > 1) {
+    const rawPs = allTests.map(t => t.pValue);
+    const adjusted = holmBonferroni(rawPs);
+    const testByExp = new Map<string, TestResult[]>();
+    for (let i = 0; i < allTests.length; i++) {
+      allTests[i].pValueAdjusted = adjusted[i];
+      // Holm 只增大 p 值：若原始不显著则保持不显著；若原始显著则看校正后是否仍 < 0.05
+      allTests[i].significant = allTests[i].significant && adjusted[i] < 0.05;
+      const expId = allTests[i].experimentId;
+      if (!testByExp.has(expId)) testByExp.set(expId, []);
+      testByExp.get(expId)!.push(allTests[i]);
+    }
+    // 重新保存校正后的 tests
+    for (const [expId, expTests] of testByExp) {
+      const testsPath = path.join(OUTPUT_DIR, expId, "tests.json");
+      fs.writeFileSync(testsPath, JSON.stringify(expTests, null, 2));
+    }
+    console.log(`\n  Applied Holm-Bonferroni correction across ${allTests.length} hypotheses`);
   }
 
   return { metrics: allMetrics, tests: allTests };

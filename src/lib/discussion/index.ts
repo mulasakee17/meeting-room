@@ -803,6 +803,15 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     return beliefStd < this.config.convergenceThreshold;
   }
 
+  /**
+   * **@deprecated for v6 path**（v0.4.3 标注）
+   * 此方法实现**成对扰动 DeGroot**（通过 `InferenceLayer`），更新 scalar `agentStates.belief`。
+   * v6 的 `NativeCognitiveEngine` 走 `native_cognitive` 模式，**不调用此方法**——
+   * Utility 由 LLM 原生输出，认知状态由 `MeasurementLayer.updateCognitiveStates` 维护。
+   * 保留用于向后兼容旧 `belief` 模式实验。
+   *
+   * 理论说明：严格 FJ 是解释性镜头，见 THEORY.md §0。
+   */
   protected updateBeliefs(
     opinions: AgentOpinion[],
     agentStates: Map<string, { belief: number; confidence: number }>,

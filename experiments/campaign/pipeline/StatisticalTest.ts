@@ -209,13 +209,38 @@ export function holmBonferroni(pValues: number[]): number[] {
 function testE1(metrics: ExperimentMetrics): TestResult {
   const ss = metrics.stateStability!;
   const ratios = ss.perRunRatios;
+  const n = ratios.length;
+
+  // P0 守卫：空数据或不足样本时直接返回不显著
+  // 修复前：ratios=[] → 置换循环空转 → countExtreme=0 → pValue≈0.0001（假阳性）
+  if (n < 2) {
+    return {
+      experimentId: "e1_stability",
+      testName: "State Stability Permutation Test",
+      pValue: 1,
+      effectSize: ss.stabilityRatio,
+      effectSizeName: "Stability Ratio",
+      ciLower: 0,
+      ciUpper: 0,
+      ciLevel: 0.95,
+      sampleSize: n,
+      significant: false,
+      conclusion: `样本不足 (n=${n})，无法进行统计检验`,
+      details: {
+        sigmaSqDeltaB: ss.sigmaSqDeltaB,
+        sigmaSqDeltaU: ss.sigmaSqDeltaU,
+        tStatistic: 0,
+        cohensD: 0,
+        nPermutations: 0,
+      },
+    };
+  }
 
   // 单样本检验：稳定性比是否 > 1
   const shifted = ratios.map(r => r - 1); // H₀: mean = 0
-  const n = shifted.length;
   const m = mean(shifted);
   const se = sampleStd(shifted) / Math.sqrt(n);
-  const tStat = n >= 2 ? m / (se || 1) : 0;
+  const tStat = m / (se || 1);
 
   // 置换检验
   const rng = mulberry32(PERMUTATION_SEED);
@@ -517,8 +542,8 @@ function testE4(metrics: ExperimentMetrics): TestResult {
     ciUpper,
     ciLevel: 0.95,
     sampleSize: metrics.sampleSize,
-    significant: pValue < 0.05 && ciLower > 0,
-    conclusion: pValue < 0.05 && ciLower > 0
+    significant: pValue < 0.05 && (ciLower > 0) === (ciUpper > 0) && ciLower !== 0,
+    conclusion: pValue < 0.05 && (ciLower > 0) === (ciUpper > 0) && ciLower !== 0
       ? `Confidence 显著预测未来 Utility 变化 (β₁=${beta1Cog.toFixed(4)}, p=${pValue.toFixed(4)}, 95% CI [${ciLower.toFixed(4)}, ${ciUpper.toFixed(4)}])`
       : `Confidence 未能显著预测未来 Utility 变化 (β₁=${beta1Cog.toFixed(4)}, p=${pValue.toFixed(4)})`,
     details: {
@@ -614,6 +639,11 @@ function testE5(metrics: ExperimentMetrics): TestResult {
     ciUpper = deltaTau;
   }
 
+  // v0.4.4: 加 CI 同号保障（Granger-based 显著性 + CI 不跨 0 双重确认）
+  // 修复前：仅用点估计 deltaTau > 0，CI 跨 0 时仍判显著
+  const ciSameSign = (ciLower > 0) === (ciUpper > 0) && ciLower !== 0;
+  const significant = pGranger < 0.05 && deltaTau > 0 && ciSameSign;
+
   return {
     experimentId: "e5_governance",
     testName: "Governance Mechanism (Granger + Δτ)",
@@ -624,8 +654,8 @@ function testE5(metrics: ExperimentMetrics): TestResult {
     ciUpper,
     ciLevel: 0.95,
     sampleSize: metrics.sampleSize,
-    significant: pGranger < 0.05 && deltaTau > 0,
-    conclusion: pGranger < 0.05 && deltaTau > 0
+    significant,
+    conclusion: significant
       ? `Governance 通过 Evidence 路径显著提升决策质量 (Δτ=${deltaTau.toFixed(3)}, Granger F=${F_EtoU.toFixed(2)}, p=${pGranger.toFixed(4)})`
       : `Governance 机制未展现显著效果 (Δτ=${deltaTau.toFixed(3)}, Granger F=${F_EtoU.toFixed(2)}, p=${pGranger.toFixed(4)})`,
     details: {

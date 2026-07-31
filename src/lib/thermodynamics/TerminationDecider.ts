@@ -1,6 +1,11 @@
 /**
  * 热力学终止决策器
  *
+ * **@deprecated for v6 path**（v0.4.3 标注）
+ * 此模块仅被 `asyncEngine.ts`（fraud 系列实验）使用。
+ * v6 的 `NativeCognitiveEngine` 走 sync 路径，使用固定 `maxRounds=5` 硬上限，
+ * **不调用此模块**。保留用于向后兼容 fraud 系列 async 实验。
+ *
  * 基于社会热力学状态 (R, T, H, F) 判断异步讨论是否该终止。
  *
  * 核心假设：F 分解的"系统是否冻结"诊断能力可以决定讨论何时结束，

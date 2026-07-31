@@ -125,7 +125,7 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
     expect(state.R).toBe(1);
   });
 
-  it("F = (1-R) + T·H 关系成立", () => {
+  it("F = U - T·S 关系成立（v0.4.3 修正自由能，三变量解耦）", () => {
     const agents = [
       mockAgent("a1", "Alice", "analyst", 0.8, 0.8),
       mockAgent("a2", "Bob", "critic", -0.3, 0.6),
@@ -137,7 +137,20 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
 
     layer.updateCognitiveStates(opinions, agents, 1, { mode: "native" });
     const state = layer.computeThermoState();
-    const expectedF = (1 - state.R) + state.T * state.H;
+
+    // v0.4.3: F = U - T·S（三变量解耦，替代旧 F=(1-R)+T·H）
+    // U = mean(‖u_i‖/√K)，S = H（证据多样性熵）
+    const cs = layer.getCognitiveStates();
+    const states = Array.from(cs.values());
+    const K = states[0]?.utility.scores ? Object.keys(states[0].utility.scores).length : 1;
+    const sqrtK = Math.sqrt(Math.max(1, K));
+    const U = states.reduce((sum, s) => {
+      const scores = Object.values(s.utility.scores);
+      const norm = Math.sqrt(scores.reduce((ss, v) => ss + v * v, 0));
+      return sum + norm / sqrtK;
+    }, 0) / states.length;
+    const expectedF = U - state.T * state.H;
+
     expect(state.F).toBeCloseTo(expectedF, 10);
   });
 
