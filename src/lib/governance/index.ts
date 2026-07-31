@@ -25,7 +25,7 @@ import {
 } from "./feedbackChannel";
 import { ReduceWeightIntervention, IntroduceDiversityIntervention, ForceReflectionIntervention, ContinueDiscussionIntervention } from "./interventions";
 import { computeAdaptiveThresholds, computeCalibrationMetrics, type CalibrationMetrics } from "./adaptiveThresholds";
-import { computeAdaptiveDosage, type DosageContext } from "./adaptiveDosage";
+import { computeAdaptiveDosage } from "./adaptiveDosage";
 import { mulberry32, shannonEntropy, socialFreeEnergy, normalizeTemperature, computeKuramotoOrder } from "../utils/statsUtils";
 import {
   GOVERNANCE_ECHO_CHAMBER_THRESHOLD,

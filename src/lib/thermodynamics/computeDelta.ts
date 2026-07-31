@@ -1,5 +1,5 @@
 /**
- * computeDelta — v6 诊断层（6 个 δ 信号，自适应阈值）
+ * computeDelta — v6 诊断层（8 个 δ 信号，自适应阈值）
  *
  * 所有 δ 指标共同特征：
  * - 都不需要 ground truth
@@ -118,10 +118,6 @@ function adaptiveThreshold(
   return base + (1 - minConfidence) * safetyMargin;
 }
 
-/** 从 estimates 中提取 δ 使用变量的最小置信度 */
-function minConf(...confs: number[]): number {
-  return Math.min(...confs);
-}
 
 // ============================================================================
 // δ 1: Polarization — 轮内 U 向量分化（可靠，Round 1+ 可用）
@@ -436,7 +432,7 @@ export function computeDeltaConcentration(
   estimates: Map<string, ProgressiveEstimates>,
   states: AgentCognitiveState[],
   config?: DeltaConfig,
-): DeltaDiagnosis["polarization"] {
+): DeltaDiagnosis["concentration"] {
   const base = config?.concentrationThreshold ?? DEFAULTS.concentrationThreshold;
 
   if (states.length < 2) {
@@ -504,7 +500,7 @@ export function computeDeltaConsistency(
   estimates: Map<string, ProgressiveEstimates>,
   states: AgentCognitiveState[],
   config?: DeltaConfig,
-): DeltaDiagnosis["polarization"] {
+): DeltaDiagnosis["consistency"] {
   const base = config?.consistencyThreshold ?? DEFAULTS.consistencyThreshold;
 
   if (states.length === 0) {
@@ -584,7 +580,7 @@ export function computeDeltaConsistency(
 /**
  * 计算完整的 δ 诊断。
  *
- * 6 个 δ 全部计算，但低置信度的 δ 自动趋向不触发（通过自适应阈值 + 门控）。
+ * 8 个 δ 全部计算，但低置信度的 δ 自动趋向不触发（通过自适应阈值 + 门控）。
  * 调用方不需要判断"该不该触发这个 δ"——自适应阈值已在内部处理。
  */
 export function computeDeltaDiagnosis(

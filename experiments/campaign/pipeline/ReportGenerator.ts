@@ -14,7 +14,6 @@ import type { ExperimentMetrics, TestResult } from "../types";
 
 function generateMarkdown(metrics: ExperimentMetrics, tests: TestResult[], figurePaths: string[]): string {
   const lines: string[] = [];
-  const testMap = new Map(tests.map(t => [t.experimentId, t]));
 
   lines.push(`# ${metrics.experimentId} — Experiment Report`);
   lines.push("");

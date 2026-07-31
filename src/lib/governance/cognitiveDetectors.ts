@@ -346,7 +346,7 @@ export interface EvidenceImbalanceResult {
  * 信号：agent 之间的 evidence.coverage 分布不均。
  * 使用简化基尼系数：mean absolute difference / (2 × mean)。
  *
- * 阈值：默认基尼 > 0.3
+ * 阈值：默认基尼 > 0.4
  */
 export function detectEvidenceImbalance(
   states: CognitiveGovernanceState[],
@@ -414,7 +414,7 @@ export interface CognitiveActionMismatchResult {
  * 信号：utility.topChoice ≠ rankingTopChoice（LLM 推理偏好与排名行动不一致）。
  * 不一致程度 = utility.scores[topChoice] - utility.scores[rankingTopChoice] 的绝对值。
  *
- * 阈值：差距 > 0.3（与 MAST FM-2.6 一致）
+ * 阈值：差距 > 0.4（与 MAST FM-2.6 一致）
  */
 export function detectCognitiveActionMismatch(
   states: CognitiveGovernanceState[],

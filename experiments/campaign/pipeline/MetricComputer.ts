@@ -853,7 +853,7 @@ export function computeE7Detector(data: RawRunData[]): ExperimentMetrics {
     const inertiaImbalance = inertiaMin > 0 ? inertiaMax / inertiaMin : 1;
     const gtAuthority = inertiaImbalance > 2.0 && lastStd < 0.15;
 
-    // polarization: 双峰系数 BC = (g² + 1) / (k * ((n-1)/(n-2))³)，g=偏度 k=峰度
+    // polarization: 双峰系数 BC = (g² + 1) / (k + 3(n-1)²/((n-2)(n-3)))，g=偏度，k=超额峰度 (Ellison 1987)
     // BC > 0.555 是常见双峰判据
     const gtPolarized = bimodalityCoefficient(lastUtilities) > 0.555;
 
@@ -947,12 +947,6 @@ function giniCoefficient(values: number[]): number {
   let cumSum = 0;
   for (let i = 0; i < n; i++) cumSum += (i + 1) * sorted[i];
   return (2 * cumSum) / (n * sum) - (n + 1) / n;
-}
-
-function stdOfUtilityIntensity(snaps: CognitiveStateSnapshot[]): number {
-  if (snaps.length < 2) return 0;
-  const vals = snaps.map(s => s.utilityIntensity);
-  return sampleStd(vals);
 }
 
 function computeF1(
@@ -1276,7 +1270,7 @@ export function computeGlobalMetrics(data: RawRunData[]): ExperimentMetrics["glo
   const tauMean = mean(tauValues);
   const tauStd = sampleStd(tauValues);
 
-  // 极化：τ 值分布的双峰系数 BC = (g² + 1) / (k * ((n-1)/(n-2))³)
+  // 极化：τ 值分布的双峰系数 BC = (g² + 1) / (k + 3(n-1)²/((n-2)(n-3)))，g=偏度，k=超额峰度 (Ellison 1987)
   // BC > 0.555 表明分布呈双峰（群体分化为两个阵营）
   const polarization = bimodalityCoefficient(tauValues);
 

@@ -1492,7 +1492,7 @@ export class MeasurementLayer {
     }
 
     if (delta.evidenceSilence.triggered) {
-      const silenced = (delta.evidenceSilence as any).silencedAgents ?? [];
+      const silenced = delta.evidenceSilence.silencedAgents ?? [];
       suggestions.push({
         type: "rebalance_attention",
         targetAgents: silenced,
@@ -1511,7 +1511,7 @@ export class MeasurementLayer {
     }
 
     if (delta.noResponse.triggered) {
-      const unresponsive = (delta.noResponse as any).unresponsiveAgents ?? [];
+      const unresponsive = delta.noResponse.unresponsiveAgents ?? [];
       suggestions.push({
         type: "rebalance_attention",
         targetAgents: unresponsive,

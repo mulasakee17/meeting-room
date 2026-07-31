@@ -8,7 +8,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import type { ExperimentMetrics, TestResult } from "../types";
-import { mean, sampleStd } from "../../v2/statsShared";
 
 // ============================================================================
 // SVG Utilities
@@ -27,11 +26,11 @@ function svgFooter(): string {
 }
 
 function svgText(x: number, y: number, text: string, opts?: { fontSize?: number; anchor?: string; fill?: string; fontWeight?: string }): string {
-  const fs = opts?.fontSize ?? 12;
+  const fontSize = opts?.fontSize ?? 12;
   const anchor = opts?.anchor ?? "start";
   const fill = opts?.fill ?? "#333";
   const fw = opts?.fontWeight ?? "normal";
-  return `<text x="${x}" y="${y}" font-family="sans-serif" font-size="${fs}" text-anchor="${anchor}" fill="${fill}" font-weight="${fw}">${escapeXml(text)}</text>`;
+  return `<text x="${x}" y="${y}" font-family="sans-serif" font-size="${fontSize}" text-anchor="${anchor}" fill="${fill}" font-weight="${fw}">${escapeXml(text)}</text>`;
 }
 
 function svgRect(x: number, y: number, w: number, h: number, fill: string): string {

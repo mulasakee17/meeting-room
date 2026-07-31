@@ -184,7 +184,7 @@ function parseLLMResponse(content: string, provider: string): LLMResponse {
     };
   }
 
-  // 4. Last resort — treat entire response as reasoning with neutral emotion
+  // 3. Last resort — treat entire response as reasoning with neutral emotion
   if (cleaned.length > 10) {
     return { emotion: 0, reasoning: cleaned.slice(0, 2000), rawContent: content };
   }

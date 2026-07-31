@@ -1,5 +1,5 @@
 /**
- * SwarmAlpha v3.0 — Agent Cognitive State Space
+ * SwarmAlpha — Agent Cognitive State Space (v6，演进自 v3.0)
  *
  * Replaces the single scalar `belief` with a multi-dimensional cognitive state:
  *
@@ -12,10 +12,10 @@
  *     Confidence (c) = f(e.quality, e.coverage)
  *     Expression (ê) = g(u, strategy) — Phase 4
  *
- * Phase 2 (Core Validation): 最小可行实现。
- * - LLM prompt 不变，仍输出 belief/confidence/evidence/itemBeliefs
- * - 所有 cognitive state 由系统从 LLM 输出中 post-hoc 计算
- * - 不影响旧实验数据
+ * 演进说明：v3.0 为最小可行实现（系统 post-hoc 计算）；
+ * v6 起 NativeCognitiveEngine 让 LLM 原生输出 Utility/Evidence/Confidence，
+ * 系统只计算 Inertia/Susceptibility，并引入 BehaviorEvents 与 ProgressiveEstimator。
+ * 标注 @deprecated 的字段为 v6 前旧路径，保留用于 E9_D_OLD 基线对照与冷启动。
  */
 
 // ============================================================================
@@ -569,7 +569,7 @@ export function updateConfidence(
  * - evidenceBased = evidence.coverage × 0.3
  * - roleBased = 角色基础值（不变）
  * - 如果被反驳：strength -= 0.1
- * - 衰减：strength *= 0.95
+ * - 衰减：strength *= INERTIA_DECAY (0.98)
  */
 export function updateInertia(
   currentInertia: Inertia,
@@ -773,7 +773,7 @@ export function updateCognitiveState(input: CognitiveStateUpdateInput): AgentCog
 export function computeSusceptibility(inertia: Inertia, confidence: Confidence): number {
   return Math.max(
     (1 - inertia.strength) * (1 - confidence.overall),
-    0.05,
+    MIN_SUSCEPTIBILITY,
   );
 }
 
