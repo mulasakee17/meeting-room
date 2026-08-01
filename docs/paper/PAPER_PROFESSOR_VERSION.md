@@ -114,7 +114,10 @@ LLM（感知）→ 五维认知状态 → δ 一致性诊断 → 非破坏性干
 ### 3.7 历史路径（对比基准）
 
 早期版本的两项贡献在当前 v6 主线中降级为历史/对比基准：
-- **七种偏差检测器**（4 经典 + 3 MAST 对齐）：v6 由 δ 诊断替代为主检测机制；3 个 MAST 检测器 0 次实证触发，属"实现+单元测试"级贡献
+- **七种偏差检测器**（4 经典 + 3 MAST 对齐）：v6 由 δ 诊断替代为主检测机制，但在历史方法学验证（§4.1）与 D 组对照实验（§4.2）中作为检测手段使用。
+  - **4 经典检测器**（belief 基，触发阈值）：回声室（信息冗余 ≥ 0.5）、权威偏差（引用集中度 ≥ 0.25）、极化（信念双峰分布 ≥ 0.30）、过早共识（轮次浅 + 共识高 ≥ 0.35）——阈值即"警戒线"，信号超过才触发干预。
+  - **3 MAST 对齐检测器**：FM-2.4 信息隐瞒、FM-2.5 输入忽视、FM-2.6 推理-行为不匹配——已实现并通过单元测试，但 0 次实证触发（"实现+单元测试"级贡献）。
+  - **v6 认知检测器**（utility 基，评分公式不同）：阈值独立（如过早共识 0.55），与旧 belief 基阈值不可混用（见 §3.8）。
 - **五因子发言意愿公式**：异步路径（asyncEngine，已冻结）的历史贡献，v6 同步路径不使用
 
 ### 3.8 符号与阈值约定（代码一致性）
@@ -217,7 +220,7 @@ Pilot B 组 16 次干预、δ 诊断正常触发，Δτ=+0.071（单次，不作
 [6] López-Corona O, et al. Measuring social complexity and the emergence of cooperation. arXiv:1502.05741, 2015.
 [7] Tomé T, et al. Stochastic thermodynamics of opinion dynamics. arXiv:2212.07268, 2022.
 [8] Galam S. Echo Chambers and Random Polarization. arXiv:2410.02582, 2024.
-[9] Liu X, et al. CoBRA: Programming Cognitive Bias in Social Agents. CHI 2026.
+[9] Liu X, et al. CoBRA: Programming Cognitive Bias in Social Agents. CHI 2026 (Best Paper).
 [10] Nudo J, et al. Generative Exaggeration in LLM Social Agents. arXiv:2507.00657, 2025.
 [11] Du Y, et al. Improving Factuality through Multiagent Debate. ICML 2024.
 [12] Cui Y, et al. Free-MAD: Consensus-Free Multi-Agent Debate. arXiv:2509.11035, 2025.

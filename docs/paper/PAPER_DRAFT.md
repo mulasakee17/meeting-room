@@ -125,7 +125,10 @@ LLM as a semantic sensor in the mathematical engine's hands (not a decision-make
 ### 3.7 Historical Path (Comparison Baseline)
 
 Two earlier contributions are downgraded to historical/comparison baselines in the v6 mainline:
-- **Seven bias detectors** (4 classical + 3 MAST-aligned): superseded by δ-diagnosis; the 3 MAST detectors have zero empirical triggers (implementation + unit-test level contribution).
+- **Seven bias detectors** (4 classical + 3 MAST-aligned): superseded by δ-diagnosis as the primary detection mechanism, but still used in the historical method validation (§4.1) and as the D-group comparison (§4.2).
+  - **4 classical detectors** (belief-based, trigger thresholds): echo chamber (information redundancy ≥ 0.5), authority bias (reference concentration ≥ 0.25), polarization (bimodal belief distribution ≥ 0.30), premature consensus (early round + high consensus ≥ 0.35). Thresholds act as warning lines: an intervention fires only when the signal exceeds the threshold.
+  - **3 MAST-aligned detectors**: FM-2.4 information withholding, FM-2.5 ignored input, FM-2.6 reasoning-action mismatch—implemented and unit-tested, but with zero empirical triggers (implementation + unit-test level contribution).
+  - **v6 cognitive detectors** (utility-based, different scoring formula): independent thresholds (e.g., premature consensus 0.55), not interchangeable with the legacy belief-based thresholds (see §3.8).
 - **Five-factor speech-willingness formula**: historical contribution of the async path (`asyncEngine.ts`, frozen); the v6 sync path does not use it.
 
 ### 3.8 Symbol and Threshold Conventions (Code Consistency)
