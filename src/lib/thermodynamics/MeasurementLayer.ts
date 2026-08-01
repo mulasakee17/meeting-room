@@ -190,6 +190,9 @@ export class MeasurementLayer {
    */
   private semanticAuditLog: SemanticAuditEntry[] = [];
 
+  /** 上次 evidence_dedup 时的未共享证据数——用于"新增证据才去重"门控（避免每轮无条件调 LLM） */
+  private lastSemanticDedupUnsharedCount: number | undefined = undefined;
+
   // ==========================================================================
   // Social Thermodynamics
   // ==========================================================================
@@ -799,6 +802,14 @@ export class MeasurementLayer {
     }
 
     if (unsharedItems.length < 2) return;
+
+    // ── 门控：仅在"有新增未共享证据"时调用 evidence_dedup ──
+    // 若本轮未共享数 ≤ 上次调用时（无新证据），跳过——避免每轮无条件调 LLM（分层成本设计）。
+    // 只有出现新证据才重新去重；上次去重若已标记部分 shared，未共享数减少也跳过（非新证据）。
+    if (this.lastSemanticDedupUnsharedCount !== undefined && unsharedItems.length <= this.lastSemanticDedupUnsharedCount) {
+      return;
+    }
+    this.lastSemanticDedupUnsharedCount = unsharedItems.length;
 
     // 调用 SemanticTool evidence_dedup
     const callStart = Date.now();

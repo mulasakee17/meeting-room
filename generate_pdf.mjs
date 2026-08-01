@@ -47,6 +47,53 @@ const CSS = `
   @page { size: A4; margin: 0; }
 `;
 
+// ── 学术论文样式（--academic）：衬线、黑色正文、标题居中、三线表 ──
+const ACADEMIC_CSS = `
+  * { box-sizing: border-box; }
+  body { font-family: "Times New Roman", "STSong", "SimSun", "Noto Serif CJK SC", serif;
+         font-size: 11pt; line-height: 1.78; color: #000; margin: 0; padding: 25mm 22mm; }
+  /* 标题 */
+  h1 { text-align: center; font-size: 17pt; font-weight: 700; letter-spacing: 1px;
+       margin: 0 0 18px; padding-bottom: 10px; border-bottom: 1px solid #000; }
+  h2 { font-size: 13.5pt; font-weight: 700; margin: 24px 0 10px;
+       border-bottom: 0.5px solid #aaa; padding-bottom: 4px; }
+  /* 主要章节从新页开始（第一个 h2「摘要」除外，紧跟标题页） */
+  h2:not(:first-of-type) { page-break-before: always; }
+  h3 { font-size: 12pt; font-weight: 700; margin: 18px 0 8px; }
+  h4 { font-size: 11pt; font-weight: 700; margin: 14px 0 6px; }
+  /* 正文：段首缩进 2 字符（中文论文习惯） */
+  p { margin: 0 0 8px; text-align: justify; }
+  body > p { text-indent: 2em; }
+  table p, li p, blockquote p { text-indent: 0; }
+  /* 摘要标签居中 */
+  h2:first-of-type { text-align: center; }
+  /* 列表 */
+  ul, ol { margin: 6px 0 10px; padding-left: 2em; }
+  li { margin: 4px 0; }
+  /* 三线表（学术规范：粗-细-粗） */
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 10pt; }
+  th, td { padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { border-top: 1.5px solid #000; border-bottom: 0.75px solid #000; font-weight: 700; }
+  td { border: none; }
+  table tr:last-child td { border-bottom: 1.5px solid #000; }
+  table p { margin: 0; }
+  /* 代码 */
+  code { font-family: "Courier New", Consolas, monospace; font-size: 9.5pt;
+         background: #f4f4f4; padding: 1px 4px; border-radius: 2px; }
+  pre { font-family: "Courier New", Consolas, monospace; background: #f8f8f8;
+        border: 0.5px solid #ddd; padding: 12px 14px; font-size: 9.5pt; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  /* 引用块 */
+  blockquote { border-left: 3px solid #000; margin: 14px 0; padding: 6px 16px; color: #222; }
+  /* 链接：点线下划线（学术优雅） */
+  a { color: #000; text-decoration: none; border-bottom: 0.5px dotted #666; word-break: break-all; }
+  hr { border: none; border-top: 0.5px solid #999; margin: 22px 0; }
+  svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  details { margin: 8px 0; }
+  summary { font-weight: 700; cursor: pointer; }
+  @page { size: A4; margin: 0; }
+`;
+
 // markdown-it 渲染（动态导入，兼容 --no-save 安装）
 const { default: MarkdownIt } = await import('markdown-it');
 const md = new MarkdownIt({ html: true, linkify: true, breaks: false });
@@ -69,11 +116,14 @@ md.core.ruler.push('mdlinks', (state) => {
   }
 });
 
+const useAcademic = process.argv.includes('--academic');
+const STYLE = useAcademic ? ACADEMIC_CSS : CSS;
+
 function render(mdPath) {
   const content = fs.readFileSync(mdPath, 'utf8');
   const body = md.render(content);
   return `<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
-    <title>${path.basename(mdPath, '.md')}</title><style>${CSS}</style></head>
+    <title>${path.basename(mdPath, '.md')}</title><style>${STYLE}</style></head>
     <body>${body}</body></html>`;
 }
 

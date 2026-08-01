@@ -1,21 +1,21 @@
 {
-  "timestamp": "2026-07-24T12:48:41.162Z",
+  "timestamp": "2026-08-01T13:43:09.220Z",
   "totalExperiments": 1,
-  "totalRuns": 6,
+  "totalRuns": 5,
   "experiments": [
     {
-      "id": "e1_stability",
-      "hypothesis": "H1",
+      "id": "e9_v6_c_semantic",
+      "hypothesis": "H9",
       "status": "partial",
-      "runsCompleted": 3,
-      "runsPlanned": 3,
-      "keyResult": "未发现 Utility 稳定性显著优于 Belief (p=0.8723)",
+      "runsCompleted": 5,
+      "runsPlanned": 5,
+      "keyResult": "v6/c_semantic: τ=0.571, not significant (p=1.0000)",
       "significant": false,
-      "pValue": 0.8723127687231277,
-      "effectSize": 0.6452069169167121
+      "pValue": 0.9999999989999999,
+      "effectSize": 0.5714285714285714
     }
   ],
   "overallConclusions": [
-    "❌ 未发现 Utility 稳定性显著优于 Belief (p=0.8723)"
+    "❌ v6/c_semantic: τ=0.571, not significant (p=1.0000)"
   ]
 }

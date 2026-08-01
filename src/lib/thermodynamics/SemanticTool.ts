@@ -91,6 +91,8 @@ The following evidence items have NOT been shared with the group:
 
 Identify which unshared items are most critical to the current discussion.
 A critical item is one that, if shared, could meaningfully change the group's decision.
+IMPORTANT CONSTRAINT:
+- suggestedRecipients MUST ONLY contain exact agent IDs from the list above (do not invent agent names).
 Return JSON:
 {"criticalItems":[{"itemId":"...","reason":"...","suggestedRecipients":["agent1"]}],"nonCriticalItems":["..."],"confidence":0.0-1.0}`;
 

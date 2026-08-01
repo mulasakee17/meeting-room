@@ -1,18 +1,18 @@
 # SwarmAlpha Experimental Campaign — Summary
 
-**Generated:** 2026-07-24T12:48:41.162Z
+**Generated:** 2026-08-01T13:43:09.220Z
 **Total Experiments:** 1
-**Total Runs:** 6
+**Total Runs:** 5
 
 ## Results
 
 | Experiment | Hypothesis | Significant | p-value | Effect Size | Key Result |
 |------------|------------|-------------|---------|-------------|------------|
-| e1_stability | H1 | ❌ | 0.8723 | 0.645 | 未发现 Utility 稳定性显著优于 Belief (p=0.8723)... |
+| e9_v6_c_semantic | H9 | ❌ | 1.0000 | 0.571 | v6/c_semantic: τ=0.571, not significant (p=1.0000)... |
 
 ## Conclusions
 
-- ❌ 未发现 Utility 稳定性显著优于 Belief (p=0.8723)
+- ❌ v6/c_semantic: τ=0.571, not significant (p=1.0000)
 
 ---
 
