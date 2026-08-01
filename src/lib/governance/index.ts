@@ -1174,6 +1174,9 @@ export class GovernanceEngine {
     if (result.prematureConsensus.detected && shouldTrigger("continue_discussion")) {
       const pcRound = result.prematureConsensus.roundNumber;
       const pcMaxRounds = result.prematureConsensus.maxRounds;
+      // 死 fallback：mergedConfig 通常从 defaultConfig 继承 prematureConsensusThreshold(0.35)，
+      // 故 0.5 几乎不会触发；保留仅为向后兼容。注意：认知检测器用独立的
+      // COGNITIVE_PREMATURE_CONSENSUS_THRESHOLD(0.55)，二者语义不同，勿混。
       const threshold = mergedConfig.prematureConsensusThreshold ?? 0.5;
       const pcRoundProgress = pcRound / pcMaxRounds;
       let additionalRounds = Math.ceil(pcMaxRounds * (threshold - pcRoundProgress));

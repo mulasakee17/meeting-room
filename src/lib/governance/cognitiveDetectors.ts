@@ -19,6 +19,12 @@ import type {
   GovernanceConfig,
   SeverityLevel,
 } from "./types";
+import {
+  COGNITIVE_ECHO_CHAMBER_THRESHOLD,
+  COGNITIVE_POLARIZATION_THRESHOLD,
+  COGNITIVE_PREMATURE_CONSENSUS_THRESHOLD,
+  COGNITIVE_AUTHORITY_BIAS_THRESHOLD,
+} from "../constants";
 
 // ============================================================================
 // Utility Functions
@@ -107,7 +113,7 @@ export function detectEchoChamberCognitive(
   const jaccardOverlap = pairCount > 0 ? utilityOverlapSum / pairCount : 0;
 
   const echoScore = 0.3 * (1 - coverageVariance) + 0.3 * (1 - diversityMean) + 0.4 * jaccardOverlap;
-  const threshold = config?.echoChamberThreshold ?? 0.75;
+  const threshold = config?.echoChamberThreshold ?? COGNITIVE_ECHO_CHAMBER_THRESHOLD;
 
   // 找冗余 agent：coverage 接近均值且 diversity 低的 agent
   const covMean = coverages.reduce((s, v) => s + v, 0) / coverages.length;
@@ -177,7 +183,7 @@ export function detectPolarizationCognitive(
   }
 
   const meanDist = pairCount > 0 ? totalDist / pairCount : 0;
-  const threshold = config?.polarizationThreshold ?? 0.25;
+  const threshold = config?.polarizationThreshold ?? COGNITIVE_POLARIZATION_THRESHOLD;
 
   return {
     detected: meanDist >= threshold,
@@ -252,7 +258,9 @@ export function detectPrematureConsensusCognitive(
   // 修复：原公式 roundProgress × ... 在早期轮次削弱信号，与直觉相反
   // 正确逻辑：早期轮次（roundProgress 低）应放大信号，晚期轮次（roundProgress 高）应缩小信号
   const score = (1 - roundProgress) * utilityConsensus * (1 - Math.min(1, beliefDispersion));
-  const threshold = config?.prematureConsensusThreshold ?? 0.55;
+  // 认知检测器自己的阈值（COGNITIVE_PREMATURE_CONSENSUS_THRESHOLD=0.55，utility 基评分公式），
+  // 与旧 belief 基检测器的 GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD(0.35) 语义不同，勿混。
+  const threshold = config?.prematureConsensusThreshold ?? COGNITIVE_PREMATURE_CONSENSUS_THRESHOLD;
 
   return {
     detected: score >= threshold,
@@ -313,7 +321,7 @@ export function detectAuthorityBiasCognitive(
   // 综合信号：惯性集中度 + 易感性不对称度
   // 注意：threshold 直接作为信号值阈值（不再使用 threshold*2 的间接映射）
   const signal = (inertiaConcentration - 1) * 0.5 + (susceptibilityAsymmetry - 1) * 0.5;
-  const threshold = config?.authorityBiasThreshold ?? 0.6;
+  const threshold = config?.authorityBiasThreshold ?? COGNITIVE_AUTHORITY_BIAS_THRESHOLD;
   const detected = signal >= threshold;
 
   return {

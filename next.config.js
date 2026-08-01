@@ -39,7 +39,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
-              "connect-src 'self' https://api.openai.com https://api.anthropic.com https://api.deepseek.com http://localhost:*",
+              "connect-src 'self' https://api.openai.com https://api.anthropic.com https://api.deepseek.com https://open.bigmodel.cn https://dashscope.aliyuncs.com http://localhost:*",
               "font-src 'self'",
               "object-src 'none'",
               "base-uri 'self'",

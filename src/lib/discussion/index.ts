@@ -707,10 +707,15 @@ export class DiscussionEngine {
     state: { belief: number; confidence: number },
     currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number }> = []
   ): string {
+    // ── 历史窗口剪枝：防止全局历史无限制膨胀进 prompt ────────────
+    // memory 按时间顺序存储（InMemoryStrategy 追加），slice(-N) 取最近 N 条。
+    // 只保留：自己的最近 MAX_OWN_HISTORY 条 + 引用我的最近 MAX_REPLIES 条。
+    const MAX_OWN_HISTORY = 6;
+    const MAX_REPLIES = 4;
     let memoryContext = "";
     if (memory.length > 0) {
-      const ownEntries = memory.filter(e => e.agentId === agent.id);
-      const repliedToMe = memory.filter(e => e.agentId !== agent.id);
+      const ownEntries = memory.filter(e => e.agentId === agent.id).slice(-MAX_OWN_HISTORY);
+      const repliedToMe = memory.filter(e => e.agentId !== agent.id).slice(-MAX_REPLIES);
       memoryContext = "\n\n你的讨论历史:\n";
       if (ownEntries.length > 0) {
         memoryContext += "你之前的发言:\n";
@@ -737,9 +742,11 @@ export class DiscussionEngine {
 
     // ── 本轮已发言的观点（顺序发言机制）───────────────────────────────
     let currentRoundContext = "";
+    // 本轮已发言观点做窗口限制（最多 8 条），防异步引擎单周期发言人过多时 prompt 膨胀
+    const MAX_CURRENT_ROUND = 8;
     if (currentRoundOpinions.length > 0) {
       currentRoundContext = "\n\n本轮其他 agent 已发表的观点:\n";
-      for (const op of currentRoundOpinions) {
+      for (const op of currentRoundOpinions.slice(-MAX_CURRENT_ROUND)) {
         currentRoundContext += `- ${op.agentId}: ${op.reasoning} (信念: ${op.belief.toFixed(2)}, 置信度: ${op.confidence.toFixed(0)}%)\n`;
       }
       currentRoundContext += "你可以参考或反驳上述观点。\n";

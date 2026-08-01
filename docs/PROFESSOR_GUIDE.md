@@ -37,10 +37,10 @@
 ### 2.1 社会热力学测量信号（论文 §3.2——注意两套 F 定义，勿混）
 
 - **旧路径定义**（论文 §3.2）：将 agent 信念 $b_i\in[-1,1]$ 映射为相位 $\theta_i=(\pi/2)b_i$，定义 $R$（Kuramoto 序参量，方向一致性）、$T$（总体标准差，离散度）、$H$（Shannon 熵，分布形状）、$F=(1-R)+T\cdot H$（综合失序指标）。
-- **v6 新路径定义**（`MeasurementLayer.ts:251`）：**改用修正自由能 $F = U - T\cdot S$**（U=效用 L1 范数，T=时序波动，S=分布熵）——与旧 F **不是同一个公式**。
+- **v6 新路径定义**（`MeasurementLayer.ts:251`）：**改用修正自由能 $F = U - T\cdot H$**（U=效用 L2 范数，T=效用波动，H=证据熵）——与旧 F **不是同一个公式**。
 - **证据状态**（⚠️ 两个证据对应不同公式，勿混）：
   - 旧 $F=(1-R)+T\cdot H$ 的两分量**强相关** $r=0.9175$（证伪"正交"，[THEORY.md §0.1](research/THEORY.md)）；且旧 R/T/H 由回归 $F\approx 0.019+2.014(1-R)$（$R^2=0.955$）显示**退化为 1 个有效维度**。
-  - v6 新 $F=U-T\cdot S$ 三变量**解耦** $r=0.274$（`MeasurementLayer.ts:214`）。
+  - v6 新 $F=U-T\cdot H$ 三变量**解耦** $r=0.274$（`MeasurementLayer.ts:214`）。
 - **审稿人视角**：旧"3 维热力学状态空间"叙事已被自己的证伪削弱（R/T/H 塌缩 1 维），**只能靠 v6 解耦挽回**——论文必须把主证据切到新路径、并明确区分两套 F 定义，否则会因"自相矛盾"被击穿。
 - **代码**：`src/lib/thermodynamics/MeasurementLayer.ts`（v6 解耦路径）/ `src/lib/utils/statsUtils.ts`
 
@@ -146,7 +146,7 @@
 | 引擎 | DiscussionEngine（belief 标量） | NativeCognitiveEngine（5 维认知状态） |
 | 检测 | 4 经典检测器（启发式阈值） | δ 诊断（无 ground truth） |
 | 干预 | 破坏性（reduce_weight 等） | 非破坏性（inject_evidence 等） |
-| 热力学 | R/T/H 强耦合（旧路径 R−T 相关 r=−0.96，scalar beliefs） | 解耦（新路径 F=U−T·S，r=0.274） |
+| 热力学 | R/T/H 强耦合（旧路径 R−T 相关 r=−0.96，scalar beliefs） | 解耦（新路径 F=U−T·H，r=0.274） |
 | 证据 | 169 闭环（已验证） | 仅 Pilot（未验证） |
 | 状态 | 已冻结部分（asyncEngine 等） | 当前唯一维护主线 |
 
@@ -185,6 +185,7 @@ npx tsx experiments/campaign/run_all.ts --experiment=e9_v6_a_none --seeds=42  # 
 | GovernanceRuntime cognitive 分支 | 死代码（~250 行，未接线） |
 | MAST 检测器 enable 标志 | 默认关，0 次实验触发 |
 | 旧路径有效率数字 | 无对照，已加 caveat，待 E10 重算 |
+| **未使用变量/死代码** | **核心 111 个 + 实验 201 个**（2026-08-01 noUnusedLocals 排查发现；其中部分为 barrel re-export 误报）。**E9 后分批清理**，交付期不动（避免误删风险） |
 
 ## 附录 D：术语速查
 

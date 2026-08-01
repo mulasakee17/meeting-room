@@ -12,9 +12,9 @@
 
 ## Abstract
 
-LLM multi-agent systems lack a principled, runtime-detectable signal for identifying when group deliberation drifts toward collective cognitive failure. We propose the **v6 cognitive governance framework**, whose core design is: **(i)** agents directly output a five-dimensional cognitive state (Utility, Evidence, Inertia, Confidence, Susceptibility), eliminating the circular reasoning of post-hoc cognitive inference; **(ii)** detection uses **consistency diagnosis** (δ-signals that compare self-reported vs. observed behavior, requiring no ground truth); **(iii)** intervention is **non-destructive**—changing information flow rather than belief weights; **(iv)** a **social-thermodynamic measurement layer** (decoupled $F = U - T\cdot S$) provides collective-state signals. Cost is layered: deterministic mathematics handles the large majority of rounds (design target ~95%, zero additional LLM calls; actual trigger rate pending E9), with an LLM semantic sensor (SemanticTool) invoked only on anomalous rounds.
+LLM multi-agent systems lack a runtime-detectable signal for identifying when collective deliberation drifts toward cognitive failure. We propose the **v6 cognitive governance framework**: agents output a five-dimensional cognitive state; detection uses **consistency diagnosis** (δ-signals comparing self-reported vs. observed behavior, no ground truth required); intervention is **non-destructive** (changing information flow, not belief weights); and a **decoupled social-thermodynamic layer** ($F = U - T\cdot H$, Helmholtz form) provides collective signals, with LLMs used only as occasional semantic sensors (design target ~95% of rounds at zero extra LLM cost).
 
-Historical method validation (169 closed-loop runs, Crisis 80 + Supplier 89) establishes: consensus level and decision quality are nearly uncorrelated ($r \approx -0.10$, $p=0.20$, not significant—an exploratory observation that **questions** the "convergence implies correctness" assumption, not a refutation); breaking role-information coherence ($d=1.44$) outperforms in-discussion governance ($d=0.92$); destructive interventions are harmful ($\Delta\tau=-0.267$), motivating the non-destructive design. The current v6 Pilot (single run, seed 42) verifies the δ→intervention chain (B group: 5 rounds, 16 non-destructive interventions, τ=0.643 vs A group 0.571), with the full E9 experiment (4 groups × 50 runs = 200 runs) pending. The framework provides an engineering foundation for multi-agent cognitive governance that is reproducible, cost-layered, and honest about its evidence boundaries.
+Historical method validation (169 closed-loop runs) establishes that consensus and decision quality are nearly uncorrelated ($r \approx -0.10$, $p=0.20$, exploratory—**questioning**, not refuting, "convergence implies correctness"); structural rearrangement outperforms procedural governance ($d=1.44$); and destructive interventions are harmful ($\Delta\tau=-0.267$). A current v6 Pilot (single run, seed 42) verifies the δ→intervention chain (16 interventions, $\tau=0.643$ vs. 0.571); the full E9 experiment (200 runs) is pending. The framework is a reproducible, cost-layered foundation for multi-agent cognitive governance, honest about its evidence boundaries.
 
 ---
 
@@ -120,13 +120,27 @@ LLM as a semantic sensor in the mathematical engine's hands (not a decision-make
 
 **⚠️ Empirical falsification (2026-07-28)**: the two components of historical $F$ are strongly correlated ($r=0.9175$), and $R/T/H$ collapse to one effective dimension (regression $F\approx0.019+2.014(1-R)$, $R^2=0.955$).
 
-**v6 correction**: based on the 5D cognitive-state vector, use $F = U - T\cdot S$ (U: utility L1 norm, T: temporal fluctuation, S: distribution entropy). $U$ and the product $T\cdot S$ decouple ($|r|=0.274$, [THEORY.md §0.1]), a major improvement over $r=0.917$; **however, $U$ and $S$ components remain correlated ($r=-0.79$)—the decoupling is partial, not full independence**. Reframing: the historical collapse itself is a finding—MAS small groups differ from physical systems in that DeGroot belief updating couples alignment and convergence.
+**v6 correction**: based on the 5D cognitive-state vector, use $F = U - T\cdot H$ (U: utility L2 norm, T: utility volatility, H: evidence entropy—**R/T/H are redefined in v6**, computed from the cognitive-state vector rather than scalar beliefs, see MeasurementLayer.ts). $U$ and the product $T\cdot H$ decouple ($|r|=0.274$, [THEORY.md §0.1]), a major improvement over $r=0.917$; **however, $U$ and $H$ components remain correlated ($r=-0.79$)—the decoupling is partial, not full independence**. Reframing: the historical collapse itself is a finding—MAS small groups differ from physical systems in that DeGroot belief updating couples alignment and convergence.
 
 ### 3.7 Historical Path (Comparison Baseline)
 
 Two earlier contributions are downgraded to historical/comparison baselines in the v6 mainline:
 - **Seven bias detectors** (4 classical + 3 MAST-aligned): superseded by δ-diagnosis; the 3 MAST detectors have zero empirical triggers (implementation + unit-test level contribution).
 - **Five-factor speech-willingness formula**: historical contribution of the async path (`asyncEngine.ts`, frozen); the v6 sync path does not use it.
+
+### 3.8 Symbol and Threshold Conventions (Code Consistency)
+
+Symbols in this paper map strictly to the code (to avoid reviewer confusion when checking the repository):
+
+| Symbol | v6 definition (code) | Difference from old path |
+|--------|----------------------|--------------------------|
+| $R$ | utility-vector cosine alignment (`MeasurementLayer`) | old: Kuramoto order parameter (belief phases) |
+| $T$ | utility round-to-round volatility | old: belief population std |
+| $H$ | evidence-support distribution entropy | old: belief 5-bin Shannon entropy |
+| $F$ | $F = U - T\cdot H$ (Helmholtz form) | old: $F=(1-R)+T\cdot H$ |
+| $U$ | utility L2 norm (normalized) | — |
+
+**Two threshold regimes**: cognitive detectors (v6, utility-based scoring) use `COGNITIVE_*` thresholds (e.g., premature consensus 0.55); legacy belief-based detectors use `GOVERNANCE_*` thresholds (e.g., premature consensus 0.35)—**the scoring formulas differ, so thresholds are not interchangeable** (see `constants.ts`).
 
 ---
 

@@ -60,6 +60,12 @@ import {
 } from "./ProgressiveEstimator";
 import { semanticConsult, type SemanticConsultRequest } from "./SemanticTool";
 import type { LLMConfig } from "../llm/providers";
+import {
+  COGNITIVE_ECHO_CHAMBER_THRESHOLD,
+  COGNITIVE_POLARIZATION_THRESHOLD,
+  COGNITIVE_PREMATURE_CONSENSUS_THRESHOLD,
+  COGNITIVE_AUTHORITY_BIAS_THRESHOLD,
+} from "../constants";
 
 // ============================================================================
 // Thermo → δ → Intervention Pipeline Types
@@ -224,6 +230,15 @@ export class MeasurementLayer {
    *
    * @returns ThermoState，若 cognitiveStates 为空则返回全零
    */
+  /**
+   * 计算热力学状态（v6 重定义）。
+   *
+   * ⚠️ R/T/H 在 v6 中基于认知状态向量重定义，与旧路径（asyncEngine，belief 相位）含义不同：
+   *   - R: utility 向量 cosine 对齐（旧：Kuramoto 序参量 |Σe^(iθ)|/N）
+   *   - T: utility 逐轮波动（旧：belief 总体标准差）
+   *   - H: evidence supports 分布熵（旧：belief 5-bin Shannon 熵）
+   *   - F = U - T·H（Helmholtz 形式；旧：F = (1-R) + T·H）
+   */
   computeThermoState(): ThermoState {
     const states = Array.from(this.cognitiveStates.values());
     if (states.length === 0) return { R: 0, T: 0, H: 0, F: 0 };
@@ -237,18 +252,19 @@ export class MeasurementLayer {
     // ── H: Evidence items 的 supports 分布的归一化 Shannon 熵 ──
     const H = this.computeEvidenceDiversity(states);
 
-    // ── F = U - T·S（v0.4.3 修正自由能，三变量解耦）──
-    // U: 平均效用强度 = mean(‖u_i‖)，归一化到 [0,1]（每维已 clamp 到 [-1,1]，
+    // ── F = U - T·H（v0.4.3 修正自由能，Helmholtz 形式，三变量解耦）──
+    // U: 平均效用强度 = mean(‖u_i‖)，L2 范数归一化到 [0,1]（每维已 clamp 到 [-1,1]，
     //    L2 范数上限为 √K，除以 √K 归一化）
+    // T: 效用波动（computeUtilityVolatility）；H: 证据熵（computeEvidenceDiversity）
+    // 注：S 不再单列——熵分量即 H，F = U - T·H（消除冗余符号 S）
     const K = states[0]?.utility.scores ? Object.keys(states[0].utility.scores).length : 1;
     const sqrtK = Math.sqrt(Math.max(1, K));
     const U = states.reduce((sum, s) => {
       const scores = Object.values(s.utility.scores);
-      const norm = Math.sqrt(scores.reduce((ss, v) => ss + v * v, 0));
+      const norm = Math.sqrt(scores.reduce((ss, v) => ss + v * v, 0)); // L2 范数
       return sum + norm / sqrtK;
     }, 0) / states.length;
-    const S = H; // S = 证据多样性熵（复用 H）
-    const F = U - T * S;
+    const F = U - T * H;
 
     return { R, T, H, F };
   }
@@ -1268,10 +1284,10 @@ export class MeasurementLayer {
     return runCognitiveDetectors(
       input,
       {
-        echoChamberThreshold: govConfig.echoChamberThreshold ?? 0.75,
-        polarizationThreshold: govConfig.polarizationThreshold ?? 0.25,
-        prematureConsensusThreshold: govConfig.prematureConsensusThreshold ?? 0.55,
-        authorityBiasThreshold: govConfig.authorityBiasThreshold ?? 0.6,
+        echoChamberThreshold: govConfig.echoChamberThreshold ?? COGNITIVE_ECHO_CHAMBER_THRESHOLD,
+        polarizationThreshold: govConfig.polarizationThreshold ?? COGNITIVE_POLARIZATION_THRESHOLD,
+        prematureConsensusThreshold: govConfig.prematureConsensusThreshold ?? COGNITIVE_PREMATURE_CONSENSUS_THRESHOLD,
+        authorityBiasThreshold: govConfig.authorityBiasThreshold ?? COGNITIVE_AUTHORITY_BIAS_THRESHOLD,
         disabledInterventions: govConfig.disabledInterventions ?? [],
         currentRound: round,
         maxRounds,

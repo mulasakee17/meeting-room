@@ -135,6 +135,19 @@ export const GOVERNANCE_REDUNDANT_CONFIDENCE_DIFF = 10;
 export const GOVERNANCE_CLUSTER_BELIEF_OFFSET = 0.2;
 /** 内容相似度：最小词长度 */
 export const GOVERNANCE_SIMILARITY_MIN_WORD_LENGTH = 2;
+
+// ============================================================================
+// 认知检测器（v6，认知状态基）——阈值与旧 belief 基检测器的 GOVERNANCE_* 语义不同
+// （评分公式不同：认知检测器基于 utility 向量/认知状态，旧检测器基于 belief 标量）
+// ============================================================================
+/** 认知检测器：回声室阈值（utility 相似度基评分） */
+export const COGNITIVE_ECHO_CHAMBER_THRESHOLD = 0.75;
+/** 认知检测器：极化阈值（utility pairwise cosine 距离） */
+export const COGNITIVE_POLARIZATION_THRESHOLD = 0.25;
+/** 认知检测器：过早共识阈值（(1-轮次进度)×效用共识×(1-离散度) 评分）——与 GOVERNANCE_PREMATURE_CONSENSUS_THRESHOLD(0.35) 语义不同，勿混 */
+export const COGNITIVE_PREMATURE_CONSENSUS_THRESHOLD = 0.55;
+/** 认知检测器：权威偏差阈值（惯性集中信号） */
+export const COGNITIVE_AUTHORITY_BIAS_THRESHOLD = 0.6;
 /** 标准差归一化因子 */
 export const GOVERNANCE_STD_NORM_FACTOR = 2;
 /** 共识水平计算因子 */
