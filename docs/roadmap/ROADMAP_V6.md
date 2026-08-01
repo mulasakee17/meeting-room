@@ -6,7 +6,7 @@
 >
 > **最近更新（2026-07-30 Pilot 验证）**：
 > - **关键 Bug 修复**：δ→干预类型映射断裂（δ issues type 与 generateCognitiveInterventions switch case 不匹配导致 0 干预）+ Intervention 数据记录不完整（丢失 targetAgents/effect/parameters）+ SemanticTool 审计日志补齐（4 文件改动）
-> - **Pilot A/B 对照**（university 任务, seed=42, 1 run each）：A 组 τ=0.571（无治理），B 组 τ=0.643（δ 治理），Δτ=+0.071，δ→干预链路打通。⚠️ 干预数与 R 趋势以磁盘 `pilot_output/` 实测为准（当前 B 组 0 干预、2 轮），原记录 14 干预不可复现。
+> - **Pilot A/B 对照**（university 任务, seed=42, 1 run each）：A 组 τ=0.571（无治理），B 组 τ=0.643（δ 治理），Δτ=+0.071，δ→干预链路打通。⚠️ 原记录 14 干预为 7/30 旧代码版本；8/1 重跑 B 组为 5 轮、16 干预（以磁盘 `pilot_output/` 实测为准）。
 > - **3 个待解决问题**：τ 偏高（天花板风险）、δ 触发率偏高（40-45%，任务特性）、C 组 SemanticTool 链路未验证
 > **历史更新（Phase 2.8）**：15 tsc 类型错误清零 + 4 项实验配置差距闭合（task_university、E9 4 组 A/B/C/D、maxRounds=5、Runner useSemanticTool）
 > **历史更新（Phase 2.7）**：深度自检发现 5 处数学实现 bug，全部修复并补 22+1 个单元测试。包括 M1 Granger FWL 残差化不完整、M2 Bimodality 系数公式错误（Ellison 1987 校正项缺失）、M3 t 分布临界值表缺口（df=11-29）、M4 ProgressiveEstimator β>1.0 越界、M5 detectBehaviorEvents dead code。

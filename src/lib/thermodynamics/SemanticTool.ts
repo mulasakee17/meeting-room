@@ -75,6 +75,9 @@ Rules:
 
 const DEDUP_PROMPT = `Group the following evidence items by semantic meaning.
 Items that express the same underlying claim should be in the same cluster, even if worded differently.
+IMPORTANT CONSTRAINTS:
+- Each item MUST appear in EXACTLY ONE cluster (no item may appear in multiple clusters).
+- Assign ALL items to some cluster (no item may be omitted).
 Return JSON: {"clusters":[{"label":"...","itemIds":["id1","id2"]}],"confidence":0.0-1.0}
 
 Items:
