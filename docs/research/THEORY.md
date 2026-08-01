@@ -31,7 +31,7 @@
 - 169 sync runs 仍只有标量 belief（v6 NativeCognitiveEngine 路径才有 5 维认知状态输出）
 - **旧 asyncEngine 路径**的 R/T/H（基于 scalar beliefs）仍强耦合——此路径已 `@deprecated`，仅 fraud 系列向后兼容
 - **新 MeasurementLayer 路径**的 R/T/H（基于认知状态向量）已重写，F=U-T·S 三变量解耦（r=0.274，见 §0.1 验证 3）
-- 5 维认知状态待 v6 全量实验验证（E1-E9 待跑，Pilot A/B 已验证 Δτ=+0.215）
+- 5 维认知状态待 v6 全量实验验证（E1-E9 待跑，Pilot A/B 已验证 Δτ=+0.071）
 
 ### 0.1 社会热力学深化验证（2026-07-28，v0.4.1）
 

@@ -29,7 +29,7 @@ After fixing 4 cognitive defects (D1–D4) that broke the governance loop, 169 c
 | **Easy tasks** (Supplier, baseline τ=0.68) | — | ⚠️ d=0.47, p=0.086 (underpowered, 43%) | Ceiling effect: shuffle d=0.09 |
 | **Structural intervention** (shuffle) | ✅ d=1.44 on Crisis (p<0.001) | d=0.09 on Supplier (easy task) | — |
 | **Cognitive governance** (E9 Smoke Test) | — | — | ❌ Δτ = −0.267: reduce_weight suppresses key info, force_reflection backfires |
-| **Procedural intervention** (force_reflection) | ✅ 79.4% effective (27/34 events) | — | ⚠️ Backfire in polarized states (F-decomposition analysis) |
+| **Procedural intervention** (force_reflection) | ⚠️ 79.4% (27/34, uncontrolled, non-causal) | — | ⚠️ Backfire in polarized states (F-decomposition analysis) |
 | **Intervention count** | — | — | r=−0.55 with decision quality (dependency-chain cascades) |
 
 **Three cross-task findings** (169 experiments, Crisis 80 + Supplier 89):
@@ -39,6 +39,8 @@ After fixing 4 cognitive defects (D1–D4) that broke the governance loop, 169 c
 3. **Task difficulty is the master switch** — Governance effectiveness is bounded by task difficulty (ceiling effect on easy tasks, significant on hard tasks).
 
 **Current priority: intervention stabilization.** The cognitive governance smoke test (E9, N=6 runs) showed that current interventions are destructive. We are replacing `reduce_weight` and `force_reflection` with non-destructive alternatives (`inject_evidence`, `rebalance_attention`, structural `shuffle`) that change information flow rather than belief weights. See [future.md](future.md) for the stabilization roadmap.
+
+**v6 status (2026-07-31):** The development mainline has moved to the v6 cognitive governance path — `NativeCognitiveEngine` with a five-dimensional cognitive state (Utility/Evidence/Inertia/Confidence/Susceptibility), δ-diagnosis (detects contradictions between observable signals, no ground truth required), and non-destructive interventions (inject_evidence, rebalance_attention, shuffle_knowledge). An optional asynchronous semantic tool (SemanticTool) performs evidence dedup and gap analysis via LLM. The E9 four-group experiment (A none / B δ / C δ+SemanticTool / D legacy detectors, 200 runs total) is designed; a single Pilot A/B run (2026-07-30) showed Δτ=+0.071 with no statistical significance. See [SOT.md](docs/SOT.md) and [ROADMAP_V6.md](docs/roadmap/ROADMAP_V6.md).
 
 > **Historical note**: 120 earlier experiments were collected with a broken governance loop (D1–D4). The prior "governance is ineffective" conclusion was a loop artifact. These data are retained for provenance but explicitly labeled as provisional. The 169 closed-loop runs above are the primary evidence.
 
@@ -191,6 +193,7 @@ test/                     # 633 automated tests (630 passed, 3 skipped)
 
 | Order | Document | Content |
 |-------|----------|---------|
+| 0th | [docs/PROFESSOR_GUIDE.md](docs/PROFESSOR_GUIDE.md) | Project overview & collaboration guide for professors |
 | 1st | [docs/SOT.md](docs/SOT.md) | Single source of truth — all verified numbers |
 | 2nd | [docs/paper/LIMITATIONS.md](docs/paper/LIMITATIONS.md) | Known boundaries — scientific honesty |
 | 3rd | [docs/paper/PAPER_DRAFT.md](docs/paper/PAPER_DRAFT.md) | Academic paper draft (English) |
@@ -238,7 +241,7 @@ test/                     # 633 automated tests (630 passed, 3 skipped)
 | 120 historical experiments with broken governance loop | Confounds early conclusions | Explicitly labeled as provisional; 169 closed-loop runs are primary evidence |
 | MAST detectors (FM-2.4/2.5/2.6) never triggered in experiments | 0 empirical validation | Requires v2 trace experiments with audit fields |
 | 1 experiment with full audit fields (detectionMetrics + effectMetrics) | Audit infrastructure sample insufficient | Needs 10+ new experiments for statistical meaning |
-| `full_reflection` p=0.048 finding was RETRACTED | Obtained under broken loop (D1–D4) | Crisis re-validation: 79.4% effective (27/34), direction reversed |
+| `full_reflection` p=0.048 finding was RETRACTED | Obtained under broken loop (D1–D4) | Crisis re-validation: 79.4% (27/34, uncontrolled, non-causal), direction reversed |
 | **Cognitive governance interventions destructive** (E9 Smoke Test) | Δτ = −0.267 on Supplier task | Replacing reduce_weight & force_reflection with non-destructive alternatives (inject_evidence, rebalance_attention, structural shuffle) |
 
 ### Academic integrity

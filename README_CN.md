@@ -27,7 +27,8 @@ SwarmAlpha 是一个**多智能体认知治理研究平台**。它不创建智�
 | **困难任务**（Crisis，基线 τ=0.41） | ✅ d=0.92，p=0.0038，τ +51% | — | — |
 | **简单任务**（Supplier，基线 τ=0.68） | — | ⚠️ d=0.47，p=0.086（功效不足，43%） | 天花板效应：shuffle d=0.09 |
 | **结构干预**（shuffle 洗牌） | ✅ d=1.44（Crisis，p<0.001） | d=0.09（Supplier，简单任务） | — |
-| **过程干预**（force_reflection） | ✅ 79.4% 有效（27/34 次干预） | — | ⚠️ 极化状态下反火（F 分解分析） |
+| **认知治理**（E9 Smoke Test） | — | — | ❌ Δτ=−0.267：reduce_weight 压制关键信息，force_reflection 反火 |
+| **过程干预**（force_reflection） | ⚠️ 79.4%（27/34，无对照，非因果） | — | ⚠️ 极化状态下反火（F 分解分析） |
 | **干预次数** | — | — | r=−0.55（依赖链级联反火） |
 
 **三条跨任务发现**（169 次实验，Crisis 80 + Supplier 89）：
@@ -35,6 +36,10 @@ SwarmAlpha 是一个**多智能体认知治理研究平台**。它不创建智�
 1. **弱共识-质量相关**——共识-质量相关性 r≈−0.10（p=0.20，不显著，探索性），跨任务方向一致。"高共识"不等于"好决策"。
 2. **结构 > 过程**——重新分配 agent 知识（shuffle d=1.44）优于讨论内治理干预（governance d=0.92）。
 3. **任务难度是总开关**——治理有效性受任务难度约束（简单任务天花板效应，困难任务显著有效）。
+
+**当前重点：干预稳定化。** 认知治理 smoke test（E9，N=6）显示现有干预是破坏性的。我们正在用非破坏性替代方案（`inject_evidence`、`rebalance_attention`、结构性 `shuffle`）替换 `reduce_weight` 与 `force_reflection`——改变信息流而非信念权重。稳定化路线图见 [future.md](future.md)。
+
+**v6 状态（2026-07-31）**：开发主线已切到 v6 认知治理路径——`NativeCognitiveEngine` 配合五维认知状态（Utility/Evidence/Inertia/Confidence/Susceptibility）、δ 诊断（无需 ground truth，检测可观测信号之间的矛盾）以及非破坏性干预（inject_evidence、rebalance_attention、shuffle_knowledge）。可选异步语义工具 SemanticTool 通过 LLM 执行证据去重与信息缺口分析。E9 四组实验（A 无治理 / B δ / C δ+SemanticTool / D 旧检测器，共 200 runs）已设计；Pilot A/B 单次验证（2026-07-30）显示 Δτ=+0.071，无统计显著性。详见 [SOT.md](docs/SOT.md) 与 [ROADMAP_V6.md](docs/roadmap/ROADMAP_V6.md)。
 
 > **历史说明**：120 次早期实验在断裂治理环路（D1-D4）下收集。之前的"治理无效"结论是环路断裂的假象。这些数据保留以备溯源，明确标注为临时性。上述 169 次闭环实验是主要证据。
 
@@ -187,6 +192,7 @@ test/                     # 633 自动化测试（630 通过，3 跳过）
 
 | 顺序 | 文档 | 内容 |
 |------|------|------|
+| 第〇 | [docs/PROFESSOR_GUIDE.md](docs/PROFESSOR_GUIDE.md) | 给教授的项目总览与协作指南 |
 | 第一 | [docs/SOT.md](docs/SOT.md) | 单一真相源——所有经核实的数字 |
 | 第二 | [docs/paper/LIMITATIONS.md](docs/paper/LIMITATIONS.md) | 已知边界——学术诚实 |
 | 第三 | [docs/paper/PAPER_DRAFT.md](docs/paper/PAPER_DRAFT.md) | 学术论文草稿（英文） |
@@ -232,7 +238,7 @@ test/                     # 633 自动化测试（630 通过，3 跳过）
 | 120 次历史实验治理环路断裂 | 干扰早期结论 | 明确标注为临时性；169 次闭环实验为主要证据 |
 | MAST 检测器（FM-2.4/2.5/2.6）从未在实验中触发 | 0 次实证验证 | 待 v2 trace 实验触发 |
 | 仅 1 个实验含完整审计字段 | 审计样本不足 | 需 10+ 次新实验才有统计意义 |
-| `full_reflection` p=0.048 结论已撤回 | 断裂环路下的假象 | Crisis 重验证：79.4% 有效（27/34），方向逆转 |
+| `full_reflection` p=0.048 结论已撤回 | 断裂环路下的假象 | Crisis 重验证：79.4%（27/34，无对照，非因果），方向逆转 |
 
 ### 学术诚信
 
@@ -311,6 +317,14 @@ test/                     # 633 自动化测试（630 通过，3 跳过）
 <summary><b>点击展开：干预有效性与成本分析</b></summary>
 
 基于 169 次闭环实验的干预效果分析：
+
+> **⚠️ 该表数字仅供溯源参考，存在多重局限（详见 [AAMAS_SUBMISSION_CHECKLIST.md](docs/paper/AAMAS_SUBMISSION_CHECKLIST.md) E10）**：
+> 1. **非因果**：有效率 = 干预后目标 agent 的 belief 变化 >0.05 的比例，**无对照**——LLM 温度 0.2 的自然波动也会让 belief 移动，不能归因到干预。
+> 2. **`reduce_weight` 测量错位**：它的 prompt 发给接收者（让其他 agent 独立于目标），但"有效"判定测的是目标 agent 自己的 belief——**测的变量 ≠ 干预作用的变量**。
+> 3. **数字不可复现**：`reduce_weight 81.8%` 等来自历史分析；当前数据实测（crisis-only 61.3%、crisis+supplier 52.0%）无法复现。权威数字以 [SOT.md](docs/SOT.md) 为准。
+> 4. **Token 成本（68/142）与当前脚本估计不符**（reduce_weight≈275、force_reflection≈308 tokens/次），来源待核实。
+>
+> 此表待 E10 对照实验重算。历史值保留仅供溯源，不作论文依据。
 
 **四类干预性价比**：
 

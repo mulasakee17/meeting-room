@@ -285,7 +285,7 @@ E1-E8（~400 runs）─────────→ 5 维认知状态理论正当
 |---|---|---|
 | 旧路径 R/T/H 强耦合（scalar beliefs） | R-T r=-0.967，旧 F≈(1-R) 线性（R²=0.955） | **仅约束旧 asyncEngine 路径**（已 @deprecated）；它驱动了 MeasurementLayer 重写，不再是当前框架现状 |
 | **新路径解耦（MeasurementLayer v3.2.1）** | R=utility cosine、T=utility L2 时序、H=evidence 熵（不同信息源）；F=U-T·S；scalar 近似验证 sync r=-0.046 / fraud r=-0.271（THEORY §0.1） | **代码级修正已落地**；native 模式独立验证待 E9 V6 |
-| 治理正面证据 | 非破坏性 Δτ=0.000（N=6）；Pilot B-A=+0.215（n=1） | 治理有效性未确认 |
+| 治理正面证据 | 非破坏性 Δτ=0.000（N=6）；Pilot B-A=+0.071（n=1） | 治理有效性未确认 |
 | 结构性重排最强 | shuffle d=1.44 > gov d=0.92 | 支持"最小干预/信息流"哲学 |
 | 共识-质量弱相关 | r=-0.10, p=0.20 | 反驳 DeGroot"收敛=正确" |
 | 信息捷径 | Qwen 共享率 0-16% 但 τ=0.62 | 治理前提（诚实但低能）在强模型下失效 |

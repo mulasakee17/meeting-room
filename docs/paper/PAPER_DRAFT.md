@@ -5,7 +5,7 @@
 > **Target venues**: arXiv preprint → AAMAS 2027 / AAAI 2027 / ICML 2027 Workshop on Multi-Agent Systems
 > **Status**: Pre-submission draft. Measurement framework complete, preliminary experiments (169 closed-loop runs, Crisis 80 + Supplier 89; 573 total JSON files) complete. Governance intervention optimization is future work; this paper focuses on the measurement and diagnostic layer.
 >
-> **v6 更新（2026-07-30）**：混合范式架构（确定性 δ 诊断 + 可选 SemanticTool 异步验证）已落地，Pilot A/B 对照完成（单次验证，Δτ=+0.215，无统计显著性）。Phase 3 全量实验（4 组 × 50 runs = 200 runs）待启动，本论文实验数据章节待 Phase 3 完成后重写。当前正文仍基于历史 169 runs 数据，不引用 v6 Pilot 数据作为结论依据。
+> **v6 更新（2026-07-30）**：混合范式架构（确定性 δ 诊断 + 可选 SemanticTool 异步验证）已落地，Pilot A/B 对照完成（单次验证，Δτ=+0.071，无统计显著性）。Phase 3 全量实验（4 组 × 50 runs = 200 runs）待启动，本论文实验数据章节待 Phase 3 完成后重写。当前正文仍基于历史 169 runs 数据，不引用 v6 Pilot 数据作为结论依据。
 > **Code**: [github.com/mulasakee17/swarmalpha](https://github.com/mulasakee17/swarmalpha)
 
 ---

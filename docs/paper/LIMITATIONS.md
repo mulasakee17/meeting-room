@@ -1815,13 +1815,13 @@ npx tsx experiments/v2/run_malicious.ts --group=G --count=10
 **现状**：v6 Pilot 仅 A 组 1 run + B 组 1 run（seed=42），无统计显著性。
 
 **影响**：
-- Δτ=+0.215（B 组 0.786 vs A 组 0.571）不能作为 δ 治理有效的结论，仅作为链路验证
+- Δτ=+0.071（B 组 0.643 vs A 组 0.571）不能作为 δ 治理有效的结论，仅作为链路验证
 - 论文若引用此数据，必须标注"单次实验，待 Phase 3 全量验证"
 - Phase 3 计划：4 组 × 50 runs = 200 runs，预计可达到统计显著性
 
 ### 25.2 任务天花板风险
 
-**现状**：university 任务 Pilot τ 偏高（A 组 0.571, B 组 0.786），超出 ROADMAP §5.1 要求的 [0.3, 0.5] 区间。
+**现状**：university 任务 Pilot τ 偏高（A 组 0.571, B 组 0.643），超出 ROADMAP §5.1 要求的 [0.3, 0.5] 区间。
 
 **根因分析**：
 - university 任务 8 选项中后 4 名（E/F/G/H）信息差异明显，agent 容易排对

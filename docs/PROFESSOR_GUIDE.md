@@ -42,7 +42,7 @@
 将 LLM 作为数学治理引擎手中的语义传感器——**不是决策者，是工具**。确定性 δ 诊断负责 95% 的轮次筛查，仅在异常轮次触发 SemanticTool 异步 LLM 验证。
 
 - **代码**：[computeDelta.ts](../src/lib/thermodynamics/computeDelta.ts) + [SemanticTool.ts](../src/lib/thermodynamics/SemanticTool.ts)
-- **可证伪假设**：H9（δ 治理提升 τ）——Pilot A/B 单次验证 Δτ=+0.215，需 Phase 3 全量实验确认
+- **可证伪假设**：H9（δ 治理提升 τ）——Pilot A/B 单次验证 Δτ=+0.071，需 Phase 3 全量实验确认
 - **诚实标注**：C 组（SemanticTool）链路未实测，仅有 A/B 组数据
 
 ### 2.2 LLM 原生认知状态输出（v3.2）
@@ -253,16 +253,7 @@ v2.0 破坏性干预（reduce_weight/force_reflection）导致 Δτ=-0.267。v2.
 
 ### 6.3 δ 诊断信号（8 维，v6 核心创新）
 
-| δ 名称 | 检测什么 | 触发条件 | 代码位置 |
-|---------|----------|----------|----------|
-| `δ_polarization` | U 向量分化严重 | pairwise cosine dist ≥ 0.15 | `computeDeltaPolarization` |
-| `δ_1d_mask` | 标量共识掩盖向量分歧 | R × meanDist ≥ 0.40 | `computeDelta1DMask` |
-| `δ_evidence_silence` | 证据被系统性忽视 | min/mean < 0.50 | `computeDeltaEvidenceSilence` |
-| `δ_confidence_gap` | 自报信心与 U 位置矛盾 | stated>0.8 且 dist>0.5 | `computeDeltaConfidenceGap` |
-| `δ_stance_flip` | topChoice 翻转 | ≥2 人同时翻转 | `computeDeltaStanceFlip` |
-| `δ_no_response` | 干预后无响应 | 暴露≥1 但未响应 | `computeDeltaNoResponse` |
-| `δ_concentration` | 惯性集中在少数 agent | — | `computeDeltaConcentration` |
-| `δ_consistency` | 立场变化与惯性矛盾 | — | `computeDeltaConsistency` |
+8 个 δ 信号检测"自报 vs 行为"矛盾——无需 ground truth，纯可观测信号对比（如 `δ_confidence_gap` 检测 agent 自报高信心但 U 偏离群体）。完整定义见 [computeDelta.ts](../src/lib/thermodynamics/computeDelta.ts) 与 [ROADMAP_V6.md](roadmap/ROADMAP_V6.md)。
 
 ### 6.4 检测器（6 个，认知偏差层）
 
@@ -313,7 +304,7 @@ v2.0 破坏性干预（reduce_weight/force_reflection）导致 Δτ=-0.267。v2.
 | H6: 5 维状态解耦 | Conjecture | `computeE6Decoupling` | VIF + 条件数 |
 | H9: δ 治理提升 τ | Conjecture | `computeE9CognitiveGovernance` | per-run τ Bootstrap |
 
-> **诚实标注**：H5、H6、H9 是 Conjecture（经验猜想），需 Phase 3 全量实验确认。Pilot A/B 单次验证 Δτ=+0.215，但样本量不足。
+> **诚实标注**：H5、H6、H9 是 Conjecture（经验猜想），需 Phase 3 全量实验确认。Pilot A/B 单次验证 Δτ=+0.071，但样本量不足。
 
 ---
 
@@ -321,26 +312,15 @@ v2.0 破坏性干预（reduce_weight/force_reflection）导致 Δτ=-0.267。v2.
 
 一表速览所有实验。详细设计见 [EXPERIMENT_DESIGN.md §11](research/EXPERIMENT_DESIGN.md)。
 
-| ID | 假设 | 核心问题 | 配置文件 | 当前 runs | 目标 runs |
-|----|------|----------|----------|-----------|-----------|
-| E1_stability | H1 | 认知状态 vs belief 稳定性 | `e1_stability.ts` | 1 | 30 |
-| E1_native | H1 | LLM 原生输出验证 | `e1_native.ts` | 0 | 30 |
-| E1_native_lite | H1 | 信号方向验证（精简版） | `e1_native_lite.ts` | 6 | 6 ✅ |
-| E2_evidence | H2 | Evidence 解释力 | `e2_evidence.ts` | 0 | 30 |
-| E3_inertia | H3 | Inertia → Authority 预测 | `e3_inertia.ts` | 0 | 30 |
-| E4_confidence | H4 | Confidence 预测 ΔU | `e4_confidence.ts` | 0 | 30 |
-| E5_governance | H5 | 治理中介机制 | `e5_governance.ts` | 0 | 30 |
-| E6_decoupling | H6 | 5 维状态解耦 | `e6_decoupling.ts` | 0 | 30 |
-| E7_detector | H7 | 检测器准确性 | `e7_detector.ts` | 0 | 30 |
-| E8_susceptibility | H8 | Susceptibility 中介 | `e8_susceptibility.ts` | 0 | 30 |
-| E9_smoke | — | 链路打通验证 | `e9_cognitive_governance.ts` | 6 | 6 ✅ |
-| E9_medium | H9 | 中规模验证 | `e9_cognitive_governance.ts` | 6 | 50 |
-| E9_V6_A_none | H9 | 无治理对照 | `e9_cognitive_governance.ts` | 0 | 50 |
-| E9_V6_B_delta | H9 | δ 治理 | `e9_cognitive_governance.ts` | 0 | 50 |
-| E9_V6_C_semantic | H9 | δ + SemanticTool | `e9_cognitive_governance.ts` | 0 | 50 |
-| E9_V6_D_OLD | H9 | 基线对照 | `e9_cognitive_governance.ts` | 0 | 50 |
+| 实验 | 核心问题 | 状态 |
+|------|----------|------|
+| E1_native_lite | 认知状态信号方向验证 | ✅ 6 runs |
+| E9_smoke | 链路打通验证（3 seeds × 2 modes） | ✅ 6 runs |
+| E9_medium | 中规模验证 | 🟡 6 runs |
+| E1–E8（其余） | H1–H8 主实验 | ⏳ 0 runs |
+| E9_V6_A/B/C/D | v6 四组对照（200 runs 计划） | ⏳ 待启动 |
 
-> **状态**：截至 2026-07-31，仅 E1_native_lite（6 runs）和 E9_smoke（6 runs，3 seeds × 2 modes）完成。大规模实验尚未启动。
+> **状态**：截至 2026-07-31，仅 E1_native_lite 和 E9_smoke 完成，E9_medium 有 6 runs，大规模实验尚未启动。完整 16 项配置见 [EXPERIMENT_DESIGN.md §11](research/EXPERIMENT_DESIGN.md)。
 
 ---
 
@@ -418,18 +398,7 @@ const significant = (ciLower > 0 && ciUpper > 0) || (ciLower < 0 && ciUpper < 0)
 
 ## 11. 测试覆盖矩阵
 
-28 个测试文件，630 tests passed（3 skipped，截至 2026-07-31）。
-
-### 11.1 核心模块测试
-
-| 模块 | 测试文件 | 测试数 | 覆盖重点 |
-|------|----------|--------|----------|
-| 统计检验 | `statistical-test-significance.test.ts` | 13 | Bootstrap CI、跨零判定、Bonferroni |
-| 认知检测器 | `cognitive-detectors.test.ts` | 45 | Echo Chamber cosine、Polarization |
-| δ 诊断 | `delta-diagnosis.test.ts` | 52 | 8 个 δ 的触发条件 |
-| 认知状态 | `cognitive-state.test.ts` | 35 | 5 维变量更新规则 |
-| 治理运行时 | `governance.test.ts` | 34 | applyInterventions 错误隔离 |
-| LLM providers | `llm-providers.test.ts` | 9 | detectLLMProvider 分类 |
+28 个测试文件，**630 tests passed + 3 skipped**（截至 2026-07-31），覆盖统计检验、认知检测器、δ 诊断、认知状态、治理运行时、LLM providers 等核心模块。
 
 ### 11.2 未覆盖的模块（诚实标注）
 
