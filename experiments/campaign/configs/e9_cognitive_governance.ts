@@ -130,3 +130,25 @@ export const E9_SUPPLIER_NONE = E9_V6_A_NONE;
 export const E9_SUPPLIER_BELIEF = E9_V6_B_DELTA;
 /** @deprecated 使用 E9_V6_C_SEMANTIC 替代 */
 export const E9_SUPPLIER_COGNITIVE = E9_V6_C_SEMANTIC;
+
+// ============================================================================
+// 优化任务（12 选项，区分度验证）
+// ============================================================================
+
+/** 优化任务 A 组：无治理基线（验证 τ 区分度） */
+export const E9_OPTIMIZED_A: ExperimentConfig = {
+  id: "e9_optimized_a",
+  hypothesis: "H9",
+  title: "Optimized Task Baseline — 12 options",
+  scenario: "optimized",
+  runtimeModes: ["native_cognitive"],
+  governanceMode: "none",
+  agentCount: 5,
+  maxRounds: 5,
+  runsPerSeed: 3,
+  seeds: [42, 123, 456],
+  llmModel: "deepseek-v4-flash",
+  temperature: 0.0,
+  isMain: false,
+  description: "优化任务（12 选项）无治理基线，验证 τ 区分度是否高于 university 任务",
+};

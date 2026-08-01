@@ -295,7 +295,15 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
           typeof task.content === "string" ? task.content : JSON.stringify(task.content),
           personalMemory, evalCycle, state, currentRoundOpinions
         );
-        const response = await (speaker as ObserverAgent).sendMessage(prompt);
+        // ── per-agent 门控（2026-08-01 解除冻结按需修改）：单 agent 失败跳过，不崩溃整个讨论 ──
+        // 与同步引擎 observeAgents 的 per-agent catch 一致；失败者不参与本轮，但讨论继续。
+        let response: string;
+        try {
+          response = await (speaker as ObserverAgent).sendMessage(prompt);
+        } catch (err) {
+          console.warn(`[AsyncEngine] Agent ${speaker.id} skipped (LLM call failed): ${err instanceof Error ? err.message : err}`);
+          continue;
+        }
         const parsedOpinion = this.opinionParser.parseOpinion(
           response, speaker.id, state.belief, state.confidence, evalCycle
         );
@@ -341,7 +349,13 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
         });
       }
 
-      this.totalUtterances += allOpinions.length;
+      // ── per-agent 门控补充：本周期全失败时强制推进，防止 totalUtterances 不增导致死循环 ──
+      if (allOpinions.length === 0) {
+        console.warn(`[AsyncEngine] evalCycle ${evalCycle}: 所有 agent 发言失败，强制推进一次`);
+        this.totalUtterances += 1;
+      } else {
+        this.totalUtterances += allOpinions.length;
+      }
 
       // ── 更新图和信念 ──
       this.graphBuilder.updateFromOpinions(allOpinions, evalCycle);

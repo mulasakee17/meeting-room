@@ -37,13 +37,16 @@ import { E5_GOVERNANCE } from "./configs/e5_governance";
 import { E6_DECOUPLING } from "./configs/e6_decoupling";
 import { E7_DETECTOR } from "./configs/e7_detector";
 import { E8_SUSCEPTIBILITY } from "./configs/e8_susceptibility";
-import { E9_ALL } from "./configs/e9_cognitive_governance";
+import { E9_ALL, E9_OPTIMIZED_A } from "./configs/e9_cognitive_governance";
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
 const OUTPUT_DIR = path.resolve(__dirname, "output");
+
+/** 默认 token 预算（成本门控）——DeepSeek 约 ¥0.07/1K 输出 token，500K ≈ ¥35 */
+const DEFAULT_TOKEN_BUDGET = 500_000;
 
 /** 主实验列表（按 Priority 排序） */
 const MAIN_EXPERIMENTS: ExperimentConfig[] = [
@@ -58,6 +61,8 @@ const MAIN_EXPERIMENTS: ExperimentConfig[] = [
   E8_SUSCEPTIBILITY,
   // Priority 2: Cognitive State Driven Governance (Phase 4B)
   ...E9_ALL,
+  // 优化任务（12 选项，区分度验证）——isMain=false，仅按需跑
+  E9_OPTIMIZED_A,
   // Priority 3: Detector Validation
   E3_INERTIA,
   E7_DETECTOR,
@@ -85,6 +90,7 @@ interface CliOptions {
   verbose: boolean;
   seeds?: number[];
   model?: string;
+  budget?: number;  // token 预算上限（成本门控，超过停止后续实验）
 }
 
 function parseArgs(): CliOptions {
@@ -124,6 +130,9 @@ function parseArgs(): CliOptions {
       case "--seeds":
         opts.seeds = args[++i]?.split(",").map(Number);
         break;
+      case "--budget":
+        opts.budget = parseInt(args[++i], 10);
+        break;
       case "--model":
         opts.model = args[++i];
         break;
@@ -144,6 +153,11 @@ async function runExperiments(
 ): Promise<Map<string, RawRunData[]>> {
   const allData = new Map<string, RawRunData[]>();
 
+  // ── 预算门控（成本防护）：累计 token，超过预算停止后续实验 ──
+  // 使用方式：run_all --experiment=e9_optimized_a --budget=100000（token 上限）
+  const budget = opts.budget ?? DEFAULT_TOKEN_BUDGET;
+  let totalTokens = 0;
+
   for (const config of configs) {
     // 应用 CLI 覆盖
     let finalConfig = { ...config };
@@ -156,6 +170,7 @@ async function runExperiments(
     console.log(`  Modes: ${config.runtimeModes.join(", ")}`);
     console.log(`  Seeds: ${config.seeds.join(", ")}`);
     console.log(`  Runs per seed: ${config.runsPerSeed}`);
+    console.log(`  Token budget: ${budget.toLocaleString()}（已用 ${totalTokens.toLocaleString()}）`);
     console.log(`${"=".repeat(60)}`);
 
     const data = await runExperiment(finalConfig, OUTPUT_DIR, {
@@ -164,7 +179,20 @@ async function runExperiments(
     });
     allData.set(config.id, data);
 
-    console.log(`  Completed ${config.id}: ${data.length} runs`);
+    // 累计 token 消耗（从每个 run 的 tokenUsage 统计）
+    const configTokens = data.reduce(
+      (s, r) => s + ((r as any).tokenUsage?.totalTokens ?? 0),
+      0,
+    );
+    totalTokens += configTokens;
+    console.log(`  Completed ${config.id}: ${data.length} runs | 消耗 ${configTokens.toLocaleString()} token | 累计 ${totalTokens.toLocaleString()}/${budget.toLocaleString()}`);
+
+    // 预算门控：超过预算 → 停止后续实验，防止费用失控
+    if (totalTokens > budget) {
+      console.warn(`\n⚠️ [预算门控] 已用 ${totalTokens.toLocaleString()} token，超过预算 ${budget.toLocaleString()}——停止后续实验。`);
+      console.warn(`  如需继续，请用 --budget 提高上限。`);
+      break;
+    }
   }
 
   return allData;

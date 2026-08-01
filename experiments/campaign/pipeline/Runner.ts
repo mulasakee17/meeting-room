@@ -60,6 +60,10 @@ function loadScenario(scenarioId: string): { task: any; dataDir: string } {
       const { TASK_UNIVERSITY } = require("../tasks/task_university");
       return { task: TASK_UNIVERSITY, dataDir: "data_university" };
     }
+    case "optimized": {
+      const { TASK_OPTIMIZED } = require("../tasks/task_optimized");
+      return { task: TASK_OPTIMIZED, dataDir: "data_optimized" };
+    }
     default:
       throw new Error(`Unknown scenario: ${scenarioId}`);
   }
