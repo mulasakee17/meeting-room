@@ -1,6 +1,10 @@
 /**
  * 热力学终止决策器
  *
+ * ⛔ **FROZEN (2026-08-01)** — 此模块已冻结，不再修改。
+ * 冻结原因：仅被已冻结的 asyncEngine.ts（fraud 系列）使用，v6 主线不调用。
+ * 冻结规则：E9 v6 实验不使用此模块。如需修改，必须先解除冻结并说明理由。
+ *
  * **@deprecated for v6 path**（v0.4.3 标注）
  * 此模块仅被 `asyncEngine.ts`（fraud 系列实验）使用。
  * v6 的 `NativeCognitiveEngine` 走 sync 路径，使用固定 `maxRounds=5` 硬上限，

@@ -1,6 +1,11 @@
 /**
  * 异步讨论引擎
  *
+ * ⛔ **FROZEN (2026-08-01)** — 此模块已冻结，不再修改。
+ * 冻结原因：非 v6 主线。v6 主线 = NativeCognitiveEngine + MeasurementLayer + computeDelta。
+ * 用途：仅 fraud 系列实验（experiments/v2/run_malicious.ts、run_async_ab.ts）向后兼容。
+ * 冻结规则：E9 v6 实验不使用此模块。如需修改，必须先解除冻结并说明理由。
+ *
  * 与 DiscussionEngine（同步全员发言）不同，AsyncDiscussionEngine 采用：
  * 1. 异步发言：每轮只有部分 agent 发言（内容驱动或随机概率）
  * 2. 热力学自适应终止：F 分解决定讨论何时结束（非固定轮次）
