@@ -1,4 +1,4 @@
-# 基于社会热力学的LLM多智能体认知治理系统的研究与应用
+# 基于社会热力学与认知状态一致性诊断的 LLM 多智能体认知治理框架
 
 **贺孟元**（松山湖未来学校科创班）
 
@@ -6,189 +6,209 @@
 
 ## 摘要
 
-大语言模型（LLM）多智能体系统在协作决策中存在回声室、权威偏差、群体极化等集体失败风险，但现有治理工具仅关注安全层，缺乏对认知层偏差的运行时检测手段。Cemri等提出的MAST失败分类体系标注了14种失败模式，但将检测与干预留作未来工作[1]。针对这一空白，本文提出基于社会热力学的认知治理框架：定义四维状态变量（Kuramoto序参量 $R$、归一化温度 $T$、Shannon熵 $H$、Helmholtz型自由能 $F$），设计七种偏差检测器（4 经典 + 3 MAST 对齐）与基于 $F$ 分解的干预排序策略，并提出一种五因子加权的发言意愿公式实现去中心化的内容驱动发言选择。在169次闭环实验（Crisis 80 + Supplier 89；573 个总 JSON 文件含断裂环路 provenance）中，系统发现三个反直觉结论：共识水平与决策质量几乎不相关（$r \approx -0.10$，$p=0.20$，不显著，探索性观察）；打破角色-信息一致性（$d=1.44$）优于讨论内治理干预（$d=0.92$）；干预次数与决策质量负相关（$r=-0.55$），存在依赖链级联反火风险。实验表明，该框架能够以零额外LLM调用的代价实现运行时偏差检测，为多智能体认知治理提供了可工程化的信号基础。
+大语言模型（LLM）多智能体系统在协作决策中存在回声室、权威偏差、群体极化等集体失败风险，但现有治理工具仅关注安全层，缺乏对认知层偏差的运行时检测手段。MAST 失败分类体系标注了 14 种失败模式，但将检测与干预留作未来工作[1]。针对这一空白，本文提出 v6 认知治理框架：让 LLM 直接输出**五维认知状态**（效用、证据、惯性、信心、易感性），系统通过**一致性诊断**（δ 信号，检测"自报 vs 行为"矛盾、无需 ground truth）和**非破坏性干预**（改变信息流而非信念权重）实现运行时治理，并以**社会热力学测量**（解耦的 $F=U-T\cdot S$）提供集体状态信号——全程分层成本：确定性数学处理绝大多数轮次（**设计目标约 95%**，零额外 LLM 调用；触发率待 E9 实测），LLM 仅在异常轮次作为语义传感器（SemanticTool）兜底。
+
+框架的历史方法学验证来自 169 次闭环实验（Crisis 80 + Supplier 89）：共识水平与决策质量几乎不相关（$r\approx-0.10$，$p=0.20$，不显著，探索性观察）——**质疑**"收敛即正确"的常见假设；打破角色-信息一致性（$d=1.44$）优于讨论内治理（$d=0.92$）；干预次数与决策质量负相关（$r=-0.55$），存在依赖链反火风险。当前 v6 路径的 Pilot A/B 对照（单次，seed 42）验证了"δ 诊断→干预"链路打通（B 组 5 轮、16 次干预），全量实验（E9，200 runs）待执行。本文为多智能体认知治理提供了可工程化、可复现、诚实标注证据边界的信号基础。
 
 ---
 
 ## 1. 背景介绍
 
-LLM多智能体框架（AutoGen[16]、CrewAI、LangGraph等）越来越多地用于协调团队完成复杂决策。在这一过程中，它们继承了社会心理学研究中长期关注的集体失败模式：回声室效应、权威偏差、群体极化和过早共识。MAST分类体系从七个框架的1600余条对话轨迹中标注了14种失败模式，其中智能体间对齐失败（FC2）是最大的单一类别[1]，但MAST明确将检测与干预列为未来工作。与此同时，生产级治理工具——微软Agent Governance Toolkit、NVIDIA OpenShell、OWASP Agentic Top 10[2]——聚焦于安全边界（未授权工具调用、预算超限、提示注入），认知层（在讨论过程中检测群体是否正在滑向偏差性共识）在学术分类和生产工具中均未得到解决。
+LLM 多智能体框架（AutoGen[16]、CrewAI、LangGraph 等）越来越多地用于协调团队完成复杂决策。在这一过程中，它们继承了社会心理学研究中长期关注的集体失败模式：回声室效应、权威偏差、群体极化和过早共识。MAST 分类体系从七个框架的 1600 余条对话轨迹中标注了 14 种失败模式，其中智能体间对齐失败（FC2）是最大的单一类别[1]，但 MAST 明确将检测与干预列为未来工作。与此同时，生产级治理工具——微软 Agent Governance Toolkit、NVIDIA OpenShell、OWASP Agentic Top 10[2]——聚焦于安全边界（未授权工具调用、预算超限、提示注入），认知层（在讨论过程中检测群体是否正在滑向偏差性共识）在学术分类和生产工具中均未得到解决。
 
-本文针对上述两个具体空白：（1）缺乏面向讨论健康的运行时相变信号；（2）MAST目录中三种FC2失败模式（FM-2.4信息隐瞒、FM-2.5输入忽视、FM-2.6推理-行为不匹配）尚无检测器实现。我们提出社会热力学框架，将统计物理相变概念工程化为可运行的治理信号，并设计了一种五因子加权的发言意愿公式实现去中心化的发言选择。
+本文针对上述空白提出 **v6 认知治理框架**，其核心设计决策与已有工作的差异在于：
+1. **状态表示**：不依赖单一标量 belief，而是让 LLM 直接输出五维认知状态——消除"系统从行为反推认知"的循环论证。
+2. **检测方式**：用**一致性诊断**（对比可观测信号之间的矛盾）替代启发式阈值判断——无需 ground truth。
+3. **干预原则**：改变信息流而非信念权重——避免破坏性干预的级联反火。
 
 ---
 
 ## 2. 相关研究
 
-本文的工作涉及三个技术领域：观点动力学的统计物理建模（§2.1）、多智能体偏差检测与失败分类（§2.2）、以及多智能体发言选择机制（§2.3）。
+本文的工作涉及三个技术领域：观点动力学的统计物理建模（§2.1）、多智能体偏差检测与失败分类（§2.2）、以及多智能体认知状态与发言选择机制（§2.3）。
 
 ### 2.1 观点动力学的统计物理建模
 
-将统计物理模型应用于观点动力学已有较长的研究历史。Pluchino等（2004）首次将Kuramoto模型适配到观点动力学中[3]，Pradhan和Ujjwal（2025）进一步发现其变体在双极化和共识之间存在爆炸性相变，多样性群体更易达成共识[4]——直接支撑了本文基于 $R$ 的共识检测设计。在热力学概念的社会化应用方面，Tsekov提出"社会热力学2.0"模型[5]，López-Corona等将Helmholtz自由能应用于社会合作可持续性分析[6]，Tomé等将观点形成纳入随机热力学框架[7]，Galam通过零温Ising模型分析回声室与随机极化的形成[8]。上述工作的共同特征是将相变量视为描述性量，未连接到可部署的运行时检测器；本文将相信号工程化为闭环的检测-干预-评估周期。
+将统计物理模型应用于观点动力学已有较长的研究历史。Pluchino 等（2004）首次将 Kuramoto 模型适配到观点动力学中[3]，Pradhan 和 Ujjwal（2025）进一步发现其变体在双极化和共识之间存在爆炸性相变[4]——支撑了本文基于 $R$ 的共识检测设计。López-Corona 等将 Helmholtz 自由能应用于社会合作分析[6]，Tomé 等将观点形成纳入随机热力学框架[7]，Galam 通过零温 Ising 模型分析回声室与随机极化[8]。上述工作的共同特征是将相变量视为描述性量，未连接到可部署的运行时检测器；本文的差异在于（i）将相变量工程化为闭环检测-干预-评估周期，（ii）基于五维认知状态而非单一标量计算。
 
 ### 2.2 多智能体偏差检测与失败分类
 
-MAST分类是描述性的，检测和干预被明确推迟为未来工作[1]。本文的治理运行时为其中三种FC2模式实现了检测器——FM-2.4（信息隐瞒）、FM-2.5（输入忽视）、FM-2.6（推理-行为不匹配）——迈出了从分类到工具的第一步。在认知偏差编程方面，Liu等的CoBRA工具包发现自然语言描述无法跨模型一致地控制偏差[9]，促使本文采用数学化、可解释的检测指标；Nudo等发现LLM智能体在社交互动中系统性放大极化信号的"生成性夸张"现象[10]。
+MAST 分类是描述性的，检测和干预被明确推迟为未来工作[1]。在认知偏差编程方面，Liu 等的 CoBRA 发现自然语言描述无法跨模型一致地控制偏差[9]，促使本文采用数学化、可解释的检测指标；Nudo 等发现 LLM 智能体系统性放大极化信号的"生成性夸张"[10]。
 
-在共识与决策质量关系方面，Du等将多智能体辩论引入为一种假设共识收敛即正确性的范式[11]，而本文发现共识（Kendall $\tau$）与决策质量几乎不相关（$r \approx -0.10$，$p=0.20$，不显著，探索性观察），构成对该假设的直接实证反例。Cui等在Free-MAD框架中独立质疑了"共识=正确性"假设[12]，Riedl基于偏信息分解（PID）的信息论框架区分真实协同与虚假时间耦合[13]，为本文 $R$ 基共识度量的局限提供了替代方案。Jin等在同行评审模拟中量化了权威偏差（占决策方差的37.1%）[14]，Liang等发现多智能体辩论中的思维退化（DoT）现象——LLM一旦建立信心便无法产生新视角[15]，为 `force_reflection` 干预在锁定立场上的失效提供了理论解释。
+在共识与决策质量关系方面，Du 等引入多智能体辩论为"共识收敛即正确"的范式[11]，而本文的观察（$r\approx-0.10$，$p=0.20$，不显著，探索性）**质疑**该假设的普适性。Cui 等的 Free-MAD 独立质疑了"共识=正确性"[12]，Riedl 的 PID 框架为 $R$ 基共识度量的局限提供了替代[13]。Jin 等量化了权威偏差（占决策方差 37.1%）[14]，Liang 等发现思维退化（DoT）[15]。
 
-### 2.3 多智能体发言选择机制
+### 2.3 认知状态与发言选择机制
 
-发言选择是多方LLM讨论中的核心问题。AutoGen的SelectorGroupChat采用集中式LLM选择器：模型读取完整对话历史后输出下一发言者名称[16]，每轮发言选择需一次额外LLM调用。LangChain的多智能体竞价机制采用去中心化拍卖：每个智能体用LLM输出一个相关性整数出价，最高者发言。
-
-Yang等（2026）提出的TBS框架引入了"发言意愿"作为智能体内部状态之一，但通过编排器（orchestrator）协调竞争性发言意图，而非闭式数学公式[17]。本文提出的五因子加权发言意愿公式在三个方面与上述工作区分：（i）完全去中心化——每个智能体独立计算分数；（ii）数学可分析——闭式表达式允许性质证明；（iii）零额外LLM成本——所有因子从维护的状态变量计算。
+发言选择是多方 LLM 讨论的核心问题。AutoGen 的 SelectorGroupChat 用集中式 LLM 选择器（每轮一次额外 LLM 调用）[16]，LangChain 用去中心化竞价。本文历史路径提出的五因子发言意愿公式（完全去中心化、闭式可分析、零额外 LLM 成本）是这一方向的贡献之一，但在 v6 主线中，**发言选择不是核心**——v6 采用同步固定轮次，聚焦于治理而非发言机制。本文与 TBS 框架[17]在"认知状态驱动"上的差异在于：v6 让 LLM 直接输出认知状态，而非由编排器协调。
 
 ---
 
-## 3. 算法与系统设计
+## 3. 系统设计：v6 认知治理框架
 
-### 3.1 系统总体架构
+### 3.1 总体架构
 
-SwarmAlpha认知治理运行时实现五阶段循环：**观察→建模→检测→干预→评估**。LLM仅执行感知功能——从自然语言输出中提取结构化信念，所有治理逻辑均为基于信念向量的确定性数学运算。
+SwarmAlpha v6 实现五阶段循环：**观察→建模→检测→干预→评估**。与早期版本（标量 belief + 规则检测器）不同，v6 的核心是：
 
-### 3.2 热力学状态变量
+```
+LLM（感知）→ 五维认知状态 → δ 一致性诊断 → 非破坏性干预 → 热力学测量
+     ↑                                                          ↓
+     └──────────────── LLM 语义传感器（SemanticTool，可选） ←────┘
+```
 
-将智能体的结构化信念输出 $b_i \in [-1, 1]$ 视为一个集体，定义四个汇总变量。信念到相位的映射采用半圆映射：$\theta_i = (\pi/2) \cdot b_i$，使 $\theta \in [-\pi/2, \pi/2]$，确保完美极化时 $R \approx 0$。
+- **确定性优先**：设计目标约 95% 轮次的检测/治理由确定性数学处理（零额外 LLM 调用；实际触发率待 E9 实测）
+- **LLM 兜底**：仅在 δ 诊断的异常轮次，触发 SemanticTool（LLM 作为语义传感器，非决策者）
 
-**表1. 热力学状态变量定义**
+### 3.2 五维认知状态（LLM 原生输出）
 
-| 符号 | 定义 | 含义 |
-|------|------|------|
-| $R = \|\sum_i e^{i\theta_i}\| / N$ | Kuramoto序参量 | 方向性共识（$R=1$：完美对齐；$R \to 0$：平衡对立） |
-| $T = \sigma_{\text{pop}}(b)$ | 归一化温度 | 信念的总体标准差 |
-| $H = H_{\text{5bins}}(b) / \log_2 5$ | 归一化Shannon熵 | 五等宽区间上的分布不确定性 |
-| $F = (1-R) + T \cdot H$ | 社会自由能 | 总无序的结构性与热性分量分解 |
+让 LLM 直接输出五维认知状态，系统只计算其中两维：
 
-自由能 $F$ 将无序分解为两个概念上不同的来源：$(1-R)$ 捕获结构性无序（信念向量在相位圆上的位置错位），$T \cdot H$ 捕获热性无序（弥散与分布不确定性的乘积）。需要指出，这些变量并非关于语言模型中物理实在的断言，而应理解为**操作性启发式**：为治理决策提供比纯文本分析更及时信号的粗粒度汇总统计量。
+| 维度 | 符号 | 来源 | 含义 |
+|------|------|------|------|
+| 效用 | $U$ | LLM 原生输出 | 对选项的偏好向量 |
+| 证据 | $E$ | LLM 原生输出 | 信息覆盖度/质量/多样性 |
+| 信心 | $C$ | LLM 原生输出 | 自报信心（0-100） |
+| 惯性 | $I$ | 系统计算 | 认知改变的阻力（角色+反驳+衰减） |
+| 易感性 | $\Lambda$ | 系统计算 | $(1-I)(1-C)$，暴露后响应概率 |
 
-> **⚠️ 2026-07-28 实证修订（正交性证伪）。**
->
-> 上述"正交"声明是概念性断言，从未经统计验证。对 $N=259$ 个样本（8 个数据源：data_fraud ×6、crisis、supplier）的实证分析得到 $r((1-R),\, T \cdot H) = 0.9175$（$p < 10^{-6}$），表明两个分量**强正相关**，而非正交。
->
-> **根因**：在 asyncEngine 实现中，$R$、$T$、$H$ 均派生自同一组标量 `beliefs[]` 数组，是同一底层量——"轮内跨 agent 信念分散度"——的不同变换：$R$ 为角度对齐（分散度的逆），$T$ 为归一化总体标准差（分散度），$H$ 为五等宽直方图 Shannon 熵（分散度）。
->
-> **对声明的影响**：
-> 1. $F$ 应定位为*工程启发式综合诊断指标*，而非严格的热力学自由能（SOT.md 已声明）。
-> 2. "F 分解干预排序"在 A/B 对照实验中已证伪（$d_z = -0.354$；见 LIMITATIONS.md §21）。
-> 3. "3D 热力学状态空间"叙事不成立——$R/T/H$ 在 $N=5$ 群体中退化为 1 个有效维度（回归：$F \approx 0.019 + 2.014(1-R)$，$R^2 = 0.955$）。
-> 4. TerminationDecider 的淬火态检测（通过独立 AND 逻辑阈值使用 $R+T+H$）仍然有效，因为它依赖 $T$ 和 $H$ 的*相对变化*而非绝对值独立性。
->
-> **重新框架**：强耦合本身是一个发现——它揭示了 MAS 小群体与物理系统的本质差异：物理系统中 $R/T/H$ 是独立热力学变量，但在 MAS 中 DeGroot 信念更新机制导致对齐与收敛同步发生，三个指标退化为一个有效维度。
->
-> 分析脚本：`experiments/v2/analyze_thermo_correlation.ts`
+**设计动机**：早期版本让 LLM 输出 belief/confidence，系统 post-hoc 反推认知状态——存在循环论证。v6 让 LLM 直接自报效用、证据覆盖度、证据质量、信心，系统计算惯性、易感性，以及证据多样性（`cognitiveState.ts:524` 从 evidence 类别数推导）——**减少但未完全消除系统后处理**。
 
-### 3.3 偏差检测器组
+### 3.3 δ 一致性诊断（无需 ground truth）
 
-系统包含七种偏差检测器。四种经典检测器针对回声室、权威偏差、极化和过早共识，信号分别基于内容Jaccard相似度、引用集中度、双峰系数和轮次加权共识水平。三种MAST对齐检测器针对FM-2.4（信息隐瞒：≥2智能体有证据而≥1为空）、FM-2.5（输入忽视：被引用≥2次但未回引）和FM-2.6（推理-行为不匹配：rank-1项的belief非最大值且差值>0.3）。
+传统检测器需要定义"什么是异常"（需 ground truth）。v6 的 δ 诊断**对比可观测信号之间的矛盾**，无需 ground truth：
 
-### 3.4 基于F分解的干预排序
+| δ 信号 | 检测的矛盾 |
+|--------|-----------|
+| $\delta_{polarization}$ | 效用向量分化严重 |
+| $\delta_{1D\_mask}$ | 标量共识掩盖向量分歧 |
+| $\delta_{evidence\_silence}$ | 证据被系统性忽视 |
+| $\delta_{confidence\_gap}$ | 自报高信心但效用偏离群体 |
+| $\delta_{stance\_flip}$ | 立场翻转 |
+| $\delta_{no\_response}$ | 干预后无响应 |
+| $\delta_{concentration}$ | 惯性过度集中 |
+| $\delta_{consistency}$ | 立场变化与惯性矛盾 |
 
-当多个检测器同时触发时，干预通过分解 $F$ 而非固定顺序来排序优先级：`force_reflection`针对热性无序（$T \cdot (1-\text{structural})$），`reduce_weight`抑制高噪声智能体（$T \cdot H$），`introduce_diversity`注入替代信息（$R \cdot (1-H)$），`continue_discussion`延长早期讨论（$R \cdot (1-H) \cdot (1-F)$）。其中后两种因实证效果差（有效率分别为4.7%和0%）而默认禁用。
+δ 信号自适应阈值：`effective = base + (1−minConfidence) × safetyMargin`——置信度越低，阈值越保守。**Pilot 验证**：B 组首轮即触发 $\delta_{polarization}$（pairwise cosine 0.643 ≥ 0.15）和 $\delta_{1D\_mask}$（标量 R=0.68 但向量分歧 0.643），证明链路有效。
 
-### 3.5 内容驱动发言意愿公式
+### 3.4 非破坏性干预
 
-本文提出一种五因子加权的发言意愿公式，用于在异步讨论中实现去中心化的内容驱动发言选择。对智能体 $i$，其原始发言意愿分数定义为：
+基于历史破坏性干预（reduce_weight、force_reflection）实测有害（$\Delta\tau=-0.267$，见 §4.1）的教训，v6 采用改变**信息流**而非**信念权重**的干预：
 
-$$W_i = 0.6 \cdot E_i + \phi(\Delta b_i) + \psi(b_i, \bar{b}) + 0.3 \cdot D_i - 0.5 \cdot P_i$$
+- **inject_evidence**：向讨论注入被忽略的私有证据（不压制任何人）
+- **rebalance_attention**：调整发言顺序，让被忽视的 agent 先发言
+- **shuffle_knowledge**：结构性重排知识（历史最强干预，$d=1.44$）
 
-其中 $E_i \in [0,1]$ 为独有信息曝光度（独有关键词在讨论文本中的覆盖率，权重0.6）；$\phi(\Delta b_i)$ 为信念变化分档加分（$\Delta b > 0.3$ 加0.4，$> 0.1$ 加0.2）；$\psi(b_i, \bar{b})$ 为共识偏离分档加分（$\|b-\bar{b}\| > 0.4$ 加0.4，$> 0.2$ 加0.2）；$D_i \in \{0,1\}$ 为依赖触发（前置依赖信息已出现，加0.3）；$P_i \in \{0,1\}$ 为刚发过言惩罚（最近2周期内发过言，减0.5）。原始分数通过 $w_i = (\tanh(W_i) + 1) / 2$ 归一化到 $[0,1]$，再由双阈值门控：$w_i \geq 0.82$ 必须发言，$0.40 \leq w_i < 0.82$ 加权随机发言（概率 $p = (w_i - 0.40) / 0.42$），$w_i < 0.40$ 沉默；若所有智能体均未通过阈值，选择意愿最高者发言确保讨论不停滞。该公式完全去中心化、闭式可数学分析、零额外LLM成本。
+**证据状态**：⚠️ 设计方向由历史失败支持；v2.1 干预尚无统计验证（smoke test $N=6$，$\Delta\tau=0.000$，早期 +0.533 已撤回）。
 
-### 3.6 热力学终止判定
+### 3.5 SemanticTool（LLM 语义传感器）
 
-异步引擎在热力学状态指示结晶时终止讨论。主要判据为 $R \geq 0.85$，同时设置40条发言的硬上限。终止判定器基于 $(R, T, H)$ 轨迹将状态分类为结晶态（真收敛）、淬火态（伪收敛）、混沌态（发散）和稳定态，解决了MAST失败模式FM-1.5（"不知何时停止"）。
+将 LLM 作为数学引擎手中的"语义传感器"（不是决策者）：证据语义去重（evidence_dedup）、信息缺口分析（gap_analysis）、干预文本生成。**分层成本架构**：δ 诊断负责约 95% 轮次（零成本）；仅异常轮次触发 SemanticTool（按需付费）。**证据状态**：🔧 代码完整，C 组链路待 E9 实测。
 
----
+### 3.6 热力学测量与解耦
 
-## 4. 实验结果及分析
+**旧定义**（历史）：$F=(1-R)+T\cdot H$，其中 $R$ 为 Kuramoto 序参量、$T$ 为总体标准差、$H$ 为 Shannon 熵。
 
-### 4.1 实验设置
+**⚠️ 实证证伪（2026-07-28）**：旧 $F$ 两分量强相关 $r=0.9175$，且 $R/T/H$ 由回归 $F\approx0.019+2.014(1-R)$（$R^2=0.955$）显示**退化为 1 个有效维度**——旧标量 belief 路径下三个"热力学变量"是同一底层量的不同变换。
 
-**任务。** 两种隐藏档案排序任务。*危机响应*（困难任务，基线 $\tau = 0.41$）：五名智能体在五个维度上排序五个危机区域，每人持有2-3个维度的私有信息。*供应商选择*（中等任务，基线 $\tau = 0.68$）：五名智能体排序五家供应商，每人持有其领域维度的私有数据加1-2个重叠维度的部分数据。
+**v6 修正**：基于五维认知状态向量，改用 $F = U - T\cdot S$（U=效用 L1 范数，T=时序波动，S=分布熵）。$U$ 与 $T\cdot S$ 乘积解耦（$|r|=0.274$，[THEORY.md §0.1]），相较旧路径 $r=0.917$ 大幅改善；**但需诚实标注：$U$ 与 $S$ 分量间仍有耦合（$r=-0.79$）——解耦是部分的，非完全独立**。**重构**：旧路径的塌缩本身是一个发现——MAS 小群体中 DeGroot 信念更新使对齐与收敛同步发生，与物理系统的独立热力学变量不同。
 
-**条件。** `none`（无检测无干预）、`full`（全部检测器激活，应用干预）、`shuffle`（智能体私有知识旋转+2位，角色标签不变——打破角色-信息一致性但不改变信息内容）。
+### 3.7 历史路径（对比基准）
 
-**基础设施。** 模型：DeepSeek-V3，温度0.2。五名智能体。三轮（同步引擎）或最多40条发言（异步引擎）。危机任务 $n=24$ 每条件（注：`full` 目录实有 32 个 JSON 文件，含 8 个 `full_fixed` 补充运行；主分析按 `ablation` 字段过滤使用 $n=24$），供应商任务 $n=30$ 每条件（shuffle 组 $n=29$）。共169次闭环实验（Crisis 80 + Supplier 89）为主证据；573 个总 JSON 文件（v2:487 + lunar:85 + .claude:1）含断裂环路 provenance。统计方法采用Kendall $\tau$-b、置换检验（$10^4$次重排，种子42）、Cohen's $d$ 和Benjamini-Hochberg FDR校正。
-
-### 4.2 主要发现：结构重排优于过程治理
-
-**危机任务（困难，$n=24$ 每条件）：**
-
-| 条件 | $\tau$（$\mu \pm \sigma$） | $d$ vs. none | $p$ | 功效 |
-|------|---------------------------|--------------|-----|------|
-| `none` | $0.408 \pm 0.182$ | — | — | — |
-| `full` | $0.617 \pm 0.263$ | +0.92 | 0.0038 | 88% |
-| `shuffle` | $0.717 \pm 0.243$ | +1.44 | <0.001 | 100% |
-
-**供应商任务（中等，$n=30$ 每条件）：**
-
-| 条件 | $\tau$（$\mu \pm \sigma$） | $d$ vs. none | $p$ | 功效 |
-|------|---------------------------|--------------|-----|------|
-| `none` | $0.680 \pm 0.186$ | — | — | — |
-| `full` | $0.767 \pm 0.183$ | +0.47 | 0.086 | 43% |
-| `shuffle` | $0.697 \pm 0.204$ | +0.09 | 0.78 | 6% |
-
-在困难任务上，打破角色-信息一致性产生大效应（$d=1.44$），超过讨论内治理的效果（$d=0.92$）。在中等任务上，shuffle因天花板效应而效果微弱。这一任务依赖性表明：结构重排的效果随任务难度递增，集体讨论质量的相边界由角色与信息的配对方式结构性预设。
-
-### 4.3 共识-质量弱相关（探索性观察，p=0.20 不显著）
-
-在所有条件和两任务中（$N=169$），最终共识水平（$R$）与最终决策质量（$\tau$）的Pearson相关系数为 $r \approx -0.10$（$p=0.20$，统计不显著）。该相关系数接近零且方向轻微负向，**本文将其降级为探索性观察而非确认性发现**。Crisis 子集 $r \approx -0.05$（$p=0.66$，$n=80$），Supplier 子集 $r \approx -0.03$（$p=0.78$，$n=89$）。该观察表明共识水平不能作为正确性的可靠代理：智能体可以在信念标准差低于0.05的情况下产生错误排名；反之，高质量排名可从分歧较大的讨论中产生。$R$ 衡量的是方向一致性而非方向正确性——DeGroot模型关于"收敛即正确"的假设在本设置中未获实证支持。
-
-### 4.4 干预效果：反火风险
-
-在一个 rogue-agent 场景中（$N=10$），干预次数与决策质量的相关系数为 $r=-0.55$。成功组（$\tau \geq 0.6$）平均4.0次干预，失败组（$\tau < 0.4$）平均9.5次。此结果被视为探索性信号而非因果断言，因为混杂明显：更困难的场景同时触发更多检测器和更低的决策质量。
-
-同一场景中，依赖链最下游的智能体 $a_2$ 被命中24次——对 rogue 智能体 $a_1$ 的 `reduce_weight` 改变了 $a_2$ 的发言模式，使其类似回声室重复，进而触发对 $a_2$ 的 `reduce_weight`。这揭示了基于症状检测的结构性脆弱：当干预改变症状而非原因时，可在依赖链中级联传播。
-
-### 4.5 发言意愿公式的初步验证
-
-异步引擎实验（fraud 欺诈调查任务，每组 $n=10$）对比了三种配置：A组（同步引擎基线，固定五轮）$\tau=0.88 \pm 0.10$，发言25.0次；B组（异步 content_driven 发言意愿公式 + 固定5轮终止）$\tau=0.42 \pm 0.22$，发言12.2次；C组（异步 content_driven + 热力学自适应终止）$\tau=0.64 \pm 0.21$，发言18.6次。C组显著优于B组（$d=1.09$，$p=0.028$，置换检验），证明热力学自适应终止相对于固定轮次的优越性——C组允许讨论持续到系统达到结晶态（平均18.6次发言 vs B组固定截断于12.2次），从而完成信息整合；B组的低 $\tau$ 源于固定轮次在信息链未完成时强行截断。content_driven 模式通过依赖触发因子确保了关键信息链的连贯性，避免了早期 random_prob 模式中关键智能体沉默导致的依赖链断裂。但A组基线过高（$\tau=0.88$）提示 fraud 任务对同步引擎可能过于简单，存在天花板效应；C组跨模型验证（智谱 glm-4-flash）$\tau=0.680 \pm 0.253$（+6.3% vs DeepSeek，差异较小），方向一致。该组实验为发言意愿公式提供了机制验证，扩样至 $n=30$ 后方可作正式统计结论。
-
-> **数据 provenance**：C 组经历三阶段阈值标定（旧阈值 $\tau=0.34$ → 新阈值 $\tau=0.46$ → beliefShift 修复后 $\tau=0.64$），当前权威值取自 `data_fraud/` 目录（2026-07-19 后）。三阶段数据分别备份于 `data_fraud_old_thresholds/` 和 `data_fraud_pre_beliefshift_fix/` 以备溯源。
+早期版本的两项贡献在当前 v6 主线中降级为历史/对比基准：
+- **七种偏差检测器**（4 经典 + 3 MAST 对齐）：v6 由 δ 诊断替代为主检测机制；3 个 MAST 检测器 0 次实证触发，属"实现+单元测试"级贡献
+- **五因子发言意愿公式**：异步路径（asyncEngine，已冻结）的历史贡献，v6 同步路径不使用
 
 ---
 
-## 5. 总结与展望
+## 4. 实验与证据
 
-本文将社会热力学——从结构化信念输出中确定性计算的四维状态空间 $(R, T, H, F)$——工程化为LLM多智能体系统的运行时治理信号，结合七种偏差检测器（4 经典 + 3 MAST 对齐）、基于自由能分解排序的干预策略、五因子加权发言意愿公式和热力学结晶终止准则。169次闭环实验（Crisis 80 + Supplier 89；573 个总 JSON 文件含 provenance）揭示了三个具有系统设计意义的发现：共识与正确性不相关（$r \approx -0.10$，$p=0.20$，不显著，探索性观察）；结构重排可优于过程治理（$d=1.44$ vs $0.92$）；干预存在依赖链级联反火风险（$r=-0.55$）。
+> ⚠️ 两套证据，来源不同时代：**§4.1 是历史方法学验证（旧路径），§4.2 是当前 v6 实验（Pilot，全量待跑）**——论文不以历史证据冒充 v6 的证据。
 
-本文的局限包括：（1）所有闭环实验基于单一模型（DeepSeek-V3），跨模型普适性未经验证——Qwen 3.7-plus 的 Crisis 30 次试点实验最初揭示治理效应方向不一致（DeepSeek +0.208 vs Qwen -0.020），但**深度核查（2026-07-27）发现此比较被代码版本差异混淆**：DeepSeek 数据于 2026-07-14 跑（修复前旧代码，无 codeVersion），Qwen 数据于 2026-07-22 跑（codeVersion="2026-07-19"，D1-D4 修复 + B1-B8 升级后新代码），两者 consensusLevel 公式不同（旧 1-2·std vs 新 Kuramoto R）、检测器触发行为不同（DeepSeek 触发 polarization+echo_chamber，Qwen 触发 premature_consensus）、干预次数不同（5 次 vs 1 次），**代码版本是未控制的混淆变量，方向不一致无法归因于模型差异**；此试点降级为探索性观察，需控制实验（同代码版本重跑两模型）才能得出跨模型结论；主证据 $d=0.92$ 是单模型结论，不受此混淆影响；（2）理论命题部分形式化（8个中4个已证明，4个为猜想）；（3）MAST对齐检测器通过单元测试但尚无实证触发数据；（4）部分实验组样本量不足（供应商任务功效仅43%）；（5）`force_reflection` 干预的 rogue-agent 反向强化结论因归因混淆而撤回；（6）v2.1 非破坏性干预（inject_evidence + rebalance_attention）在 2026-07-25 重跑的 smoke test（$N=6$）中 $\Delta\tau=0.000$，未能复现早期报告的 $+0.533$，非破坏性干预的有效性需正式实验（$N\geq30$）验证。后续工作将沿以下方向展开：跨模型验证（**必须先控制代码版本**：同代码版本重跑 DeepSeek 基线 + Qwen 扩样到 $n=24$，再预注册 GPT-4o、Claude 复制协议）、检测器标定（需200+次实验以标定真阳性/假阳性率）、理论形式化（与数学家合作将猜想推进为定理）、发言意愿公式的消融实验（逐一去除各因子验证其必要性）、v2.1 非破坏性干预在 Crisis 任务上的正式验证。本文是多智能体认知治理这一问题的早期贡献，框架和代码采用MIT许可证、将在论文接收后公开发布，欢迎合作与批判性复制。
+### 4.1 历史方法学验证（169 闭环，旧路径）
+
+**设置**：Crisis（困难，基线 τ=0.41）+ Supplier（中等，基线 τ=0.68），5 agent 排序任务，条件 none/full/shuffle，模型 DeepSeek-V3（单模型），n=24–30/组，169 闭环 = Crisis 80 + Supplier 89。
+
+**核心结果**：
+
+| 结果 | 数值 | 证据强度 |
+|------|------|----------|
+| 治理在困难任务有效 | Crisis full d=0.92, p=0.0038, 88% 功效 | ✅ 数字经审计验证 |
+| 结构重排 > 过程治理 | shuffle d=1.44 vs governance d=0.92 | ✅ 数字真；post-hoc、未预注册 |
+| 共识-质量弱相关 | r≈−0.10, p=0.20 不显著 | ✅ 诚实降级为探索性 |
+| 干预反火 | r=−0.55（干预数-质量） | ⚠️ 轶事（N=10, 失败组 n=2） |
+| 破坏性干预有害 | Δτ=−0.267 | ✅ 驱动 v6 非破坏性设计 |
+
+**对 v6 的意义**：这套历史实验提供了（i）"共识≠正确"的方法学基础（§5 发现），（ii）破坏性干预有害→非破坏性干预的设计动机，（iii）shuffle 结构干预最强→结构重排方向。
+
+### 4.2 当前 v6 实验（E9，Pilot + 计划）
+
+**设计**：四组对照 A（none）/ B（δ 治理）/ C（δ+SemanticTool）/ D（旧检测器），university 任务，计划 200 runs（4 组 × 50）。
+
+**Pilot A/B（单次，seed 42，2026-08-01 重跑）**：
+
+| 组 | τ | 轮次 | 干预 |
+|----|-----|------|------|
+| A（无治理） | 0.571 | 5 | 0 |
+| B（δ 治理） | 0.643 | 5 | 16 |
+
+Δτ=+0.071，**单次无统计显著性**，仅验证链路：δ 诊断首轮即触发（polarization/1D-mask），16 次非破坏性干预正常生成。**C/D 组待跑**，全量 200 runs 待执行。
+
+**统计方法**（`e9_v6_comparison.ts`）：B−A 为唯一 confirmatory（primary），其余 exploratory；显著判定 = Bootstrap CI 两端同号；B vs D 用非劣效（margin=0.1）。
+
+---
+
+## 5. 核心发现
+
+**F1（方法学基础）：共识 ≠ 正确——但证据是探索性的。**
+$r\approx-0.10$（$p=0.20$，不显著）**质疑** DeGroot"收敛即正确"假设的普适性（不能"推翻"）。若共识与正确性无关，则只看共识的治理系统可能在优化错误目标——这是"测量优先"哲学的依据。
+
+**F2（历史）：结构重排 > 过程治理。**
+shuffle（$d=1.44$）优于讨论内治理（$d=0.92$），但 post-hoc、未预注册、单模型。
+
+**F3（历史）：破坏性干预有害，干预有反火风险。**
+Δτ=−0.267；干预次数与质量负相关（$r=-0.55$，轶事）——驱动 v6 非破坏性干预设计。
+
+**F4（当前，探索性）：δ 治理链路打通。**
+Pilot B 组 16 次干预、δ 诊断正常触发，Δτ=+0.071（单次，不作为统计证据）。
+
+---
+
+## 6. 局限与展望
+
+**当前局限**：
+1. **单模型**：历史 169 闭环全 DeepSeek-V3；跨模型 pilot 被代码版本混杂（F16 降级）
+2. **任务少**：2 个历史任务 + 1 个 v6 任务；AAMAS 期望 5+
+3. **证据分层**：历史证据（169 闭环）≠ v6 证据（仅 Pilot）
+4. **检测器**：3 个 MAST 检测器 0 实证触发；echo chamber 被判定无效
+5. **F 分解排序已证伪**（$d_z=-0.354$），仅保留为设计原则
+6. **干预判定**：历史"有效率"基于无对照 belief-move（E10），不作因果证据
+7. **理论命题**：8 个中 4 个已证，4 个是猜想
+
+**展望**：E9 全量 200 runs（验证 v6 四组）→ 同代码版本跨模型复现 → 第三任务 → 检测器实证标定 → 理论形式化。
+
+---
+
+## 7. 结论
+
+本文提出 v6 认知治理框架——以五维认知状态为表示、δ 一致性诊断为检测、非破坏性干预为手段、解耦热力学测量为信号，分层使用 LLM（约 95% 轮次零额外调用）。历史方法学验证（169 闭环）确立了"共识≠正确"和"非破坏性干预"的方向；当前 Pilot 验证了 δ→干预链路；全量 E9 实验待执行。框架、代码、数据开源于 GitHub，欢迎合作与批判性复制。
 
 ---
 
 ## 参考文献
 
-[1] Cemri M, Pan M Z, Yang S, et al. Why Do Multi-Agent LLM Systems Fail?[J]. arXiv preprint arXiv:2503.13657, 2025.
-
-[2] OWASP. Top 10 for Agentic Applications for 2026[S]. OWASP Standard, 2025.
-
-[3] Pluchino A, Latora V, Rapisarda A. Changing Opinions in a Changing World: A New Perspective in Sociophysics[J]. International Journal of Modern Physics C, 2004. arXiv:cond-mat/0410217.
-
-[4] Pradhan S, Ujjwal S R. Diversity mitigates polarization and consensus in opinion dynamics[J]. arXiv preprint arXiv:2509.19860, 2025.
-
-[5] Tsekov R. Social Thermodynamics 2.0[J]. arXiv preprint arXiv:2307.05984, 2023.
-
-[6] López-Corona O, Padilla P, Huerta A, et al. Measuring social complexity and the emergence of cooperation from entropic principles[J]. arXiv preprint arXiv:1502.05741, 2015.
-
-[7] Tomé T, Fiore C E, Oliveira M J. Stochastic thermodynamics of opinion dynamics[J]. arXiv preprint arXiv:2212.07268, 2022.
-
-[8] Galam S. Spontaneous Symmetry Breaking, Group Decision Making and Beyond 1: Echo Chambers and Random Polarization[J]. arXiv preprint arXiv:2410.02582, 2024.
-
-[9] Liu X, Shang H, Jin H. CoBRA: Programming Cognitive Bias in Social Agents Using Classic Social Science Experiments[C]. Proceedings of CHI 2026. arXiv:2509.13588.
-
-[10] Nudo J, Pandolfo M E, Loru E, et al. Generative Exaggeration in LLM Social Agents: Consistency, Bias, and Toxicity[J]. arXiv preprint arXiv:2507.00657, 2025.
-
-[11] Du Y, Li S, Torralba A, et al. Improving Factuality and Reasoning in Language Models through Multiagent Debate[C]. Proceedings of ICML 2024. arXiv:2305.14325.
-
-[12] Cui Y, Fu H, Zhang H, et al. Free-MAD: Consensus-Free Multi-Agent Debate[J]. arXiv preprint arXiv:2509.11035, 2025.
-
-[13] Riedl C. Emergent Coordination in Multi-Agent Language Models[C]. Proceedings of ICLR 2026. arXiv:2510.05174.
-
-[14] Jin Y, Zhao Q, Wang Y, et al. AgentReview: Exploring Peer Review Dynamics with LLM Agents[C]. Proceedings of EMNLP 2024 (Oral). arXiv:2406.12708.
-
-[15] Liang T, He Z, Jiao W, et al. Encouraging Divergent Thinking in Large Language Models through Multi-Agent Debate[C]. Proceedings of EMNLP 2024. arXiv:2305.19118.
-
-[16] Wu Q, Bansal G, Zhang J, et al. AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation[J]. arXiv preprint arXiv:2308.08155, 2023.
-
-[17] Yang K, Peng T Q, Lee S, et al. Think-Before-Speak: From Internal Evaluation to Public Expression in Multi-Agent Social Simulation[C]. Proceedings of KDD'26 Workshop, 2026. arXiv:2606.03137.
-
-[18] Stasser G, Titus W. Pooling of unshared information in group decision making[J]. Journal of Personality and Social Psychology, 1985, 48(6): 1467-1478.
+[1] Cemri M, et al. Why Do Multi-Agent LLM Systems Fail? arXiv:2503.13657, 2025.
+[2] OWASP. Top 10 for Agentic Applications for 2026. 2025.
+[3] Pluchino A, et al. Changing Opinions in a Changing World. IJMPC, 2004.
+[4] Pradhan S, Ujjwal S R. Diversity mitigates polarization and consensus. arXiv:2509.19860, 2025.
+[5] Tsekov R. Social Thermodynamics 2.0. arXiv:2307.05984, 2023.
+[6] López-Corona O, et al. Measuring social complexity and the emergence of cooperation. arXiv:1502.05741, 2015.
+[7] Tomé T, et al. Stochastic thermodynamics of opinion dynamics. arXiv:2212.07268, 2022.
+[8] Galam S. Echo Chambers and Random Polarization. arXiv:2410.02582, 2024.
+[9] Liu X, et al. CoBRA: Programming Cognitive Bias in Social Agents. CHI 2026.
+[10] Nudo J, et al. Generative Exaggeration in LLM Social Agents. arXiv:2507.00657, 2025.
+[11] Du Y, et al. Improving Factuality through Multiagent Debate. ICML 2024.
+[12] Cui Y, et al. Free-MAD: Consensus-Free Multi-Agent Debate. arXiv:2509.11035, 2025.
+[13] Riedl C. Emergent Coordination in Multi-Agent Language Models. ICLR 2026.
+[14] Jin Y, et al. AgentReview: Exploring Peer Review Dynamics with LLM Agents. EMNLP 2024.
+[15] Liang T, et al. Encouraging Divergent Thinking through Multi-Agent Debate. EMNLP 2024.
+[16] Wu Q, et al. AutoGen: Enabling Next-Gen LLM Applications. arXiv:2308.08155, 2023.
+[17] Yang K, et al. Think-Before-Speak. KDD'26 Workshop, 2026.

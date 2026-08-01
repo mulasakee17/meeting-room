@@ -1,26 +1,20 @@
-# Social Thermodynamics: A Runtime Measurement Framework for LLM Multi-Agent Deliberation
+# Social Thermodynamics and Cognitive-State Consistency Diagnosis for LLM Multi-Agent Governance
 
-**He Mengyuan** (Independent Researcher)
+**He Mengyuan** (Independent Researcher, Songshan Lake Future School)
 
 > **Target venues**: arXiv preprint → AAMAS 2027 / AAAI 2027 / ICML 2027 Workshop on Multi-Agent Systems
-> **Status**: Pre-submission draft. Measurement framework complete, preliminary experiments (169 closed-loop runs, Crisis 80 + Supplier 89; 573 total JSON files) complete. Governance intervention optimization is future work; this paper focuses on the measurement and diagnostic layer.
+> **Status**: Pre-submission draft. The v6 cognitive governance framework is implemented and unit-tested; historical method validation (169 closed-loop runs) is complete; the current v6 experiment (E9, 200 runs) is at Pilot stage. This paper's narrative is organized around the v6 mainline, with historical evidence explicitly labeled as method validation rather than current-system evidence.
 >
-> **v6 更新（2026-07-30）**：混合范式架构（确定性 δ 诊断 + 可选 SemanticTool 异步验证）已落地，Pilot A/B 对照完成（单次验证，Δτ=+0.071，无统计显著性）。Phase 3 全量实验（4 组 × 50 runs = 200 runs）待启动，本论文实验数据章节待 Phase 3 完成后重写。当前正文仍基于历史 169 runs 数据，不引用 v6 Pilot 数据作为结论依据。
+> **v6 note (2026-08-01)**: Pilot A/B re-run on 2026-08-01 (B group: 5 rounds, 16 interventions, δ-diagnosis firing polarization/1D-mask, τ=0.643). Original Pilot records (0.786/+0.215, 14 interventions) were from the 2026-07-30 code version and are not reproducible on current code. Pilot is single-run (seed 42) and is not treated as statistical evidence.
 > **Code**: [github.com/mulasakee17/swarmalpha](https://github.com/mulasakee17/swarmalpha)
 
 ---
 
 ## Abstract
 
-LLM multi-agent systems lack a principled, runtime-detectable signal for identifying when group deliberation is drifting toward collective failure. We propose **social thermodynamics** as such a signal: a four-variable state space—Kuramoto order parameter $R$, normalized temperature $T$, Shannon entropy $H$, and Helmholtz-style free energy $F = (1-R) + T \cdot H$—computed deterministically from agents' structured belief outputs with zero additional LLM calls. We engineer this signal into a measurement runtime that combines seven bias detectors (four classical + three MAST-aligned) with a thermodynamic termination criterion. From 169 closed-loop runs across two hidden-profile tasks (573 total JSON files including broken-loop provenance), we report three findings that challenge common assumptions about multi-agent deliberation:
+LLM multi-agent systems lack a principled, runtime-detectable signal for identifying when group deliberation drifts toward collective cognitive failure. We propose the **v6 cognitive governance framework**, whose core design is: **(i)** agents directly output a five-dimensional cognitive state (Utility, Evidence, Inertia, Confidence, Susceptibility), eliminating the circular reasoning of post-hoc cognitive inference; **(ii)** detection uses **consistency diagnosis** (δ-signals that compare self-reported vs. observed behavior, requiring no ground truth); **(iii)** intervention is **non-destructive**—changing information flow rather than belief weights; **(iv)** a **social-thermodynamic measurement layer** (decoupled $F = U - T\cdot S$) provides collective-state signals. Cost is layered: deterministic mathematics handles the large majority of rounds (design target ~95%, zero additional LLM calls; actual trigger rate pending E9), with an LLM semantic sensor (SemanticTool) invoked only on anomalous rounds.
 
-1. **Weak consensus-quality correlation** ($N=169$, two tasks, $p=0.20$, not significant): the correlation between final consensus level ($R$) and decision quality (Kendall $\tau$) is $r \approx -0.10$—consensus is largely uncorrelated with correctness. We treat this as an exploratory observation (p=0.20, not significant) rather than a confirmatory finding, questioning convergence-based stopping criteria.
-
-2. **Structural precursors dominate procedural correction** ($N=24$ per condition, hard task): breaking role-information coherence ($d=1.44$) substantially outperforms within-discussion governance interventions ($d=0.92$), suggesting that the topology of information distribution is a more powerful lever than runtime correction.
-
-3. **Intervention strategy determines governance outcomes** ($N=6$ smoke test v2.0 + $N=6$ v2.1): destructive interventions (reduce_weight, force_reflection) degraded decision quality ($\Delta\tau = -0.267$). Non-destructive alternatives (inject_evidence, rebalance_attention) that change information flow rather than belief weights were re-tested on 2026-07-25; the current smoke test yields $\Delta\tau = 0.000$ (both groups $\tau = 0.733$), failing to reproduce the earlier reported $+0.533$. The destructive-vs-nondestructive design principle remains theoretically motivated, but its empirical validation requires a larger-sample experiment ($N \geq 30$) on a hard task (Crisis) rather than the ceiling-effect Supplier task.
-
-The framework provides design-level coverage of over a third of the MAST taxonomy's failure modes, including three inter-agent modes (information withholding, ignored input, reasoning-action mismatch) that previously had no detection mechanism. The thermodynamic variables are best understood not as physical quantities but as operational heuristics for surfacing governance-relevant patterns faster than text-only analysis permits. **This paper focuses on the measurement and diagnostic layer.** We also report a preliminary intervention experiment: v2.0 destructive interventions (reduce_weight, force_reflection) produced $\Delta\tau = -0.267$; v2.1 non-destructive interventions (inject_evidence, rebalance_attention) were re-tested on 2026-07-25 and yielded $\Delta\tau = 0.000$ in the current smoke test ($N=6$), failing to reproduce the earlier reported $+0.533$. The empirical validation of non-destructive interventions is ongoing.
+Historical method validation (169 closed-loop runs, Crisis 80 + Supplier 89) establishes: consensus level and decision quality are nearly uncorrelated ($r \approx -0.10$, $p=0.20$, not significant—an exploratory observation that **questions** the "convergence implies correctness" assumption, not a refutation); breaking role-information coherence ($d=1.44$) outperforms in-discussion governance ($d=0.92$); destructive interventions are harmful ($\Delta\tau=-0.267$), motivating the non-destructive design. The current v6 Pilot (single run, seed 42) verifies the δ→intervention chain (B group: 5 rounds, 16 non-destructive interventions, τ=0.643 vs A group 0.571), with the full E9 experiment (4 groups × 50 runs = 200 runs) pending. The framework provides an engineering foundation for multi-agent cognitive governance that is reproducible, cost-layered, and honest about its evidence boundaries.
 
 ---
 
@@ -28,520 +22,204 @@ The framework provides design-level coverage of over a third of the MAST taxonom
 
 ### 1.1 The Cognitive Governance Gap
 
-LLM multi-agent frameworks—AutoGen, CrewAI, LangGraph, and others—increasingly coordinate teams of agents for complex decisions. In doing so, they inherit collective failure modes familiar from decades of social psychology research: echo chambers, authority bias, group polarization, and premature consensus. The MAST taxonomy (Cemri et al., 2025) catalogued 14 such failure modes across 1,600 traces from seven frameworks, finding that inter-agent misalignment accounted for 32.3% of all failures—the largest single category. Yet MAST explicitly leaves detection and intervention as future work.
+LLM multi-agent frameworks (AutoGen, CrewAI, LangGraph) increasingly coordinate teams of agents for complex decisions, inheriting collective failure modes familiar from social psychology: echo chambers, authority bias, group polarization, premature consensus. The MAST taxonomy (Cemri et al., 2025) catalogued 14 failure modes across 1,600 traces but explicitly deferred detection and intervention to future work. Production governance tools (Microsoft Agent Governance Toolkit, NVIDIA OpenShell, OWASP Agentic Top 10) address the security layer (unauthorized tool calls, budget overruns, prompt injection) but not the cognitive layer—detecting *during* discussion that the group is drifting toward biased consensus. The cognitive layer remains unaddressed by both academic taxonomies and production tooling.
 
-Meanwhile, production governance tools—Microsoft's Agent Governance Toolkit, NVIDIA OpenShell, the OWASP Agentic Top 10—address the **security layer**: unauthorized tool calls, budget overruns, prompt injection. The **cognitive layer**—detecting *during a discussion* that the group is drifting toward biased or incorrect consensus—remains unaddressed by both academic taxonomies and production tooling.
+### 1.2 Our Design Decisions
 
-### 1.2 Two Specific Gaps
+This work responds with three design decisions that distinguish it from prior work:
 
-**Gap 1: No runtime-detectable phase signal for deliberation health.** Statistical-physics models of agent collectives have been explored in prior work, but they typically treat agents as interchangeable oscillators on a lattice, ignoring the role-information structure that characterizes real multi-agent systems. More critically, they provide no runtime detector deployable in a production governance loop, nor do they connect phase variables to actionable interventions. We are not aware of prior work that engineers phase variables ($R$, $T$, $H$) into a runtime governance signal for LLM-based multi-agent systems.
+1. **State representation**: agents output a five-dimensional cognitive state rather than a single scalar belief—eliminating the circular reasoning of post-hoc inference from behavior.
+2. **Detection**: consistency diagnosis (δ-signals comparing observable-signal contradictions) replaces heuristic threshold judgment—requiring no ground truth.
+3. **Intervention principle**: change information flow, not belief weights—avoiding the cascading backfire of destructive interventions (historically observed, §4.1).
 
-**Gap 2: MAST catalogues failures but does not detect them.** Three inter-agent failure modes in the MAST taxonomy—FM-2.4 (information withholding), FM-2.5 (ignored input), and FM-2.6 (reasoning-action mismatch)—together constitute 17.2% of all catalogued failures, yet no detector implementation exists for any of them. The data fields needed (evidence strings, cross-references, per-item belief rankings) are already collected by most agent frameworks; what is missing is the detection logic that acts on them.
+### 1.3 Why "Measure First, Govern Later"
 
-### 1.3 Our Approach
-
-This paper presents two intertwined contributions:
-
-**A measurement framework grounded in social thermodynamics.** We define a four-variable thermodynamic state $(R, T, H, F)$ computed deterministically from agents' structured belief outputs at every discussion round. We engineer this state into a runtime that provides diagnostic capabilities: seven bias detectors consume the thermodynamic state, and termination is governed by a crystallization criterion on $R$. All detection logic is deterministic; LLMs are used only for perception—extracting structured beliefs from natural language. We also implement both destructive (v2.0: reduce_weight, force_reflection) and non-destructive (v2.1: inject_evidence, rebalance_attention) intervention strategies as a proof-of-concept governance loop, demonstrating that the measurement framework supports principled intervention design. The v2.0 destructive path produced $\Delta\tau = -0.267$; the v2.1 non-destructive path, re-tested on 2026-07-25, yielded $\Delta\tau = 0.000$ in the current smoke test ($N=6$), failing to reproduce the earlier reported $+0.533$—empirical validation is ongoing.
-
-**Counterintuitive experimental findings from 169 closed-loop runs.** The experiments surface several findings that challenge prevailing assumptions. The most consequential—weak consensus-quality correlation, the near-zero correlation between consensus and correctness—directly contradicts the DeGroot-model assumption embedded in most convergence-based stopping criteria. Two additional findings (the dominance of structural rearrangement over procedural governance, and the demonstration that intervention strategy—destructive vs. non-destructive—can reverse governance outcomes from negative to positive) point toward principles that any multi-agent governance system must contend with.
-
-This work is at an early stage. The measurement framework is implemented and unit-tested; the experiments are preliminary and conducted on a single model (DeepSeek-V3); the theoretical propositions are partially formalized; the MAST-aligned detectors await empirical validation. We present it as a scientific communication—a principled measurement effort whose empirical signals, though provisional, merit wider scrutiny and replication. The governance intervention layer is explicitly identified as work-in-progress, with specific destructive failure modes documented in §5.5 and a stabilization roadmap outlined in §8.
+Historical data (§5, F1) provide evidence **questioning** the "convergence implies correctness" assumption: consensus and decision quality are nearly uncorrelated ($r\approx-0.10$, $p=0.20$, not significant—exploratory). A governance system optimizing only for convergence may be optimizing the wrong objective. Therefore: **without a reliable measurement signal, intervention is blind.** This motivates the measurement-first philosophy.
 
 ---
 
 ## 2. Related Work
 
-### 2.1 Statistical Physics of Opinion Dynamics and Social Thermodynamics
+### 2.1 Statistical Physics of Opinion Dynamics
 
-Statistical-physics models of opinion dynamics have a rich history. The Kuramoto model was first adapted to opinion dynamics by Pluchino, Latora, and Rapisarda (2004, arXiv:cond-mat/0410217), who treated individual opinions as oscillator phases and studied the conditions under which heterogeneous agents reach consensus. More recently, Pradhan and Ujjwal (2025, arXiv:2509.19860) showed that Kuramoto-model variants exhibit explosive transitions between bipolarization and consensus, with diverse populations reaching consensus more easily—a finding that directly informs our R-based consensus detection. Reggio, Delabays, and Jacquod (2020, arXiv:2007.01214) extended the Kuramoto framework to bounded-confidence settings, constructing phase diagrams that reveal cluster structures beyond simple consensus/polarization dichotomies.
+The Kuramoto model was adapted to opinion dynamics by Pluchino et al. (2004), with explosive transitions between bipolarization and consensus studied by Pradhan and Ujjwal (2025). Thermodynamic concepts have been applied socially by Tsekov ("Social Thermodynamics 2.0"), López-Corona et al. (Helmholtz free energy for cooperation), Tomé et al. (stochastic thermodynamics of opinion formation), and Galam (zero-temperature Ising for echo chambers). These works treat phase variables as descriptive quantities; our contribution is engineering them into a deployable runtime with a decoupled, cognitive-state-based measurement layer (§3.6).
 
-The application of thermodynamic concepts to social systems has been explored by Tsekov (2023, arXiv:2307.05984) in his "Social Thermodynamics 2.0" model. López-Corona et al. (2015, arXiv:1502.05741) directly applied Helmholtz free energy to analyze the sustainability of cooperation in social systems—an approach conceptually parallel to our F = (1−R) + T·H decomposition. Wang, Yan, and Wu (2020, arXiv:2009.07984) constructed a free-utility model mathematically consistent with Helmholtz free energy, where the internal energy term corresponds to utility (consistency) and the entropy term to information-processing cost (diversity).
+### 2.2 Multi-Agent Bias Detection and Failure Taxonomy
 
-Tomé, Fiore, and Oliveira (2022, arXiv:2212.07268) demonstrated that opinion formation can be incorporated into the stochastic thermodynamics framework, with steady-state heat flows linked to entropy production—a non-equilibrium characterization. Oliveira et al. (2023, arXiv:2311.05803) introduced a "social temperature" parameter as social anxiety noise, observing non-equilibrium order-disorder transitions accompanied by social entropy production. Han et al. (2019, arXiv:1909.04843) used Shannon information entropy to characterize opinion cluster structures, validating the entropy-maximization/entropy-minimization interpretation. Galam (2024, arXiv:2410.02582) analyzed echo chambers and random polarization through zero-temperature Ising models, distinguishing echo-chamber formation (symmetry breaking within a single group) from polarization (multiple echo chambers selecting different opinions).
+MAST is descriptive; detection and intervention are deferred. CoBRA (Liu et al.) found natural-language descriptions cannot consistently control bias across models—motivating our mathematical, interpretable detection metrics. Nudo et al. documented "generative exaggeration" (LLM agents amplify polarization). Regarding consensus-quality, Du et al. introduced multi-agent debate assuming convergence→correctness; our observation ($r\approx-0.10$, exploratory) questions this assumption's universality, consistent with Free-MAD (Cui et al.) and the PID framework (Riedl). Jin et al. quantified authority bias (37.1% of variance); Liang et al. identified Degeneration-of-Thought.
 
-The distinguishing features of our approach relative to this literature are: (i) we connect phase variables to a concrete, deployable runtime rather than treating them as purely descriptive quantities; (ii) we incorporate role-information structure rather than modeling agents as interchangeable; and (iii) we engineer the phase signal into a closed-loop detect–intervene–evaluate governance cycle.
+### 2.3 Cognitive State and Speaker Selection
 
-### 2.2 MAST, Cognitive Bias Programming, and Bias Amplification
-
-Cemri et al. (2025, arXiv:2503.13657) constructed the first Multi-Agent System Failure Taxonomy from 1,600 annotated traces across seven frameworks, identifying 14 failure modes in three categories: system design (FC1, 44.2%), inter-agent misalignment (FC2, 32.3%), and task verification (FC3, 23.5%). The taxonomy is descriptive; detection and mitigation are explicitly deferred as future work. Our governance runtime implements detectors for three FC2 modes—FM-2.4 (information withholding), FM-2.5 (ignored input), and FM-2.6 (reasoning-action mismatch)—taking the first concrete step on MAST's roadmap from taxonomy to tool.
-
-Liu, Shang, and Jin (2025, arXiv:2509.13588, CHI 2026) proposed CoBRA, a toolkit for programming cognitive bias in social agents using two primitives: a Cognitive Bias Index (quantifying bias through classic social-science experiments) and a Behavioral Regulation Engine (closed-loop control of agent behavior). Their finding that natural-language descriptions cannot consistently control bias across models motivates our approach of using mathematical, interpretable detection metrics. Nudo et al. (2025, arXiv:2507.00657) demonstrated "generative exaggeration"—LLM agents systematically amplify polarization, stylistic signals, and toxic language in social interactions, with richer context leading to more polarization. This directly validates the bias-amplification phenomenon our detectors are designed to capture.
-
-Jin et al. (2024, arXiv:2406.12708, EMNLP 2024 Oral) quantified authority bias in a peer-review simulation, finding that reviewer bias accounts for 37.1% of decision variance—a benchmark for the severity of authority bias in multi-agent deliberation. Liang et al. (2024, arXiv:2305.19118, EMNLP 2024) identified Degeneration-of-Thought (DoT) in multi-agent debate: once LLMs establish confidence, they cannot generate new perspectives—providing a theoretical explanation for premature consensus and the observed failure of force_reflection on agents with locked positions.
-
-### 2.3 Security-Layer Governance
-
-The OWASP Agentic Top 10 (2025-12) defines ten security risks for agentic applications and is a normative framework without detector implementations. Production tools such as Microsoft's Agent Governance Toolkit and NVIDIA OpenShell target the security boundary. Our work operates at a different layer—cognitive dynamics during deliberation—but is motivated by the same insight: collective behavior requires governance mechanisms beyond individual-agent alignment.
-
-### 2.4 Hidden Profile Tasks, False Consensus, and Consensus–Quality Decoupling
-
-Hidden profile tasks (Stasser & Titus, 1985) are a social psychology paradigm in which each group member holds unique information needed to discover the optimal solution. Human groups systematically fail to share such unique information. We use hidden profile tasks as our experimental substrate and manipulate role-information coherence as an independent variable.
-
-The relationship between consensus and decision quality has been questioned in recent work. Du et al. (2024, arXiv:2305.14325, ICML 2024) introduced multi-agent debate as a paradigm that assumes consensus convergence leads to correctness. Our finding that consensus (Kendall τ) and decision quality are uncorrelated (r ≈ −0.10 across two tasks, p=0.20, not significant; treated as an exploratory observation) constitutes a direct empirical counterexample to this assumption. Cui et al. (2025, arXiv:2509.11035) independently challenged the "consensus = correctness" assumption in their Free-MAD framework, arguing that consensus mechanisms suffer from three flaws: high communication cost, LLM conformity causing error propagation, and majority-vote unfairness. They proposed an "anti-conformity" mechanism, conceptually parallel to our introduce_diversity intervention. Riedl (2025, arXiv:2510.05174, ICLR 2026) developed an information-theoretic framework using partial information decomposition (PID) on time-delayed mutual information (TDMI) to distinguish genuine cross-agent synergy from spurious temporal coupling—an approach that could provide a rigorous alternative to our R-based consensus metric and address our acknowledged blind spot in distinguishing true from false consensus.
-
-Myakala, Agrawal, and Manche (2026, arXiv:2603.23848) introduced BeliefShift, the first benchmark for evaluating temporal belief consistency and opinion drift in LLM agents across 2,400 annotated multi-session trajectories, providing four new metrics (BRA, DCS, CRR, ESI) that could serve as evaluation tools for our belief-evolution dynamics.
-
-### 2.5 Speaker Selection in Multi-Agent LLM Systems
-
-A growing body of work addresses how agents in multi-party LLM discussions decide who speaks and when—the turn-taking problem. We survey five representative approaches and characterize SwarmAlpha's position within this landscape.
-
-**MMAgents (Nonomura & Mori, 2025)** applies conversation analysis principles (Sacks, Schegloff, and Jefferson's turn-taking systematics) to AI dialogue. Agents use a `think()` function to generate an importance value (0–9) for self-selection, and a `detectDesignation()` mechanism identifies adjacency pairs (e.g., question–answer) for current-speaker-selects-next (CSSN). Results showed reduced dialogue breakdowns and improved information sharing. The mechanism is semi-decentralized—CSSN requires the current speaker to judge—and uses LLM black-box outputs rather than a factorized scoring function.
-
-**AutoGen SelectorGroupChat (Microsoft, 2025)** uses a centralized LLM selector: the model reads the full conversation history and outputs the name of the next speaker. A customizable selector prompt encodes conditions for when each speaker should be selected. This approach is fully centralized and incurs an LLM call per speaker selection, making it costly for long discussions.
-
-**LangChain Multi-Agent Bidding (2024)** implements a decentralized auction: each agent uses an LLM to output an integer bid representing relevance to the current topic, and the highest bidder speaks. Ties are broken randomly. The mechanism is decentralized but single-dimensional—bids capture only self-assessed relevance.
-
-**YES AND (Ghosh & Rintel, CHI 2025)** uses confidence-based turn-taking: agents organically decide to speak based on their confidence in contributing, building on each other's ideas in an ideation context. The mechanism is fully decentralized but uses a single factor (confidence).
-
-**SwarmAlpha content_driven (this work)** uses a five-factor decomposition: information exposure, belief shift, consensus deviation, dependency trigger, and recency penalty, combined into a raw willingness score normalized via tanh and gated by two thresholds. The mechanism is: (i) **fully decentralized**—each agent independently computes its score; (ii) **mathematically analyzable**—the closed-form score permits property proofs (boundedness, monotonicity, fallback conditions; see THEORY.md §4); and (iii) **zero additional LLM cost**—all factors are computed from maintained state variables.
-
-Recent work on willingness-based speaking further contextualizes our design. The Think-Before-Speak framework (Anonymous, 2026, arXiv:2606.03137, KDD'26 Workshop) explicitly uses a "willingness to speak" concept but parameterizes it through prompt descriptions rather than a closed-form mathematical formula—making it less analyzable and harder to reproduce. The "When to Think, When to Speak" framework (arXiv:2605.03314, ICML 2026) introduced the concept of a "silence tax"—the cost of not speaking—providing an economic justification for our fallback guarantee that at least one agent speaks per turn. Piao et al. (2025, arXiv:2502.08691, AgentSociety) demonstrated large-scale social simulation where polarization is a primary research focus, validating the real-world relevance of our detection targets.
-
-**Positioning.** To our knowledge, no existing turn-taking mechanism for LLM multi-agent systems simultaneously satisfies the combination of decentralization, mathematical analyzability, and zero marginal LLM cost. The cost of this design is that weights are hand-set heuristics rather than learned from data or produced by an LLM's implicit judgment. A formal comparative table appears in THEORY.md §4.9.
+AutoGen's SelectorGroupChat uses a centralized LLM selector (one extra LLM call per turn); LangChain uses decentralized bidding. Our historical path proposed a five-factor speech-willingness formula (fully decentralized, closed-form, zero extra LLM cost), but in the v6 mainline, speech selection is **not** the focus—v6 uses synchronous fixed rounds, focusing on governance rather than turn-taking. v6 differs from the TBS framework (Yang et al.) in that agents directly output cognitive state rather than an orchestrator coordinating intentions.
 
 ---
 
-## 3. Theory: Social Thermodynamics as an Operational Heuristic
+## 3. System Design: v6 Cognitive Governance Framework
 
-### 3.1 Epistemological Framing
+### 3.1 Overall Architecture
 
-We begin with a methodological clarification. The thermodynamic variables we define below—$R$, $T$, $H$, $F$—are not claims about physical realities in language models. LLM belief outputs are inherently stochastic and context-sensitive; a single prompt rephrasing can shift a belief value by 0.2 or more. The variables we compute from these noisy measurements should be understood as **operational heuristics**: coarse-grained summary statistics that, we argue, provide more timely and consistent signals for governance decisions than raw text analysis alone. Their value is engineering value—they enable a deterministic, low-latency governance loop—not metaphysical value. We use the language of thermodynamics metaphorically and instrumentally, in the spirit of statistical physics providing organizing principles rather than literal descriptions.
+SwarmAlpha v6 implements a five-stage loop: **observe → model → detect → intervene → evaluate**. The core flow:
 
-### 3.2 State Variable Definitions
+```
+LLM (perception) → 5D cognitive state → δ consistency diagnosis → non-destructive intervention → thermo measurement
+     ↑                                                                                                  ↓
+     └──────────────────────────── LLM semantic sensor (SemanticTool, optional) ←─────────────────────────┘
+```
 
-We treat agents' structured belief outputs $b_i \in [-1, 1]$ as a collective and define four summary variables. The belief-to-phase mapping uses a half-circle: $\theta_i = (\pi/2) \cdot b_i$, placing $\theta \in [-\pi/2, \pi/2]$. This design choice ensures that $b = +1$ and $b = -1$ map to opposite points on the unit circle ($+\pi/2$ and $-\pi/2$ respectively), so that perfect polarization yields $R \approx 0$. A full-circle mapping would place both extremes on the same side, misclassifying polarization as consensus.
+- **Determinism first**: design target ~95% of rounds handled by deterministic mathematics (zero extra LLM calls; actual trigger rate pending E9).
+- **LLM fallback**: SemanticTool invoked only on δ-flagged anomalous rounds (LLM as semantic sensor, not decision-maker).
 
-| Symbol | Definition | Interpretation |
-|---|---|---|
-| $b_i \in [-1, 1]$ | Agent $i$'s top-level belief | Raw output of structured belief extraction |
-| $\theta_i = (\pi/2) \cdot b_i$ | Belief-to-phase mapping | Half-circle; separates consensus from polarization |
-| $R = \|\sum_i e^{i\theta_i}\| / N$ | Kuramoto order parameter | Directional consensus ($R=1$: perfect alignment; $R \to 0$: balanced opposition) |
-| $T = \sigma_{\text{pop}}(b)$ | Normalized temperature | Dispersion of beliefs (population standard deviation) |
-| $H = H_{\text{5bins}}(b) / \log_2 5$ | Normalized Shannon entropy | Distributional uncertainty over five equal-width bins |
-| $F = (1-R) + T \cdot H$ | Social free energy | Total disorder decomposed into structural and thermal components |
+### 3.2 Five-Dimensional Cognitive State
 
-**Free energy decomposition.** $F$ separates disorder into two conceptually distinct sources: $(1-R)$ captures **structural disorder**—positional misalignment of belief vectors on the phase circle—while $T \cdot H$ captures **thermal disorder**—the product of dispersion and distributional uncertainty. (Note: these were originally described as "orthogonal"; empirical analysis below shows they are in fact strongly correlated, $r=0.9175$.) This decomposition is the basis for intervention prioritization (§4.3): interventions targeting structural disorder differ in mechanism and expected effect from those targeting thermal disorder.
+Agents directly output three dimensions; the system computes the rest:
 
-> **⚠️ 2026-07-28 Empirical Revision (orthogonality falsified).**
->
-> The "orthogonal" claim above is a *conceptual* assertion that was never statistically validated. Empirical analysis across $N=259$ samples (8 data sources: data_fraud ×6, crisis, supplier) yields $r((1-R),\, T \cdot H) = 0.9175$ ($p < 10^{-6}$), indicating the two components are **strongly positively correlated**, not orthogonal.
->
-> **Root cause**: In the asyncEngine implementation, $R$, $T$, and $H$ are all computed from the same scalar `beliefs[]` array and are different transformations of the same underlying quantity—"within-round cross-agent belief dispersion":
-> - $R$: angular alignment (inverse of dispersion)
-> - $T$: normalized population standard deviation (dispersion)
-> - $H$: 5-bin histogram Shannon entropy (dispersion)
->
-> Earlier descriptions of $T$ as "between-round fluctuation" and $H$ as "information diversity" do not match this implementation; they have been corrected in [asyncEngine.ts](../../src/lib/discussion/asyncEngine.ts) comments and [TECHNICAL_REPORT.md §3.1](../archive/paper/TECHNICAL_REPORT.md).
->
-> **Impact on claims**:
-> 1. $F$ should be positioned as an *engineering heuristic composite diagnostic index*, not a rigorous thermodynamic free energy (SOT.md already states this).
-> 2. "F-decomposition intervention ranking" was falsified in an A/B controlled experiment ($d_z = -0.354$; see LIMITATIONS.md §21).
-> 3. The "3D thermodynamic state space" narrative does not hold—$R/T/H$ collapse to one effective dimension in $N=5$ groups (regression: $F \approx 0.019 + 2.014(1-R)$, $R^2 = 0.955$).
-> 4. TerminationDecider's quenched-state detection (which uses $R+T+H$ via independent AND-logic thresholds) remains valid, because it relies on the *relative change* of $T$ and $H$ rather than their absolute-value independence.
->
-> **Reframing**: The strong coupling itself is a finding—it reveals a fundamental difference between MAS small groups and physical systems: in physical systems $R/T/H$ are independent thermodynamic variables, but in MAS the DeGroot belief-updating mechanism causes alignment and convergence to occur simultaneously, collapsing the three metrics into one effective dimension.
->
-> Analysis script: `experiments/v2/analyze_thermo_correlation.ts`
+| Dim | Symbol | Source | Meaning |
+|-----|--------|--------|---------|
+| Utility | $U$ | LLM native | preference vector over options |
+| Evidence | $E$ | LLM native (coverage/quality) + system (diversity) | information state |
+| Confidence | $C$ | LLM native (self-reported) | stated confidence (0-100) |
+| Inertia | $I$ | system | resistance to change (role + refutation + decay) |
+| Susceptibility | $\Lambda$ | system | $(1-I)(1-C)$, response probability |
 
-### 3.3 Propositions and One Corrective Episode
+*Honesty note*: the system computes inertia, susceptibility, **and** evidence diversity (derived from evidence categories, `cognitiveState.ts:524`)—system post-processing is reduced but not fully eliminated. Confidence `overall` is directly the LLM self-report (`confidence/100`, `cognitiveState.ts:338`).
 
-We state the key theoretical results, distinguishing between formally verified and conjectured claims.
+### 3.3 δ Consistency Diagnosis (No Ground Truth)
 
-**Proposition 1a (perfect consensus):** All $b_i$ identical $\Rightarrow R = 1$. Formally proven: identical $\theta_i$ produce co-linear unit vectors, so $|\sum e^{i\theta_i}| = N$.
+Traditional detectors require defining "what is anomalous" (ground truth). δ-diagnosis compares contradictions between observable signals:
 
-**Proposition 1b (perfect polarization, corrected):** Under the half-circle mapping, $R = 0$ holds only for even $N$ with an exact half-split (half $b = +1$, half $b = -1$). For odd $N$ or distributions containing intermediate values, $R > 0$. Example: the five-agent distribution $[+1, +1, -1, -1, 0]$ yields $R = 0.2$, not $R = 0$.
+| δ-signal | Detects |
+|----------|---------|
+| $\delta_{polarization}$ | severe utility-vector divergence |
+| $\delta_{1D\_mask}$ | scalar consensus masking vector divergence |
+| $\delta_{evidence\_silence}$ | evidence systematically ignored |
+| $\delta_{confidence\_gap}$ | self-reported high confidence but utility deviates from group |
+| $\delta_{stance\_flip}$ | stance reversal |
+| $\delta_{no\_response}$ | no response after intervention |
+| $\delta_{concentration}$ | inertia over-concentrated |
+| $\delta_{consistency}$ | stance change contradicts inertia |
 
-**Proposition 1c (uniform limit, corrected):** $R \to 2/\pi \approx 0.637$ in the continuous-uniform limit as $N \to \infty$. For finite $N$, $R$ deviates substantially from this asymptotic value; the convergence rate depends on $N$.
+Adaptive threshold: `effective = base + (1−minConfidence) × safetyMargin` (`computeDelta.ts:118`)—lower confidence → more conservative threshold. Pilot verification: B group's first round fired $\delta_{polarization}$ (pairwise cosine 0.643 ≥ 0.15) and $\delta_{1D\_mask}$ (scalar R=0.68 but vector divergence 0.643), confirming the chain.
 
-**Proposition 2 (R–H complementarity, corrected):** $R$ and $H$ measure distinct dimensions of the belief distribution and exhibit a qualitative complementarity—polarized states tend to have lower $R$ and higher $H$ than consensus states—but there is no strict threshold relationship. The distribution $[+0.5, +0.5, -0.5, -0.5, 0]$ yields $R = 0.766$ and $H = 0.655$, neither crossing the thresholds we initially hypothesized. $R$ is sensitive to directional consistency (whether beliefs cross zero); $H$ is sensitive to distributional shape (unimodal versus multimodal). They do not always move in opposite directions.
+### 3.4 Non-Destructive Intervention
 
-**Corrective episode.** Propositions 1b, 1c, and 2 were initially stated in internal documentation with stronger claims: $R = 0$ for any polarization (false for odd $N$), $R$ approaches $2/\pi$ for any near-uniform distribution (false for finite samples), and polarization could be identified by threshold crossings $R < 0.7$ and $H > 0.8$ (false for the five-agent example above). Script-based testing against concrete numerical cases revealed all three errors. We report this not as a weakness but as evidence of the framework's empirical discipline: the propositions that survived testing are those that withstood direct numerical challenge. The remaining propositions (3, 5, 6, 7, 8) are labeled as conjectures throughout this draft; they involve LLM black-box functions or stochastic dynamics that admit no closed-form proof, and their formalization is part of our ongoing theoretical work.
+Motivated by the historical harm of destructive interventions ($\Delta\tau=-0.267$, §4.1), v6 changes **information flow** rather than belief weights:
 
-Propositions 1a, 1b (in its corrected, strengthened if-and-only-if form for even $N$), 1c, and 4 are formally proven; these proofs use the Pythagorean identity, the non-negativity of $\cos\theta$ on $[-\pi/2, \pi/2]$, the Strong Law of Large Numbers, and the Laplacian zero-eigenvalue lemma, respectively. The proofs are AI-assisted drafts pending human verification by a collaborating mathematician.
+- **inject_evidence**: inject ignored private evidence (suppresses no one)
+- **rebalance_attention**: reorder speaking so marginalized agents speak first
+- **shuffle_knowledge**: structural knowledge rearrangement (historically strongest, $d=1.44$)
 
-### 3.4 Intervention Fixed-Point Analysis
+*Evidence status*: ⚠️ design direction supported by historical failure; v2.1 interventions lack statistical validation (smoke test $N=6$, $\Delta\tau=0.000$; earlier $+0.533$ retracted).
 
-For the belief update dynamic $b_i^{(t+1)} = b_i^{(t)} + \alpha \sum_j w_{ij}(b_j^{(t)} - b_i^{(t)}) + \varepsilon_i$, we analyze how interventions shift the system's fixed points.
+### 3.5 SemanticTool (LLM Semantic Sensor)
 
-- **`reduce_weight`**: Down-weights the influence of a target agent ($w_{ik} \leftarrow \beta w_{ik}$, $\beta < 1$). This does not change the existence of a fixed point but shifts its position away from the target agent's belief. This provides theoretical grounding for the rogue-agent defense strategy (Proposition 4, proven).
+LLM as a semantic sensor in the mathematical engine's hands (not a decision-maker): evidence semantic dedup, information-gap analysis, intervention-text generation. Layered cost: δ handles ~95% of rounds (zero cost); SemanticTool fires only on anomalous rounds (pay-as-you-go). *Evidence status*: 🔧 implemented; C-group link pending E9.
 
-- **`force_reflection`**: Prompts the LLM to re-examine its reasoning. The fixed-point effect is indeterminate—it depends on the LLM's reflection function $f_{\text{reflect}}$, which differs between honest and adversarial agents. For honest agents with biased reasoning, $f_{\text{reflect}}$ tends to produce evidence regression (effective). For agents with prompts locking them into positions, $f_{\text{reflect}}$ can reinforce the original stance (ineffective or harmful) (Proposition 5, conjecture).
+### 3.6 Social-Thermodynamic Measurement
 
-- **Lyapunov analysis**: The potential function $V(b) = \frac{1}{2}\sum_i (b_i - \bar{b})^2$ decreases monotonically without intervention. The `force_reflection` intervention can cause $V$ to *rise* if the reflection function reinforces rather than regresses, providing a theoretical mechanism for the empirical observation that more interventions can correlate with worse outcomes (§5.4) (Propositions 6–7, conjectures).
+**Historical definition**: $F=(1-R)+T\cdot H$ (R: Kuramoto order, T: std, H: Shannon entropy).
 
----
+**⚠️ Empirical falsification (2026-07-28)**: the two components of historical $F$ are strongly correlated ($r=0.9175$), and $R/T/H$ collapse to one effective dimension (regression $F\approx0.019+2.014(1-R)$, $R^2=0.955$).
 
-## 4. Framework: The SwarmAlpha Measurement Runtime
+**v6 correction**: based on the 5D cognitive-state vector, use $F = U - T\cdot S$ (U: utility L1 norm, T: temporal fluctuation, S: distribution entropy). $U$ and the product $T\cdot S$ decouple ($|r|=0.274$, [THEORY.md §0.1]), a major improvement over $r=0.917$; **however, $U$ and $S$ components remain correlated ($r=-0.79$)—the decoupling is partial, not full independence**. Reframing: the historical collapse itself is a finding—MAS small groups differ from physical systems in that DeGroot belief updating couples alignment and convergence.
 
-The runtime implements a five-stage loop: **observe → model → detect → intervene → evaluate**. LLMs perform only perception—extracting structured beliefs from natural language outputs via tag parsing, with an LLM fallback when parsing fails. All measurement and detection logic is deterministic mathematics operating on the extracted belief vectors. The intervention stage is implemented as a proof-of-concept but is not the focus of this paper; our experimental findings (§5.5) reveal that current intervention strategies are destructive in certain configurations, and we treat them as an open research problem (§8).
+### 3.7 Historical Path (Comparison Baseline)
 
-### 4.1 Observation Layer
-
-Each agent's output is parsed into structured fields: `belief ∈ [-1, 1]`, `confidence ∈ [0, 100]`, `reasoning`, `evidence[]`, `referencedAgents[]`, and `itemBeliefs[]` (per-option ranking with associated belief and confidence values). The `itemBeliefs` field, enforced by prompt constraints, provides the per-option data needed for detecting reasoning-action mismatches.
-
-### 4.2 Seven Detectors
-
-The runtime implements **seven detectors** (four classical + three MAST-aligned) covering over a third of the MAST taxonomy's 14 failure modes at the design level.
-
-**Four classical detectors:**
-
-| Detector | Signal | Threshold |
-|---|---|---|
-| Echo chamber | $(1-\sigma_{\text{norm}}) \cdot 0.5 + \text{Jaccard}_{\text{content}} \cdot 0.5$ | $\geq 0.5$ |
-| Authority bias | $\max(\text{refs}_i) / \sum \text{refs}_i$ | $\geq 0.25$ |
-| Polarization | Polarization index + bimodality coefficient $BC = (g^2+1)/(k + 3(n-1)^2/((n-2)(n-3)))$ (Ellison 1987; $g$=skewness, $k$=excess kurtosis, $n$=sample size) | Polarization index $\geq 0.30$; $BC > 0.555$ (supplementary) |
-| Premature consensus | Round progress × consensus level × belief dispersion | Round-progress-weighted |
-
-Thresholds are configurable constants and were set heuristically; calibration against human-annotated ground truth has not yet been performed.
-
-**Three MAST-aligned detectors** (this work):
-
-| Detector | MAST mode | Detection rule | Intervention |
-|---|---|---|---|
-| Information withholding | FM-2.4 (9.1% of MAST failures) | ≥2 agents have non-empty `evidence[]` and ≥1 agent has empty `evidence[]` | `force_reflection` |
-| Ignored input | FM-2.5 (1.9%) | Agent referenced ≥2 times by others but self `referencedAgents[]` empty | `force_reflection` |
-| Reasoning-action mismatch | FM-2.6 (6.2%) | In `itemBeliefs[]`, rank-1 item's belief is not the maximum, gap > 0.3 | `force_reflection` |
-
-These three detectors were implemented on 2026-07-20 and have passed unit testing (13 dedicated tests). However, as no experiments have been re-run since their implementation, they have zero empirical triggers in the current dataset. V1 experiment data (which lack the required `evidence` and `itemBeliefs` fields) return `notDetected` by design, ensuring backward compatibility. The detectors are active only in V2+ experiments.
-
-**Design-time coverage and empirical trigger rates.** The seven detectors cover over a third of the MAST taxonomy's 14 failure modes at the design level, concentrated in the inter-agent misalignment category (FC2). Coverage gaps remain primarily in system-design failures (FC1) and task-verification failures (FC3), which require task-schema validation beyond the current observation layer. Empirical trigger rates for the four classical detectors, measured from 279 sync-engine runs, are:
-
-| Detector | Trigger rate (per-run) | Per-round mean | $\tau$ when triggered | $\tau$ when not | $\Delta\tau$ |
-|---|---|---|---|---|---|
-| Echo chamber | 22.9% (64/279) | 0.55 | 0.700 ± 0.221 | 0.626 ± 0.231 | +0.074 |
-| Authority bias | 41.2% (115/279) | 1.44 | 0.701 ± 0.224 | 0.602 ± 0.226 | +0.098 |
-| Polarization | 38.7% (108/279) | 1.75 | 0.715 ± 0.213 | 0.598 ± 0.230 | +0.117 |
-| Premature consensus | 28.3% (79/279) | 1.19 | 0.597 ± 0.222 | 0.661 ± 0.232 | −0.064 |
-
-We emphasize that these correlations are not causal estimates. Harder tasks may independently trigger more detectors and produce lower decision quality, creating a confounded association. The 279 runs include 120 broken-loop runs where interventions were logged but could not affect agent behavior; detector trigger rates are independent of intervention efficacy, so their inclusion is appropriate for measuring trigger frequency. No false-positive or false-negative rates are reported, as human-annotated ground truth for bias detection does not yet exist.
-
-**Six cognitive-state detectors (v3.2).** In addition to the seven classical detectors above, the framework implements six cognitive-state detectors that operate on the five-dimensional cognitive state $(U, E, I, C, S)$ rather than on external behavior: echo chamber (cognitive), polarization (cognitive), premature consensus (cognitive), authority bias (cognitive), evidence imbalance, and cognitive-action mismatch. These detectors are active only in NativeCognitiveEngine mode and have passed unit testing (45 dedicated tests). However, as the only experiment using cognitive mode is the E9 smoke test ($N=6$), empirical trigger rates and intervention efficacy for these detectors remain unvalidated (§5.5, §7).
-
-### 4.3 F-Decomposition Intervention Ranking
-
-When multiple detectors fire simultaneously, interventions are prioritized by decomposing $F$ rather than by a fixed ordering. The mapping relates each intervention to the disorder component it targets:
-
-| Intervention | Primary target | Mechanism |
-|---|---|---|
-| `force_reflection` | $T \cdot (1 - \text{structural})$ | Thermal disorder with low structural misalignment; noise reduction |
-| `reduce_weight` | $T \cdot H$ | Suppress the influence of a high-noise agent |
-| `introduce_diversity` | $R \cdot (1-H)$ | High consensus, low entropy (suspicious); inject alternative information |
-| `continue_discussion` | $R \cdot (1-H) \cdot (1-F)$ | Early convergence; extend discussion rounds |
-
-The `introduce_diversity` and `continue_discussion` interventions are disabled by default due to low empirical effectiveness (9.1% and 0%, respectively).
-
-An A/B paired experiment (Crisis task, $N=8$ pilot) comparing F-decomposition ranking against fixed ranking found no significant difference ($d_z = -0.354$, $p = 0.378$). The pre-registered stopping rule ($d_z < 0.2$ or direction reversal) was executed. We retain F-decomposition as the default ranking mode because its diagnostic value—it revealed a mapping error in the original `force_reflection` hypothesis, subsequently confirmed by backtesting ($p = 0.0092$, $d = -0.667$; 85 events across 62 experiments, Round 3 termination events excluded)—exceeds its current runtime value. Whether the decomposition provides runtime benefit in longer discussions (beyond the three-round format used here) remains an open question.
-
-### 4.4 Thermodynamic Termination
-
-The async engine terminates when the thermodynamic state indicates crystallization. The primary criterion is $R \geq 0.85$, a sufficient-but-not-necessary condition for directional convergence (Proposition 3). A hard cap of 40 utterances per discussion prevents runaway loops. The termination decider classifies states into crystallized, divergent, premature, and stable categories based on $(R, T, H)$ trajectories.
-
-This termination signal addresses MAST failure mode FM-1.5 ("unaware of stopping")—a failure that MAST catalogues but for which it provides no operational resolution.
-
-### 4.5 Reproducibility Engineering
-
-All stochastic operations use a `mulberry32` PRNG seeded from experiment configuration. The PRNG instance is persisted across rounds (reset only on full system reset) to prevent identical intervention patterns across rounds. Permutation tests use a unified seed (42); bootstrap confidence intervals use a distinct seed (42 + 0x5EED). These seeds are shared across all analysis scripts to ensure cross-script reproducibility. Custom instrumentation tracks token usage, API call count, and latency per agent.
+Two earlier contributions are downgraded to historical/comparison baselines in the v6 mainline:
+- **Seven bias detectors** (4 classical + 3 MAST-aligned): superseded by δ-diagnosis; the 3 MAST detectors have zero empirical triggers (implementation + unit-test level contribution).
+- **Five-factor speech-willingness formula**: historical contribution of the async path (`asyncEngine.ts`, frozen); the v6 sync path does not use it.
 
 ---
 
-## 5. Experiments
+## 4. Experiments and Evidence
 
-### 5.1 Setup
+> ⚠️ Two sets of evidence from different eras: **§4.1 is historical method validation (old path); §4.2 is the current v6 experiment (Pilot; full run pending)**. Historical evidence is not presented as v6 evidence.
 
-**Tasks.** Two hidden-profile ranking tasks. *Crisis Response* (hard, baseline $\tau = 0.41$): five agents prioritize five crisis areas across five dimensions, each holding private information on two to three dimensions. *Supplier Selection* (moderate, baseline $\tau = 0.68$): five agents rank five suppliers across five dimensions, each holding private data on their domain dimension plus partial data on one to two overlapping dimensions. Both tasks have predetermined ground-truth rankings based on weighted dimension scores.
+### 4.1 Historical Method Validation (169 Closed-Loop Runs, Old Path)
 
-**Conditions.** `none` (no detection or intervention), `full` (all detectors active, interventions applied), `shuffle` (agent private knowledge rotated by +2 positions with role labels fixed—breaking role-information coherence without changing the information content).
+**Setup**: Crisis (hard, baseline τ=0.41) + Supplier (moderate, baseline τ=0.68), 5-agent ranking tasks, conditions none/full/shuffle, model DeepSeek-V3 (single model), n=24–30/group, 169 closed-loop = Crisis 80 + Supplier 89.
 
-**Infrastructure.** Model: DeepSeek-V3, temperature 0.2. Five agents. Three rounds (sync engine) or up to 40 utterances (async engine). Crisis: $n = 24$ per condition. Supplier: $n = 30$ per condition.
+**Key results**:
 
-**Statistics.** Kendall $\tau$-b for decision quality with tie correction. Permutation test ($10^4$ permutations, seed 42) for $p$-values with $(\text{count}+1)/(\text{nPerms}+1)$ correction. Bootstrap percentile CI ($10^4$ resamples). Welch $t$-distribution CI for small-sample correction. Cohen's $d$ with extreme-value trimming. Benjamini-Hochberg FDR for multiple comparisons.
+| Result | Value | Evidence strength |
+|--------|-------|-------------------|
+| Governance effective on hard task | Crisis full d=0.92, p=0.0038, 88% power | ✅ audit-verified |
+| Structural > procedural | shuffle d=1.44 vs governance d=0.92 | ✅ number verified; post-hoc, not pre-registered |
+| Consensus-quality weak | r≈−0.10, p=0.20, not significant | ✅ honestly exploratory |
+| Intervention backfire | r=−0.55 (intervention count-quality) | ⚠️ anecdotal (N=10, failure n=2) |
+| Destructive interventions harmful | Δτ=−0.267 | ✅ motivates v6 non-destructive design |
 
-**Total runs.** 169 closed-loop runs (Crisis 80 + Supplier 89) serve as the primary evidence; 573 total JSON files (v2:487 + lunar:85 + .claude:1) include broken-loop provenance data (318 broken-loop runs) used only for detector trigger-rate statistics, not for causal claims. Of the 169 closed-loop runs, all used DeepSeek-V3.
+**Significance for v6**: these experiments provide (i) the "consensus≠correctness" methodological basis (§5 F1), (ii) the motivation for non-destructive intervention (destructive harm), (iii) evidence that structural rearrangement (shuffle) is the strongest lever.
 
-### 5.2 Evidence Strength Overview
+### 4.2 Current v6 Experiment (E9, Pilot + Plan)
 
-Before presenting results, we characterize the evidential status of each claim. The table below distinguishes confirmatory findings (hypothesized or discovered under conditions that permit strong inference) from exploratory observations (post-hoc patterns from small samples or confounded designs).
+**Design**: four groups A (none) / B (δ governance) / C (δ+SemanticTool) / D (old detectors), university task, planned 200 runs (4 × 50).
 
-| Finding | Type | $N$ | Model(s) | Independent replication | Key limitation |
-|---|---|---|---|---|---|
-| Weak consensus-quality correlation ($r \approx -0.10$, $p=0.20$, not significant) | Exploratory | 169 | DeepSeek-V3 | Two tasks (within-study) | Not significant; single model; correlational; exploratory observation |
-| Shuffle > governance (hard task) | Confirmatory | 24/cell | DeepSeek-V3 | No | Discovered post-hoc; not pre-registered |
-| Shuffle ceiling (moderate task) | Confirmatory | 29–30/cell | DeepSeek-V3 | No | Ceiling effect; task boundary identified |
-| More interventions → worse outcomes | Exploratory | 10 | DeepSeek-V3 | No | $n = 2$ in failure group; confounded |
-| Cascading collateral damage (F5) | Exploratory | 10 | DeepSeek-V3 | No | Single scenario; attribution ambiguous |
-| Governance effective (Crisis) | Confirmatory | 24/cell | DeepSeek-V3 | No | Single task; single model; cross-model generalization untested (F16) |
-| Governance not significant (Supplier) | Confirmatory | 30/cell | DeepSeek-V3 | No | Underpowered (43%) |
-| Cross-model governance direction inconsistency (F16, confounded) | Exploratory (downgraded) | DS 24 / Qwen 10 | DeepSeek-V3, Qwen 3.7-plus | Crisis only | ⚠️ Code version mismatch: DS 2026-07-14 vs Qwen 2026-07-22; not a valid cross-model comparison |
-| F-decomposition no runtime benefit | Confirmatory | 8 paired | DeepSeek-V3 | No | Pilot; 3-round only |
-| Temporal decay of intervention effect | Exploratory | 169 closed-loop | DeepSeek-V3 | No | No Round 4 data |
-| Classical detector trigger rates | Descriptive | 279 | DeepSeek-V3 | No | No ground truth; thresholds heuristic |
-| MAST detector design coverage | Theoretical | 0 empirical | — | No | Implemented; unvalidated at scale |
-| `force_reflection` reverse reinforcement | Retracted | — | — | — | Attribution error; see §5.4 |
+**Pilot A/B (single run, seed 42, re-run 2026-08-01)**:
 
-We present confirmatory findings in an affirmative voice and exploratory observations with appropriate qualification. Where sample sizes are small or confounding is present, we signal these constraints directly.
+| Group | τ | Rounds | Interventions |
+|-------|-----|--------|---------------|
+| A (none) | 0.571 | 5 | 0 |
+| B (δ) | 0.643 | 5 | 16 |
 
-### 5.3 Primary Finding: Structural Rearrangement Outperforms Procedural Governance
+Δτ=+0.071, **single-run, no statistical significance**—verifies only the chain: δ-diagnosis fires on round 1 (polarization/1D-mask), 16 non-destructive interventions generated. **C/D groups pending**, full 200 runs pending.
 
-**Crisis (hard task, $n = 24$ per cell):**
-
-| Condition | $\tau$ (μ ± σ) | $d$ vs. none | $p$ | Power |
-|---|---|---|---|---|
-| `none` | $0.408 \pm 0.182$ | — | — | — |
-| `full` | $0.617 \pm 0.263$ | +0.92 | 0.0038 | 88% |
-| `shuffle` | $0.717 \pm 0.243$ | +1.44 | <0.001 | 100% |
-
-**Supplier (moderate task, $n = 30$ per cell):**
-
-| Condition | $\tau$ (μ ± σ) | $d$ vs. none | $p$ | Power |
-|---|---|---|---|---|
-| `none` | $0.680 \pm 0.186$ | — | — | — |
-| `full` | $0.767 \pm 0.183$ | +0.47 | 0.086 | 43% |
-| `shuffle` | $0.697 \pm 0.204$ | +0.09 | 0.78 | 6% |
-
-**Interpretation.** On the hard task, breaking role-information coherence produces a large effect ($d = 1.44$), exceeding the effect of within-discussion governance ($d = 0.92$). On the moderate task, shuffle has negligible effect due to a ceiling effect—the baseline $\tau = 0.68$ leaves little room for improvement. This task-dependence is itself informative: structural rearrangement is not universally dominant, but its effectiveness scales with task difficulty. The result suggests that the phase boundary for collective deliberation quality is not solely a function of interaction parameters but is structurally pre-set by how roles and information are paired.
-
-### 5.4 Consensus-Quality Correlation: Weak and Non-Significant
-
-Across all conditions and both tasks ($N = 169$), the Pearson correlation between final consensus level ($R$) and final decision quality ($\tau$) is $r \approx -0.10$ ($p = 0.20$, not significant). Breaking down by task: Crisis ($r \approx -0.05$, $p=0.66$, $n=80$) and Supplier ($r \approx -0.03$, $p=0.78$, $n=89$). In both cases, the correlation is near zero and slightly negative. **We treat this as an exploratory observation rather than a confirmatory finding**, given that $p=0.20$ is far from conventional significance thresholds.
-
-This observation has direct implications. Agents can reach near-perfect agreement (belief standard deviation below 0.05) while producing incorrect rankings. Conversely, high-quality rankings can emerge from discussions with substantial disagreement. The DeGroot-model assumption that convergence implies correctness—implicit in many consensus-based stopping criteria—is not supported by this data. The theoretical basis is straightforward: $R$ measures directional consistency, not directional correctness. A malicious agent pushing all beliefs toward $+1$ increases $R$ regardless of whether $+1$ corresponds to the correct ranking.
-
-### 5.5 Intervention Effects: Evidence for Backfire Risk
-
-**Finding F4: Negative correlation between intervention count and decision quality.** In a rogue-agent scenario ($N = 10$), intervention count and decision quality correlate at $r = -0.55$. Grouping runs by outcome:
-
-| Group | $n$ | Mean interventions | Mean rounds |
-|---|---|---|---|
-| Success ($\tau \geq 0.6$) | 4 | 4.0 | 5.5 |
-| Intermediate ($0.4 \leq \tau < 0.6$) | 4 | 7.25 | 13.0 |
-| Failure ($\tau < 0.4$) | 2 | 9.5 | 11.0 |
-
-We treat this as an exploratory signal, not a causal claim. Confounding is likely: more difficult scenarios trigger more detectors and simultaneously produce lower decision quality. The Lyapunov analysis (§3.4) provides a partial mechanistic account—`force_reflection` can raise the disorder potential $V$ when the LLM's reflection function reinforces rather than regresses—but the clean causal test (ablating interventions while holding scenario difficulty constant) has not yet been run.
-
-**Finding F5: Cascading collateral damage.** In the same rogue-agent scenario, the agent most affected by dependency-chain interventions ($a_2$) was hit 24 times. The mechanism: `reduce_weight` on rogue agent $a_1$ alters $a_2$'s speaking pattern, which then resembles echo-chamber repetition and triggers `reduce_weight` on $a_2$ as well. This illustrates a structural vulnerability of detection-by-symptom: when interventions alter symptoms without addressing causes, they can cascade through dependency chains.
-
-**Retracted conclusion.** An earlier version of this work claimed that `force_reflection` produces reverse reinforcement of +0.68 in the rogue agent. We retract this claim. All relevant samples (100%) had concurrent `reduce_weight` interventions, making it impossible to isolate the `force_reflection` effect. A later partial-isolation analysis of five cases where `force_reflection` alone targeted the rogue agent found all five showed belief increase (mean +0.94)—a stronger but still observational signal. The retraction and partial-isolation finding are documented in the project repository.
-
-### 5.6 Mechanism Ablation
-
-Single-intervention ablations on the Crisis task (closed-loop):
-
-| Intervention | Direction | Status |
-|---|---|---|
-| `reduce_weight` | Positive | Core driver; partial-isolation analysis (18 cases where it alone targeted rogue $a_1$): 72% suppression, mean belief shift −0.13 |
-| `force_reflection` | Mixed | 5/5 cases of isolated application showed reverse reinforcement (mean +0.94); effect cannot be cleanly attributed in full-condition runs due to co-occurrence with `reduce_weight` |
-| `introduce_diversity` | Near zero | Disabled by default; 9.1% effective rate in closed-loop runs |
-| `continue_discussion` | Negative | Disabled by default; 0% effective, $\Delta\tau = -0.40$ |
-
-The effectiveness figures for different interventions are not directly comparable, as they derive from different observation conditions (partial-isolation versus closed-loop).
-
-### 5.7 Temporal Decay of Intervention Effectiveness
-
-Across all `full`-condition runs, intervention effectiveness decays with round number: Round 1 shows the highest impact, Round 2 shows reduced impact, and Round 3 shows zero effective interventions. No Round 4 data exists to confirm monotonicity—this is a measurement-floor limitation rather than a confirmed decay pattern. The practical implication is that the governance engine has approximately one high-leverage round to alter the discussion trajectory, after which belief positions crystallize. This is consistent with the thermodynamic termination framework: once $R \geq 0.85$, the system is past the point where interventions can meaningfully reshape the outcome.
+**Statistics** (`e9_v6_comparison.ts`): B−A is the sole confirmatory (primary) comparison; others exploratory; significance = Bootstrap CI same-sign; B vs D uses non-inferiority (margin=0.1).
 
 ---
 
-## 6. Discussion
+## 5. Findings
 
-### 6.1 A Unified Narrative: Measure First, Govern Later
+**F1 (methodological basis): consensus ≠ correctness—but the evidence is exploratory.**
+$r\approx-0.10$ ($p=0.20$, not significant) **questions** (does not refute) the universality of the "convergence implies correctness" assumption. If consensus is unrelated to correctness, a governance system optimizing only consensus may be optimizing the wrong objective.
 
-The three main findings of this work—weak consensus-quality correlation, the superiority of structural rearrangement over procedural governance, and the boundary conditions of intervention effectiveness—form a coherent story about the relationship between multi-agent deliberation and collective cognition.
+**F2 (historical): structural rearrangement > procedural governance.**
+shuffle ($d=1.44$) outperforms in-discussion governance ($d=0.92$); post-hoc, not pre-registered, single model.
 
-The DeGroot-model assumption that multi-agent deliberation converges toward correct answers is not supported by our data. Consensus and correctness are largely uncorrelated ($r \approx -0.10$, $p = 0.20$, not significant; exploratory observation). This means that any governance system optimized for convergence speed may be optimizing the wrong objective. More importantly, it means that **measurement must precede governance**: without a reliable signal for when deliberation is going wrong, interventions are blind.
+**F3 (historical): destructive interventions are harmful; backfire risk.**
+$\Delta\tau=-0.267$; intervention count negatively correlated with quality ($r=-0.55$, anecdotal)—motivating the v6 non-destructive design.
 
-Our thermodynamic framework provides this measurement signal. Rather than treating convergence as the goal, it monitors the *quality* of the convergence process: distinguishing structural disorder from thermal noise, identifying when consensus is premature rather than genuine, and providing a termination signal that does not simply equate agreement with success. The framework is best understood as a diagnostic instrument—a "stethoscope for agent deliberation"—that makes collective cognitive states visible and quantifiable.
-
-The shuffle finding deepens this picture. If breaking role-information coherence produces larger improvements than within-discussion governance, then the most powerful interventions may be structural—changes to the topology of information distribution—rather than procedural. This finding was not pre-registered and requires replication, but it suggests a design principle: the phase boundary for collective deliberation quality is structurally pre-set by how roles and information are paired.
-
-The intervention findings add a crucial design lesson. Our smoke test of the cognitive governance closed-loop with **destructive** interventions (v2.0: reduce_weight, force_reflection) found that governance interventions *reduced* decision quality ($\Delta\tau = -0.267$). The `reduce_weight` intervention suppressed agents holding key information, while `force_reflection` backfired on agents with locked positions—consistent with the Degeneration-of-Thought theory (Liang et al., 2024). We then replaced these with **non-destructive** interventions (v2.1: inject_evidence, rebalance_attention) that modify information flow rather than belief weights. A 2026-07-25 re-run of the smoke test ($N=6$) yielded $\Delta\tau = 0.000$ (both groups $\tau = 0.733$), failing to reproduce the earlier reported $+0.533$. The design principle—interventions should change information flow, not belief weights—remains theoretically motivated, but its empirical validation requires a larger-sample experiment ($N \geq 30$) on a hard task (Crisis) where the Supplier ceiling effect does not apply. We treat the design of non-destructive interventions as a promising direction with preliminary and currently inconclusive validation (§8).
-
-### 6.2 What the Framework Adds Beyond MAST
-
-The relationship between MAST and this work is complementary: taxonomy versus runtime.
-
-| Dimension | MAST (Cemri et al., 2025) | SwarmAlpha (this work) |
-|---|---|---|
-| Contribution type | Descriptive taxonomy + annotated dataset | Engineered runtime + preliminary experiments |
-| FC2 (inter-agent) coverage | Catalogues failures; 0% detection | Three detectors designed and unit-tested; empirical calibration pending |
-| FM-1.5 (unaware of stopping) | Catalogued as a failure mode | Thermodynamic termination criterion ($R \geq 0.85$) |
-| Detection | Post-hoc human annotation | Runtime, deterministic, zero additional LLM calls |
-| Intervention | Deferred as future work | Four intervention strategies with F-decomposition ranking |
-
-We take three concrete steps on MAST's roadmap: implementing detectors for FM-2.4, FM-2.5, and FM-2.6; providing a termination signal for FM-1.5; and generating preliminary evidence that interventions have measurable but bounded and context-dependent effects.
-
-### 6.3 Role-Coherence Overconfidence: A Candidate Mechanism
-
-The shuffle finding suggests a specific mechanism through which role-information structure shapes deliberation quality. We propose *role-coherence overconfidence* as a hypothesis:
-
-1. When an agent is assigned the role "Cost Analyst" and provided with cost-domain data, the LLM constructs a coherent narrative: "My expertise is cost. The cost data supports my position. Therefore my position is correct."
-2. This coherence inflates confidence beyond what the evidence warrants.
-3. High-confidence, role-coherent agents dominate the discussion, generating authority bias and polarization as emergent effects.
-4. Breaking the coherence (shuffle) severs this self-reinforcing loop, forcing agents to integrate information from multiple domains rather than anchoring to their role-assigned data.
-
-This hypothesis is not formalized. Introducing a per-agent role-coherence field $C_i$ into the thermodynamic framework and testing its predictive power across tasks and models is part of our planned theoretical development.
-
-### 6.4 Self-Critique and Methodological Reflection
-
-We consolidate here the limitations and corrections that, in an earlier draft, were distributed across the manuscript. We believe that transparent reporting of null results, retracted claims, and underpowered analyses is essential scientific practice and that consolidating them improves readability without reducing honesty.
-
-**Partial theoretical formalization.** Four of eight propositions (1a, 1b, 1c, 4) are formally proven. The remaining four (2, 3, 5, 6, 7, 8) are conjectures involving LLM black-box functions or stochastic dynamics. The term $\varepsilon_i$ (LLM output stochasticity) is not modeled; the influence weights $w_{ij}$ are assumed time-invariant in Proposition 4 but vary in practice; and per-item beliefs are not incorporated into the fixed-point analysis. The proofs, while short and grounded in standard identities, are AI-assisted drafts that await human verification by a collaborating mathematician.
-
-**Corrected propositions.** As detailed in §3.3, Propositions 1b, 1c, and 2 were corrected after script-based testing revealed errors in the initial formulations. We regard this as evidence of the framework's empirical discipline: the propositions that survived are those that withstood concrete numerical challenge.
-
-**Retracted conclusion.** The claim that `force_reflection` produces reverse reinforcement in rogue agents was retracted after discovering that 100% of relevant samples had concurrent `reduce_weight` interventions. The attribution was confounded.
-
-**Detector validation asymmetry.** The four classical detectors have measured trigger rates from 279 runs but no false-positive or false-negative estimates, as human-annotated ground truth does not exist. The three MAST-aligned detectors have passed unit testing but have zero empirical triggers, having been implemented after the most recent experiment run.
-
-**F-decomposition null result.** The A/B comparison of F-decomposition versus fixed ranking showed no significant benefit. Whether this reflects a genuine null effect or insufficient statistical power ($N = 8$ pairs, three-round format) is unresolved.
-
-**Single-model limitation. ⚠️ Cross-model pilot confounded by code version mismatch.** Of 169 closed-loop runs, all used DeepSeek-V3. Cross-model pilot data exist for Qwen 3.7-plus (Crisis 30) and Zhipu glm-4-flash (Fraud 14), but these are not part of the closed-loop primary evidence. A Qwen Crisis pilot initially suggested a governance-effect direction contradiction (DeepSeek +0.208 vs Qwen −0.020), but **deep audit (2026-07-27) revealed this comparison is confounded**: DeepSeek data was collected on 2026-07-14 (pre-D1-D4-fix, pre-B1-B8-upgrade code, no codeVersion field) while Qwen data was collected on 2026-07-22 (codeVersion="2026-07-19", post-fix/post-upgrade). The two runs differ in consensusLevel formula (old 1-2·std vs new Kuramoto R), detector triggering behavior (DeepSeek fired polarization+echo_chamber; Qwen fired premature_consensus), and intervention counts (5 vs 1). **Code version is an uncontrolled confounding variable; the direction inconsistency cannot be attributed to model differences.** This pilot is therefore downgraded to an exploratory observation pending a controlled replication (same code version, both models). The primary effect-size evidence (d=0.92) remains a single-model (DeepSeek-V3) finding; generalization to other model families (GPT-4o, Claude, larger Qwen/Zhipu variants) is untested.
-
-**Underpowered cells.** The Supplier task governance effect ($d = 0.47$, $p = 0.086$, power 43%) requires $n = 72$ per cell for 80% power. The failure group in the rogue-agent analysis contains only two runs.
-
-**Shuffle not pre-registered.** The shuffle effect was discovered during control-condition design rather than hypothesized in advance. Future experiments will be pre-registered.
-
-**Broken-loop historical data.** 318 broken-loop runs predate a critical fix that made state-modification interventions visible to agent perception. In these runs, the governance loop was broken—detectors fired and interventions were logged but could not affect agent behavior. These runs are used only for detector trigger-rate statistics (§4.2), not for causal claims about intervention efficacy. Closed-loop runs (169 primary) are the sole basis for intervention-effect claims.
-
-**Async engine PRNG bug (fixed).** An earlier version used `Math.random()` in the async engine, violating reproducibility. All instances have been replaced with the seeded `mulberry32` PRNG. The fix is verified by 332 passing unit tests (3 skipped, network-dependent, unrelated to governance logic).
+**F4 (current, exploratory): δ-governance chain is functional.**
+Pilot B group: 16 interventions, δ-diagnosis firing normally, Δτ=+0.071 (single-run, not statistical evidence).
 
 ---
 
-## 7. Limitations
+## 6. Limitations and Future Work
 
-The limitations enumerated in §6.4 represent the current boundaries of this work. Here we summarize the structural ones that define the scope of valid inference:
+**Current limitations**:
+1. **Single model**: historical 169 closed-loop runs all DeepSeek-V3; cross-model pilot confounded by code version (F16 downgraded).
+2. **Few tasks**: 2 historical + 1 v6 task; top venues expect 5+.
+3. **Evidence layering**: historical evidence (169 runs) ≠ v6 evidence (only Pilot).
+4. **Detectors**: 3 MAST detectors zero empirical triggers; echo chamber detector judged ineffective (separation=0).
+5. **F-decomposition ranking falsified** ($d_z=-0.354$), retained as design principle only.
+6. **Intervention judgment**: historical "effectiveness rates" based on uncontrolled belief-move (E10), not causal evidence.
+7. **Theory**: 4 of 8 propositions proven, 4 conjectures (AI-assisted proofs pending human verification).
 
-1. **Single model. ⚠️ Cross-model pilot confounded by code version mismatch.** All 169 closed-loop runs used DeepSeek-V3. Cross-model pilot data exist for Qwen 3.7-plus (Crisis 30) and Zhipu glm-4-flash (Fraud 14) but are not part of the closed-loop primary evidence. A Qwen Crisis pilot initially suggested a governance-effect direction contradiction (DeepSeek +0.208 vs Qwen −0.020), but deep audit (2026-07-27) revealed this comparison is **confounded by code version mismatch**: DeepSeek data (2026-07-14, pre-fix code) and Qwen data (2026-07-22, post-fix code) differ in consensusLevel formula, detector triggering behavior, and intervention counts. Code version is an uncontrolled confounding variable; the direction inconsistency cannot be attributed to model differences. This pilot is downgraded to an exploratory observation pending controlled replication (same code version, both models). The primary effect-size evidence ($d=0.92$) remains a single-model (DeepSeek-V3) finding; generalization to other model families (GPT-4o, Claude, larger Qwen/Zhipu variants) is untested.
-
-2. **Task diversity insufficient.** Both primary tasks are hidden-profile ranking tasks with five agents. Top-tier multi-agent venues typically expect coverage of 5+ task types; we have only two (Crisis and Supplier). Generalization to other task structures (classification, generation, open-ended deliberation) and larger agent counts is unknown.
-
-3. **Short discussions.** The three-round sync-engine format and 25-utterance async-engine cap may truncate dynamics that would play out differently over longer horizons. The temporal decay finding (§5.7) may be an artifact of this format.
-
-4. **Heuristic detector thresholds.** All detector thresholds are initial values set by inspection. Calibration against human-annotated bias labels has not been performed.
-
-5. **No causal identification of intervention effects.** The correlation between intervention count and decision quality ($r = -0.55$) is confounded by scenario difficulty. Causal estimates require controlled ablation experiments not yet conducted.
-
-6. **MAST detectors empirically unvalidated.** The three MAST-aligned detectors (FM-2.4/2.5/2.6) have been implemented and unit-tested (13 tests; all 27 governance tests pass) but have zero empirical triggers in the current dataset—they were implemented after the most recent experiment run and have not been validated against real failure scenarios.
-
-7. **No pre-registration** for the primary experimental findings. The F-decomposition A/B comparison (§5.6) was designed as internal hypothesis $H_F$ (no OSF/AsPredicted registration); future experiments will be formally pre-registered.
-
-8. **Smoke-test sample size insufficient for intervention claims.** The v2.1 non-destructive intervention result was originally reported as $\Delta\tau = +0.533$ based on $N = 6$ (3 seeds × 1 run × 2 conditions), yielding statistical power of approximately 50%. A 2026-07-25 re-run of the same smoke test yielded $\Delta\tau = 0.000$ (both groups $\tau = 0.733$), failing to reproduce the earlier $+0.533$. The current data therefore do not support a positive effect of non-destructive interventions; the Supplier task's ceiling effect (baseline $\tau = 0.733$) may mask any treatment effect. The destructive ($\Delta\tau = -0.267$) vs. non-destructive design contrast remains theoretically motivated but requires larger-sample replication (target $N \geq 30$ per condition) on a hard task (Crisis) before being treated as a confirmatory finding. We label it as a smoke-test-level proof of concept with currently inconclusive results.
-
-9. **Thermodynamic variables are operational heuristics, not physical quantities.** As stated in §3.1, $R$, $T$, $H$, and $F$ are metaphorical instruments for surfacing governance-relevant patterns faster than text-only analysis permits; they are not claims about physical realities in language models. The free-energy decomposition $F = (1-R) + T \cdot H$ is an organizing analogy, not a derivation from first-principles thermodynamics. LLM belief outputs are stochastic and context-sensitive; a single prompt rephrasing can shift a belief value by 0.2 or more. The framework's value is engineering value (deterministic, low-latency governance signals), not metaphysical value.
-
-10. **Ceiling effect on the Supplier task.** The Supplier baseline $\tau = 0.680 \pm 0.186$ is already high, leaving limited room for governance improvement. The governance effect on Supplier is positive but not statistically significant ($d = +0.47$, $p = 0.086$, power 43%), consistent with a ceiling effect rather than governance failure. This task-dependence means governance effectiveness cannot be assessed from a single task difficulty level.
-
-11. **Prompt injection vulnerability in the governance tag channel.** The `PromptInjector` extracts agent beliefs from `[GOV]` JSON tags appended to agent outputs. An earlier implementation took the first `[GOV]` tag, allowing prompt-injection attacks where an adversarial agent could forge a `[GOV]` tag in the message body to manipulate governance state. This has been partially mitigated by taking only the last line-start `[GOV]` tag and ignoring tags in the message body (`stripGovTag` regex fix, 2026-07-15), but the channel remains fundamentally prompt-based and a formal security audit has not been conducted.
-
-12. **Invalid echo chamber detector.** The echo chamber detector exhibits zero separation between triggered and non-triggered runs (separation = 0.000 in adaptive validation), meaning its trigger signal carries no discriminative information for decision quality. It is retained in the codebase for backward compatibility but is excluded from the active governance signal and should not be treated as a functional detector. The remaining three classical detectors (authority bias, polarization, premature consensus) show non-zero separation and are retained.
+**Future work**: E9 full run (200 runs, validating the four groups) → same-code-version cross-model replication → third task → detector empirical calibration → theoretical formalization.
 
 ---
 
-## 8. Conclusion and Next Steps
+## 7. Conclusion
 
-We have engineered social thermodynamics—a four-variable state space $(R, T, H, F)$ computed deterministically from structured belief outputs—into a runtime measurement signal for LLM multi-agent deliberation. The framework combines seven bias detectors (four classical, three MAST-aligned), three active non-destructive intervention strategies (inject_evidence, rebalance_attention, shuffle_knowledge; four deprecated destructive strategies documented as failures: reduce_weight, force_reflection, introduce_diversity, continue_discussion), and a thermodynamic crystallization criterion for termination. Preliminary experiments across 169 closed-loop runs surface three findings with implications for multi-agent system design: consensus is uncorrelated with correctness (exploratory observation, $p=0.20$ not significant), structural information rearrangement dominates procedural governance, and destructive interventions clearly harm decision quality ($\Delta\tau = -0.267$). The v2.1 non-destructive intervention path, re-tested on 2026-07-25, yielded $\Delta\tau = 0.000$ in the current smoke test ($N=6$), failing to reproduce the earlier reported $+0.533$; its empirical validation is ongoing.
-
-Our immediate priority is stabilizing the framework before large-scale validation. The stabilization roadmap has three phases:
-
-**Phase 1: Replace destructive interventions. ⚠️ Partially completed (2026-07-25).** The smoke test ($\Delta\tau = -0.267$) identified two root causes: `reduce_weight` suppresses agents holding key information, and `force_reflection` backfires on agents with locked positions (consistent with Degeneration-of-Thought theory). We replaced these with non-destructive alternatives: `inject_evidence` (injects ignored private information without modifying weights) and `rebalance_attention` (adjusts speaking order to surface marginalized voices). A 2026-07-25 re-run of the smoke test, however, yielded $\Delta\tau = 0.000$ (both groups $\tau = 0.733$), failing to reproduce the earlier reported $+0.533$. The Supplier task's ceiling effect (baseline $\tau = 0.733$) may mask any treatment effect. The design principle—interventions should change information flow, not belief weights—remains theoretically motivated, but empirical validation requires a hard-task (Crisis) experiment with $N \geq 30$.
-
-**Phase 2: Cross-model validation. ⚠️ Pilot confounded by code version mismatch; controlled replication required.** Cross-model pilots have been conducted on Qwen 3.7-plus (Crisis 30) and Zhipu glm-4-flash (Fraud 14). A Qwen Crisis pilot initially suggested a governance-effect direction contradiction (DeepSeek +0.208 vs Qwen −0.020), but deep audit (2026-07-27) revealed this comparison is **confounded by code version mismatch**: DeepSeek data (2026-07-14, pre-fix code) and Qwen data (2026-07-22, post-fix code) differ in consensusLevel formula, detector behavior, and intervention counts. The direction inconsistency cannot be attributed to model differences. **Controlled replication is required**: (1) re-run DeepSeek Crisis baseline with the current code version (same codeVersion as Qwen), (2) expand Qwen to $n=24$ for statistical power, (3) replicate on Supplier task, (4) test GPT-4o and Claude. Only after code-version-controlled replication can cross-model generalizability be assessed.
-
-**Phase 3: MAST detector empirical validation.** The three MAST-aligned detectors (FM-2.4/2.5/2.6) are implemented and unit-tested but have zero empirical triggers. We will construct deliberate trigger scenarios to validate detection accuracy before claiming coverage.
-
-**Longer-term directions** include: theoretical formalization (moving Propositions 5–8 from conjectures to theorems), large-N and long-horizon experiments, replication of the shuffle effect, and calibration of detector thresholds against human annotation. Once the measurement framework is stabilized and cross-model validated, the governance intervention layer can be optimized with confidence that the underlying diagnostic signals are reliable.
-
-This work is an early-stage contribution to a problem—cognitive measurement of multi-agent deliberation—that we believe will grow in importance as LLM-based agent teams are deployed in higher-stakes settings. The framework, code, and data are open-source. We welcome collaboration, critical replication, and connection to prior work we may have overlooked.
-
----
-
-## Acknowledgments
-
-Experiments were conducted using the DeepSeek-V3 API. Statistical methods (permutation test, bootstrap, Welch $t$-distribution, Benjamini-Hochberg FDR) were implemented from first principles with a seeded `mulberry32` PRNG for reproducibility. All code is open-source at [github.com/mulasakee17/swarmalpha](https://github.com/mulasakee17/swarmalpha) (MIT license). The author is seeking laboratory collaboration for formal theory development and large-scale validation; contact via the repository.
-
----
-
-## Appendix A: Statistical Methods
-
-### A.1 Permutation Test
-
-For each comparison, the test statistic is the observed mean difference $\Delta\bar{Q}$. Null distribution: pool observations from both conditions, randomly reassign labels ($10^4$ permutations, `mulberry32` seed 42), compute $\Delta\bar{Q}$ per permutation. Two-sided $p$-value with $(\text{count}+1)/(\text{nPerms}+1)$ correction to avoid $p = 0$ artifacts.
-
-### A.2 Bootstrap Confidence Intervals
-
-Bias-corrected percentile bootstrap, $10^4$ resamples per condition (`mulberry32` seed $42 + 0x5EED$). 95% CI reported.
-
-### A.3 Multiple Comparison Correction
-
-For $K$ simultaneous tests: Benjamini-Hochberg FDR. Bonferroni correction reported as family-wise alternative where applicable.
-
-### A.4 Effect Size
-
-Cohen's $d$ with extreme-value trimming. For paired comparisons, $d_z$ (within-subject). For small samples ($n < 30$), Welch $t$-distribution CI used in place of normal approximation.
-
----
-
-## Appendix B: Task Specifications
-
-### B.1 Crisis Response Task
-
-Five agents (Medical Coordinator, Infrastructure Lead, Logistics Chief, Communications Director, Security Head) prioritize five crisis areas across five dimensions (Casualty Impact, Infrastructure Damage, Resource Availability, Public Visibility, Recovery Timeline). Each agent holds private information on two to three dimensions. Ground-truth ranking: $0.35 \cdot \text{Casualty} + 0.25 \cdot \text{Infrastructure} + 0.20 \cdot \text{Resource} + 0.10 \cdot \text{Visibility} + 0.10 \cdot \text{Recovery}$.
-
-### B.2 Supplier Selection Task
-
-Five agents (Cost Analyst, Quality Engineer, Delivery Specialist, Technical Director, Financial Advisor) rank five suppliers across five dimensions. Each agent holds private data on their domain dimension plus partial data on one to two overlapping dimensions. Ground-truth ranking: $0.30 \cdot \text{Cost} + 0.25 \cdot \text{Quality} + 0.20 \cdot \text{Delivery} + 0.15 \cdot \text{Technical} + 0.10 \cdot \text{Financial}$.
-
----
-
-## Appendix C: Reproducibility Checklist
-
-- [x] All code open-source (MIT license)
-- [x] Seeded PRNG (`mulberry32`) for all stochastic operations
-- [x] Unified `PERMUTATION_SEED = 42` and `BOOTSTRAP_SEED = 42 + 0x5EED` across all analysis scripts
-- [x] Full experiment logs with per-round beliefs, confidences, interventions, token usage
-- [x] Statistical analysis scripts with explicit random seeds
-- [x] 332 unit tests pass (3 network-dependent tests skipped, unrelated to governance logic)
-- [x] 13 dedicated MAST detector unit tests (FM-2.4/2.5/2.6 positive, negative, safe-degradation, integration)
-- [ ] Pre-registration (protocol written; not yet executed for new experiments)
-- [ ] Cross-model validation (pilots confounded by code version mismatch: DeepSeek 2026-07-14 vs Qwen 2026-07-22; controlled replication required: same code version both models)
-- [ ] Large-scale detector calibration (designed; not run)
-- [ ] Formal proofs (Propositions 1a–4: AI-assisted drafts; Propositions 5–8: conjectures)
+We propose the v6 cognitive governance framework—five-dimensional cognitive state representation, δ consistency diagnosis, non-destructive intervention, and a decoupled social-thermodynamic measurement layer—with layered LLM usage (design target ~95% of rounds at zero extra cost). Historical method validation (169 closed-loop runs) establishes "consensus≠correctness" and the non-destructive intervention direction; the current Pilot verifies the δ→intervention chain; the full E9 experiment is pending. Framework, code, and data are open-source; we welcome collaboration and critical replication.
 
 ---
 
 ## References
 
-1. Cemri, M., Pan, M. Z., Yang, S., et al. (2025). *Why Do Multi-Agent LLM Systems Fail?* arXiv:2503.13657.
-2. OWASP (2025-12). *Top 10 for Agentic Applications for 2026.* ASI01–ASI10.
-3. Stasser, G., & Titus, W. (1985). *Pooling of unshared information in group decision making.* Journal of Personality and Social Psychology.
-4. Pluchino, A., Latora, V., & Rapisarda, A. (2004). *Changing Opinions in a Changing World: A New Perspective in Sociophysics.* arXiv:cond-mat/0410217.
-5. Pradhan, S., & Ujjwal, S. R. (2025). *Diversity mitigates polarization and consensus in opinion dynamics.* arXiv:2509.19860.
-6. Reggio, A., Delabays, R., & Jacquod, P. (2020). *Clusterization and phase diagram of the bimodal Kuramoto model with bounded confidence.* arXiv:2007.01214.
-7. Tsekov, R. (2023). *Social Thermodynamics 2.0.* arXiv:2307.05984.
-8. López-Corona, O., Padilla, P., Huerta, A., et al. (2015). *Measuring social complexity and the emergence of cooperation from entropic principles.* arXiv:1502.05741.
-9. Wang, H., Yan, X.-Y., & Wu, J. (2020). *Free utility model for explaining the social gravity law.* arXiv:2009.07984.
-10. Tomé, T., Fiore, C. E., & Oliveira, M. J. (2022). *Stochastic thermodynamics of opinion dynamics.* arXiv:2212.07268.
-11. Oliveira, I. V. G., Wang, C., Dong, G., et al. (2023). *Entropy Production on Cooperative Opinion Dynamics.* arXiv:2311.05803.
-12. Han, W., Feng, Y., Qian, X., Yang, Q., & Huang, C. (2019). *Clusters and the entropy in opinion dynamics on complex networks.* arXiv:1909.04843.
-13. Galam, S. (2024). *Spontaneous Symmetry Breaking, Group Decision Making and Beyond 1. Echo Chambers and Random Polarization.* arXiv:2410.02582.
-14. Liu, X., Shang, H., & Jin, H. (2025). *CoBRA: Programming Cognitive Bias in Social Agents Using Classic Social Science Experiments.* arXiv:2509.13588. (CHI 2026)
-15. Nudo, J., Pandolfo, M. E., Loru, E., Samory, M., Cinelli, M., & Quattrociocchi, W. (2025). *Generative Exaggeration in LLM Social Agents: Consistency, Bias, and Toxicity.* arXiv:2507.00657.
-16. Jin, Y., Zhao, Q., Wang, Y., Chen, H., Zhu, K., Xiao, Y., & Wang, J. (2024). *AgentReview: Exploring Peer Review Dynamics with LLM Agents.* arXiv:2406.12708. (EMNLP 2024 Oral)
-17. Liang, T., He, Z., Jiao, W., et al. (2024). *Encouraging Divergent Thinking in Large Language Models through Multi-Agent Debate.* arXiv:2305.19118. (EMNLP 2024)
-18. Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., & Mordatch, I. (2024). *Improving Factuality and Reasoning in Language Models through Multiagent Debate.* arXiv:2305.14325. (ICML 2024)
-19. Cui, Y., Fu, H., Zhang, H., Wang, L., & Zuo, C. (2025). *Free-MAD: Consensus-Free Multi-Agent Debate.* arXiv:2509.11035.
-20. Riedl, C. (2025). *Emergent Coordination in Multi-Agent Language Models.* arXiv:2510.05174. (ICLR 2026)
-21. Myakala, P. K., Agrawal, R., & Manche, R. (2026). *BeliefShift: Benchmarking Temporal Belief Consistency and Opinion Drift in LLM Agents.* arXiv:2603.23848.
-22. Piao, J., Yan, Y., Zhang, J., et al. (2025). *AgentSociety: Large-Scale Simulation of LLM-Driven Generative Agents.* arXiv:2502.08691.
-23. Think-Before-Speak (2026). *Willingness to Speak in Multi-Agent LLM Systems.* arXiv:2606.03137. (KDD'26 Workshop)
-24. When to Think, When to Speak (2026). arXiv:2605.03314. (ICML 2026)
-25. Mikaberidze, G., Mikaberidze, B., & Taylor, D. (2026). *GradNet: A Gradient-Based Framework for Optimal Network Science.* arXiv:2603.09197.
-
-> **Note on references.** This draft now includes 25 verified references spanning statistical physics of opinion dynamics (Refs. 4–13), multi-agent bias detection and governance (Refs. 1, 14–17), consensus-quality decoupling (Refs. 18–21), and speaker selection mechanisms (Refs. 22–24). Areas requiring further survey during peer review: (i) distributional AGI safety frameworks; (ii) formal game-theoretic models of adversarial agents in deliberation; (iii) cross-cultural generalization of hidden-profile findings.
-
----
-
-> **Draft version**: 2026-07-26. Measurement framework complete; non-destructive intervention (v2.1) re-tested on 2026-07-25, current smoke test $\Delta\tau = 0.000$ (earlier $+0.533$ not reproduced). Stabilization Phase 1 partially complete (design validated, empirical validation ongoing), Phase 2 (cross-model) in progress.
-> **Code**: [github.com/mulasakee17/swarmalpha](https://github.com/mulasakee17/swarmalpha)
-> **Author**: He Mengyuan (independent researcher)
-> **Contact**: via repository issues
+1. Cemri, M., et al. Why Do Multi-Agent LLM Systems Fail? arXiv:2503.13657, 2025.
+2. OWASP. Top 10 for Agentic Applications for 2026. 2025.
+3. Pluchino, A., et al. Changing Opinions in a Changing World. IJMPC, 2004.
+4. Pradhan, S., Ujjwal, S. R. Diversity mitigates polarization and consensus. arXiv:2509.19860, 2025.
+5. Tsekov, R. Social Thermodynamics 2.0. arXiv:2307.05984, 2023.
+6. López-Corona, O., et al. Measuring social complexity and the emergence of cooperation. arXiv:1502.05741, 2015.
+7. Tomé, T., et al. Stochastic thermodynamics of opinion dynamics. arXiv:2212.07268, 2022.
+8. Galam, S. Echo Chambers and Random Polarization. arXiv:2410.02582, 2024.
+9. Liu, X., et al. CoBRA: Programming Cognitive Bias in Social Agents. CHI 2026.
+10. Nudo, J., et al. Generative Exaggeration in LLM Social Agents. arXiv:2507.00657, 2025.
+11. Du, Y., et al. Improving Factuality through Multiagent Debate. ICML 2024.
+12. Cui, Y., et al. Free-MAD: Consensus-Free Multi-Agent Debate. arXiv:2509.11035, 2025.
+13. Riedl, C. Emergent Coordination in Multi-Agent Language Models. ICLR 2026.
+14. Jin, Y., et al. AgentReview: Exploring Peer Review Dynamics with LLM Agents. EMNLP 2024.
+15. Liang, T., et al. Encouraging Divergent Thinking through Multi-Agent Debate. EMNLP 2024.
+16. Wu, Q., et al. AutoGen: Enabling Next-Gen LLM Applications. arXiv:2308.08155, 2023.
+17. Yang, K., et al. Think-Before-Speak. KDD'26 Workshop, 2026.
