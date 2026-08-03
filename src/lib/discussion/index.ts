@@ -54,9 +54,9 @@ import {
 } from "../constants";
 import type { GovernanceRuntime as GovernanceRuntimeType } from "@/runtime/GovernanceRuntime";
 import type { DiscussionMessage } from "@/runtime/types";
-// RuntimeContext / CollectiveDecisionState 定义在 src/lib/runtime/types.ts（runtime 内部类型），
+// RuntimeContext / CollectiveDecisionState 定义在 src/lib/discussion-types/types.ts（runtime 内部类型），
 // 不在 src/runtime/types.ts（框架适配层）。makeInferenceContext 需要这两个类型构造 inference 上下文。
-import type { RuntimeContext, CollectiveDecisionState, ExperimentConfig } from "../runtime/types";
+import type { RuntimeContext, CollectiveDecisionState, ExperimentConfig } from "../discussion-types/types";
 import {
   beliefToCognitiveState,
   updateCognitiveState,

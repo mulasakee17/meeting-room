@@ -12,7 +12,7 @@
 
 import type { StateDelta, EdgeDelta, InfluenceCalculation, InferenceConfig, InfluenceCalculator, BeliefInferrer } from "./types";
 import type { AgentOpinion, InteractionGraph, InteractionEdge, InfluenceType } from "../discussion/types";
-import type { CollectiveDecisionState, RuntimeContext } from "../runtime/types";
+import type { CollectiveDecisionState, RuntimeContext } from "../discussion-types/types";
 import { determineInfluenceType, computeInfluenceWeight, computeInfluenceImpact } from "../discussion/influenceUtils";
 import {
   INFLUENCE_EDGE_DECAY_FACTOR,

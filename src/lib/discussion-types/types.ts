@@ -1,34 +1,30 @@
 /**
- * Runtime 类型定义——历史残留文档
+ * Discussion 模块类型定义（原 src/lib/runtime/types.ts，2026-08-03 重命名）
  *
- * 本文件中仅以下 3 个类型仍在生产代码中使用：
+ * 服务对象：discussion / inference / observation 三个模块共享的类型。
+ * 仅包含从以下在用类型可达的定义：
  *   - RuntimeContext         (discussion/index.ts, inference/index.ts, observation/index.ts)
  *   - CollectiveDecisionState (discussion/index.ts, inference/types.ts, inference/index.ts)
  *   - ExperimentConfig        (discussion/index.ts，作为桩类型使用)
  *
- * 其余类型（ResearchRuntime, PluginRegistry, EventBus, TerminationStrategy,
- * ResearchArtifact, ResearchReport 等）是 v1/v2 架构遗留的定义。
- * 对应的实现模块（researchRuntime.ts, scheduler.ts, context.ts, eventBus.ts,
- * adapters.ts, termination.ts）已在重构中移除（见 index.ts 注释），
- * 但类型定义保留用于历史参考和类型兼容性。
+ * 2026-08-03 清理：删除 v1/v2 架构遗留的孤儿类型（零外部引用）——
+ * Plugin 系、EventBus、TerminationStrategy、ResearchReport、Scheduler、
+ * ResearchRuntime、ExperimentStatus 等（原文件 514 行 → 现 300 行）。
+ * 对应实现模块（researchRuntime/scheduler/context/eventBus/adapters/termination）
+ * 已在重构中移除。当前生产路径：src/runtime/GovernanceRuntime.ts + src/lib/pipeline.ts。
  *
- * 技术债务：这些死类型应在后续重构中清除，但需要逐个验证无引用后才能删除。
- * 当前生产路径：src/runtime/GovernanceRuntime.ts + src/lib/pipeline.ts
+ * 命名区分：本目录（discussion-types）是类型定义；src/runtime/ 是治理运行时实现。
  */
 import type {
   InteractionGraph,
   DecisionTrace,
   AgentOpinion,
-  DiscussionTask,
-  DiscussionConfig,
   AgentState,
 } from "../discussion/types";
 
 import type {
   EvaluationResult,
   EvaluationConfig,
-  AgentDecision,
-  InteractionRound,
 } from "../evaluation/types";
 
 import type {
@@ -36,7 +32,6 @@ import type {
   GovernanceConfig,
   GovernanceIssue,
   Intervention,
-  AgentBelief,
 } from "../governance/types";
 
 export type RuntimeState =
@@ -185,31 +180,6 @@ export interface RuntimeContext {
   artifact: ResearchArtifact;
 }
 
-export interface RuntimeEvent {
-  id: string;
-  type: string;
-  timestamp: string;
-  roundNumber?: number;
-  payload: Record<string, unknown>;
-  source: string;
-}
-
-export type EventHandler = (event: RuntimeEvent) => void | Promise<void>;
-
-export interface Subscription {
-  id: string;
-  eventType: string;
-  unsubscribe(): void;
-}
-
-export interface EventBus {
-  publish(event: RuntimeEvent): void;
-  subscribe(eventType: string, handler: EventHandler): Subscription;
-  unsubscribe(subscription: Subscription): void;
-  getEvents(type?: string): RuntimeEvent[];
-  clear(): void;
-}
-
 export type TerminationType =
   | "maximum_rounds"
   | "consensus_stable"
@@ -230,18 +200,6 @@ export interface TerminationCondition {
 export interface TerminationConfig {
   conditions: TerminationCondition[];
   strategy: "any" | "all";
-}
-
-export interface TerminationDecision {
-  shouldTerminate: boolean;
-  reason: string;
-  conditionType: TerminationType;
-  metrics: Record<string, number>;
-}
-
-export interface TerminationStrategy {
-  check(context: RuntimeContext): TerminationDecision;
-  getType(): TerminationType;
 }
 
 export interface RoundSnapshot {
@@ -318,197 +276,3 @@ export interface ResearchArtifact {
   };
   terminationReason: string;
 }
-
-export interface ResearchReport {
-  experimentId: string;
-  taskId: string;
-  generatedAt: string;
-  metadata: ReportMetadata;
-  sections: ReportSection[];
-  summary: ReportSummary;
-  rawData: RawDataReference;
-}
-
-export interface ReportMetadata {
-  title: string;
-  description: string;
-  author?: string;
-  createdAt: string;
-  completedAt: string;
-  totalRounds: number;
-  agentCount: number;
-  converged: boolean;
-  terminationReason: string;
-}
-
-export type ReportSectionType =
-  | "discussion_summary"
-  | "opinion_evolution"
-  | "evidence_evolution"
-  | "influence_graph"
-  | "conflict_timeline"
-  | "consensus_evolution"
-  | "evaluation_metrics"
-  | "governance_actions"
-  | "final_decision"
-  | "experiment_metadata"
-  | "future_work";
-
-export interface ReportSection {
-  id: string;
-  title: string;
-  type: ReportSectionType;
-  content: SectionContent;
-  timestamp: string;
-}
-
-export interface SectionContent {
-  text?: string;
-  data?: Record<string, unknown>;
-  charts?: ChartData[];
-  tables?: TableData[];
-}
-
-export interface ChartData {
-  type: "line" | "bar" | "scatter" | "network" | "timeline";
-  title: string;
-  data: Record<string, unknown>;
-  options?: Record<string, unknown>;
-}
-
-export interface TableData {
-  title: string;
-  headers: string[];
-  rows: string[][];
-}
-
-export interface ReportSummary {
-  finalDecision: string;
-  consensusLevel: number;
-  confidence: number;
-  keyFindings: string[];
-  limitations: string[];
-  recommendations: string[];
-}
-
-export interface RawDataReference {
-  trace: string;
-  graph: string;
-  metrics: string;
-  events: string;
-}
-
-export interface Plugin {
-  name: string;
-  type: string;
-}
-
-export interface EvaluationStrategy extends Plugin {
-  type: "evaluation";
-  evaluate(context: RuntimeContext): EvaluationMetric;
-  getWeight(): number;
-}
-
-export interface EvaluationMetric {
-  name: string;
-  score: number;
-  details?: string;
-  dimensions?: Record<string, number>;
-}
-
-export interface AgentAdapter extends Plugin {
-  type: "agent";
-  createAgent(config: AgentConfig): Promise<DiscussionAgent>;
-  adaptToDiscussionAgent(rawAgent: unknown): DiscussionAgent;
-}
-
-export interface AgentConfig {
-  id: string;
-  name: string;
-  role: string;
-  type: string;
-  config?: Record<string, unknown>;
-}
-
-export interface VisualizationPlugin extends Plugin {
-  type: "visualization";
-  visualizationType: "chart" | "graph" | "timeline" | "heatmap";
-  render(context: RuntimeContext): VisualizationData;
-}
-
-export interface VisualizationData {
-  type: string;
-  title: string;
-  data: Record<string, unknown>;
-  options?: Record<string, unknown>;
-}
-
-export interface ResearchPlugin extends Plugin {
-  type: "research";
-  researchType: "analysis" | "transformation" | "export";
-  execute(context: RuntimeContext): ResearchResult;
-}
-
-export interface ResearchResult {
-  name: string;
-  type: string;
-  data: Record<string, unknown>;
-  summary?: string;
-}
-
-export interface PluginRegistry {
-  register(type: string, plugin: Plugin): void;
-  get(type: string, name: string): Plugin | undefined;
-  getAll(type: string): Plugin[];
-  unregister(type: string, name: string): void;
-  has(type: string, name: string): boolean;
-}
-
-export interface ScheduledTask {
-  id: string;
-  type: "discussion" | "evaluation" | "governance" | "report";
-  priority: "high" | "medium" | "low";
-  dependencies: string[];
-  payload: Record<string, unknown>;
-}
-
-export interface SchedulerStatus {
-  currentState: RuntimeState;
-  currentRound: number;
-  queuedTasks: number;
-  runningTask?: string;
-  startTime: string;
-  elapsedMs: number;
-}
-
-export interface ExperimentResult {
-  experiment: Experiment;
-  report: ResearchReport;
-  context: RuntimeContext;
-}
-
-export interface ResearchRuntime {
-  submitTask(task: TaskRequest): Promise<Task>;
-  createExperiment(taskId: string, config: ExperimentConfig): Promise<Experiment>;
-  startExperiment(experimentId: string): Promise<ExperimentResult>;
-  pauseExperiment(experimentId: string): Promise<void>;
-  resumeExperiment(experimentId: string): Promise<void>;
-  stopExperiment(experimentId: string): Promise<void>;
-  getExperimentStatus(experimentId: string): Promise<ExperimentStatus>;
-  generateReport(experimentId: string): Promise<ResearchReport>;
-  getEventBus(): EventBus;
-  getContext(experimentId: string): RuntimeContext | undefined;
-  getPluginRegistry(): PluginRegistry;
-}
-
-export interface ExperimentStatus {
-  experimentId: string;
-  status: RuntimeState;
-  currentRound: number;
-  maxRounds: number;
-  startTime: string;
-  elapsedMs: number;
-  metadata: Record<string, unknown>;
-}
-
-

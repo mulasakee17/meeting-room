@@ -1,5 +1,5 @@
 import type { AgentOpinion, InteractionGraph, InteractionEdge, InfluenceType } from "../discussion/types";
-import type { CollectiveDecisionState } from "../runtime/types";
+import type { CollectiveDecisionState } from "../discussion-types/types";
 
 export interface StateDelta {
   agentId: string;

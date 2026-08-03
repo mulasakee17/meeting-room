@@ -1,6 +1,6 @@
 import type { RawObservation, ObservationConfig, PromptBuilder, OpinionParser, ObserverAgent } from "./types";
 import type { AgentOpinion, DiscussionTask, DiscussionMemoryEntry } from "../discussion/types";
-import type { RuntimeContext } from "../runtime/types";
+import type { RuntimeContext } from "../discussion-types/types";
 import { safeJsonParse } from "../utils/jsonUtils";
 
 class DefaultPromptBuilder implements PromptBuilder {

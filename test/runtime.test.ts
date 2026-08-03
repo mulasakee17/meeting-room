@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { ObservationLayer } from "@/lib/observation";
 import { InferenceLayer } from "@/lib/inference";
 import type { ObserverAgent } from "@/lib/observation";
-import type { RuntimeContext } from "@/lib/runtime/types";
+import type { RuntimeContext } from "@/lib/discussion-types/types";
 
 class MockObserverAgent implements ObserverAgent {
   constructor(
