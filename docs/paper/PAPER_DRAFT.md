@@ -12,7 +12,7 @@
 
 ## Abstract
 
-LLM multi-agent systems lack a runtime-detectable signal for identifying when collective deliberation drifts toward cognitive failure. We propose the **v6 cognitive governance framework**: agents output a five-dimensional cognitive state; detection uses **consistency diagnosis** (δ-signals comparing self-reported vs. observed behavior, no ground truth required); intervention is **non-destructive** (changing information flow, not belief weights); and a **decoupled social-thermodynamic layer** ($F = U - T\cdot H$, Helmholtz form) provides collective signals, with LLMs used only as occasional semantic sensors (design target ~95% of rounds at zero extra LLM cost).
+LLM multi-agent systems lack a runtime-detectable signal for identifying when collective deliberation drifts toward cognitive failure. We propose the **v6 cognitive governance framework**: agents output a five-dimensional cognitive state; detection uses **consistency diagnosis** (δ-signals comparing self-reported vs. observed behavior, no ground truth required); intervention is **non-destructive** (changing information flow, not belief weights); and a **decoupled social-thermodynamic layer** ($F = U - T\cdot H$, a composite disorder index CDI) provides collective signals, with LLMs used only as occasional semantic sensors (design target ~95% of rounds at zero extra LLM cost).
 
 Historical method validation (169 closed-loop runs) establishes that consensus and decision quality are nearly uncorrelated ($r \approx -0.10$, $p=0.20$, exploratory—**questioning**, not refuting, "convergence implies correctness"); structural rearrangement outperforms procedural governance ($d=1.44$); and destructive interventions are harmful ($\Delta\tau=-0.267$). A current v6 Pilot (single run, seed 42) verifies the δ→intervention chain (16 interventions, $\tau=0.643$ vs. 0.571); the full E9 experiment (200 runs) is pending. The framework is a reproducible, cost-layered foundation for multi-agent cognitive governance, honest about its evidence boundaries.
 
@@ -140,7 +140,7 @@ Symbols in this paper map strictly to the code (to avoid reviewer confusion when
 | $R$ | utility-vector cosine alignment (`MeasurementLayer`) | old: Kuramoto order parameter (belief phases) |
 | $T$ | utility round-to-round volatility | old: belief population std |
 | $H$ | evidence-support distribution entropy | old: belief 5-bin Shannon entropy |
-| $F$ | $F = U - T\cdot H$ (Helmholtz form) | old: $F=(1-R)+T\cdot H$ |
+| $F$ | $F = U - T\cdot H$ (composite disorder index CDI; form inspired by free energy $F=U-TS$, no physical dimension claim) | old: $F=(1-R)+T\cdot H$ |
 | $U$ | utility L2 norm (normalized) | — |
 
 **Two threshold regimes**: cognitive detectors (v6, utility-based scoring) use `COGNITIVE_*` thresholds (e.g., premature consensus 0.55); legacy belief-based detectors use `GOVERNANCE_*` thresholds (e.g., premature consensus 0.35)—**the scoring formulas differ, so thresholds are not interchangeable** (see `constants.ts`).
@@ -182,6 +182,20 @@ Symbols in this paper map strictly to the code (to avoid reviewer confusion when
 
 **Statistics** (`e9_v6_comparison.ts`): B−A is the sole confirmatory (primary) comparison; others exploratory; significance = Bootstrap CI same-sign; B vs D uses non-inferiority (margin=0.1).
 
+**Process Evidence (IDR)**: τ measures decision *outcome*; to probe the *process*—whether governance actually breaks hidden-information barriers rather than the LLM "colliding with the right answer"—we add an offline Information Diffusion Rate (IDR) analysis (`idr_diffusion.ts`, auto-discovers runs from `output/<exp>/raw/`).
+
+*Method*: the hidden-profile construction is known, so each agent's exclusive fragment is marked by 【dimension keywords + distinctive values】 (university: research / employment / location / internationalization+ratio / meta). $M_{i,k}(t)\in\{0,1\}$ = agent $i$'s output (reasoning + evidence) up to round $t$ hits fragment $k$'s marker; cumulative and monotone. $\text{IDR}(t)$ = mean over fragments of the non-owner absorption rate. Matching is heuristic co-occurrence (same family as `markEvidenceSharing` Layer 1), so the edges are *inferred absorption*, not causal lineage; we claim process correlation, not mediation. Speaking volume is reported per condition as a confound control.
+
+*Current results* (university pilot, exploratory):
+
+| Governance | n | IDR_end | mean τ |
+|---|---|---|---|
+| none | 1 | 70.0% | 0.571 |
+| δ governance | 1 | 80.0% | 0.643 |
+| δ+SemanticTool | 3 | 63.8% | 0.381 |
+
+Directionally consistent with the mechanism claim—δ governance has higher information diffusion (IDR_end +10pp) and higher τ (0.571→0.643) together—but **single-run, not statistical evidence**. Per-fragment, δ raises absorption of the employment and internationalization+ratio fragments 75%→100%. Crisis/Supplier E9 pending; re-running the analyzer after the full E9 yields a full-vs-none permutation test. Caveat: the a5 "meta/rough" fragment carries no distinctive values by design and its IDR is 0 — a documented dilution effect on the denominator (see §6.9).
+
 ---
 
 ## 5. Findings
@@ -198,6 +212,9 @@ $\Delta\tau=-0.267$; intervention count negatively correlated with quality ($r=-
 **F4 (current, exploratory): δ-governance chain is functional.**
 Pilot B group: 16 interventions, δ-diagnosis firing normally, Δτ=+0.071 (single-run, not statistical evidence).
 
+**F5 (current, exploratory): governance correlates with higher information diffusion (process evidence).**
+In the university pilot, δ governance shows IDR_end 80% vs 70% (none) with τ 0.643 > 0.571; per-fragment absorption improves on the employment and internationalization+ratio fragments (75%→100%). Single-run and heuristic matching—process *correlation*, not causal proof (§6.9).
+
 ---
 
 ## 6. Limitations and Future Work
@@ -210,6 +227,8 @@ Pilot B group: 16 interventions, δ-diagnosis firing normally, Δτ=+0.071 (sing
 5. **F-decomposition ranking falsified** ($d_z=-0.354$), retained as design principle only.
 6. **Intervention judgment**: historical "effectiveness rates" based on uncontrolled belief-move (E10), not causal evidence.
 7. **Theory**: 4 of 8 propositions proven, 4 conjectures (AI-assisted proofs pending human verification).
+8. **Ordinal-vs-cardinal preference representation**: utility vectors are cardinal (interval-scale) approximations of ordinal preferences; the $U\to\text{rank}$ map is non-smooth at tie boundaries (mitigated by Kendall $\tau$-b tie correction).
+9. **IDR is heuristic co-occurrence matching**: IDR edges are inferred from keyword+value co-occurrence in agent outputs (same family as `markEvidenceSharing` Layer 1), not ground-truth lineage; it is process *correlation*, not mediation evidence. The a5 "meta/rough" fragment further dilutes the denominator (IDR ≈ 0 by design).
 
 **Future work**: E9 full run (200 runs, validating the four groups) → same-code-version cross-model replication → third task → detector empirical calibration → theoretical formalization.
 

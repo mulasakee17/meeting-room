@@ -25,7 +25,7 @@ interface DiscussionAgent {
 
 ### Prompt A：同步引擎（DiscussionEngine）
 
-`src/lib/discussion/index.ts:669-744`
+`src/lib/discussion/index.ts:702-788`
 
 ```
 You are ${agent.name}, a ${agent.role}.
@@ -33,9 +33,14 @@ You are ${agent.name}, a ${agent.role}.
 Task: ${task}
 Round: ${roundNumber}/${maxRounds}
 
-你当前的判断状态：
+【系统参考（仅背景，非强制）】系统基于讨论历史计算的群体倾向：
 - 信念强度：${state.belief}（-1 到 1）
 - 置信度：${state.confidence}%（0-100）
+
+以上为外部计算值（DeGroot 更新），仅作背景参考，不代表你的实际判断。
+
+【你的自主判断】请基于本轮讨论的事实与逻辑独立评估你的立场——
+不要简单复述上述系统参考值，你的信念应反映你对证据的真实判断。
 
 ${memoryContext}        ← 含 (信念: 0.30) 标签
 ${currentRoundContext}  ← 含 (信念: 0.30, 置信度: 70%) 标签
@@ -53,11 +58,11 @@ Respond in JSON format:
 }
 ```
 
-**特征**：向 LLM 显示 belief 数值，要求输出 scalar belief，**不要求 cognitiveState**，evidence 是无结构字符串数组。
+**特征**：向 LLM 显示 belief 数值（标注为"系统参考、仅背景"，并要求独立判断而非复述），要求输出 scalar belief，**不要求 cognitiveState**，evidence 是无结构字符串数组。
 
 ### Prompt B：Native 引擎（NativeCognitiveEngine）
 
-`src/lib/discussion/nativeCognitiveEngine.ts:260-335`
+`src/lib/discussion/nativeCognitiveEngine.ts:296-423`
 
 ```
 You are ${agent.name}, a ${agent.role}.
@@ -66,13 +71,18 @@ Task: ${task}
 Round: ${roundNumber}/${maxRounds}
 
 ${cognitiveContext}      ← 替代"判断状态"，注入 6 个认知维度
-  你当前的认知状态：
+  【系统参考（仅背景，非强制）】系统基于讨论历史计算的认知状态：
   - 偏好选项：Company A
   - 偏好清晰度：0.60（0=无偏好，1=极清晰）
   - 偏好强度：0.80
   - 证据覆盖：0.65（0=无证据，1=证据完整）
   - 证据质量：0.70（0=不可靠，1=高度可靠）
   - 确信度：0.85（0=不确信，1=完全确信）
+
+  以上为外部计算值，仅作背景参考，不代表你的实际判断。
+
+  【你的自主判断】请基于本轮讨论的事实与逻辑独立评估你的认知状态——
+  不要简单复述上述系统参考值，你的认知应反映你对证据的真实判断。
 
 ${memoryContext}        ← 无 belief 标签（Phase 4A decoupled）
 ${currentRoundContext}  ← 无 belief 标签
@@ -96,7 +106,7 @@ Respond in JSON format:
 }
 ```
 
-**特征**（`nativeCognitiveEngine.ts:268-273` 注释明确"移除所有 belief context leakage"）：
+**特征**（`nativeCognitiveEngine.ts:305` 注释明确"移除所有 belief context leakage"）：
 - **不向 LLM 显示 belief**
 - **不要求 LLM 输出 `belief` 字段**
 - memory/currentRound 移除了 `(信念: x.xx)` 标签
@@ -340,3 +350,74 @@ Round N 开始
 1. **跑小规模对照**（同任务 × 3 种子 × 2 模式）→ 看 τ/Q/收敛速度差异
 2. **若 native 显著更好** → 全面切换
 3. **若相当或某些维度退化** → 保留 post-hoc 为默认，native 为可选
+
+---
+
+## 10. Evidence Pool：确定性共享证据池（E10）
+
+> 本文档基于代码事实编写，所有引用带文件:行号。最后核对：2026-08-02
+
+### 10.1 动机与定位
+
+v6 Native 引擎的信息传递是 **Message-Centric**：每个 agent 每轮收到
+`memoryContext`（自己的全部历史 + @ 我的回复，[nativeCognitiveEngine.ts:347](file:///c:/Users/贺孟元/Desktop/swarmalpha/src/lib/discussion/nativeCognitiveEngine.ts#L347) **只 filter 不 slice**）
++ `currentRoundContext`（本轮已发言者全部 reasoning，[nativeCognitiveEngine.ts:377](file:///c:/Users/贺孟元/Desktop/swarmalpha/src/lib/discussion/nativeCognitiveEngine.ts#L377) **无窗口限制**）。
+实测（pilot raw JSON）：最终轮单 agent 注入上下文 ≈ **1082 token**（none）/ **1811 token**（delta）。
+
+E10 引入 **State-Centric Shared Evidence Pool**（`src/lib/thermodynamics/EvidencePool.ts`）：
+全局去重原子事实池，以「他人已陈述的事实（结构化，已去重）」块注入 prompt。**零额外 LLM 调用**（全确定性：canonicalize + hash + Jaccard char-bigram + 数值比较）。
+
+### 10.2 确定性算法
+
+| 步骤 | 算法 | 位置 |
+|---|---|---|
+| 数值提取 | 正则 `/(\d+(?:\.\d+)?)/g` → numericValues | EvidencePool.ts |
+| 精确去重键 | hashKey = 小写、去空白/标点（**保留数值**）→ FNV-1a 32bit | EvidencePool.ts |
+| 近似重复 | Jaccard(char-bigram) ≥ 阈值（默认 0.75）且同 dimension → 合并 | EvidencePool.ts |
+| 数值冲突 | 同 targetItem + 文本相似 ≥ 0.5 + 数值不同 → isContradicted（双向标记） | EvidencePool.ts |
+
+**关键设计（离线自测验证）**：
+- **去重键保留数值**：`0.85` 与 `0.55` 不会被文本相似吞并——Supplier 数值碰撞教训。
+- **冲突不 gate 在 dimension**：a1（学术+科研）与 a5（综合粗略）的数值冲突能触发；
+  用【目标 + 文本相似 ≥0.5 + 数值不同】排除跨话题假阳性（"就业率0.90" vs "地理位置0.95" 不冲突）。
+- **维度按属主映射**（同 [idr_diffusion.ts:47-81](file:///c:/Users/贺孟元/Desktop/swarmalpha/experiments/campaign/analysis/idr_diffusion.ts#L47) SCENARIO_SPECS）：
+  a1 学术+科研 / a2 就业 / a3 地理 / a4 国际化+师生比 / a5 综合粗略。
+
+### 10.3 注入与诚实标注
+
+- 池只收录 agent **实际输出**的证据（structuredEvidence，回退 evidence），**不含私有知识**——
+  非全知黑板书，不摧毁 hidden-profile 构造。
+- 注入块使用「仅背景参考，非强制」框架（与系统参考块同风格），见 buildView 文案。
+- 视图排除自己 source 的事实；排序：冲突优先 → 最新优先；受 maxChars（默认 800 字符）预算约束。
+- **诚实标注**：去重阈值/预算为启发式，需 A/B 标定；开放文本反义冲突不做（超出确定性能力）。
+
+### 10.4 接线点
+
+| 位置 | 改动 |
+|---|---|
+| `DiscussionConfig.evidencePool` | 新增可选配置（enabled / dimensions / similarityThreshold / maxChars） |
+| `DiscussionEngine.observeAgents` | 新增 `onOpinionObserved()` hook（默认 no-op，[index.ts:706](file:///c:/Users/贺孟元/Desktop/swarmalpha/src/lib/discussion/index.ts#L706)），parsed 后调用（[index.ts:695](file:///c:/Users/贺孟元/Desktop/swarmalpha/src/lib/discussion/index.ts#L695)） |
+| `NativeCognitiveEngine` | 覆写 hook 喂池（[nativeCognitiveEngine.ts:283](file:///c:/Users/贺孟元/Desktop/swarmalpha/src/lib/discussion/nativeCognitiveEngine.ts#L283)）；buildPrompt 注入 poolContext（[nativeCognitiveEngine.ts:415-416](file:///c:/Users/贺孟元/Desktop/swarmalpha/src/lib/discussion/nativeCognitiveEngine.ts#L415)） |
+| `ExperimentConfig.evidencePool` | Runner 透传（Runner.ts 构造 NativeCognitiveEngine 时） |
+| `idr_diffusion.ts` | classifyGovernance 新增 `_pool` → pool |
+
+### 10.5 探路结果（E10 smoke，seed 42，university，探索性 n=1）
+
+对照表（同一 seed 42，native_cognitive，5 轮；IDR 来自 `idr_diffusion.ts`）：
+
+| 条件 | τ | IDR_end | token/run | reasoning 均值 |
+|---|---|---|---|---|
+| none（无治理无池，基线） | 0.571 | 70.0% | 96,540 | 200 字符 |
+| **pool（无治理 + 池注入）** | **0.571** | **75.0%** | **193,376** | **330 字符** |
+| delta（δ 治理，对照） | 0.643 | 80.0% | 187,958 | 335 字符 |
+
+**接线验证 ✅**：池确实被注入并生效——pool 组 reasoning 均值 200 → 330 字符（agent 在处理结构化事实），逐碎片 IDR 模式与基线不同（就业/国际化 75%→100%）。离线自测已覆盖：精确去重、数值冲突（0.85 vs 0.55）、跨话题假阳性排除。
+
+**结果解读（方向性，n=1 非统计结论）**：
+- **τ 无改善**：pool = none = 0.571。
+- **IDR_end +5pp**（75% vs 70%），但**低于 δ 治理的 +10pp**（80%）；逐碎片混杂：就业/国际化提升，**地理回退 100%→75%**。
+- **成本 2x**：193K token/run ≈ δ 治理（188K），为基线（96K）2 倍——池使发言变长，无 token 收益。
+
+**方向性解读**：全量结构化披露（pool）≈ 无治理的结果质量，且 < 选择性披露（δ 治理）；δ 治理在相近成本下 τ 与 IDR 双赢。与"披露需要选择性、全披露 ≠ 更好决策"假说一致（呼应 F2 / 共识≠正确主题）。
+
+**决策**：**不投完整 E10**。池作为独立全披露机制成本高、不优于 δ。有价值的方向是把它降级为 **δ 治理的执行载体**（per-agent 视图 + 治理控制可见性 = 选择性披露），即治理从"散文 prompt 注入"升级为"池视图定向子集"，需单独实验验证（E10b，暂不投入）。

@@ -46,6 +46,18 @@ export interface ExperimentConfig {
    *  true → NativeCognitiveEngine 走 applyCognitiveGovernanceAsync（Tier 1→2→3 含 LLM 语义传感器）。
    *  false 或未设置 → 走同步 applyCognitiveGovernance（纯数学 Tier 1→2）。 */
   useSemanticTool?: boolean;
+  /** E10: 确定性共享证据池（State-Centric Evidence Pool）。
+   *  enabled=true 时 NativeCognitiveEngine 注入去重事实池（零 LLM 调用）。
+   *  对照无池基线，验证"结构化事实披露 vs prose 重放"的机制方向。 */
+  evidencePool?: {
+    enabled: boolean;
+    /** agentId → dimension 映射（任务相关，hidden-profile 构造已知） */
+    dimensions?: Record<string, string>;
+    /** Jaccard char-bigram 相似度阈值（近似重复判定，默认 0.75） */
+    similarityThreshold?: number;
+    /** 池视图字符预算（默认 800，约 480 token） */
+    maxChars?: number;
+  };
 }
 
 // ============================================================================

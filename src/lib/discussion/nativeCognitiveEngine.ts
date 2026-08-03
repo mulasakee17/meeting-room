@@ -53,6 +53,7 @@ import type {
   CognitiveStateModification,
 } from "../governance/types";
 import { MeasurementLayer, type ThermoState } from "../thermodynamics/MeasurementLayer";
+import { EvidencePool } from "../thermodynamics/EvidencePool";
 import { mulberry32 } from "../utils/statsUtils";
 import type { LLMConfig } from "../llm/providers";
 
@@ -257,6 +258,9 @@ export class NativeCognitiveEngine extends DiscussionEngine {
     this.llmConfig = config;
   }
 
+  /** E10: 确定性共享证据池（enabled 时注入结构化事实，零 LLM 调用）。 */
+  private evidencePool: EvidencePool | null = null;
+
   constructor(config?: Partial<DiscussionConfig>) {
     super(config);
     // 强制启用 cognitive state 追踪
@@ -264,6 +268,35 @@ export class NativeCognitiveEngine extends DiscussionEngine {
     this.config.useCognitiveState = true;
     }
     this.opinionParser = new NativeCognitiveOpinionParser();
+
+    // E10: 启用共享证据池
+    if (config?.evidencePool?.enabled) {
+      this.evidencePool = new EvidencePool({
+        similarityThreshold: config.evidencePool.similarityThreshold,
+        maxChars: config.evidencePool.maxChars,
+        dimensions: config.evidencePool.dimensions,
+      });
+    }
+  }
+
+  /** 把本 agent 的结构化证据喂入共享池（供后续发言者参考，顺序发言机制）。 */
+  protected onOpinionObserved(opinion: AgentOpinion, roundNumber: number): void {
+    if (!this.evidencePool) return;
+    const structured = opinion.structuredEvidence ?? [];
+    const fallback: Array<{ content: string; supports?: string }> = (opinion.evidence ?? []).map(
+      (content) => ({ content }),
+    );
+    const items = structured.length > 0 ? structured : fallback;
+    for (const item of items) {
+      if (!item.content) continue;
+      this.evidencePool.addEvidence({
+        sourceAgentId: opinion.agentId,
+        roundIntroduced: roundNumber,
+        statement: item.content,
+        confidence: opinion.confidence,
+        supports: item.supports,
+      });
+    }
   }
 
   // ==========================================================================
@@ -361,7 +394,7 @@ export class NativeCognitiveEngine extends DiscussionEngine {
       const evCoverage = myCog.evidence.coverage.toFixed(2);
       const evQuality = myCog.evidence.quality.toFixed(2);
       const confOverall = myCog.confidence.overall.toFixed(2);
-      cognitiveContext = `你当前的认知状态：
+      cognitiveContext = `【系统参考（仅背景，非强制）】系统基于讨论历史计算的认知状态：
 - 偏好选项：${topChoice}
 - 偏好清晰度：${clarity}（0=无偏好，1=极清晰）
 - 偏好强度：${intensity}
@@ -369,9 +402,18 @@ export class NativeCognitiveEngine extends DiscussionEngine {
 - 证据质量：${evQuality}（0=不可靠，1=高度可靠）
 - 确信度：${confOverall}（0=不确信，1=完全确信）
 
-这是你基于此前讨论形成的当前认知状态。请在保持这一状态的基础上，结合本轮新信息更新你的认知。`;
+以上为外部计算值，仅作背景参考，不代表你的实际判断。
+
+【你的自主判断】请基于本轮讨论的事实与逻辑独立评估你的认知状态——
+不要简单复述上述系统参考值，你的认知应反映你对证据的真实判断。`;
     } else {
       cognitiveContext = `这是讨论的第 ${roundNumber} 轮。请基于任务信息和讨论历史形成你的认知状态。`;
+    }
+
+    // E10: 共享证据池注入（结构化去重事实，他人已陈述，仅背景参考）
+    let poolContext = "";
+    if (this.evidencePool) {
+      poolContext = this.evidencePool.buildView(agent.id);
     }
 
     return `You are ${agent.name}, a ${agent.role}.
@@ -382,7 +424,7 @@ Round: ${roundNumber}/${this.config.maxRounds}
 
 ${cognitiveContext}
 
-${memoryContext}${currentRoundContext}${governanceContext}
+${poolContext}${memoryContext}${currentRoundContext}${governanceContext}
 
 Analyze the task and the previous discussion (if any). Provide your opinion with reasoning, evidence, and your internal cognitive state.
 

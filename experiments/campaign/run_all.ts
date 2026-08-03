@@ -38,6 +38,7 @@ import { E6_DECOUPLING } from "./configs/e6_decoupling";
 import { E7_DETECTOR } from "./configs/e7_detector";
 import { E8_SUSCEPTIBILITY } from "./configs/e8_susceptibility";
 import { E9_ALL, E9_OPTIMIZED_A } from "./configs/e9_cognitive_governance";
+import { E10_ALL } from "./configs/e10_evidence_pool";
 
 // ============================================================================
 // Configuration
@@ -63,6 +64,8 @@ const MAIN_EXPERIMENTS: ExperimentConfig[] = [
   ...E9_ALL,
   // 优化任务（12 选项，区分度验证）——isMain=false，仅按需跑
   E9_OPTIMIZED_A,
+  // E10 共享证据池（机制探路）——isMain=false，仅按需跑
+  ...E10_ALL,
   // Priority 3: Detector Validation
   E3_INERTIA,
   E7_DETECTOR,

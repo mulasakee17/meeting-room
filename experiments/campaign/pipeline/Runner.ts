@@ -331,6 +331,8 @@ export async function runSingle(
       // v6 Phase 2.8: 传递 useSemanticTool 开关，C 组启用异步路径（Tier 1→2→3 含 SemanticTool）
       useSemanticTool: config.useSemanticTool ?? false,
       governanceConfig: govConfig,
+      // E10: 传递共享证据池配置（enabled 时注入结构化事实，零 LLM 调用）
+      evidencePool: config.evidencePool,
     });
     // v6 Phase 2.8: useSemanticTool=true 时注入 LLM 配置，供 SemanticTool 异步路径调用
     if (config.useSemanticTool) {

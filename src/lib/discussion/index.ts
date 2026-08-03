@@ -690,6 +690,9 @@ export class DiscussionEngine {
           belief: parsedOpinion.belief,
           confidence: parsedOpinion.confidence,
         });
+        // EvidencePool hook：子类（NativeCognitiveEngine）可在此把本 agent 的
+        // 结构化证据喂入共享池，供后续发言者参考（顺序发言机制）。
+        this.onOpinionObserved(parsedOpinion, roundNumber);
       } catch (err) {
         // API 失败：跳过该 agent，不参与本轮讨论
         console.warn(`Agent ${agent.id} skipped in round ${roundNumber}: ${err instanceof Error ? err.message : err}`);
@@ -698,6 +701,9 @@ export class DiscussionEngine {
 
     return observations;
   }
+
+  /** Hook：agent 发言被解析后调用（供 EvidencePool 等子类扩展）。默认 no-op。 */
+  protected onOpinionObserved(_opinion: AgentOpinion, _roundNumber: number): void {}
 
   protected buildPrompt(
     agent: { name: string; role: string; id: string },
@@ -758,11 +764,14 @@ Task: ${task}
 
 Round: ${roundNumber}/${this.config.maxRounds}
 
-你当前的判断状态：
-- 信念强度：${state.belief.toFixed(2)}（范围 -1 到 1，-1=强烈反对，1=强烈支持）
-- 置信度：${state.confidence.toFixed(0)}%（范围 0-100，越高越确信）
+【系统参考（仅背景，非强制）】系统基于讨论历史计算的群体倾向：
+- 信念强度：${state.belief.toFixed(2)}（范围 -1 到 1）
+- 置信度：${state.confidence.toFixed(0)}%（范围 0-100）
 
-这是你基于此前讨论形成的当前立场。请在保持这一立场的基础上，结合本轮新信息更新你的判断。
+以上为外部计算值（DeGroot 更新），仅作背景参考，不代表你的实际判断。
+
+【你的自主判断】请基于本轮讨论的事实与逻辑独立评估你的立场——
+不要简单复述上述系统参考值，你的信念应反映你对证据的真实判断。
 
 ${memoryContext}${currentRoundContext}${governanceContext}
 

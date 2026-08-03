@@ -263,6 +263,27 @@ export interface DiscussionConfig {
    */
   useSemanticTool?: boolean;
   /**
+   * E10: 确定性共享证据池（State-Centric Shared Evidence Pool）。
+   *
+   * enabled=true 时，NativeCognitiveEngine 把全局去重原子事实池
+   * 以「他人已陈述的事实（结构化，已去重）」块注入 prompt。
+   * 零额外 LLM 调用（全确定性：canonicalize + hash + Jaccard + 数值比较）。
+   *
+   * 设计要点：
+   *  - dimension 按属主映射（hidden-profile 构造已知，同 idr_diffusion 碎片定义）
+   *  - 池只收录 agent 实际输出的证据，不含私有知识（非全知黑板书）
+   *  - 冲突只做可判定子集：同 (dimension, targetItem) 数值不同 → isContradicted
+   */
+  evidencePool?: {
+    enabled: boolean;
+    /** agentId → dimension 映射（任务相关） */
+    dimensions?: Record<string, string>;
+    /** Jaccard char-bigram 相似度阈值（近似重复判定，默认 0.75） */
+    similarityThreshold?: number;
+    /** buildView 字符预算（默认 800，约 480 token） */
+    maxChars?: number;
+  };
+  /**
    * Agent grouping topology for scalable discussions.
    *
    * - FlatTopology (default):  all agents in one group — round-table, n≤10

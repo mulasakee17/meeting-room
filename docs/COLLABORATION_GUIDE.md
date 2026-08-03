@@ -94,7 +94,7 @@ SwarmAlpha 的核心问题是：**能否在运行时检测这些失败，并用�
 | MAST-Data (1642 traces) | 验证检测器精度 | HuggingFace 下载，作为实验输入 |
 | MAST LLM-as-judge pipeline | κ=0.77 对照基线 | 外部 Python notebook |
 | MAST 14 失败模式定义 | 检测器设计需求源 | 概念参考 |
-| Kuramoto 序参量 / Shannon 熵 / Helmholtz 自由能 | R/T/H/F 计算 | 公式实现 |
+| Kuramoto 序参量 / Shannon 熵 / 复合失序指标（CDI） | R/T/H/F 计算 | 公式实现 |
 
 ## 五、接下来的路线（三阶段）
 
