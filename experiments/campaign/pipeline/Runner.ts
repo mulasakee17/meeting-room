@@ -33,8 +33,8 @@ import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
 // Scenario Loading
 // ============================================================================
 
-/** 加载场景配置 */
-function loadScenario(scenarioId: string): { task: any; dataDir: string } {
+/** 加载场景配置。taskIndex 仅 hiddenbench 使用（指定跑第几个 HiddenBench 任务） */
+function loadScenario(scenarioId: string, taskIndex?: number): { task: any; dataDir: string } {
   switch (scenarioId) {
     case "ma": {
       const { TASK_MA } = require("../../lunar_survival/config");
@@ -63,6 +63,15 @@ function loadScenario(scenarioId: string): { task: any; dataDir: string } {
     case "optimized": {
       const { TASK_OPTIMIZED } = require("../tasks/task_optimized");
       return { task: TASK_OPTIMIZED, dataDir: "data_optimized" };
+    }
+    case "hiddenbench": {
+      // HiddenBench 外部任务集：taskIndex 指定第几个任务（0-64），缺省第 1 个
+      const { loadAllConfigs } = require("../tasks/hiddenbench/adapter");
+      const all = loadAllConfigs();
+      const idx = typeof taskIndex === "number" && taskIndex >= 0 && taskIndex < all.length
+        ? taskIndex
+        : 0;
+      return { task: all[idx], dataDir: "data_hiddenbench" };
     }
     default:
       throw new Error(`Unknown scenario: ${scenarioId}`);
@@ -279,7 +288,7 @@ export async function runSingle(
   const runId = `${config.id}_${runtimeMode}_seed${seed}_run${runIndex}`;
   console.log(`  [${new Date().toISOString()}] Starting ${runId}...`);
 
-  const scenario = loadScenario(config.scenario);
+  const scenario = loadScenario(config.scenario, config.taskIndex);
   const useCognitive = runtimeMode === "cognitive" || runtimeMode === "native_cognitive";
   const useNativeCognitive = runtimeMode === "native_cognitive";
 

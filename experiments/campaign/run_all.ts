@@ -39,6 +39,7 @@ import { E7_DETECTOR } from "./configs/e7_detector";
 import { E8_SUSCEPTIBILITY } from "./configs/e8_susceptibility";
 import { E9_ALL, E9_OPTIMIZED_A } from "./configs/e9_cognitive_governance";
 import { E10_ALL } from "./configs/e10_evidence_pool";
+import { E11_ALL } from "./configs/e11_hiddenbench";
 
 // ============================================================================
 // Configuration
@@ -66,6 +67,8 @@ const MAIN_EXPERIMENTS: ExperimentConfig[] = [
   E9_OPTIMIZED_A,
   // E10 共享证据池（机制探路）——isMain=false，仅按需跑
   ...E10_ALL,
+  // HiddenBench 外部任务集验证（isMain=false，按需跑）
+  ...E11_ALL,
   // Priority 3: Detector Validation
   E3_INERTIA,
   E7_DETECTOR,

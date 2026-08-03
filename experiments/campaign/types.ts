@@ -10,7 +10,7 @@
 
 export type RuntimeMode = "belief" | "cognitive" | "native_cognitive";
 export type GovernanceMode = "none" | "detect-only" | "full" | "diversity_only" | "cognitive";
-export type ScenarioId = "ma" | "crisis" | "supplier" | "invest" | "er_triage" | "fraud" | "university";
+export type ScenarioId = "ma" | "crisis" | "supplier" | "invest" | "er_triage" | "fraud" | "university" | "hiddenbench";
 export type LLMProvider = "qwen" | "gpt4o" | "deepseek";
 
 export interface ExperimentConfig {
@@ -22,6 +22,8 @@ export interface ExperimentConfig {
   title: string;
   /** 场景 */
   scenario: ScenarioId;
+  /** HiddenBench 任务索引（0-64，仅 scenario="hiddenbench" 时使用；缺省跑第 1 个） */
+  taskIndex?: number;
   /** 运行时模式 */
   runtimeModes: RuntimeMode[];
   /** 治理模式 */
