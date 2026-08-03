@@ -372,6 +372,7 @@ export async function runSingle(
     : [];
   let finalRanking: string[] = [];
   let finalKendallTau = 0;
+  let finalAccuracy = 0;
 
   if (result.roundResults.length > 0) {
     const lastRound = result.roundResults[result.roundResults.length - 1];
@@ -382,6 +383,11 @@ export async function runSingle(
         finalRanking = extractRanking("", agentNames, allItemBeliefs);
         if (scenario.task.correctAnswer) {
           finalKendallTau = kendallTau(scenario.task.correctAnswer, finalRanking);
+          // 单选准确率：finalRanking[0]（群体第一名）是否为 correctAnswer 中 rank=1 的方案
+          // （HiddenBench 等单选任务用；与 HiddenBench 论文的准确率口径对齐）
+          const correctItem = Object.entries(scenario.task.correctAnswer)
+            .find(([, r]) => r === 1)?.[0];
+          finalAccuracy = correctItem && finalRanking[0] === correctItem ? 1 : 0;
         }
       } catch {
         finalRanking = agentNames;
@@ -534,6 +540,7 @@ export async function runSingle(
     converged: result.converged,
     finalRanking,
     finalKendallTau,
+    finalAccuracy,
     beliefTrajectory,
     cognitiveTrajectory,
     thermoHistory,
@@ -551,7 +558,7 @@ export async function runSingle(
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, JSON.stringify(rawData, null, 2));
 
-  console.log(`  [${new Date().toISOString()}] Completed ${runId} in ${(elapsed / 1000).toFixed(1)}s (τ=${finalKendallTau.toFixed(3)})`);
+  console.log(`  [${new Date().toISOString()}] Completed ${runId} in ${(elapsed / 1000).toFixed(1)}s (τ=${finalKendallTau.toFixed(3)}, acc=${finalAccuracy})`);
   return rawData;
 }
 

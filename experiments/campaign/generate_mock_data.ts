@@ -101,6 +101,9 @@ function generateMockData(): void {
       };
       // 计算 Kendall τ
       const tau = computeKendallTau(finalRanking, correctAnswer);
+      // 单选准确率：第一名是否为 rank=1 的方案
+      const correctItem = Object.entries(correctAnswer).find(([, r]) => r === 1)?.[0];
+      const acc = correctItem && finalRanking[0] === correctItem ? 1 : 0;
 
       const rawData: RawRunData = {
         runId,
@@ -116,6 +119,7 @@ function generateMockData(): void {
         converged: tau > 0.5,
         finalRanking,
         finalKendallTau: tau,
+        finalAccuracy: acc,
         beliefTrajectory,
         cognitiveTrajectory: isCognitive ? cognitiveTrajectory : undefined,
         interventions: [],

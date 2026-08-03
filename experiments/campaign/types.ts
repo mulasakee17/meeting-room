@@ -106,6 +106,8 @@ export interface RawRunData {
   finalRanking: string[];
   /** 最终 Kendall τ */
   finalKendallTau: number;
+  /** 最终单选准确率（finalRanking[0] 是否为 correctAnswer 中 rank=1 的方案；HiddenBench 等单选任务用） */
+  finalAccuracy: number;
   /** 每轮信念快照 */
   beliefTrajectory: Array<{
     round: number;
