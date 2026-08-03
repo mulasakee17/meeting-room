@@ -27,10 +27,10 @@
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [pipeline.ts](../../src/lib/pipeline.ts) | 438 | 共享执行管线 `runSwarmPipeline`，串联 agent 创建→交互→评估→治理→输出 |
+| [pipeline.ts](../../src/lib/pipeline.ts) | 439 | 共享执行管线 `runSwarmPipeline`，串联 agent 创建→交互→评估→治理→输出 |
 | [types.ts](../../src/lib/types.ts) | 230 | 共享类型（UnifiedAgent/ExperimentResult/StrategyDescriptor 等），re-export discussion/types |
-| [constants.ts](../../src/lib/constants.ts) | 220 | 跨模块共享常量（阈值、系数、配置值，按模块分组） |
-| [demo-data.ts](../../src/lib/demo-data.ts) | 218 | Demo 模式预计算数据，零 API 调用离线展示 |
+| [constants.ts](../../src/lib/constants.ts) | 234 | 跨模块共享常量（阈值、系数、配置值，按模块分组） |
+| [demo-data.ts](../../src/lib/demo-data.ts) | 219 | Demo 模式预计算数据，零 API 调用离线展示 |
 
 ### 2.2 agent/ — 智能体认知状态
 
@@ -42,20 +42,32 @@
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [causalEffect.ts](../../src/lib/analysis/causalEffect.ts) | 856 | 基于最近邻轨迹匹配+置换检验的干预因果效应估计 |
+| [causalEffect.ts](../../src/lib/analysis/causalEffect.ts) | 857 | 基于最近邻轨迹匹配+置换检验的干预因果效应估计 |
 
 ### 2.4 llm/ — LLM 提供商抽象
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [providers.ts](../../src/lib/llm/providers.ts) | 858 | LLM 抽象层，支持 openai/anthropic/deepseek/zhipu/qwen/local，含错误分类与超时 |
+| [providers.ts](../../src/lib/llm/providers.ts) | 886 | LLM 抽象层，支持 openai/anthropic/deepseek/zhipu/qwen/local，含错误分类与超时 |
 
 ### 2.5 observation/ & inference/ — 观察与推理层
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [observation/index.ts](../../src/lib/observation/index.ts) | 161 | 观察层：从 LLM 输出提取结构化认知状态（DefaultPromptBuilder/DefaultOpinionParser） |
-| [inference/index.ts](../../src/lib/inference/index.ts) | 198 | 推理层：基于规则的影响力计算器与信念推断器 |
+| [observation/index.ts](../../src/lib/observation/index.ts) | 162 | 观察层：从 LLM 输出提取结构化认知状态（DefaultPromptBuilder/DefaultOpinionParser） |
+| [observation/types.ts](../../src/lib/observation/types.ts) | 45 | 观察层类型（RawObservation/ObservationConfig/ObserverAgent 等） |
+| [observation/structuredOutputSchema.ts](../../src/lib/observation/structuredOutputSchema.ts) | 158 | LLM 结构化输出 JSON Schema（认知状态提取） |
+| [inference/index.ts](../../src/lib/inference/index.ts) | 211 | 推理层：基于规则的影响力计算器与信念推断器 |
+| [inference/types.ts](../../src/lib/inference/types.ts) | 49 | 推理层类型（StateDelta/EdgeDelta/InfluenceCalculation 等） |
+
+### 2.5a discussion-types/ — 讨论模块共享类型（2026-08-03 重命名）
+
+> 原 `src/lib/runtime/`（历史类型壳），因与 `src/runtime/`（治理运行时实现）撞名，更名为 `discussion-types`。仅含类型定义，无逻辑。
+
+| 文件 | 行数 | 作用 |
+|------|------|------|
+| [types.ts](../../src/lib/discussion-types/types.ts) | 279 | discussion/inference/observation 共享类型（RuntimeContext/CollectiveDecisionState/ExperimentConfig），已清理 v1/v2 孤儿类型 |
+| [index.ts](../../src/lib/discussion-types/index.ts) | 11 | re-export types + observation/inference 模块 |
 
 ### 2.6 security/ — 安全模块
 
@@ -69,11 +81,10 @@
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [jsonUtils.ts](../../src/lib/utils/jsonUtils.ts) | 140 | 统一 JSON 容错解析（safeJsonParse/stripCodeFences/extractNumber 等） |
-| [logger.ts](../../src/lib/utils/logger.ts) | 272 | 结构化分级日志系统 |
-| [retry.ts](../../src/lib/utils/retry.ts) | 208 | 指数退避重试 + 熔断器模式 |
-| [statsUtils.ts](../../src/lib/utils/statsUtils.ts) | 166 | 统计计算（mean/std/cohensD/mulberry32/shannonEntropy/socialFreeEnergy 等） |
-| [emotion.ts](../../src/lib/utils/emotion.ts) | 28 | 情绪指标计算（均值/方差/收敛检测） |
+| [jsonUtils.ts](../../src/lib/utils/jsonUtils.ts) | 141 | 统一 JSON 容错解析（safeJsonParse/stripCodeFences/extractNumber 等） |
+| [logger.ts](../../src/lib/utils/logger.ts) | 273 | 结构化分级日志系统 |
+| [statsUtils.ts](../../src/lib/utils/statsUtils.ts) | 167 | 统计计算（mean/std/cohensD/mulberry32/shannonEntropy/socialFreeEnergy 等） |
+| [emotion.ts](../../src/lib/utils/emotion.ts) | 29 | 情绪指标计算（均值/方差/收敛检测） |
 
 ### 2.8 adapters/ — 框架适配器
 
@@ -82,39 +93,39 @@
 | [types.ts](../../src/lib/adapters/types.ts) | 67 | 框架适配器接口（Agent/FrameworkAdapter） |
 | [index.ts](../../src/lib/adapters/index.ts) | 52 | 适配器注册表 |
 | [autogen.ts](../../src/lib/adapters/autogen.ts) | 97 | AutoGen 框架适配器 |
-| [custom.ts](../../src/lib/adapters/custom.ts) | 282 | 自定义框架适配器（集成 LLM + 讨论 + 治理，含 token 统计） |
+| [custom.ts](../../src/lib/adapters/custom.ts) | 283 | 自定义框架适配器（集成 LLM + 讨论 + 治理，含 token 统计） |
 
 ### 2.9 benchmarks/ — 基准测试
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
 | [financial.ts](../../src/lib/benchmarks/financial.ts) | 281 | 金融决策基准场景 |
-| [index.ts](../../src/lib/benchmarks/index.ts) | 105 | 基准测试管理器（financial/medical/legal/business） |
+| [index.ts](../../src/lib/benchmarks/index.ts) | 106 | 基准测试管理器（financial/medical/legal/business） |
 
 ### 2.10 discussion/ — 讨论引擎（项目最大模块）
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [index.ts](../../src/lib/discussion/index.ts) | 1648 | **核心讨论引擎**：观察→信念更新→治理→评估→决策追踪全流程 |
-| [types.ts](../../src/lib/discussion/types.ts) | 436 | 讨论模块所有类型定义 |
-| [asyncEngine.ts](../../src/lib/discussion/asyncEngine.ts) | 926 | 异步讨论引擎（部分发言+热力学自适应终止+信息依赖链） |
-| [nativeCognitiveEngine.ts](../../src/lib/discussion/nativeCognitiveEngine.ts) | 799 | **v3.2 原生认知引擎**：LLM 直接输出 U/E/C，系统计算 I/Λ，覆写 applyGovernance |
-| [crossExamination.ts](../../src/lib/discussion/crossExamination.ts) | 373 | 对立阵营交叉质证（五阶段：检测→阵营→论点→质证→裁决） |
+| [index.ts](../../src/lib/discussion/index.ts) | 1674 | **核心讨论引擎**：观察→信念更新→治理→评估→决策追踪全流程 |
+| [types.ts](../../src/lib/discussion/types.ts) | 458 | 讨论模块所有类型定义 |
+| [asyncEngine.ts](../../src/lib/discussion/asyncEngine.ts) | 946 | 异步讨论引擎（部分发言+热力学自适应终止+信息依赖链，FROZEN 冻结） |
+| [nativeCognitiveEngine.ts](../../src/lib/discussion/nativeCognitiveEngine.ts) | 841 | **v3.2 原生认知引擎**：LLM 直接输出 U/E/C，系统计算 I/Λ，覆写 applyGovernance，E10 EvidencePool 注入 |
+| [crossExamination.ts](../../src/lib/discussion/crossExamination.ts) | 374 | 对立阵营交叉质证（五阶段：检测→阵营→论点→质证→裁决） |
 | [decisionTrace.ts](../../src/lib/discussion/decisionTrace.ts) | 621 | 决策追踪构建器（信念变化/影响力/共识事件） |
-| [eventTracker.ts](../../src/lib/discussion/eventTracker.ts) | 50 | 讨论事件追踪器（订阅通知） |
-| [influence.ts](../../src/lib/discussion/influence.ts) | 132 | 基于规则的影响力策略与影响力管理器 |
-| [influenceUtils.ts](../../src/lib/discussion/influenceUtils.ts) | 125 | 共享影响力计算工具 |
-| [interactionGraph.ts](../../src/lib/discussion/interactionGraph.ts) | 103 | 交互图构建器（agent 节点 + 影响力边） |
-| [memory.ts](../../src/lib/discussion/memory.ts) | 72 | 讨论记忆管理（InMemoryStrategy） |
-| [sensitivityTrace.ts](../../src/lib/discussion/sensitivityTrace.ts) | 346 | 基于 Dropout 的敏感性分析 |
-| [topology.ts](../../src/lib/discussion/topology.ts) | 191 | 讨论拓扑（Flat/Grouped/Committee，支持 n≥20） |
+| [eventTracker.ts](../../src/lib/discussion/eventTracker.ts) | 51 | 讨论事件追踪器（订阅通知） |
+| [influence.ts](../../src/lib/discussion/influence.ts) | 133 | 基于规则的影响力策略与影响力管理器 |
+| [influenceUtils.ts](../../src/lib/discussion/influenceUtils.ts) | 126 | 共享影响力计算工具 |
+| [interactionGraph.ts](../../src/lib/discussion/interactionGraph.ts) | 104 | 交互图构建器（agent 节点 + 影响力边） |
+| [memory.ts](../../src/lib/discussion/memory.ts) | 73 | 讨论记忆管理（InMemoryStrategy） |
+| [sensitivityTrace.ts](../../src/lib/discussion/sensitivityTrace.ts) | 347 | 基于 Dropout 的敏感性分析 |
+| [topology.ts](../../src/lib/discussion/topology.ts) | 192 | 讨论拓扑（Flat/Grouped/Committee，支持 n≥20） |
 
 ### 2.11 evaluation/ — 评估引擎（LEGACY）
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [index.ts](../../src/lib/evaluation/index.ts) | 808 | 五维评估引擎（共识/可靠性/分散度/稳定性/影响力），服务旧 UI/API |
-| [types.ts](../../src/lib/evaluation/types.ts) | 195 | 评估模块类型 |
+| [index.ts](../../src/lib/evaluation/index.ts) | 809 | 五维评估引擎（共识/可靠性/分散度/稳定性/影响力），服务旧 UI/API |
+| [types.ts](../../src/lib/evaluation/types.ts) | 196 | 评估模块类型 |
 
 > **状态**：LEGACY，保留服务旧 UI/API，不在 Campaign Pipeline 中使用。
 
@@ -122,32 +133,33 @@
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [index.ts](../../src/lib/governance/index.ts) | 1527 | **核心治理引擎**：偏见检测→自适应干预→决策评估全流程 |
-| [types.ts](../../src/lib/governance/types.ts) | 394 | 治理模块类型（GovernanceIssue/Intervention/BiasDetector 等） |
-| [cognitiveDetectors.ts](../../src/lib/governance/cognitiveDetectors.ts) | 609 | Phase 4B 认知状态驱动检测器（6 种失败模式） |
-| [cognitiveInterventions.ts](../../src/lib/governance/cognitiveInterventions.ts) | 661 | v2.1 非破坏性认知干预（inject_evidence/rebalance_attention/shuffle_knowledge） |
-| [adaptiveDosage.ts](../../src/lib/governance/adaptiveDosage.ts) | 202 | 自适应剂量治理（根据偏差/覆盖度/历史效果动态调整强度） |
-| [adaptiveThresholds.ts](../../src/lib/governance/adaptiveThresholds.ts) | 528 | 自适应系统参数（运行时校准 16 个参数） |
-| [feedbackChannel.ts](../../src/lib/governance/feedbackChannel.ts) | 468 | 评估→治理反馈通道（修复 5 维评估未反馈到治理循环） |
-| [interventionPrompt.ts](../../src/lib/governance/interventionPrompt.ts) | 18 | 统一干预 prompt 格式化 |
-| [systemDesignDetectors.ts](../../src/lib/governance/systemDesignDetectors.ts) | 348 | FC1（MAST）系统设计检测器（角色违规/步骤重复） |
-| [taskVerificationDetectors.ts](../../src/lib/governance/taskVerificationDetectors.ts) | 237 | FC3（MAST）任务验证检测器（过早终止） |
-| [interventions/index.ts](../../src/lib/governance/interventions/index.ts) | 4 | 干预策略统一导出 |
-| [interventions/continueDiscussion.ts](../../src/lib/governance/interventions/continueDiscussion.ts) | 98 | 继续讨论干预 |
-| [interventions/forceReflection.ts](../../src/lib/governance/interventions/forceReflection.ts) | 59 | 强制反思干预 |
-| [interventions/introduceDiversity.ts](../../src/lib/governance/interventions/introduceDiversity.ts) | 55 | 引入多样性干预 |
-| [interventions/reduceWeight.ts](../../src/lib/governance/interventions/reduceWeight.ts) | 59 | 降低权重干预 |
+| [index.ts](../../src/lib/governance/index.ts) | 1542 | **核心治理引擎**：偏见检测→自适应干预→决策评估全流程 |
+| [types.ts](../../src/lib/governance/types.ts) | 396 | 治理模块类型（GovernanceIssue/Intervention/BiasDetector 等） |
+| [cognitiveDetectors.ts](../../src/lib/governance/cognitiveDetectors.ts) | 615 | Phase 4B 认知状态驱动检测器（6 种失败模式） |
+| [cognitiveInterventions.ts](../../src/lib/governance/cognitiveInterventions.ts) | 670 | v2.1 非破坏性认知干预（inject_evidence/rebalance_attention/shuffle_knowledge） |
+| [adaptiveDosage.ts](../../src/lib/governance/adaptiveDosage.ts) | 203 | 自适应剂量治理（根据偏差/覆盖度/历史效果动态调整强度） |
+| [adaptiveThresholds.ts](../../src/lib/governance/adaptiveThresholds.ts) | 529 | 自适应系统参数（运行时校准 16 个参数） |
+| [feedbackChannel.ts](../../src/lib/governance/feedbackChannel.ts) | 469 | 评估→治理反馈通道（修复 5 维评估未反馈到治理循环） |
+| [interventionPrompt.ts](../../src/lib/governance/interventionPrompt.ts) | 19 | 统一干预 prompt 格式化 |
+| [systemDesignDetectors.ts](../../src/lib/governance/systemDesignDetectors.ts) | 349 | FC1（MAST）系统设计检测器（角色违规/步骤重复） |
+| [taskVerificationDetectors.ts](../../src/lib/governance/taskVerificationDetectors.ts) | 238 | FC3（MAST）任务验证检测器（过早终止） |
+| [interventions/index.ts](../../src/lib/governance/interventions/index.ts) | 5 | 干预策略统一导出 |
+| [interventions/continueDiscussion.ts](../../src/lib/governance/interventions/continueDiscussion.ts) | 99 | 继续讨论干预 |
+| [interventions/forceReflection.ts](../../src/lib/governance/interventions/forceReflection.ts) | 60 | 强制反思干预 |
+| [interventions/introduceDiversity.ts](../../src/lib/governance/interventions/introduceDiversity.ts) | 56 | 引入多样性干预 |
+| [interventions/reduceWeight.ts](../../src/lib/governance/interventions/reduceWeight.ts) | 60 | 降低权重干预 |
 
 ### 2.13 thermodynamics/ — 热力学与认知测量
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
 | [index.ts](../../src/lib/thermodynamics/index.ts) | 19 | 模块入口 |
-| [MeasurementLayer.ts](../../src/lib/thermodynamics/MeasurementLayer.ts) | 1673 | **v5 双层测量架构**：群体动态筛查（R/T/H/F）+ 认知状态追踪（U/E/I/C/Λ）+ δ 诊断 |
-| [ProgressiveEstimator.ts](../../src/lib/thermodynamics/ProgressiveEstimator.ts) | 468 | I/C/Λ 渐进融合估计器（短对话靠 LLM 自报，长对话靠行为追踪） |
-| [SemanticTool.ts](../../src/lib/thermodynamics/SemanticTool.ts) | 289 | v6 Tier 3 LLM 语义传感器（evidence_dedup/gap_analysis/intervention_generation） |
-| [TerminationDecider.ts](../../src/lib/thermodynamics/TerminationDecider.ts) | 257 | 热力学终止决策器（基于 R/T/H/F 判断异步讨论终止） |
-| [computeDelta.ts](../../src/lib/thermodynamics/computeDelta.ts) | 661 | v6 δ 诊断层（8 个 δ 信号，自适应阈值，不需要 ground truth） |
+| [MeasurementLayer.ts](../../src/lib/thermodynamics/MeasurementLayer.ts) | 1788 | **v5 双层测量架构**：群体动态筛查（R/T/H/F）+ 认知状态追踪（U/E/I/C/Λ）+ δ 诊断 + SemanticTool 门控 |
+| [ProgressiveEstimator.ts](../../src/lib/thermodynamics/ProgressiveEstimator.ts) | 469 | I/C/Λ 渐进融合估计器（短对话靠 LLM 自报，长对话靠行为追踪） |
+| [SemanticTool.ts](../../src/lib/thermodynamics/SemanticTool.ts) | 295 | v6 Tier 3 LLM 语义传感器（evidence_dedup/gap_analysis/intervention_generation） |
+| [TerminationDecider.ts](../../src/lib/thermodynamics/TerminationDecider.ts) | 267 | 热力学终止决策器（基于 R/T/H/F 判断异步讨论终止） |
+| [computeDelta.ts](../../src/lib/thermodynamics/computeDelta.ts) | 664 | v6 δ 诊断层（8 个 δ 信号，自适应阈值，不需要 ground truth） |
+| [EvidencePool.ts](../../src/lib/thermodynamics/EvidencePool.ts) | 242 | E10 确定性共享证据池（FNV-1a hash + Jaccard 去重 + 数值冲突判定，零 LLM 调用） |
 
 ---
 
@@ -155,17 +167,17 @@
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [GovernanceRuntime.ts](../../src/runtime/GovernanceRuntime.ts) | 1112 | **治理运行时核心**：框架无关可嵌入运行时 |
-| [types.ts](../../src/runtime/types.ts) | 242 | 运行时类型（框架无关接口） |
-| [index.ts](../../src/runtime/index.ts) | 72 | 公共 API 入口 |
-| [adapters/AutoGenAdapter.ts](../../src/runtime/adapters/AutoGenAdapter.ts) | 140 | AutoGen 框架桥接器 |
-| [adapters/CustomAdapter.ts](../../src/runtime/adapters/CustomAdapter.ts) | 161 | CustomAgent 框架桥接器 |
-| [adapters/PromptInjector.ts](../../src/runtime/adapters/PromptInjector.ts) | 278 | Prompt 约束生成与干预转译器 |
-| [adapters/StateInferenceBridge.ts](../../src/runtime/adapters/StateInferenceBridge.ts) | 320 | 通用框架桥接器（三级状态提取策略） |
-| [adapters/index.ts](../../src/runtime/adapters/index.ts) | 85 | 桥接器注册表 |
-| [adapters/types.ts](../../src/runtime/adapters/types.ts) | 123 | 桥接器接口定义 |
+| [GovernanceRuntime.ts](../../src/runtime/GovernanceRuntime.ts) | 1113 | **治理运行时核心**：框架无关可嵌入运行时 |
+| [types.ts](../../src/runtime/types.ts) | 243 | 运行时类型（框架无关接口） |
+| [index.ts](../../src/runtime/index.ts) | 73 | 公共 API 入口 |
+| [adapters/AutoGenAdapter.ts](../../src/runtime/adapters/AutoGenAdapter.ts) | 141 | AutoGen 框架桥接器 |
+| [adapters/CustomAdapter.ts](../../src/runtime/adapters/CustomAdapter.ts) | 162 | CustomAgent 框架桥接器 |
+| [adapters/PromptInjector.ts](../../src/runtime/adapters/PromptInjector.ts) | 279 | Prompt 约束生成与干预转译器 |
+| [adapters/StateInferenceBridge.ts](../../src/runtime/adapters/StateInferenceBridge.ts) | 321 | 通用框架桥接器（三级状态提取策略） |
+| [adapters/index.ts](../../src/runtime/adapters/index.ts) | 86 | 桥接器注册表 |
+| [adapters/types.ts](../../src/runtime/adapters/types.ts) | 124 | 桥接器接口定义 |
 
-> **注**：`src/lib/runtime/` 是历史残留（孤儿代码已移除，仅 types.ts 残留），以 `src/runtime/` 为权威。
+> **注**：`src/lib/runtime/` 已于 2026-08-03 更名为 `src/lib/discussion-types/`（见 §2.5a）——它只含 discussion/inference/observation 共享的类型定义，**不包含**运行时实现；运行时实现以本目录（`src/runtime/`）为权威。
 
 ---
 
@@ -173,11 +185,11 @@
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [page.tsx](../../src/app/page.tsx) | 564 | 前端主页面（Demo 模式 + Live 模式） |
-| [layout.tsx](../../src/app/layout.tsx) | 21 | 根布局 |
-| [api/health/route.ts](../../src/app/api/health/route.ts) | 8 | 健康检查端点 |
+| [page.tsx](../../src/app/page.tsx) | 565 | 前端主页面（Demo 模式 + Live 模式） |
+| [layout.tsx](../../src/app/layout.tsx) | 22 | 根布局 |
+| [api/health/route.ts](../../src/app/api/health/route.ts) | 9 | 健康检查端点 |
 | [api/v3/task/route.ts](../../src/app/api/v3/task/route.ts) | 246 | 任务创建 API（含速率限制+输入验证） |
-| [api/v3/execute/route.ts](../../src/app/api/v3/execute/route.ts) | 137 | 执行 API |
+| [api/v3/execute/route.ts](../../src/app/api/v3/execute/route.ts) | 138 | 执行 API |
 | [api/v3/benchmark/route.ts](../../src/app/api/v3/benchmark/route.ts) | 134 | 基准测试 API |
 
 ---
@@ -188,11 +200,11 @@
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
-| [Runner.ts](../../experiments/campaign/pipeline/Runner.ts) | 661 | **实验执行引擎**：根据 ExperimentConfig 运行单次实验并保存原始数据 |
-| [MetricComputer.ts](../../experiments/campaign/pipeline/MetricComputer.ts) | 1410 | **度量计算引擎**：从 RawRunData 计算 E1-E9 专属指标 + Global Metrics |
-| [StatisticalTest.ts](../../experiments/campaign/pipeline/StatisticalTest.ts) | 1072 | **统计检验引擎**：置换检验/Bootstrap CI/Cohen's d/Holm-Bonferroni 校正 |
-| [FigureGenerator.ts](../../experiments/campaign/pipeline/FigureGenerator.ts) | 261 | 论文 SVG 图表生成器 |
-| [ReportGenerator.ts](../../experiments/campaign/pipeline/ReportGenerator.ts) | 265 | Markdown 报告 + LaTeX 片段生成器 |
+| [Runner.ts](../../experiments/campaign/pipeline/Runner.ts) | 687 | **实验执行引擎**：根据 ExperimentConfig 运行单次实验并保存原始数据 |
+| [MetricComputer.ts](../../experiments/campaign/pipeline/MetricComputer.ts) | 1408 | **度量计算引擎**：从 RawRunData 计算 E1-E9 专属指标 + Global Metrics |
+| [StatisticalTest.ts](../../experiments/campaign/pipeline/StatisticalTest.ts) | 1102 | **统计检验引擎**：置换检验/Bootstrap CI/Cohen's d/Holm-Bonferroni 校正 |
+| [FigureGenerator.ts](../../experiments/campaign/pipeline/FigureGenerator.ts) | 260 | 论文 SVG 图表生成器 |
+| [ReportGenerator.ts](../../experiments/campaign/pipeline/ReportGenerator.ts) | 264 | Markdown 报告 + LaTeX 片段生成器 |
 | [CampaignSummarizer.ts](../../experiments/campaign/pipeline/CampaignSummarizer.ts) | 93 | 战役汇总器 |
 
 ### 5.2 configs/ — 实验配置（H1-H9 假设）
@@ -211,6 +223,7 @@
 | [e8_susceptibility.ts](../../experiments/campaign/configs/e8_susceptibility.ts) | E8: Susceptibility Mediation (H8) |
 | [e9_cognitive_governance.ts](../../experiments/campaign/configs/e9_cognitive_governance.ts) | E9: Cognitive Governance (H9) — v6 Phase 3 主实验（4 组 A/B/C/D × 50 runs） |
 | [e9_medium_scale.ts](../../experiments/campaign/configs/e9_medium_scale.ts) | E9 中等规模验证（2 场景 × 3 治理模式） |
+| [e10_evidence_pool.ts](../../experiments/campaign/configs/e10_evidence_pool.ts) | E10: 确定性共享证据池 smoke（university，pool vs none，seed 42 n=1） |
 
 ### 5.3 根目录 — 运行入口与工具
 
@@ -232,6 +245,8 @@
 | [e9_medium_scale.ts](../../experiments/campaign/analysis/e9_medium_scale.ts) | E9 中等规模运行器 |
 | [e9_minimal.ts](../../experiments/campaign/analysis/e9_minimal.ts) | E9 单次运行端到端链路验证 |
 | [e9_smoke_test.ts](../../experiments/campaign/analysis/e9_smoke_test.ts) | E9 烟雾测试（Supplier 场景） |
+| [e9_v6_comparison.ts](../../experiments/campaign/analysis/e9_v6_comparison.ts) | E9 v6 四组交叉对比（A/B/C/D，B-A 为 primary endpoint，Bootstrap CI 显著判定） |
+| [idr_diffusion.ts](../../experiments/campaign/analysis/idr_diffusion.ts) | 信息扩散率分析（碎片级吸收率，过程证据——治理是否打破信息壁垒） |
 | [hidden_anchors_ols.ts](../../experiments/campaign/analysis/hidden_anchors_ols.ts) | Hidden Anchors OLS 系统辨识（FJ 模型锚点恢复） |
 | [phase1_5_probe.ts](../../experiments/campaign/analysis/phase1_5_probe.ts) | Phase 1.5 探测实验（三个关键假设最小成本验证） |
 
@@ -240,6 +255,7 @@
 | 文件 | 作用 |
 |------|------|
 | [task_university.ts](../../experiments/campaign/tasks/task_university.ts) | 大学排名任务（v6 Phase 3 主实验，8 大学 × 6 维度 hidden-profile） |
+| [task_optimized.ts](../../experiments/campaign/tasks/task_optimized.ts) | 12 选项优化任务（前 5 名链条竞争，差 0.001-0.003，τ 区分度验证） |
 
 ---
 
