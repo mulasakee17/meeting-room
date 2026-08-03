@@ -246,7 +246,9 @@
 
 ### 5.3 F 的诚实定位
 
-> F = (1-R) + T·H 是一个工程上有用的启发式综合诊断指标，不是严格的热力学自由能。它的价值在于把三维度压缩到一个标量便于诊断，以及分解项可指导干预类型选择。当前论文不 claim 热力学理论贡献，F 作为诊断指标使用。理论验证（相变、Lyapunov）留作未来工作。
+> **v6 新公式（当前主线，MeasurementLayer）**：F = U − T·H（Helmholtz 形式）。U = 平均效用强度（L2 范数，每维已 clamp 到 [−1,1]，除以 √K 归一化），T = utility 逐轮 L2 波动，H = evidence supports 分布 Shannon 熵。三变量来自不同信息源（总能量 / 时序 / 分布），已实证解耦（r(U, T·H) = −0.274，见 [THEORY.md §0.1 验证 3](research/THEORY.md)），修复了旧公式的双重计数问题。**实现：`src/lib/thermodynamics/MeasurementLayer.ts:245-273`。**
+
+> **旧公式（已废弃/证伪）**：F = (1−R) + T·H 是工程上有用的启发式综合诊断指标，不是严格的热力学自由能。r((1-R), T·H) = 0.9175 证伪了"两分量正交"声明（R/T/H 同源自 scalar beliefs[]，数学上必然强相关）。**此公式仅存在于 asyncEngine 路径（已 @deprecated），仅供溯源，不再用于 v6 主线。**
 
 ### 5.4 理论框架声明（2026-07-28，v0.4）
 
@@ -269,11 +271,12 @@
 
 **2026-07-28 实证补充**：对 N=259 样本（8 个数据源）计算 r((1-R), T·H) = **0.9175**（p < 10⁻⁶），证伪了此前文档中"F 公式两分量正交"的声明。根因：asyncEngine.ts 的 R/T/H 都源自同一组 scalar `beliefs[]`，是"同轮内 agent 间信念分散度"的不同变换，数学上必然强相关。回归显示 F ≈ 0.019 + 2.014·(1-R)（R²=0.955），F 几乎是 (1-R) 的线性变换。
 
-**影响**：
-1. F 公式存在双重计数风险，"3 维热力学状态空间"叙事不成立（R/T/H 退化为 1 个有效维度）
+**影响**（针对旧 asyncEngine 路径的 F）：
+1. 旧 F 公式存在双重计数风险，"3 维热力学状态空间"叙事不成立（R/T/H 退化为 1 个有效维度）
 2. F 分解排序在 A/B 对照实验中已被证伪（d_z=-0.354，详见 LIMITATIONS.md §21）
 3. TerminationDecider 的淬火态检测仍然有效（依赖 T/H 的相对变化而非绝对值独立性）
 4. R/T/H 强耦合本身作为"MAS 小群体与物理系统本质差异"的负面发现呈现
+5. **v6 已修复**：新 MeasurementLayer 路径的 R/T/H/F 基于认知状态向量重写，F = U − T·H，三变量解耦（r = −0.274），双重计数问题不再适用（详见 §5.3 与 THEORY.md §0.1 验证 3）
 
 详见：LIMITATIONS.md §27.1、TECHNICAL_REPORT.md §3.1 修订说明、PAPER_DRAFT.md §3.2 修订说明、`experiments/v2/analyze_thermo_correlation.ts`
 

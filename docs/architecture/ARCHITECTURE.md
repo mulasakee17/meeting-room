@@ -139,20 +139,19 @@ class GovernanceRuntime {
 
 ### 4.2 社会热力学变量（4 个，ThermoState）
 
+**v6 主线（MeasurementLayer，基于认知状态向量）**：
+
 | 变量 | 含义 | 计算 | 低值含义 | 高值含义 |
 |------|------|------|---------|---------|
-| **R** | Kuramoto 序参量 | `θ = (π/2)·b`，`R = \|Σ e^(iθ_j)\| / N` | 信念分散 | 信念同步 |
-| **T** | 归一化温度 | `std(beliefs) / ((max−min)/2)` | 噪声小 | 噪声大 |
-| **H** | Shannon 熵 | `−Σ p·log₂(p)`，5 bins，除以 `log₂(5)` | 信念集中 | 信念均匀 |
-| **F** | 社会自由能 | `(1−R) + T·H` | 系统有序 | 系统无序 |
+| **R** | Utility 对齐度 | `(avg_cosine + 1) / 2`，各 agent utility 向量两两 cosine 均值归一化 | 方向相反→0 | 方向一致→1 |
+| **T** | Utility 波动度 | `mean_i(‖u_i(t)−u_i(t−1)‖ / (2·√K))`，utility 逐轮 L2 距离归一化 | 冻结→0 | 剧烈波动→1 |
+| **H** | 证据多样性熵 | evidence supports 分布 Shannon 熵（归一化，同 `computeEvidenceDiversity`） | 集中 | 均匀 |
+| **F** | 修正自由能 | `U − T·H`，U = 平均效用 L2 范数（clamp 后 / √K 归一化） | 有序 | 无序 |
+
+> ⚠️ **v6 重定义**：R/T/H 在 v6 中基于认知状态向量（utility/evidence）重写，与旧 asyncEngine 路径（belief 相位）含义不同——旧 R 为 Kuramoto 序参量、旧 T 为 belief 标准差、旧 H 为 belief 5-bin 熵、旧 F 为 `(1−R)+T·H`。**旧路径已 @deprecated，仅供溯源。**
 
 **F 的诚实定位**（来自 SOT.md §5.3）：
-> F = (1-R) + T·H 是工程上有用的启发式综合诊断指标，**不是严格的热力学自由能**。其价值在于把三维度压缩到一个标量便于诊断，以及分解项可指导干预类型选择。当前论文不 claim 热力学理论贡献。
-
-**F 分解的直觉**：
-- `(1−R)` = 结构性无序（"势能"）——信念方向不一致带来的无序
-- `T·H` = 热性无序（"耗散"）——信念波动带来的无序
-- 两者**正交**，可指导干预分别降低正确的无序分量
+> v6 修正自由能 F = U − T·H：U/T/H 来自不同信息源（总能量/时序/分布），已实证解耦（r = −0.274，见 THEORY.md §0.1 验证 3），修复了旧公式 `(1−R)+T·H` 的双重计数问题。实现：`MeasurementLayer.ts:245-273`。
 
 ### 4.3 H4 关键修复：Kuramoto 相位映射
 
