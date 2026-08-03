@@ -72,6 +72,16 @@ import {
 // ============================================================================
 
 /**
+ * evidence_dedup 每 run 最大调用次数（2026-08-03 频率限制修复）。
+ *
+ * 审计数据显示：hidden-profile 任务中 agent 每轮产生新证据 → "未共享数创新高"
+ * 门控永远成立 → evidence_dedup 每轮调用 LLM（C 组每 run 在 round 2-5 各调 1 次，
+ * 输入 31→88 条但 cluster 数稳定 12-17，新增证据几乎无重复）。
+ * 设 2 次：首次去重 + 一轮后续补判，之后不再重复扫描。
+ */
+const MAX_SEMANTIC_DEDUP_CALLS = 2;
+
+/**
  * δ 触发的干预建议类型。
  */
 export interface DeltaInterventionSuggestion {
@@ -192,6 +202,9 @@ export class MeasurementLayer {
 
   /** 上次 evidence_dedup 时的未共享证据数——用于"新增证据才去重"门控（避免每轮无条件调 LLM） */
   private lastSemanticDedupUnsharedCount: number | undefined = undefined;
+
+  /** evidence_dedup 本 run 已调用次数——频率限制门控（2026-08-03 修复） */
+  private semanticDedupCallCount = 0;
 
   // ==========================================================================
   // Social Thermodynamics
@@ -803,12 +816,23 @@ export class MeasurementLayer {
 
     if (unsharedItems.length < 2) return;
 
-    // ── 门控：仅在"有新增未共享证据"时调用 evidence_dedup ──
+    // ── 门控 1（内部）：仅在"有新增未共享证据"时调用 evidence_dedup ──
     // 若本轮未共享数 ≤ 上次调用时（无新证据），跳过——避免每轮无条件调 LLM（分层成本设计）。
     // 只有出现新证据才重新去重；上次去重若已标记部分 shared，未共享数减少也跳过（非新证据）。
     if (this.lastSemanticDedupUnsharedCount !== undefined && unsharedItems.length <= this.lastSemanticDedupUnsharedCount) {
       return;
     }
+
+    // ── 门控 2（频率限制，2026-08-03 修复）──
+    // hidden-profile 任务中 agent 每轮产生新证据 → 门控 1 的"未共享数创新高"永远成立 →
+    // 每轮都调用 LLM。实测审计日志：C 组每 run 在 round 2-5 各调 1 次，输入从 31 条涨到
+    // 88 条，但输出 cluster 数稳定在 12-17——新增证据几乎无重复，去重收益极低。
+    // 修复：每 run 最多调用 MAX_SEMANTIC_DEDUP_CALLS 次（首次去重 + 一轮后续），
+    // 超出后不再调用，避免每轮支付全量重扫的 LLM 成本。
+    if (this.semanticDedupCallCount >= MAX_SEMANTIC_DEDUP_CALLS) {
+      return;
+    }
+    this.semanticDedupCallCount += 1;
     this.lastSemanticDedupUnsharedCount = unsharedItems.length;
 
     // 调用 SemanticTool evidence_dedup
@@ -1232,6 +1256,18 @@ export class MeasurementLayer {
         continue;
       }
 
+      // ── 全局信息注入（key="*"）：所有 agent 可见 ──
+      // 修复（2026-08-03）：inject_evidence 把目标 agent 的私有知识写为全局 prompt，
+      // 让所有 agent 在 buildPrompt 中都能看到（index.ts:742-744 读取 "*"）。
+      // 此分支在 cognitiveStates 查找之前处理，避免 "*" 被当作 agentId 而 continue。
+      if (agentId === "*") {
+        if (mod.injectPrompt) {
+          const current = this.governancePrompts.get("*") ?? [];
+          this.governancePrompts.set("*", [...current, mod.injectPrompt]);
+        }
+        continue;
+      }
+
       const state = this.cognitiveStates.get(agentId);
       if (!state) continue;
 
@@ -1380,11 +1416,6 @@ export class MeasurementLayer {
     round: number,
     llmConfig?: LLMConfig,
   ): Promise<{ thermo: ThermoState; delta: DeltaDiagnosis; suggestions: DeltaInterventionSuggestion[] }> {
-    // ── Layer 2: SemanticTool evidence 语义去重（批量补判 Layer 1 遗漏）──
-    if (llmConfig) {
-      await this.markEvidenceSharingSemantic(llmConfig, round);
-    }
-
     const states = Array.from(this.cognitiveStates.values());
     const thermo = this.computeThermoState();
 
@@ -1394,11 +1425,26 @@ export class MeasurementLayer {
     // ── 运行 δ 诊断（自适应阈值已在各 δ 函数内处理）──
     const delta = computeDeltaDiagnosis(states, thermo, estimates);
 
+    // ── Layer 2: SemanticTool evidence 语义去重（批量补判 Layer 1 遗漏）──
+    // 门控（成本优化）：仅在"信息类 δ 信号触发"时调用 evidence_dedup。
+    // 修复前：markEvidenceSharingSemantic 在 δ 计算之前无条件尝试，内部"未共享数创新高"
+    //   门控对 hidden-profile 任务失效（agent 每轮产生新证据→未共享数永远创新高→每轮调用 LLM），
+    //   实测 C 组每 run 在 round 2-5 各调 1 次 evidence_dedup（输入 31-111 条），是 token 飙高主因。
+    // 修复后：与 gap_analysis 对齐——信息类 δ（1D 遮蔽/证据沉默/确信度缺口）触发才值得语义去重，
+    //   否则本轮无信息异常，去重收益不抵 LLM 成本。
+    if (llmConfig && this.shouldDedupByDelta(delta)) {
+      await this.markEvidenceSharingSemantic(llmConfig, round);
+    }
+
     // ── δ triggers → 干预建议 ──
     const suggestions: DeltaInterventionSuggestion[] = this.buildDeltaSuggestions(delta, states, thermo, round);
 
     // ── Tier 3: 根因模糊 → SemanticTool ──
-    if (this.shouldConsultSemanticTool(delta, round)) {
+    // 2026-08-03 修复：与 evidence_dedup 门控对称——无 llmConfig 时不调用。
+    // 旧实现只查 shouldConsultSemanticTool(delta)，未检查 llmConfig，导致
+    // useSemanticTool=true 但未 setLlmConfig 的调用方在 δ 触发时静默产生
+    // 无配置的 LLM 调用（semanticConsult 用 {...undefined} 展开后 callLLM）。
+    if (llmConfig && this.shouldConsultSemanticTool(delta, round)) {
       const enhancedSuggestions = await this.consultSemanticTool(delta, states, thermo, round, llmConfig);
       if (enhancedSuggestions.length > 0) {
         // C1 修复（Phase 2.9）：合并而非替换。
@@ -1428,6 +1474,24 @@ export class MeasurementLayer {
     if (delta.evidenceSilence.triggered && delta.oneDMask.triggered) return true;
 
     return false;
+  }
+
+  /**
+   * 判断是否应调用 evidence_dedup（成本门控）。
+   *
+   * evidence_dedup 的职责是"批量判定 Layer 1 未匹配证据的语义等价性"，
+   * 只有当存在信息类异常时才值得调用 LLM：
+   *   - δ_1d_mask：标量共识掩盖向量分歧 → 可能需去重定位被忽略的证据
+   *   - δ_evidence_silence：证据被系统性忽视 → 需确认是否因重复而被忽略
+   *   - δ_confidence_gap：自报高确信但效用偏离 → 可能引用了重复证据支撑
+   *
+   * 修复前：每次 diagnoseAndSuggest 都尝试调用（靠内部"未共享数创新高"门控），
+   * 但 hidden-profile 任务中 agent 每轮产生新证据→未共享数永远创新高→每轮触发。
+   */
+  private shouldDedupByDelta(delta: DeltaDiagnosis): boolean {
+    return delta.oneDMask.triggered
+      || delta.evidenceSilence.triggered
+      || delta.confidenceGap.triggered;
   }
 
   /** 调用 SemanticTool 获取增强建议 */
@@ -1685,6 +1749,11 @@ export class MeasurementLayer {
     this.governancePrompts.clear();
     this.pendingInertiaFactors.clear();
     this.semanticAuditLog = [];
+    // 2026-08-03 修复：重置 SemanticTool 门控状态，防止跨 run 污染——
+    // 旧实现遗漏 lastSemanticDedupUnsharedCount，上一 run 结束时该值很大，
+    // 下一 run 首几轮未共享数都 ≤ 它 → evidence_dedup 被永久跳过（饿死）。
+    this.lastSemanticDedupUnsharedCount = undefined;
+    this.semanticDedupCallCount = 0;
   }
 }
 

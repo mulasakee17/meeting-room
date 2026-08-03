@@ -75,7 +75,7 @@ function makeIssue(
 // ============================================================================
 
 describe("applyInjectEvidence", () => {
-  it("有 agentKnowledge 时，注入私有知识到 injectPrompt", () => {
+  it("有 agentKnowledge 时，注入私有知识到全局 injectPrompt（所有 agent 可见）", () => {
     const states = makeCognitiveStatesMap(["a1", "a2"]);
     const knowledge = new Map<string, string[]>([
       ["a1", ["数据点A", "数据点B", "数据点C", "数据点D"]],
@@ -84,17 +84,24 @@ describe("applyInjectEvidence", () => {
 
     const mods = applyInjectEvidence(["a1", "a2"], states, knowledge);
 
-    const a1Mod = mods.get("a1")!;
-    expect(a1Mod.injectPrompt).toBeDefined();
-    expect(a1Mod.injectPrompt).toContain("数据点A");
-    expect(a1Mod.injectPrompt).toContain("数据点B");
-    expect(a1Mod.injectPrompt).toContain("数据点C");
-    // slice(0, 3) 只取前 3 条
-    expect(a1Mod.injectPrompt).not.toContain("数据点D");
-    expect(a1Mod.injectPrompt).toContain("[信息注入]");
+    // 2026-08-03 修复：知识注入到 "*"（全局）key——所有 agent 在 buildPrompt 都能看到
+    const globalMod = mods.get("*")!;
+    expect(globalMod.injectPrompt).toBeDefined();
+    expect(globalMod.injectPrompt).toContain("数据点A");
+    expect(globalMod.injectPrompt).toContain("数据点B");
+    expect(globalMod.injectPrompt).toContain("数据点C");
+    // slice(0, 3) 只取每个 agent 前 3 条
+    expect(globalMod.injectPrompt).not.toContain("数据点D");
+    expect(globalMod.injectPrompt).toContain("证据X");
+    expect(globalMod.injectPrompt).toContain("[信息注入]");
 
+    // 目标 agent 只收到 evidenceGuidance（本人已知知识，但需关注多维度）
+    const a1Mod = mods.get("a1")!;
+    expect(a1Mod.injectPrompt).toBeUndefined();
+    expect(a1Mod.evidenceGuidance).toBeDefined();
     const a2Mod = mods.get("a2")!;
-    expect(a2Mod.injectPrompt).toContain("证据X");
+    expect(a2Mod.injectPrompt).toBeUndefined();
+    expect(a2Mod.evidenceGuidance).toBeDefined();
   });
 
   it("无 agentKnowledge 时，降级为 evidenceGuidance", () => {
@@ -119,17 +126,20 @@ describe("applyInjectEvidence", () => {
     expect(a1Mod.evidenceGuidance).toBeDefined();
   });
 
-  it("对每个目标 agent 同时注入 evidenceGuidance（让所有人关注被忽略证据维度）", () => {
+  it("知识注入到全局 key，目标 agent 收到 evidenceGuidance", () => {
     const states = makeCognitiveStatesMap(["a1", "a2"]);
     const knowledge = new Map<string, string[]>([["a1", ["证据A"]]]);
     const mods = applyInjectEvidence(["a1", "a2"], states, knowledge);
 
-    // a1 有知识 → injectPrompt + evidenceGuidance
-    const a1Mod = mods.get("a1")!;
-    expect(a1Mod.injectPrompt).toBeDefined();
-    expect(a1Mod.evidenceGuidance).toBeDefined();
+    // 全局注入：a1 的知识对所有 agent 可见
+    const globalMod = mods.get("*")!;
+    expect(globalMod.injectPrompt).toBeDefined();
+    expect(globalMod.injectPrompt).toContain("证据A");
 
-    // a2 无知识 → 只有 evidenceGuidance
+    // a1（有知识）和 a2（无知识）都收到 evidenceGuidance
+    const a1Mod = mods.get("a1")!;
+    expect(a1Mod.injectPrompt).toBeUndefined();
+    expect(a1Mod.evidenceGuidance).toBeDefined();
     const a2Mod = mods.get("a2")!;
     expect(a2Mod.injectPrompt).toBeUndefined();
     expect(a2Mod.evidenceGuidance).toBeDefined();
@@ -226,8 +236,11 @@ describe("generateCognitiveInterventions", () => {
     expect(result.interventions).toHaveLength(1);
     expect(result.interventions[0].type).toBe("inject_evidence");
 
-    const a1Mod = result.cognitiveModifications.get("a1")!;
-    expect(a1Mod.injectPrompt).toContain("极化证据A");
+    // 2026-08-03 修复：知识注入到全局 "*" key，所有 agent 可见
+    const globalMod = result.cognitiveModifications.get("*")!;
+    expect(globalMod.injectPrompt).toContain("极化证据A");
+    // 目标 agent 收到 evidenceGuidance
+    expect(result.cognitiveModifications.get("a1")!.evidenceGuidance).toBeDefined();
   });
 
   it("premature_consensus_cognitive → inject_evidence（所有 agent）", () => {
@@ -259,7 +272,9 @@ describe("generateCognitiveInterventions", () => {
 
     expect(result.interventions).toHaveLength(1);
     expect(result.interventions[0].type).toBe("inject_evidence");
-    expect(result.cognitiveModifications.get("a2")!.injectPrompt).toContain("a2 私有数据");
+    // 2026-08-03 修复：知识注入到全局 "*" key
+    expect(result.cognitiveModifications.get("*")!.injectPrompt).toContain("a2 私有数据");
+    expect(result.cognitiveModifications.get("a2")!.evidenceGuidance).toBeDefined();
   });
 
   it("cognitive_action_mismatch → rebalance_attention", () => {
@@ -311,9 +326,10 @@ describe("generateCognitiveInterventions", () => {
     const knowledge = new Map<string, string[]>([["a1", ["共享证据"]]]);
     const result = generateCognitiveInterventions(issues, states, undefined, knowledge);
 
-    // a1 应同时有 injectPrompt（来自 polarization）和 lowerSpeakingPriority（来自 authority_bias）
+    // 2026-08-03 修复：injectPrompt 在全局 "*" key，rebalance 的 speakingPriority 在 a1
+    const globalMod = result.cognitiveModifications.get("*")!;
+    expect(globalMod.injectPrompt).toContain("共享证据");
     const a1Mod = result.cognitiveModifications.get("a1")!;
-    expect(a1Mod.injectPrompt).toContain("共享证据");
     expect(a1Mod.lowerSpeakingPriority).toBe(true);
   });
 });

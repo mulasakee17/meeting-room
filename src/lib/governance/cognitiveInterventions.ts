@@ -47,27 +47,36 @@ export function applyInjectEvidence(
 ): Map<string, CognitiveStateModification> {
   const modifications = new Map<string, CognitiveStateModification>();
 
+  // 修复（2026-08-03）：inject_evidence 的目标是"打破信息壁垒，让所有 agent
+  // 看到被忽略的私有证据"——但旧实现把 holder 的知识写回 holder 本人
+  // （modifications.set(agentId, ...) → governancePrompts.get(agentId)），
+  // 其他 agent 永远看不到，信息壁垒未被打破，违背论文设计哲学。
+  // 修复：把目标 agent 的私有知识写为全局 prompt（key="*"），所有 agent
+  // 在 buildPrompt 中都能看到（index.ts:742-744 读取 "*"）。
+  const injectedEvidence: string[] = [];
   for (const agentId of targetAgentIds) {
     const knowledge = agentKnowledge?.get(agentId);
     if (knowledge && knowledge.length > 0) {
-      // 有私有知识：注入到 governance prompt
-      const evidenceText = knowledge.slice(0, 3).join("；");
-      modifications.set(agentId, {
-        injectPrompt: `[信息注入] 以下是被忽略的关键信息，请将其纳入你的判断：${evidenceText}`,
-      });
-    } else {
-      // 无私有知识：降级为 evidenceGuidance
+      injectedEvidence.push(...knowledge.slice(0, 3));
+    }
+  }
+
+  if (injectedEvidence.length > 0) {
+    modifications.set("*", {
+      injectPrompt: `[信息注入] 以下是讨论中被忽略的关键信息，请所有成员纳入判断：${injectedEvidence.join("；")}`,
+    });
+    // 同时给目标 agent 补充 evidenceGuidance（他们本人已知知识，但需关注多维度）
+    for (const agentId of targetAgentIds) {
       modifications.set(agentId, {
         evidenceGuidance: ["evidence_coverage", "evidence_diversity", "alternative_perspectives"],
       });
     }
-  }
-
-  // 同时给所有 agent 注入 evidenceGuidance（让所有人都关注被忽略的证据维度）
-  for (const agentId of targetAgentIds) {
-    const mod = modifications.get(agentId)!;
-    if (!mod.evidenceGuidance) {
-      mod.evidenceGuidance = ["evidence_coverage", "evidence_diversity"];
+  } else {
+    // 无私有知识：降级为 evidenceGuidance（针对目标 agent）
+    for (const agentId of targetAgentIds) {
+      modifications.set(agentId, {
+        evidenceGuidance: ["evidence_coverage", "evidence_diversity", "alternative_perspectives"],
+      });
     }
   }
 

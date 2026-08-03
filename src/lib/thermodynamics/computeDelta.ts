@@ -80,6 +80,7 @@ const DEFAULTS = {
   stanceFlipThreshold: 0,       // 二进制：发生了就触发
   noResponseThreshold: 0,       // 二进制
   concentrationThreshold: 2.0,
+  // 2026-08-03 修复：矛盾度 = ΔU × I（高惯性大幅翻转才标记），阈值 2.0 对应 ΔU×I
   consistencyThreshold: 2.0,
 } as const;
 
@@ -508,8 +509,14 @@ export function computeDeltaConsistency(
       minConfidence: 0, effectiveThreshold: base };
   }
 
+  // 修复（2026-08-03）：矛盾度量方向反转。
+  // 旧公式 ratio = ΔU / I：高惯性（I=0.9）大幅翻转（ΔU=0.5）→ ratio=0.56 不标记
+  //   （而这正是"高阻力却大幅改变"的真矛盾）；低惯性（I=0.05）小幅变化（ΔU=0.2）
+  //   → ratio=4 误标记（低阻力改变是其正常行为）。
+  // 矛盾度应与惯性 × 变化幅度成正比：高惯性还大幅翻转才是"立场变化与惯性矛盾"。
+  // 修正公式：score = ΔU × I（I∈[0.05,1]），base 阈值相应调整为 0.5。
   const anomalousAgents: string[] = [];
-  let maxRatio = 0;
+  let maxScore = 0;
   const confs: number[] = [];
 
   for (const s of states) {
@@ -524,19 +531,19 @@ export function computeDeltaConsistency(
     const I = est?.inertia.estimate ?? 0.5;
     confs.push(est?.inertia.confidence ?? 0);
 
-    // 保护：I 不能为 0
+    // 矛盾度：变化幅度 × 惯性（惯性越大、变化越大 → 越矛盾）
     const safeI = Math.max(I, 0.05);
-    const ratio = delta / safeI;
-    if (ratio > maxRatio) maxRatio = ratio;
+    const score = delta * safeI;
+    if (score > maxScore) maxScore = score;
 
-    if (ratio > base) {
+    if (score > base) {
       anomalousAgents.push(s.agentName);
     }
   }
 
   const minC = confs.length > 0 ? Math.min(...confs) : 0;
 
-  // 门控：短对话中 I 不可靠，仅标记极端异常（ratio > base×1.5）
+  // 门控：短对话中 I 不可靠，仅标记极端异常（score > base×1.5）
   if (minC < 0.25) {
     const strictThreshold = base * 1.5;
     const strictAnomalous = anomalousAgents.filter(name => {
@@ -548,11 +555,11 @@ export function computeDeltaConsistency(
       const delta = utilityL2(prev, curr);
       const est = estimates.get(s.agentId);
       const I = Math.max(est?.inertia.estimate ?? 0.5, 0.05);
-      return (delta / I) > strictThreshold;
+      return (delta * I) > strictThreshold;
     });
 
     return {
-      value: maxRatio,
+      value: maxScore,
       triggered: strictAnomalous.length > 0,
       explanation: strictAnomalous.length > 0
         ? `δ_consistency 极端异常（minC=${minC.toFixed(2)}，严格阈值 ${strictThreshold.toFixed(1)}）：${strictAnomalous.join("、")}`
@@ -563,13 +570,13 @@ export function computeDeltaConsistency(
   }
 
   const effectiveThreshold = adaptiveThreshold(base, minC, SAFETY_MARGINS.consistency);
-  const triggered = anomalousAgents.length > 0 && maxRatio > effectiveThreshold;
+  const triggered = anomalousAgents.length > 0 && maxScore > effectiveThreshold;
 
   const explanation = triggered
-    ? `异常立场变化：${anomalousAgents.join("、")} ΔU/I=${maxRatio.toFixed(1)} > ${effectiveThreshold.toFixed(1)}`
-    : `立场变化正常：max ΔU/I=${maxRatio.toFixed(1)} ≤ ${effectiveThreshold.toFixed(1)}`;
+    ? `异常立场变化：${anomalousAgents.join("、")} ΔU×I=${maxScore.toFixed(1)} > ${effectiveThreshold.toFixed(1)}`
+    : `立场变化正常：max ΔU×I=${maxScore.toFixed(1)} ≤ ${effectiveThreshold.toFixed(1)}`;
 
-  return { value: maxRatio, triggered, explanation,
+  return { value: maxScore, triggered, explanation,
     minConfidence: minC, effectiveThreshold };
 }
 
