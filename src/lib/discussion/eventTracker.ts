@@ -5,19 +5,20 @@ export class EventTracker {
   private subscribers: Array<(event: DiscussionEvent) => void> = [];
 
   track(event: DiscussionEvent): void {
-    this.events.push(event);
-    this.notify(event);
+    const snapshot = structuredClone(event);
+    this.events.push(snapshot);
+    this.notify(snapshot);
   }
 
   getEvents(type?: DiscussionEventType): DiscussionEvent[] {
     if (!type) {
-      return [...this.events];
+      return structuredClone(this.events);
     }
-    return this.events.filter(e => e.type === type);
+    return structuredClone(this.events.filter(e => e.type === type));
   }
 
   getEventsByRound(roundNumber: number): DiscussionEvent[] {
-    return this.events.filter(e => e.roundNumber === roundNumber);
+    return structuredClone(this.events.filter(e => e.roundNumber === roundNumber));
   }
 
   subscribe(callback: (event: DiscussionEvent) => void): () => void {
@@ -32,7 +33,7 @@ export class EventTracker {
 
   private notify(event: DiscussionEvent): void {
     for (const subscriber of this.subscribers) {
-      subscriber(event);
+      subscriber(structuredClone(event));
     }
   }
 

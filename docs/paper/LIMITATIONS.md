@@ -1855,15 +1855,15 @@ npx tsx experiments/v2/run_malicious.ts --group=G --count=10
 
 ### 25.4 C 组 SemanticTool 链路未验证
 
-**现状**：SemanticTool 审计日志代码已补齐（MeasurementLayer + NativeCognitiveEngine + Runner + types），但 C 组（useSemanticTool=true）从未实际运行。
+**现状**：SemanticTool 审计日志代码已补齐（MeasurementLayer + NativeCognitiveEngine + Runner + types）。C 组（useSemanticTool=true）已由 08-01 探路运行 run0/1（有效），但 run2/3/4 为旧 `checkConvergence` 伪收敛退化 run（opinions<2 → true，08-06 fix#1/#2 已作废）；**结论级验证（n≥10）仍未运行**。
 
 **影响**：
-- C 组论文声明（"混合范式优于纯数学"）无数据支撑
-- SemanticTool 异步路径可能有未发现的 Bug
-- 审计日志实际产出未验证
+- C 组论文声明（"混合范式优于纯数学"）仅有 n=2 有效探路数据支撑（mean τ=0.571），统计证据不足
+- SemanticTool 异步路径 Bug 已被 08-06 fix#3（merge 误删）与 fix#4（devils_advocate 静默丢弃）坐实，需在重跑中回归验证
+- 审计日志实际产出仅由 run0/1（semanticAuditLog=8）验证，产出正确性待重跑复核
 
-**缓解方案**：Phase 3 启动前必须先跑 C 组 Pilot（1 run），验证：
-1. SemanticTool 异步路径无崩溃
+**缓解方案**：用当前代码（含 fix#1-#4）重跑 C 组（n≥10），并剔除退化 run 后重算指标。验证：
+1. SemanticTool 异步路径无崩溃、无静默丢弃（devils_advocate 分支）
 2. 审计日志正确记录 evidence_dedup 和 gap_analysis 调用
 3. Tier 3 触发率、验证通过率、降级率可从 RawRunData.semanticAuditLog 提取
 

@@ -56,12 +56,13 @@ describe("Rate Limiter", () => {
 });
 
 describe("Validation", () => {
-  let sanitizeString: any, validateSwarmRequest: any;
+  let sanitizeString: any, validateSwarmRequest: any, validatePublicLLMConfig: any;
 
   beforeEach(async () => {
     const mod = await import("@/lib/security/validation");
     sanitizeString = mod.sanitizeString;
     validateSwarmRequest = mod.validateSwarmRequest;
+    validatePublicLLMConfig = mod.validatePublicLLMConfig;
   });
 
   it("sanitizeString 应移除 XSS 模式", () => {
@@ -113,5 +114,23 @@ describe("Validation", () => {
       news: "x".repeat(20000),
     });
     expect(result.valid).toBe(false);
+  });
+
+  it("public LLM config is reconstructed without SSRF or secret fields", () => {
+    const result = validatePublicLLMConfig({
+      provider: "local",
+      model: "qwen2",
+      temperature: 0.4,
+      baseUrl: "http://169.254.169.254/latest/meta-data",
+      apiKey: "attacker-controlled",
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.sanitized).toEqual({ provider: "local", model: "qwen2", temperature: 0.4 });
+  });
+
+  it("public LLM config rejects invalid numeric and provider values", () => {
+    expect(validatePublicLLMConfig({ provider: "evil", model: "x" }).valid).toBe(false);
+    expect(validatePublicLLMConfig({ provider: "openai", model: "x", temperature: Infinity }).valid).toBe(false);
   });
 });

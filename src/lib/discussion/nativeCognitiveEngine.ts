@@ -47,13 +47,14 @@ import type { OpinionParser } from "../observation";
 import {
   generateCognitiveInterventions,
 } from "../governance/cognitiveInterventions";
-import { estimateAll } from "../thermodynamics/ProgressiveEstimator";
+import { computeDeltaDiagnosis } from "../thermodynamics/computeDelta";
 import type {
   CognitiveGovernanceState,
   CognitiveStateModification,
 } from "../governance/types";
 import { MeasurementLayer, type ThermoState } from "../thermodynamics/MeasurementLayer";
 import { EvidencePool } from "../thermodynamics/EvidencePool";
+import { TerminationDecider, type TerminationDecision } from "../thermodynamics/TerminationDecider";
 import { mulberry32 } from "../utils/statsUtils";
 import type { LLMConfig } from "../llm/providers";
 
@@ -221,6 +222,18 @@ export class NativeCognitiveEngine extends DiscussionEngine {
   private thermoHistory: Array<{ round: number } & ThermoState> = [];
 
   /**
+   * v6 路径二（2026-08-04）：热力学终止决策器。
+   * F 进决策分支——强结晶态 F<0.15 立即终止，普通结晶态 F<0.25 连续 3 轮终止。
+   * 解冻自原 FROZEN 状态，适配 sync 路径（基于 round 而非 utteranceCount）。
+   */
+  private terminationDecider: TerminationDecider = new TerminationDecider();
+
+  /**
+   * v6 路径二：最近一次终止决策（供 Runner 落盘分析）。
+   */
+  private lastTerminationDecision: TerminationDecision | null = null;
+
+  /**
    * Phase 4B: 待应用的认知状态修改。
    *
    * 由 applyGovernance 生成，在下一轮 updateCognitiveStatesFromRound 中消费。
@@ -263,6 +276,8 @@ export class NativeCognitiveEngine extends DiscussionEngine {
 
   constructor(config?: Partial<DiscussionConfig>) {
     super(config);
+    // 未经 held-out 校准前，native 主实验默认固定轮数；RHT/RHTF 只能显式开启。
+    this.config.terminationPolicy = config?.terminationPolicy ?? "fixed_rounds";
     // 强制启用 cognitive state 追踪
     if (!this.config.useCognitiveState) {
     this.config.useCognitiveState = true;
@@ -311,7 +326,42 @@ export class NativeCognitiveEngine extends DiscussionEngine {
 
   /** 获取热力学历史（RTHF 逐轮轨迹） */
   getThermoHistory(): Array<{ round: number } & ThermoState> {
-    return this.thermoHistory;
+    return structuredClone(this.thermoHistory);
+  }
+
+  /** v6 路径二：获取热力学快照历史（论文分析用，不重新评估） */
+  getTerminationHistory() {
+    return this.terminationDecider.getHistory();
+  }
+
+  /** v6 路径二：获取最近一次终止决策 */
+  getLastTerminationDecision(): TerminationDecision | null {
+    return this.lastTerminationDecision ? { ...this.lastTerminationDecision } : null;
+  }
+
+  /**
+   * v6 热力学终止候选。
+   *
+   * 只负责基于当前轮 post-update thermoState 计算结构化候选，不再直接让主循环
+   * break。父类 finalizeRound 会先完成治理诊断、roundData/trace/event 提交，再统一
+   * 仲裁是否退出，从而保证 hard cap 与提前终止轮都不会丢失审计记录。
+   */
+  protected evaluateTerminationCandidate(round: number): TerminationDecision | null {
+    // thermoHistory 在 updateCognitiveStatesFromRound 中已填充（当前轮 post-update）
+    if (this.thermoHistory.length === 0) return null;
+
+    const lastThermo = this.thermoHistory[this.thermoHistory.length - 1];
+    const decision = this.terminationDecider.evaluateSync(
+      lastThermo.R, lastThermo.T, lastThermo.H, lastThermo.F,
+      round, this.config.maxRounds,
+      this.config.terminationPolicy ?? "fixed_rounds",
+    );
+    this.lastTerminationDecision = decision;
+
+    if (decision.shouldTerminate) {
+      console.log(`[TerminationDecider] round ${round}: ${decision.message}`);
+    }
+    return decision;
   }
 
   /**
@@ -547,6 +597,76 @@ Field explanations:
   }
 
   /**
+   * 从原始 LLM 输出构建临时 cognitive states（用于 δ 诊断）。
+   *
+   * 关键：不经过 MeasurementLayer 的 DeGroot 融合——直接用 LLM 自报的 utility/confidence，
+   * 保留 agent 之间的原始分歧。δ 需要检测的正是这些原始分歧。
+   */
+  private buildRawCognitiveStates(
+    opinions: AgentOpinion[],
+    agents: DiscussionAgent[],
+  ): AgentCognitiveState[] {
+    const agentMap = new Map(agents.map(a => [a.id, a]));
+    return opinions.map(op => {
+      const agent = agentMap.get(op.agentId);
+      const rawU = op.cognitiveState?.utility ?? {};
+      const entries = Object.entries(rawU);
+      entries.sort((a, b) => b[1] - a[1]);
+      const scores: Record<string, number> = {};
+      for (const [k, v] of entries) scores[k] = v;
+
+      return {
+        agentId: op.agentId,
+        agentName: agent?.name ?? op.agentId,
+        agentRole: agent?.role ?? "",
+        utility: {
+          scores,
+          topChoice: entries[0]?.[0] ?? "",
+          preferenceClarity: entries.length >= 2 ? entries[0][1] - entries[1][1] : 0,
+          intensity: Math.sqrt(entries.reduce((s, [, v]) => s + v * v, 0)),
+        },
+        evidence: {
+          coverage: op.cognitiveState?.evidenceCoverage ?? 0.5,
+          quality: op.cognitiveState?.evidenceQuality ?? 0.5,
+          diversity: 0.5,
+          recentGain: 0,
+          items: (op.evidence ?? []).map((e, i) => ({
+            id: `${op.agentId}_ev_${i}`,
+            content: typeof e === "string" ? e : (e as any).content ?? "",
+            supports: typeof e === "string" ? "" : (e as any).supports ?? "",
+            strength: typeof e === "string" ? 0.5 : (e as any).strength ?? 0.5,
+            source: "initial" as const,
+            sourceReliability: 0.5,
+            acquiredAt: 0,
+            shared: false,
+          })),
+        },
+        inertia: { estimate: 0.5, confidence: 0.1, sourceWeights: { stated: 0.5, rolePrior: 0.5, behavioral: 0 },
+          strength: 0.5, source: { evidenceBased: 0.5, expressionBased: 0.5, roleBased: 0 }, recentRefutations: 0 },
+        confidence: {
+          estimate: (op.confidence ?? 50) / 100,
+          // 字段语义：confidence.confidence 是"estimate 的统计置信度"（元置信度），
+          // 不是 LLM 自报值。rawStates 是单轮临时对象，无历史数据做统计估计，
+          // 因此元置信度为 0.10（冷启动低置信），与 inertia/susceptibility 一致。
+          // 之前误用 stated 值是为了"避免拉高 δ 自适应阈值"，但 δ 诊断不读此字段
+          //（读的是 inertia.confidence / susceptibility.confidence），所以改回正确语义。
+          confidence: 0.10,
+          stated: (op.confidence ?? 50) / 100,
+          stability: 0.5, sourceWeights: { stated: 1, stability: 0 },
+          overall: (op.confidence ?? 50) / 100, evidenceBased: 0.5, stabilityBased: 0.5,
+        },
+        susceptibility: { estimate: 0.5, confidence: 0.1, usable: false },
+        behaviorEvents: {
+          timesRefuted: 0, timesChangedAfterRefutation: 0, spontaneousFlips: 0,
+          timesExposed: 0, timesRespondedAfterExposure: 0,
+        },
+        spokeThisRound: true,
+        utilityHistory: [],
+      };
+    });
+  }
+
+  /**
    * 认知治理主流程（v6：δ 驱动，同步路径）。
    *
    * 使用 diagnoseAndSuggestSync（同步，纯数学路径）。
@@ -559,48 +679,99 @@ Field explanations:
     currentRound: number,
     maxRounds: number,
   ): { hasIntervention: boolean; interventions: Intervention[]; issues: GovernanceIssue[] } {
-    // v6：δ 驱动诊断
+    // v6：δ 驱动诊断 → 直接干预（无中间层）
     try {
-      const { suggestions } = this.measurementLayer.diagnoseAndSuggestSync(currentRound);
+      // 关键修复：从原始 LLM 输出构建 cognitive states 做 δ 诊断，
+      // 而非从 MeasurementLayer 读取（已被 DeGroot 融合抹平了分歧）。
+      const rawStates = this.buildRawCognitiveStates(opinions, agents);
+      const thermo = this.measurementLayer.computeThermoState();
+      // P1-C 修复（2026-08-04）：estimates 基于 cognitiveStates（有累积 behaviorEvents），
+      // 而非 rawStates（临时对象，behaviorEvents 全 0）。
+      // 修复前：estimateAll(rawStates) → susceptibility.usable=false（暴露事件<2）
+      //   → δ_no_response 门控条件不满足 → 永远不触发。
+      // 修复后：estimateAll(cognitiveStates) → susceptibility.usable 可能=true
+      //   → δ_no_response 能正常检测"被暴露但未响应"的 agent。
+      const estimates = this.measurementLayer.estimateProgressiveState(currentRound);
+      const delta = computeDeltaDiagnosis(rawStates, thermo, estimates);
+      const suggestions = this.measurementLayer.buildDeltaSuggestionsPublic(
+        delta, rawStates, thermo, currentRound,
+      );
+
+      const trigCount = (Object.values(delta) as any[]).filter(
+        v => typeof v === 'object' && (v as any)?.triggered,
+      ).length;
+      console.log(`[δ raw r${currentRound}] ${trigCount} signals triggered → ${suggestions.length} suggestions`);
 
       if (suggestions.length > 0) {
-        const govConfig = this.config.governanceConfig ?? {};
-        const statesMap = this.buildGovernanceStateMap(opinions);
+        const interventions: Intervention[] = [];
+        const modifications = new Map<string, import("../governance/types").CognitiveStateModification>();
+        const issueList: GovernanceIssue[] = [];
 
-        const issues: GovernanceIssue[] = suggestions.map((s, i) => ({
-          type: s.source as any,
-          severity: "medium" as const,
-          description: s.reason,
-          agents: s.targetAgents,
-          source: "custom" as const,
-          suggestedIntervention: {
+        for (const s of suggestions) {
+          // δ 信号 → 直接干预（跳过置信度门——δ 触发本身已是门控）
+          const intv: Intervention = {
             type: s.type,
             targetAgents: s.targetAgents,
             reason: s.reason,
-          },
-          detectedAt: new Date().toISOString(),
-          id: `delta_${currentRound}_${i}`,
-        }));
+            source: `δ_${s.source}`,
+            effect: s.reason,
+            applied: true,
+          };
+          interventions.push(intv);
 
-        // v6：渐进估计用于置信度感知干预降级
-        const progressiveEstimates = estimateAll(
-          this.measurementLayer.getCognitiveStates(), currentRound,
-        );
+          issueList.push({
+            type: s.source as any,
+            severity: "medium" as const,
+            description: s.reason,
+            agents: s.targetAgents,
+            source: "custom" as const,
+            suggestedIntervention: { type: s.type, targetAgents: s.targetAgents, reason: s.reason },
+            detectedAt: new Date().toISOString(),
+            id: `δ_${currentRound}_${s.source}`,
+          });
 
-        const { interventions, cognitiveModifications } = generateCognitiveInterventions(
-          issues,
-          statesMap,
-          govConfig,
-          this.agentKnowledge,
-          progressiveEstimates,
-        );
+          // 直接构建 CognitiveStateModification（跳过 generateCognitiveInterventions）
+          for (const aid of (s.targetAgents.length > 0 ? s.targetAgents : agents.map(a => a.id))) {
+            const mod = modifications.get(aid) ?? {};
 
-        this.pendingCognitiveModifications = cognitiveModifications;
+            if (s.type === "inject_evidence") {
+              const prompt = `[治理干预 — ${s.source}] ${s.reason}`;
+              mod.injectPrompt = mod.injectPrompt
+                ? `${mod.injectPrompt}\n${prompt}`
+                : prompt;
+            } else if (s.type === "rebalance_attention") {
+              mod.higherSpeakingPriority = true;
+            } else if (s.type === "devils_advocate") {
+              // HiddenBench §6.4: 强制每个 agent 给当前领先选项找一个反驳理由
+              mod.injectPrompt = `[治理干预 — devil's advocate] 在分享你的分析之前，请先完成以下步骤：
+1. 识别当前讨论中看起来最受欢迎的选项
+2. 找出至少一个反驳该选项的理由（基于你掌握的独有信息）
+3. 然后再给出你的完整分析
+这有助于防止过早共识和群体思维。`;
+            }
+
+            modifications.set(aid, mod);
+          }
+
+          // rebalance_attention: 压低非目标 agents 的发言优先级
+          if (s.type === "rebalance_attention" && s.targetAgents.length > 0) {
+            const targetSet = new Set(s.targetAgents);
+            for (const a of agents) {
+              if (!targetSet.has(a.id)) {
+                const mod = modifications.get(a.id) ?? {};
+                mod.lowerSpeakingPriority = true;
+                modifications.set(a.id, mod);
+              }
+            }
+          }
+        }
+
+        this.pendingCognitiveModifications = modifications;
 
         return {
-          hasIntervention: interventions.length > 0,
+          hasIntervention: true,
           interventions,
-          issues,
+          issues: issueList,
         };
       }
 
@@ -615,9 +786,7 @@ Field explanations:
       currentRound, maxRounds, govConfig,
     );
     const statesMap = this.buildGovernanceStateMap(opinions);
-    const progressiveEstimates = estimateAll(
-      this.measurementLayer.getCognitiveStates(), currentRound,
-    );
+    const progressiveEstimates = this.measurementLayer.estimateProgressiveState(currentRound);
     const { interventions, cognitiveModifications } = generateCognitiveInterventions(
       detectionResult.issues,
       statesMap,
@@ -651,8 +820,13 @@ Field explanations:
     _maxRounds: number,
   ): Promise<{ hasIntervention: boolean; interventions: Intervention[]; issues: GovernanceIssue[] }> {
     try {
+      // P1-B 修复（2026-08-04）：异步路径 δ 诊断用 rawStates（原始分歧），
+      // 与同步路径（applyCognitiveGovernance）保持一致。
+      // 修复前：diagnoseAndSuggest 用 this.cognitiveStates（融合后），
+      // DeGroot 融合抹平分歧 → δ_polarization/δ_1d_mask 等检测"分歧"的信号失真。
+      const rawStates = this.buildRawCognitiveStates(opinions, agents);
       const { suggestions } = await this.measurementLayer.diagnoseAndSuggest(
-        currentRound, this.llmConfig ?? undefined,
+        currentRound, this.llmConfig ?? undefined, rawStates,
       );
 
       if (suggestions.length > 0) {
@@ -674,9 +848,7 @@ Field explanations:
           id: `delta_semantic_${currentRound}_${i}`,
         }));
 
-        const progressiveEstimates = estimateAll(
-          this.measurementLayer.getCognitiveStates(), currentRound,
-        );
+        const progressiveEstimates = this.measurementLayer.estimateProgressiveState(currentRound);
 
         const { interventions, cognitiveModifications } = generateCognitiveInterventions(
           issues,
@@ -834,6 +1006,8 @@ Field explanations:
     super.reset();
     this.measurementLayer.reset();
     this.thermoHistory = [];
+    this.terminationDecider.reset();
+    this.lastTerminationDecision = null;
     this.pendingCognitiveModifications.clear();
     this.speakingPriority.clear();
     this.pendingShuffleKnowledge = false;

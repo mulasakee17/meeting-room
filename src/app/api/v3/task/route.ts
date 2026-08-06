@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
-import { sanitizeString } from "@/lib/security/validation";
+import { sanitizeString, validatePublicLLMConfig, type PublicLLMConfig } from "@/lib/security/validation";
 import { checkRateLimit, RATE_LIMIT_PRESETS, getClientIdentifier } from "@/lib/security/rateLimit";
 import { runSwarmPipeline } from "@/lib/pipeline";
+import { randomUUID } from "node:crypto";
 
 interface CreateTaskRequest {
   version: "v3";
@@ -52,6 +53,9 @@ interface CreateTaskResponse {
 
 /** Maximum age for a pending/running task before it is auto-failed (10 min). */
 const TASK_STALE_TIMEOUT_MS = 10 * 60 * 1000;
+const TASK_RESULT_RETENTION_MS = 60 * 60 * 1000;
+const MAX_TASK_STORE_SIZE = 1_000;
+const MAX_INPUT_CHARS = 100_000;
 
 let taskStore: Map<string, {
   taskId: string;
@@ -66,8 +70,12 @@ let taskStore: Map<string, {
 /** Periodically fail tasks that have been pending/running for too long. */
 function cleanupStaleTasks(): void {
   const now = Date.now();
-  Array.from(taskStore.entries()).forEach(([, task]) => {
-    if (task.status === "completed" || task.status === "failed") return;
+  Array.from(taskStore.entries()).forEach(([taskId, task]) => {
+    if (task.status === "completed" || task.status === "failed") {
+      const finishedAt = new Date(task.completedAt ?? task.createdAt).getTime();
+      if (now - finishedAt > TASK_RESULT_RETENTION_MS) taskStore.delete(taskId);
+      return;
+    }
     const age = now - new Date(task.createdAt).getTime();
     if (age > TASK_STALE_TIMEOUT_MS) {
       task.status = "failed";
@@ -79,7 +87,8 @@ function cleanupStaleTasks(): void {
 
 // Run cleanup every 5 minutes
 if (typeof setInterval !== "undefined") {
-  setInterval(cleanupStaleTasks, 5 * 60 * 1000);
+  const cleanupTimer = setInterval(cleanupStaleTasks, 5 * 60 * 1000);
+  cleanupTimer.unref?.();
 }
 
 export async function POST(request: NextRequest) {
@@ -112,9 +121,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate required fields
-    if (!body.input || !body.input.type) {
+    if (!body.input || !["text", "structured", "question"].includes(body.input.type)) {
       return NextResponse.json(
-        { success: false, error: { code: "INVALID_INPUT", message: "input.type is required" } },
+        { success: false, error: { code: "INVALID_INPUT", message: "input.type is invalid" } },
+        { status: 400 }
+      );
+    }
+
+    const serializedContent = typeof body.input.content === "string"
+      ? body.input.content
+      : JSON.stringify(body.input.content);
+    if (!serializedContent || serializedContent.length > MAX_INPUT_CHARS) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: `input.content must contain at most ${MAX_INPUT_CHARS} characters` } },
+        { status: 400 }
+      );
+    }
+
+    if (!body.agentConfig || typeof body.agentConfig !== "object") {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: "agentConfig is required" } },
         { status: 400 }
       );
     }
@@ -132,11 +158,63 @@ export async function POST(request: NextRequest) {
       requestData.title = sanitizeString(requestData.title);
     }
 
-    const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    if (!["autogen", "custom"].includes(requestData.agentConfig.provider)) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: `Invalid agent provider: ${requestData.agentConfig.provider}` } },
+        { status: 400 }
+      );
+    }
+
+    const agentCount = requestData.agentConfig.agentCount ?? 5;
+    if (!Number.isInteger(agentCount) || agentCount < 1 || agentCount > 20) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: "agentConfig.agentCount must be an integer between 1 and 20" } },
+        { status: 400 }
+      );
+    }
+
+    const maxRounds = requestData.maxRounds ?? 3;
+    if (!Number.isInteger(maxRounds) || maxRounds < 1 || maxRounds > 20) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: "maxRounds must be an integer between 1 and 20" } },
+        { status: 400 }
+      );
+    }
+
+    const llmValidation = validatePublicLLMConfig(body.llmConfig);
+    if (!llmValidation.valid) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: llmValidation.errors.join("; ") } },
+        { status: 400 }
+      );
+    }
+    const llmConfig = llmValidation.sanitized as PublicLLMConfig;
+
+    // Store a reconstructed request so unknown transport fields cannot reach the worker.
+    const sanitizedRequest: CreateTaskRequest = {
+      ...requestData,
+      agentConfig: {
+        provider: requestData.agentConfig.provider,
+        agentCount,
+        agentTypes: requestData.agentConfig.agentTypes?.slice(0, agentCount),
+      },
+      llmConfig,
+      maxRounds,
+    };
+
+    cleanupStaleTasks();
+    if (taskStore.size >= MAX_TASK_STORE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: { code: "TASK_CAPACITY_REACHED", message: "Task capacity reached; retry later" } },
+        { status: 503 }
+      );
+    }
+
+    const taskId = `task_${randomUUID()}`;
     const taskEntry = {
       taskId,
       status: "pending" as const,
-      request: requestData,
+      request: sanitizedRequest,
       createdAt: new Date().toISOString(),
     };
 
@@ -225,6 +303,7 @@ async function processTask(taskId: string) {
       agentCount: task.request.agentConfig.agentCount,
       agentTypes: task.request.agentConfig.agentTypes,
       llmConfig: task.request.llmConfig,
+      maxRounds: task.request.maxRounds,
       input: task.request.input,
       evaluationConfig: task.request.evaluationConfig,
       governanceConfig: task.request.governanceConfig,

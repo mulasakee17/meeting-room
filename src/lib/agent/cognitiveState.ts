@@ -488,6 +488,9 @@ export function extractEvidenceItems(
  * - quality = avg(sourceReliability)
  * - diversity = unique categories / TOTAL_CATEGORIES
  * - recentGain = new items this round / total items
+ *
+ * @deprecated v6 post-hoc 路径。详见 updateCognitiveState 的 @deprecated 说明。
+ *   native 路径在 MeasurementLayer.updateCognitiveStatesNative 重新实现（coverage/quality 改用 LLM 自报）。
  */
 export function updateEvidence(
   currentEvidence: Evidence,
@@ -539,6 +542,10 @@ export function updateEvidence(
  *
  * evidenceBased = evidence.quality × evidence.coverage
  * stabilityBased = Phase 4 引入
+ *
+ * @deprecated v6 post-hoc 路径。详见 updateCognitiveState 的 @deprecated 说明。
+ *   native 路径在 MeasurementLayer.updateCognitiveStatesNative 重新实现
+ *   （stated = LLM 自报，overall = 0.4*ev+0.6*LLM_conf，与本实现不可比）。
  */
 export function updateConfidence(
   evidence: Evidence,
@@ -570,6 +577,9 @@ export function updateConfidence(
  * - roleBased = 角色基础值（不变）
  * - 如果被反驳：strength -= 0.1
  * - 衰减：strength *= INERTIA_DECAY (0.98)
+ *
+ * @deprecated v6 post-hoc 路径。详见 updateCognitiveState 的 @deprecated 说明。
+ *   公式与 native 一致，但 evidence.coverage 输入不同（此处客观计数，native LLM 自报）。
  */
 export function updateInertia(
   currentInertia: Inertia,
@@ -629,6 +639,10 @@ export function updateInertia(
  * Phase 4B 加权 DeGroot：
  * - 支持可选的 weight 参数（默认 1）
  * - 认知治理干预可降低特定 agent 的 weight（如 reduce_weight 设 weight=0.3）
+ *
+ * @deprecated v6 post-hoc 路径。详见 updateCognitiveState 的 @deprecated 说明。
+ *   DeGroot 公式与 native 一致，但 susceptibility 用 (1-ι)(1-c) 局部值；
+ *   native 检测器可能用 ProgressiveEstimator 行为估计，同轮两套值。
  */
 export function updateUtility(
   currentUtility: Utility,
@@ -715,6 +729,17 @@ export interface CognitiveStateUpdateInput {
  * 执行一轮完整的 cognitive state 更新
  *
  * 顺序：Evidence → Confidence → Inertia → Utility
+ *
+ * @deprecated v6 post-hoc 路径（2026-08-04）。仅以下场景使用：
+ *   1) e1_stability 的 "cognitive" runtimeMode（E1 基线对照）
+ *   2) GovernanceRuntime 异步治理直接调用其子函数
+ *   native 路径（v6 主实验 A/B/C/D 组）在
+ *   MeasurementLayer.updateCognitiveStatesNative 重新实现，两者存在字段伪一致：
+ *   - Confidence.stated：此处 = overall（非 LLM 自报），native = LLM_confidence/100
+ *   - Confidence.overall：此处 0.7*ev+0.3*0.5，native 0.4*ev+0.6*LLM_conf
+ *   - Evidence.coverage/quality：此处客观计数（quality 恒 0.5），native LLM 自报
+ *   - Evidence.diversity：此处计数比，native Shannon 熵
+ *   跨 runtimeMode 混用这些字段会产生不可比数值。新实验应使用 native_cognitive。
  */
 export function updateCognitiveState(input: CognitiveStateUpdateInput): AgentCognitiveState {
   const {

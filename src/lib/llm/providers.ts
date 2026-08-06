@@ -59,7 +59,7 @@ export interface LLMResponse {
 }
 
 // 带超时的 fetch
-async function fetchWithTimeout(
+export async function fetchWithTimeout(
   url: string,
   options: RequestInit,
   timeout: number = DEFAULT_TIMEOUT

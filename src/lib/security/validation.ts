@@ -60,6 +60,53 @@ interface LLMConfigInput {
   timeout?: number;
 }
 
+export interface PublicLLMConfig {
+  provider: 'openai' | 'anthropic' | 'deepseek' | 'local';
+  model: string;
+  temperature?: number;
+}
+
+/**
+ * Validate and reconstruct the LLM configuration accepted by public routes.
+ * Reconstructing the object is deliberate: transport fields such as baseUrl,
+ * apiKey and arbitrary provider options must never cross the HTTP trust boundary.
+ */
+export function validatePublicLLMConfig(config: unknown): ValidationResult {
+  const errors: string[] = [];
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    return { valid: false, errors: ['llmConfig must be an object'] };
+  }
+
+  const candidate = config as Record<string, unknown>;
+  const provider = candidate.provider;
+  const model = candidate.model;
+  const temperature = candidate.temperature;
+
+  if (typeof provider !== 'string' || !VALID_PROVIDERS.includes(provider)) {
+    errors.push('llmConfig.provider is not supported');
+  }
+  if (typeof model !== 'string' || model.trim().length === 0 || model.length > 100) {
+    errors.push('llmConfig.model must be a non-empty string of at most 100 characters');
+  }
+  if (temperature !== undefined && (
+    typeof temperature !== 'number' || !Number.isFinite(temperature) || temperature < 0 || temperature > 2
+  )) {
+    errors.push('llmConfig.temperature must be a finite number between 0 and 2');
+  }
+
+  if (errors.length > 0) return { valid: false, errors };
+
+  return {
+    valid: true,
+    errors: [],
+    sanitized: {
+      provider: provider as PublicLLMConfig['provider'],
+      model: (model as string).trim(),
+      ...(temperature !== undefined ? { temperature: temperature as number } : {}),
+    } satisfies PublicLLMConfig,
+  };
+}
+
 /** ML 选项结构（替代 any） */
 interface MLOptionsInput {
   enableLSTM?: boolean;

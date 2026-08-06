@@ -98,7 +98,7 @@ if (result.hasIntervention) {
 
 | 能力 | 说明 | 状态 |
 |---|---|---|
-| **7 种偏差检测器** | 回声室、权威偏差、极化、过早共识 + 3 种 MAST 检测器（信息隐瞒、输入忽视、推理-行动不一致） | ✅ 内置；MAST 检测器尚未在实验中触发 |
+| **16 种偏差检测器** | 4 经典（回声室、权威偏差、极化、过早共识）+ 3 MAST FC2 + 6 认知 + 3 FC1/FC3 | ✅ 内置；MAST 检测器尚未在实验中触发 |
 | **3 种非破坏性干预**（v2.1 active） | inject_evidence、rebalance_attention、shuffle_knowledge — 改变信息流而非信念权重 | ✅ 内置；Δτ=0.000（smoke test, N=6，+0.533 已撤回） |
 | **4 种破坏性干预**（v2.0 deprecated） | reduce_weight、force_reflection、introduce_diversity、continue_discussion — 破坏性（Δτ=−0.267） | ⚠️ 默认禁用 |
 | **4 种治理模式 + 5 种扩展消融** | none / detect-only / full / random-intervene + shuffle / full_diversity 等 | ✅ 内置 |
@@ -127,7 +127,7 @@ if (result.hasIntervention) {
 | **治理 Δτ** | **+0.209** | **+0.087** | ✅ 方向一致 |
 | **治理 d** | 0.92（p=0.0038） | 0.47（p=0.086） | ✅ 方向一致 |
 | **功效** | 88% ✅ | 43% ⚠️ | Supplier 需 n=72 达 80% |
-| **共识-质量 r** | −0.137 | −0.107 | ✅ 均 ≈ 0 |
+| **共识-质量 r** | −0.0491 | −0.0291 | ✅ 均 ≈ 0（Kuramoto R 口径） |
 
 **异步引擎**（热力学终止）：C 组 τ=0.64 vs B 组 τ=0.42，d=1.09，p=0.028。跨模型：智谱 C 组 τ=0.680（+6.3% vs DeepSeek）。
 
@@ -155,7 +155,7 @@ if (result.hasIntervention) {
 │   ┌─────────────────────────────────────┐    │
 │   │  观测 → 信念建模                      │    │
 │   │     ↓                                │    │
-│   │  偏差检测（7 种）                     │    │
+│   │  偏差检测（16 种）                    │    │
 │   │     ↓                                │    │
 │   │  自由能干预排序                       │    │
 │   │     ↓                                │    │
@@ -174,7 +174,7 @@ if (result.hasIntervention) {
 src/
 ├── runtime/              # 可嵌入治理运行时（SDK）
 ├── lib/
-│   ├── governance/       # 7 种偏差检测器 + 3 active + 4 deprecated 干预策略
+│   ├── governance/       # 16 种偏差检测器 + 3 active + 4 deprecated 干预策略
 │   ├── evaluation/       # 五维评分引擎
 │   ├── observation/      # LLM 输出解析
 │   ├── inference/        # 信念演化计算

@@ -57,4 +57,90 @@ export const E11_HIDDENBENCH_DELTA: ExperimentConfig = {
   description: "HiddenBench 任务 + δ 治理，验证治理能否提升决策质量（vs 无治理基线）",
 };
 
-export const E11_ALL = [E11_HIDDENBENCH_NONE, E11_HIDDENBENCH_DELTA];
+/** E11 C 组：旧检测器 full 治理（与论文 none/full 对照一致） */
+export const E11_HIDDENBENCH_FULL: ExperimentConfig = {
+  id: "e11_hb_full",
+  hypothesis: "H11",
+  title: "HiddenBench 外部任务 — 全治理 full (C组)",
+  scenario: "hiddenbench",
+  taskIndex: TASK_INDEX,
+  runtimeModes: ["native_cognitive"],
+  governanceMode: "full",
+  agentCount: 4,
+  maxRounds: 15,
+  runsPerSeed: 5,
+  seeds: SEEDS,
+  llmModel: "deepseek-v4-flash",
+  temperature: 0.0,
+  isMain: false,
+  description: "HiddenBench 任务 + 旧检测器 full 治理（历史 169 闭环主证据路径），验证治理提升",
+};
+
+/** E11 D 组：基线严格对齐原论文主实验——不提示信息不对称（nohint），应重现"讨论后失败" */
+export const E11_HIDDENBENCH_NONE_NOHINT: ExperimentConfig = {
+  id: "e11_hb_none_nohint",
+  hypothesis: "H11",
+  title: "HiddenBench 原论文对齐基线 — 无治理 no-hint (D组)",
+  scenario: "hiddenbench",
+  taskIndex: TASK_INDEX,
+  runtimeModes: ["native_cognitive"],
+  governanceMode: "none",
+  agentCount: 4,
+  maxRounds: 15,
+  runsPerSeed: 5,
+  seeds: SEEDS,
+  llmModel: "deepseek-v4-flash",
+  temperature: 0.0,
+  isMain: false,
+  promptStyle: "nohint",
+  description: "HiddenBench 任务 + 原论文主实验 prompt（不提示信息不对称），复现讨论后失败基线",
+};
+
+/** E11 E 组：治理在 no-hint 条件下发力——同样的原论文 prompt，只加治理框架 */
+export const E11_HIDDENBENCH_FULL_NOHINT: ExperimentConfig = {
+  id: "e11_hb_full_nohint",
+  hypothesis: "H11",
+  title: "HiddenBench 原论文对齐 + 治理 — 全治理 no-hint (E组)",
+  scenario: "hiddenbench",
+  taskIndex: TASK_INDEX,
+  runtimeModes: ["native_cognitive"],
+  governanceMode: "full",
+  agentCount: 4,
+  maxRounds: 15,
+  runsPerSeed: 5,
+  seeds: SEEDS,
+  llmModel: "deepseek-v4-flash",
+  temperature: 0.0,
+  isMain: false,
+  promptStyle: "nohint",
+  description: "HiddenBench 原论文 prompt + full 治理——唯一变量是治理，验证治理能否在严格基线上提升决策质量",
+};
+
+/** E11 F 组：δ 认知治理在 no-hint 条件下发力——非破坏性干预（v6 设计路径） */
+export const E11_HIDDENBENCH_DELTA_NOHINT: ExperimentConfig = {
+  id: "e11_hb_delta_nohint",
+  hypothesis: "H11",
+  title: "HiddenBench 原论文对齐 + δ治理 — 认知治理 no-hint (F组)",
+  scenario: "hiddenbench",
+  taskIndex: TASK_INDEX,
+  runtimeModes: ["native_cognitive"],
+  governanceMode: "cognitive",
+  agentCount: 4,
+  maxRounds: 15,
+  runsPerSeed: 5,
+  seeds: SEEDS,
+  llmModel: "deepseek-v4-flash",
+  temperature: 0.0,
+  isMain: false,
+  promptStyle: "nohint",
+  description: "HiddenBench 原论文 prompt + δ 认知治理（非破坏性干预，v6 设计路径）——唯一变量是治理",
+};
+
+export const E11_ALL = [
+  E11_HIDDENBENCH_NONE,
+  E11_HIDDENBENCH_DELTA,
+  E11_HIDDENBENCH_FULL,
+  E11_HIDDENBENCH_NONE_NOHINT,
+  E11_HIDDENBENCH_FULL_NOHINT,
+  E11_HIDDENBENCH_DELTA_NOHINT,
+];

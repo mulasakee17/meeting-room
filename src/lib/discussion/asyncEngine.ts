@@ -22,6 +22,7 @@ import type { RawObservation, ObserverAgent } from "../observation";
 import { TerminationDecider, type TerminationThresholds, type ThermoSnapshot, type TerminationDecision } from "../thermodynamics/TerminationDecider";
 import { mulberry32, shannonEntropy, normalizeTemperature } from "../utils/statsUtils";
 import { BELIEF_MIN, BELIEF_MAX } from "../constants";
+import { canonicalizeOpinionOptions } from "../observation/optionCanonicalization";
 
 
 /** 发言模式 */
@@ -194,6 +195,8 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
     dependencyMap?: DependencyMap,
     infoKeywordsMap?: InfoKeywordsMap
   ): Promise<AsyncDiscussionResult> {
+    this.beginRunLifecycle();
+    try {
     this.eventTracker.track({
       type: "round_start", timestamp: new Date().toISOString(), roundNumber: 0,
       payload: { task: task.id, agentCount: agents.length, mode: "async", speakMode: this.asyncConfig.speakMode },
@@ -240,6 +243,9 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
       totalUtterances: this.totalUtterances,
       totalEvalCycles: this.thermoHistory.length,
     };
+    } finally {
+      this.completeRunLifecycle();
+    }
   }
 
   /** 异步主循环 */
@@ -307,7 +313,11 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
         const parsedOpinion = this.opinionParser.parseOpinion(
           response, speaker.id, state.belief, state.confidence, evalCycle
         );
-        const opinion = parsedOpinion;
+        const opinion = canonicalizeOpinionOptions(
+          parsedOpinion,
+          task.canonicalOptions,
+          task.optionAliases,
+        );
         allOpinions.push(opinion);
 
         // 累积到本轮已发言列表（后续发言者可见）
@@ -327,6 +337,7 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
           belief: opinion.belief,
           confidence: opinion.confidence,
           referencedAgents: opinion.referencedAgents,
+          itemBeliefs: opinion.itemBeliefs,
           timestamp: new Date().toISOString(),
         });
 
@@ -390,7 +401,9 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
         influenceEvents: [],
         governanceIssues: governanceResult?.issues || [],
         interventions,
-        converged,
+        surfaceConverged: converged,
+        acceptedConsensus: false,
+        converged: false,
         // 审计字段：存储干预效果度量（第三方验证用，2026-07-23 新增）
         effectMetrics: governanceResult?.effectMetrics,
       });
@@ -399,7 +412,9 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
         roundNumber: evalCycle,
         opinions: [...allOpinions],
         timestamp: new Date().toISOString(),
-        converged,
+        surfaceConverged: converged,
+        acceptedConsensus: false,
+        converged: false,
       });
 
       // 更新 prevCycleBeliefs（用于下一轮的 beliefShift 计算）
@@ -865,8 +880,13 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
    *
    * 与 MeasurementLayer.ts 的区别：MeasurementLayer 基于 5 维认知状态
    * （utility 向量 / evidence items / utilityHistory）计算 R/T/H，语义独立
-   * 性更好，但仅用于 cognitive 治理模式（当前为死代码，未在真实实验触发）。
-   * 本函数的输出才是 TerminationDecider 和 thermoHistory 落盘的实际数据。
+   * 性更好。v6 sync 路径（NativeCognitiveEngine）已激活 MeasurementLayer 版
+   * thermo 用于 δ 诊断和 TerminationDecider.evaluateSync，本函数仅用于
+   * async 路径（belief-based，v6 不使用）。
+   *
+   * @deprecated v6 统一到 MeasurementLayer.computeThermoState（cosine/utility/evidence 版）。
+   * 新实验应走 NativeCognitiveEngine（sync 路径），本函数仅保留用于 async 历史复现。
+   * 论文新实验报告的 R/T/H/F 均来自 MeasurementLayer 实现，与此函数数值不可比。
    */
   private computeThermoState(beliefs: number[]): { R: number; T: number; H: number } {
     if (beliefs.length === 0) return { R: 0, T: 0, H: 0 };

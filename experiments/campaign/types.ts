@@ -10,7 +10,7 @@
 
 export type RuntimeMode = "belief" | "cognitive" | "native_cognitive";
 export type GovernanceMode = "none" | "detect-only" | "full" | "diversity_only" | "cognitive";
-export type ScenarioId = "ma" | "crisis" | "supplier" | "invest" | "er_triage" | "fraud" | "university" | "hiddenbench";
+export type ScenarioId = "ma" | "crisis" | "crisis_v2" | "supplier" | "invest" | "er_triage" | "fraud" | "university" | "hiddenbench";
 export type LLMProvider = "qwen" | "gpt4o" | "deepseek";
 
 export interface ExperimentConfig {
@@ -24,6 +24,8 @@ export interface ExperimentConfig {
   scenario: ScenarioId;
   /** HiddenBench 任务索引（0-64，仅 scenario="hiddenbench" 时使用；缺省跑第 1 个） */
   taskIndex?: number;
+  /** HiddenBench prompt 风格："hint"（默认）提示信息不对称主动分享；"nohint" 对齐原论文主实验（不提示） */
+  promptStyle?: "hint" | "nohint";
   /** 运行时模式 */
   runtimeModes: RuntimeMode[];
   /** 治理模式 */
@@ -44,6 +46,19 @@ export interface ExperimentConfig {
   isMain: boolean;
   /** 额外说明 */
   description: string;
+  /** LLM 超时（毫秒），默认 30000。弱模型生成结构化 JSON 可能需要更长 */
+  timeout?: number;
+  /** Phase D: 每轮强制 devil's advocate（HiddenBench §6.4 静态协议） */
+  staticDevilsAdvocate?: boolean;
+  /**
+   * 实验协议：控制讨论格式和评估方式。
+   * - "swarmalpha"（默认）：同时发言 + 结构化 JSON + cognitive state + δ 治理
+   * - "hiddenbench"：对齐 HiddenBench 参考协议——顺序 round-robin + 自由文本（1-2句）
+   *   + pre/post 独立投票 + average/majority rule 评估
+   */
+  protocol?: "swarmalpha" | "hiddenbench";
+  /** 终止策略；native 主实验默认 fixed_rounds，RHT/RHTF 仅作为显式消融。 */
+  terminationPolicy?: "fixed_rounds" | "surface" | "rht_joint" | "rhtf_joint";
   /** v6: 是否启用 SemanticTool 异步路径（C 组实验专用）。
    *  true → NativeCognitiveEngine 走 applyCognitiveGovernanceAsync（Tier 1→2→3 含 LLM 语义传感器）。
    *  false 或未设置 → 走同步 applyCognitiveGovernance（纯数学 Tier 1→2）。 */
@@ -108,8 +123,22 @@ export interface RawRunData {
   finalRanking: string[];
   /** 最终 Kendall τ */
   finalKendallTau: number;
+  /** false 表示任务只有单选真值，finalKendallTau 不得进入统计分析。 */
+  rankingMetricApplicable?: boolean;
   /** 最终单选准确率（finalRanking[0] 是否为 correctAnswer 中 rank=1 的方案；HiddenBench 等单选任务用） */
   finalAccuracy: number;
+  /** 个体正确率（average rule）：rank-1 匹配 correctAnswer rank-1 的 agent 比例。
+   *  与 HiddenBench A 组的 postAccuracy 直接对比。仅非 HiddenBench 协议时有值。 */
+  individualAccuracy?: number;
+  /** 选项标签解析质量；invalid/ambiguous 输出按 fail-closed 处理。 */
+  optionParsing?: {
+    totalOpinions: number;
+    validOpinions: number;
+    invalidRate: number;
+    statusCounts: Record<string, number>;
+    unmatchedLabels: string[];
+    rankingError?: string;
+  };
   /** 每轮信念快照 */
   beliefTrajectory: Array<{
     round: number;
@@ -129,6 +158,14 @@ export interface RawRunData {
     H: number;
     /** 操作化综合失序指标 */
     F: number;
+  }>;
+  /** v6 路径二：热力学终止决策历史（仅 native_cognitive 模式，F 进决策） */
+  terminationDecisions?: Array<{
+    round: number;
+    shouldTerminate: boolean;
+    reason: string;
+    stateType: string;
+    message: string;
   }>;
   /** ROADMAP_V5/v6: δ 一致性诊断（每轮 deltaDiagnosis，仅 native_cognitive 模式）
    *  v6 更新：与 DeltaDiagnosis 接口对齐（8 个 δ 信号）。 */
@@ -241,6 +278,18 @@ export interface RawRunData {
     latencyMs: number;
     error?: string;
   }>;
+  /** HiddenBench 协议结果（仅 protocol="hiddenbench" 时填充） */
+  hiddenbenchResult?: {
+    preVotes: Array<{ agentId: string; agentLabel: string; vote: string; rationale: string; isCorrect: boolean }>;
+    postVotes: Array<{ agentId: string; agentLabel: string; vote: string; rationale: string; isCorrect: boolean }>;
+    discussionHistory: Array<{ round: number; agentId: string; agentLabel: string; content: string }>;
+    preAccuracy: number;
+    postAccuracy: number;
+    preMajorityCorrect: boolean;
+    postMajorityCorrect: boolean;
+    collectiveGain: number;
+    elapsedMs: number;
+  };
 }
 
 // ============================================================================

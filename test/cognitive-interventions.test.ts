@@ -58,7 +58,6 @@ function makeIssue(
     type,
     severity: "medium",
     description: `test issue: ${type}`,
-    detectedAt: 1,
     affectedAgents: targetAgents,
     suggestedIntervention: suggestedInterventionType
       ? {
@@ -283,6 +282,23 @@ describe("generateCognitiveInterventions", () => {
 
     expect(result.interventions).toHaveLength(1);
     expect(result.interventions[0].type).toBe("rebalance_attention");
+  });
+
+  it("δ_* issue + devils_advocate 建议 → 生成 devils_advocate 干预并注入 prompt（审计 P1.2 修复）", () => {
+    // 回归：修复前 default 分支只处理 inject_evidence / rebalance_attention，
+    // devils_advocate 建议落到 break 被静默丢弃（语义异步路径）。
+    const issues = [makeIssue("δ_stance_flip", ["a1"], "devils_advocate")];
+    const result = generateCognitiveInterventions(issues, states);
+
+    expect(result.interventions).toHaveLength(1);
+    expect(result.interventions[0].type).toBe("devils_advocate");
+    expect(result.interventions[0].applied).toBe(true);
+    expect(result.interventions[0].targetAgents).toEqual(["a1"]);
+
+    // a1 收到 devil's advocate injectPrompt（与同步路径 applyCognitiveGovernance 一致）
+    const a1Mod = result.cognitiveModifications.get("a1");
+    expect(a1Mod).toBeDefined();
+    expect(a1Mod!.injectPrompt).toContain("devil's advocate");
   });
 
   it("默认禁用 reduce_weight / force_reflection / introduce_diversity / continue_discussion", () => {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
-import { sanitizeString } from "@/lib/security/validation";
+import { sanitizeString, validatePublicLLMConfig, type PublicLLMConfig } from "@/lib/security/validation";
 import { checkRateLimit, RATE_LIMIT_PRESETS, getClientIdentifier } from "@/lib/security/rateLimit";
 import { runSwarmPipeline } from "@/lib/pipeline";
 
@@ -24,7 +24,10 @@ interface ExecuteRequest {
   governanceConfig?: {
     interventionLevel?: "none" | "light" | "medium" | "heavy";
   };
+  maxRounds?: number;
 }
+
+const MAX_INPUT_CHARS = 100_000;
 
 interface ExecuteResponse {
   success: boolean;
@@ -81,9 +84,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!body.input || !body.input.type) {
+    if (!body.input || !["text", "structured", "question"].includes(body.input.type)) {
       return NextResponse.json(
-        { success: false, error: { code: "INVALID_INPUT", message: "input.type is required" } },
+        { success: false, error: { code: "INVALID_INPUT", message: "input.type is invalid" } },
+        { status: 400 }
+      );
+    }
+
+    const serializedContent = typeof body.input.content === "string"
+      ? body.input.content
+      : JSON.stringify(body.input.content);
+    if (!serializedContent || serializedContent.length > MAX_INPUT_CHARS) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: `input.content must contain at most ${MAX_INPUT_CHARS} characters` } },
+        { status: 400 }
+      );
+    }
+
+    if (!body.agentConfig || typeof body.agentConfig !== "object") {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: "agentConfig is required" } },
         { status: 400 }
       );
     }
@@ -96,7 +116,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate agent config provider
-    const validProviders = ["autogen", "crewai", "langgraph", "custom"];
+    // 审计 P1.1 修复（2026-08-06）：只接受注册表已注册的 provider。
+    // 修复前 crewai/langgraph 通过白名单校验后到 adapterRegistry.get 抛 "Unsupported framework" → 500；
+    // 现在提前 400 拒绝，避免"类型接受但不可用"的误导性 API 表面。
+    const validProviders = ["autogen", "custom"];
     if (requestData.agentConfig.provider && !validProviders.includes(requestData.agentConfig.provider)) {
       return NextResponse.json(
         { success: false, error: { code: "INVALID_INPUT", message: `Invalid agent provider: ${requestData.agentConfig.provider}` } },
@@ -104,11 +127,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const agentCount = requestData.agentConfig.agentCount ?? 5;
+    if (!Number.isInteger(agentCount) || agentCount < 1 || agentCount > 20) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: "agentConfig.agentCount must be an integer between 1 and 20" } },
+        { status: 400 }
+      );
+    }
+
+    const maxRounds = requestData.maxRounds ?? 3;
+    if (!Number.isInteger(maxRounds) || maxRounds < 1 || maxRounds > 20) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: "maxRounds must be an integer between 1 and 20" } },
+        { status: 400 }
+      );
+    }
+
+    const llmValidation = validatePublicLLMConfig(body.llmConfig);
+    if (!llmValidation.valid) {
+      return NextResponse.json(
+        { success: false, error: { code: "INVALID_INPUT", message: llmValidation.errors.join("; ") } },
+        { status: 400 }
+      );
+    }
+    const llmConfig = llmValidation.sanitized as PublicLLMConfig;
+
     // ---- Execute shared pipeline -----------------------------------------
     const result = await runSwarmPipeline({
       provider: requestData.agentConfig.provider,
-      agentCount: requestData.agentConfig.agentCount,
-      llmConfig: requestData.llmConfig,
+      agentCount,
+      maxRounds,
+      llmConfig,
       input: requestData.input,
       evaluationConfig: requestData.evaluationConfig,
       governanceConfig: requestData.governanceConfig,

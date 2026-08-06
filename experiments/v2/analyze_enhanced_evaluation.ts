@@ -26,7 +26,7 @@ import type {
   InteractionRound,
   GroundTruth,
 } from "../../src/lib/evaluation/types";
-import { mulberry32, cohensD, mean, std, type ExperimentResult } from "./statsShared";
+import { mulberry32, cohensD, mean, std, PERMUTATION_SEED, type ExperimentResult } from "./statsShared";
 
 dotenv.config({ path: ".env.local" });
 
@@ -35,7 +35,7 @@ dotenv.config({ path: ".env.local" });
 // ============================================================================
 
 const DATA_DIR = path.resolve(__dirname, "data_fraud_malicious");
-const PERMUTATION_SEED = 42;
+// PERMUTATION_SEED 从 statsShared 统一 import，避免本地重定义破坏单一来源（v6 修复 2026-08-04）
 
 const CORRECT_ANSWER: Record<string, number> = {
   "线索1-关联交易调查": 1,

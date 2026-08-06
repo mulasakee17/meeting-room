@@ -283,4 +283,30 @@ describe("TerminationDecider", () => {
       expect(DEFAULT_TERMINATION_THRESHOLDS.hardCapUtterances).toBe(40);
     });
   });
+
+  describe("sync 终止策略（P0d）", () => {
+    it("低 F 但高 T/高 H 不得被判为结晶", () => {
+      const decision = decider.evaluateSync(0.2, 0.9, 0.9, -0.7, 1, 5, "rht_joint");
+      expect(decision.shouldTerminate).toBe(false);
+      expect(decision.stateType).toBe("chaotic");
+    });
+
+    it("rht_joint 由 R/T/H 联合条件决定，不要求低 F", () => {
+      const decision = decider.evaluateSync(0.95, 0.05, 0.10, 0.8, 1, 5, "rht_joint");
+      expect(decision.shouldTerminate).toBe(true);
+      expect(decision.reason).toBe("strong_crystallized");
+    });
+
+    it("rhtf_joint 只把 F 作为 R/T/H 之后的附加条件", () => {
+      const decision = decider.evaluateSync(0.95, 0.05, 0.10, 0.8, 1, 5, "rhtf_joint");
+      expect(decision.shouldTerminate).toBe(false);
+    });
+
+    it("fixed_rounds 只在 hard cap 终止", () => {
+      const early = decider.evaluateSync(0.99, 0.01, 0.01, 0.01, 1, 3, "fixed_rounds");
+      expect(early.shouldTerminate).toBe(false);
+      const capped = decider.evaluateSync(0.2, 0.9, 0.9, -0.7, 3, 3, "fixed_rounds");
+      expect(capped.reason).toBe("hard_cap");
+    });
+  });
 });

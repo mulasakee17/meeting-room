@@ -47,21 +47,14 @@ export interface TaskInput {
   context?: string;
 }
 
+export interface InteractionOptions {
+  maxRounds?: number;
+}
+
 export interface FrameworkAdapter {
   framework: AgentFrameworkType;
   createAgents(configs: AgentConfig[], llmConfig?: LLMConfig): Promise<Agent[]>;
-  runInteraction(agents: Agent[], input: TaskInput): Promise<InteractionResult>;
+  runInteraction(agents: Agent[], input: TaskInput, options?: InteractionOptions): Promise<InteractionResult>;
   getAgentInfo(agents: Agent[]): AgentConfig[];
   dispose(agents: Agent[]): Promise<void>;
-}
-
-export interface FrameworkAdapterOptions {
-  llmConfig?: {
-    provider: string;
-    model: string;
-    temperature?: number;
-  };
-  maxRounds?: number;
-  timeoutSeconds?: number;
-  customConfig?: Record<string, unknown>;
 }

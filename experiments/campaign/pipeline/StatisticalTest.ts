@@ -715,8 +715,11 @@ function testE6(metrics: ExperimentMetrics): TestResult {
     ciLower = bootDiffs[Math.floor(nBoot * 0.025)];
     ciUpper = bootDiffs[Math.floor(nBoot * 0.975)];
     // Bootstrap p 值：Δ|r| <= 0 的比例 × 2（双侧）
-    const propLeq0 = bootDiffs.filter(d => d <= 0).length / nBoot;
-    pValue = Math.min(1, 2 * Math.min(propLeq0, 1 - propLeq0));
+    // (count+1)/(n+1) 校正避免 p=0.000 假阳性（与项目硬约束一致）
+    const countLeq0 = bootDiffs.filter(d => d <= 0).length;
+    const countGt0 = nBoot - countLeq0;
+    const propLeq0 = (Math.min(countLeq0, countGt0) + 1) / (nBoot + 1);
+    pValue = Math.min(1, 2 * propLeq0);
   } else {
     // 回退：Fisher z（仅当 per-run 数据不足时）
     const zCog = Math.atanh(Math.min(Math.abs(maxCorrCog), 0.999));
@@ -801,8 +804,11 @@ function testE7(metrics: ExperimentMetrics): TestResult {
     ciLower = bootDeltaF1[Math.floor(nBoot * 0.025)];
     ciUpper = bootDeltaF1[Math.floor(nBoot * 0.975)];
     // 双侧 p：ΔF1 <= 0 的比例 × 2
-    const propLeq0 = bootDeltaF1.filter(d => d <= 0).length / nBoot;
-    pValue = Math.min(1, 2 * Math.min(propLeq0, 1 - propLeq0));
+    // (count+1)/(n+1) 校正避免 p=0.000 假阳性（与项目硬约束一致）
+    const countLeq0 = bootDeltaF1.filter(d => d <= 0).length;
+    const countGt0 = nBoot - countLeq0;
+    const propLeq0 = (Math.min(countLeq0, countGt0) + 1) / (nBoot + 1);
+    pValue = Math.min(1, 2 * propLeq0);
   } else {
     // 回退：无原始数据，无法做 Bootstrap
     pValue = 1;

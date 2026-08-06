@@ -10,6 +10,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
+import { matchCanonicalOption } from "../../src/lib/observation/optionCanonicalization";
 
 // ============================================================================
 // 类型定义
@@ -172,29 +173,90 @@ export function loadExperiments(
 // ============================================================================
 
 /**
+ * 边界归一化：将 LLM 输出的 item 名映射到 task 定义的规范名。
+ *
+ * 根因：LLM 倾向输出短名/别名（"方案B"），task 的 correctAnswer/searchKeys
+ * 使用全名（"方案B-分阶段响应"）。下游所有指标（τ/acc/δ/thermo）依赖精确
+ * 字符串匹配——名称不一致会导致指标静默错误。
+ *
+ * 匹配策略（优先级递降）：
+ *   1. 精确匹配 (llmName === canonicalName)
+ *   2. 子串匹配——选最长重叠的规范名（"方案B" ⊂ "方案B-分阶段响应"）
+ *   3. searchKeys 关键词匹配
+ *   4. 无匹配 → 返回 null
+ *
+ * @param llmName        LLM 输出的 item 名
+ * @param canonicalNames task 定义的规范名列表
+ * @param searchKeys     可选的关键词映射（规范名 → 别名列表）
+ * @returns 匹配的规范名，或 null
+ */
+export function normalizeItemName(
+  llmName: string,
+  canonicalNames: string[],
+  searchKeys?: Record<string, string[]>,
+): string | null {
+  const match = matchCanonicalOption(llmName, canonicalNames, searchKeys);
+  return match.status === "matched" ? match.canonical ?? null : null;
+}
+
+/**
  * 从 itemBeliefs 聚合提取排名（唯一路径，不再有 fallback）。
  *
  * 修复 P0-1：旧版有 V1 fallback（首次提及位置启发式）——当 itemBeliefs
  * 为空时静默降级，产生与 V2 路径不可直接对比的 τ 值。现统一为 itemBeliefs
  * 聚合路径，itemBeliefs 为空时抛出错误（调用方已有 try-catch 隔离）。
+ *
+ * P0 fail-closed：任何无法唯一匹配的标签或缺失规范选项都会抛错。
+ * 不允许位置对齐、Object.keys 插入顺序或 ground-truth 排名参与恢复。
  */
 export function extractRanking(
   _decision: string,
   itemNames: string[],
-  itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>
+  itemBeliefs?: Array<{ item: string; rank: number; belief: number; confidence: number }>,
+  searchKeys?: Record<string, string[]>,
 ): string[] {
   if (!itemBeliefs || itemBeliefs.length === 0) {
     throw new Error("extractRanking: itemBeliefs 为空，无法提取排名。请检查 LLM 输出格式。");
   }
+
   const itemRanks = new Map<string, number[]>();
+  const invalidLabels: string[] = [];
+
   for (const ib of itemBeliefs) {
-    if (!itemRanks.has(ib.item)) itemRanks.set(ib.item, []);
-    itemRanks.get(ib.item)!.push(ib.rank);
+    const match = matchCanonicalOption(ib.item, itemNames, searchKeys);
+    if (match.status !== "matched"
+      || !match.canonical
+      || !Number.isInteger(ib.rank)
+      || ib.rank < 1
+      || ib.rank > itemNames.length) {
+      invalidLabels.push(ib.item);
+      continue;
+    }
+    if (!itemRanks.has(match.canonical)) itemRanks.set(match.canonical, []);
+    itemRanks.get(match.canonical)!.push(ib.rank);
   }
+
+  if (invalidLabels.length > 0) {
+    throw new Error(
+      `extractRanking: 存在无法唯一映射的选项标签: ${[...new Set(invalidLabels)].join(", ")}`,
+    );
+  }
+
+  const missingOptions = itemNames.filter(name => !itemRanks.has(name));
+  if (missingOptions.length > 0) {
+    throw new Error(`extractRanking: 排名不完整，缺少规范选项: ${missingOptions.join(", ")}`);
+  }
+
   const avgRanks = itemNames.map(name => {
-    const ranks = itemRanks.get(name);
-    return { name, avgRank: ranks && ranks.length > 0 ? ranks.reduce((a, b) => a + b, 0) / ranks.length : Infinity };
+    const ranks = itemRanks.get(name)!;
+    return { name, avgRank: ranks.reduce((a, b) => a + b, 0) / ranks.length };
   });
+  const sortedRankValues = avgRanks.map(item => item.avgRank).sort((a, b) => a - b);
+  for (let i = 1; i < sortedRankValues.length; i++) {
+    if (Math.abs(sortedRankValues[i] - sortedRankValues[i - 1]) < 1e-12) {
+      throw new Error("extractRanking: group ranking contains an unresolved average-rank tie");
+    }
+  }
   avgRanks.sort((a, b) => a.avgRank - b.avgRank);
   return avgRanks.map(r => r.name);
 }

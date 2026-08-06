@@ -6,7 +6,7 @@
  * 能在外部公认任务上运行——消除"任务是自己设计"的质疑。
  *
  * 数据源：experiments/campaign/tasks/hiddenbench/benchmark.json（HuggingFace/GitHub 公开，MIT）
- * 原文：https://github.com/jonradoff/hiddenbench
+ * 数据/实现参考：https://github.com/jonradoff/hiddenbench（第三方 reference implementation，非论文作者官方仓库）
  *
  * ─── 映射规则 ───
  * 1. shared_information（公共事实）→ sharedBriefing（所有 agent 可见）
@@ -62,10 +62,13 @@ export function loadHiddenBenchTasks(
  *
  * @param task HiddenBench 原始任务
  * @param agentCount agent 数（默认 4，HiddenBench 协议）
+ * @param promptStyle "hint"（默认）：提示信息不对称，主动分享独有信息；
+ *                    "nohint"：对齐原论文主实验，不提示信息不对称（基线应重现"讨论后失败"）
  */
 export function taskToConfig(
   task: HiddenBenchTask,
   agentCount: number = AGENT_COUNT,
+  promptStyle: "hint" | "nohint" = "hint",
 ): TaskConfig {
   // 1. sharedBriefing：公共事实 + 任务描述
   const sharedFacts = (task.shared_information ?? []).map((f, i) => `${i + 1}. ${f}`);
@@ -73,7 +76,9 @@ export function taskToConfig(
     `${task.description}\n\n` +
     `以下是所有成员共同掌握的信息：\n${sharedFacts.join("\n")}\n\n` +
     `你需要与 ${agentCount} 位成员讨论，从以下候选中选出最合适的方案。` +
-    `注意：每位成员还掌握一些他人不知道的独有信息，请主动分享。` +
+    (promptStyle === "hint"
+      ? `注意：每位成员还掌握一些他人不知道的独有信息，请主动分享。`
+      : `请仔细考虑你掌握的所有信息，并与成员充分讨论。`) +
     `最终请给出你对各候选方案的判断（belief 最高的即你的选择）。`;
 
   // 2. hidden_information → 分配给各 agent 的 knownItems
@@ -83,14 +88,22 @@ export function taskToConfig(
     const myHidden = hidden.filter((_, hi) => hi % agentCount === i);
     const knownItems =
       myHidden.length > 0
-        ? `你掌握以下他人不知道的独有信息：\n${myHidden.map((h, hi) => `${hi + 1}. ${h}`).join("\n")}`
-        : `你目前没有独有信息，请基于公共信息讨论，并认真听取他人分享的独有事实。`;
+        ? (promptStyle === "hint"
+            ? `你掌握以下他人不知道的独有信息：\n`
+            : `你掌握的信息：\n`) +
+          myHidden.map((h, hi) => `${hi + 1}. ${h}`).join("\n")
+        : (promptStyle === "hint"
+            ? `你目前没有独有信息，请基于公共信息讨论，并认真听取他人分享的独有事实。`
+            : `你目前没有额外信息，请基于公共信息参与讨论。`);
     return {
       id: `a${i + 1}`,
       name: ROLE_NAMES[i],
       role: ROLE_NAMES[i],
       knownItems,
-      initialBias: "你的专业身份是评估分析师。请基于你掌握的信息独立判断，并主动分享你的独有信息。",
+      initialBias:
+        promptStyle === "hint"
+          ? "你的专业身份是评估分析师。请基于你掌握的信息独立判断，并主动分享你的独有信息。"
+          : "你的专业身份是评估分析师。请基于你掌握的信息独立判断，并在讨论中认真听取他人的观点。",
     };
   });
 
@@ -114,6 +127,7 @@ export function taskToConfig(
     searchKeys,
     sharedBriefing,
     agents,
+    promptStyle,
   };
 }
 
@@ -121,7 +135,8 @@ export function taskToConfig(
 export function loadAllConfigs(
   jsonPath?: string,
   agentCount: number = AGENT_COUNT,
+  promptStyle: "hint" | "nohint" = "hint",
 ): TaskConfig[] {
   const tasks = loadHiddenBenchTasks(jsonPath);
-  return tasks.map((t) => taskToConfig(t, agentCount));
+  return tasks.map((t) => taskToConfig(t, agentCount, promptStyle));
 }

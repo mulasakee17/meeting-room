@@ -6,7 +6,6 @@ import {
   TaskInput,
   InteractionResult,
   AgentState,
-  FrameworkAdapterOptions,
 } from "./types";
 
 import { AutoGenAdapter } from "./autogen";

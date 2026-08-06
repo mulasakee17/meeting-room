@@ -192,7 +192,9 @@ Symbols in this paper map strictly to the code (to avoid reviewer confusion when
 |---|---|---|---|
 | none | 1 | 70.0% | 0.571 |
 | δ governance | 1 | 80.0% | 0.643 |
-| δ+SemanticTool | 3 | 63.8% | 0.381 |
+| δ+SemanticTool | 3（有效 2）⚠️ | 63.8% | 0.381 |
+
+> ⚠️ **Validity note (2026-08-06 audit)**: the n=3 mean τ=0.381 and IDR_end 63.8% include a degenerate run (run2) produced by the old `checkConvergence` pseudo-convergence (opinions<2 → true), invalidated by the 08-06 fixes. **Valid semantic samples: run0/1 only (n=2, mean τ=0.571).** SemanticTool/δ+LLM conclusions require a re-run with current code (n≥10); run2/3/4 must be excluded from any recomputation.
 
 Directionally consistent with the mechanism claim—δ governance has higher information diffusion (IDR_end +10pp) and higher τ (0.571→0.643) together—but **single-run, not statistical evidence**. Per-fragment, δ raises absorption of the employment and internationalization+ratio fragments 75%→100%. Crisis/Supplier E9 pending; re-running the analyzer after the full E9 yields a full-vs-none permutation test. Caveat: the a5 "meta/rough" fragment carries no distinctive values by design and its IDR is 0 — a documented dilution effect on the denominator (see §6.9).
 

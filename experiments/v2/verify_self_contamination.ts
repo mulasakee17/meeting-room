@@ -12,7 +12,7 @@
  */
 import * as fs from "fs";
 import * as path from "path";
-import { mean, mulberry32 } from "./statsShared";
+import { mean, mulberry32, PERMUTATION_SEED } from "./statsShared";
 import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
 
 interface Round {
@@ -484,8 +484,7 @@ console.log("");
 
 // V3 上的置换检验（如果样本足够）
 if (validStruct.length >= 3 && validThermal.length >= 3) {
-  // 用与 backtest 一致的 PRNG 规范
-  const PERMUTATION_SEED = 42;
+  // PERMUTATION_SEED 从 statsShared 统一 import（v6 修复 2026-08-04，避免本地重定义）
   const rng = mulberry32(PERMUTATION_SEED);
   const nPerms = 5000;
   const observed = Math.abs(mean(v3Thermal) - mean(v3Struct));

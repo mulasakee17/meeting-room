@@ -34,6 +34,41 @@ class MockAgent {
   }
 }
 
+/** 测试治理否决：表面收敛时生成一个下一轮生效的干预。 */
+class GovernanceVetoEngine extends DiscussionEngine {
+  governanceCalls = 0;
+
+  protected applyGovernance(): any {
+    this.governanceCalls++;
+    return {
+      hasIntervention: true,
+      interventions: [{
+        type: "devils_advocate",
+        targetAgents: ["agent1"],
+        effect: "challenge premature consensus",
+        applied: true,
+      }],
+      issues: [{
+        type: "premature_consensus",
+        severity: "high",
+        description: "surface agreement lacks sufficient evidence",
+      }],
+    };
+  }
+}
+
+/** 测试热力学候选只提供信号，退出由 finalizeRound 在记录后完成。 */
+class ThermoCandidateEngine extends DiscussionEngine {
+  protected evaluateTerminationCandidate(): any {
+    return {
+      shouldTerminate: true,
+      reason: "strong_crystallized",
+      stateType: "crystallized",
+      message: "synthetic thermo stop",
+    };
+  }
+}
+
 describe("Discussion Engine - Phase 1 Fixes", () => {
   describe("D-2: Agent 状态同步", () => {
     it("should sync agent state after belief update", async () => {
@@ -148,7 +183,11 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
         referencedAgents: [],
       }));
 
-      const engine = new DiscussionEngine({ maxRounds: 3, convergenceThreshold: 0.1 });
+      const engine = new DiscussionEngine({
+        maxRounds: 3,
+        convergenceThreshold: 0.1,
+        governanceMode: "none",
+      });
       const result = await engine.run([agent1, agent2], {
         id: "test-task",
         description: "Test",
@@ -159,6 +198,82 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       expect(result.totalRounds).toBe(1);
       expect(result.converged).toBe(true);
+    });
+
+    it("P0a: 表面收敛仍完成治理，并为干预保留下一轮观察窗口", async () => {
+      const agent1 = new MockAgent("agent1", "Agent 1", "Expert", "custom", 0.5, 80);
+      const agent2 = new MockAgent("agent2", "Agent 2", "Expert", "custom", 0.51, 85);
+      const engine = new GovernanceVetoEngine({
+        maxRounds: 2,
+        convergenceThreshold: 0.1,
+      });
+
+      const result = await engine.run([agent1, agent2], {
+        id: "p0a-veto",
+        description: "Test governance veto",
+        type: "text",
+        createdAt: new Date().toISOString(),
+        content: "Test governance veto",
+      });
+
+      const rounds = engine.getRoundDataArray();
+      expect(engine.governanceCalls).toBe(2);
+      expect(result.totalRounds).toBe(2);
+      expect(rounds).toHaveLength(2);
+      expect(rounds[0].stopDecision?.shouldStop).toBe(false);
+      expect(rounds[0].stopDecision?.vetoedByGovernance).toBe(true);
+      expect(rounds[0].interventions[0].effectiveFromRound).toBe(2);
+      expect(rounds[0].interventions[0].applicationStatus).toBe("queued");
+      expect(rounds[1].interventions[0].applicationStatus).toBe("not_applied_no_next_round");
+      expect(engine.getEventTracker().getEvents("round_end")).toHaveLength(2);
+    });
+
+    it("P0b: 热力学提前终止轮在退出前完整写入 roundData 和 round_end", async () => {
+      const agent1 = new MockAgent("agent1", "Agent 1", "Expert", "custom", -0.8, 80);
+      const agent2 = new MockAgent("agent2", "Agent 2", "Expert", "custom", 0.8, 80);
+      const engine = new ThermoCandidateEngine({
+        maxRounds: 3,
+        governanceMode: "none",
+      });
+
+      const result = await engine.run([agent1, agent2], {
+        id: "p0b-thermo",
+        description: "Test thermo finalization",
+        type: "text",
+        createdAt: new Date().toISOString(),
+        content: "Test thermo finalization",
+      });
+
+      const rounds = engine.getRoundDataArray();
+      expect(result.totalRounds).toBe(1);
+      expect(rounds).toHaveLength(1);
+      expect(rounds[0].terminationDecision?.shouldTerminate).toBe(true);
+      expect(rounds[0].stopDecision?.reason).toBe("thermo_termination");
+      expect(engine.getEventTracker().getEvents("round_end")).toHaveLength(1);
+    });
+
+    it("P0b: hard cap 最后一轮仍保留完整记录", async () => {
+      const agent1 = new MockAgent("agent1", "Agent 1", "Expert", "custom", -0.8, 80);
+      const agent2 = new MockAgent("agent2", "Agent 2", "Expert", "custom", 0.8, 80);
+      const engine = new DiscussionEngine({
+        maxRounds: 2,
+        convergenceThreshold: 0.1,
+        governanceMode: "none",
+      });
+
+      const result = await engine.run([agent1, agent2], {
+        id: "p0b-hard-cap",
+        description: "Test hard cap finalization",
+        type: "text",
+        createdAt: new Date().toISOString(),
+        content: "Test hard cap finalization",
+      });
+
+      const rounds = engine.getRoundDataArray();
+      expect(result.totalRounds).toBe(2);
+      expect(rounds).toHaveLength(2);
+      expect(rounds[1].stopDecision?.reason).toBe("hard_cap");
+      expect(engine.getEventTracker().getEvents("round_end")).toHaveLength(2);
     });
   });
 
@@ -352,6 +467,67 @@ describe("Discussion Engine - Phase 1 Fixes", () => {
 
       expect(result).toBeDefined();
       expect(result.finalDecision).toBeDefined();
+    });
+  });
+
+  describe("Engine lifecycle and state ownership", () => {
+    const task = {
+      id: "lifecycle-test",
+      description: "Lifecycle test",
+      type: "text",
+      createdAt: new Date().toISOString(),
+      content: "test",
+    };
+
+    it("requires reset before an engine instance is reused", async () => {
+      const engine = new DiscussionEngine({ maxRounds: 1 });
+      const agent = new MockAgent("agent1", "Agent 1", "Expert", "custom");
+
+      await engine.run([agent], task);
+      await expect(engine.run([agent], task)).rejects.toThrow(/call reset/i);
+
+      engine.reset();
+      await expect(engine.run([agent], task)).resolves.toBeDefined();
+    });
+
+    it("returns a deep copy of round data", async () => {
+      const engine = new DiscussionEngine({ maxRounds: 1 });
+      const agent = new MockAgent("agent1", "Agent 1", "Expert", "custom");
+      await engine.run([agent], task);
+
+      const exported = engine.getRoundDataArray();
+      exported[0].opinions[0].reasoning = "tampered";
+      exported[0].interventions.push({ type: "none", targetAgents: [] } as any);
+
+      const fresh = engine.getRoundDataArray();
+      expect(fresh[0].opinions[0].reasoning).not.toBe("tampered");
+      expect(fresh[0].interventions).toHaveLength(0);
+
+      const graph = engine.getInteractionGraph();
+      graph.nodes[0].belief = 999;
+      expect(engine.getInteractionGraph().nodes[0].belief).not.toBe(999);
+
+      const memory = engine.getMemory();
+      memory[0].evidence.push("tampered");
+      expect(engine.getMemory()[0].evidence).not.toContain("tampered");
+
+      const events = engine.getEventTracker().getEvents();
+      events[0].payload.tampered = true;
+      expect(engine.getEventTracker().getEvents()[0].payload.tampered).toBeUndefined();
+    });
+
+    it("does not retain or clear caller-owned knowledge collections", () => {
+      const engine = new DiscussionEngine();
+      const items = ["private fact"];
+      const knowledge = new Map([["agent1", items]]);
+
+      engine.setAgentKnowledge(knowledge);
+      items.push("later mutation");
+      expect((engine as any).agentKnowledge.get("agent1")).toEqual(["private fact"]);
+
+      engine.reset();
+      expect(knowledge.get("agent1")).toEqual(["private fact", "later mutation"]);
+      expect((engine as any).agentKnowledge).toBeUndefined();
     });
   });
 });

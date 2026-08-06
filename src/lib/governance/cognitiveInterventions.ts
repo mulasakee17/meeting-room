@@ -182,7 +182,7 @@ export function generateCognitiveInterventions(
   ]);
 
   /** 置信度阈值：低于此值时降级更具针对性的干预 */
-  const CONFIDENCE_THRESHOLD = 0.30;
+  const CONFIDENCE_THRESHOLD = 0.10; // 降低: 允许早期轮次 (r1-r2) 在行为事件稀疏时介入
 
   for (const issue of issues) {
     const suggestedType = issue.suggestedIntervention?.type;
@@ -596,6 +596,34 @@ export function generateCognitiveInterventions(
               },
             });
           }
+        } else if (suggestedType === "devils_advocate") {
+          // 2026-08-06 修复（审计 P1.2）：此前 devils_advocate 在此 default 分支无处理，
+          // 直接落到 break 被静默丢弃。同步路径（applyCognitiveGovernance）会注入
+          // devil's advocate prompt，语义异步路径（applyCognitiveGovernanceAsync）
+          // 经 generateCognitiveInterventions 后需保持一致。
+          if (disabledTypes.has("devils_advocate")) break;
+          const mods = new Map<string, CognitiveStateModification>();
+          for (const aid of effectiveTargets) {
+            mods.set(aid, {
+              injectPrompt: `[治理干预 — devil's advocate] 在分享你的分析之前，请先完成以下步骤：
+1. 识别当前讨论中看起来最受欢迎的选项
+2. 找出至少一个反驳该选项的理由（基于你掌握的独有信息）
+3. 然后再给出你的完整分析
+这有助于防止过早共识和群体思维。`,
+            });
+          }
+          mergeModifications(allModifications, mods);
+          interventions.push({
+            type: "devils_advocate",
+            targetAgents: effectiveTargets,
+            effect: `${issue.type}: devil's advocate against leading option`,
+            applied: true,
+            parameters: {
+              mechanism: "devils_advocate",
+              deltaSource: issue.type,
+              reason: issue.suggestedIntervention?.reason,
+            },
+          });
         }
         break;
       }

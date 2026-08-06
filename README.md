@@ -99,7 +99,7 @@ if (result.hasIntervention) {
 
 | Capability | Description | Status |
 |---|---|---|
-| **7 Bias Detectors** | Echo chamber, authority bias, polarization, premature consensus + 3 MAST detectors (information withholding, ignored input, reasoning-action mismatch) | ✅ Built-in; MAST detectors not yet experimentally triggered |
+| **16 Bias Detectors** | 4 classic (echo chamber, authority bias, polarization, premature consensus) + 3 MAST FC2 + 6 cognitive + 3 FC1/FC3 | ✅ Built-in; MAST detectors not yet experimentally triggered |
 | **3 Non-destructive Interventions** (v2.1 active) | inject_evidence, rebalance_attention, shuffle_knowledge — change information flow, not belief weights | ✅ Built-in; Δτ=0.000 (smoke test, N=6, +0.533 retracted) |
 | **4 Deprecated Interventions** (v2.0) | reduce_weight, force_reflection, introduce_diversity, continue_discussion — destructive (Δτ=−0.267) | ⚠️ Disabled by default |
 | **4 Governance Modes** | none / detect-only / full / random-intervene + 5 extended ablation modes (shuffle, full_diversity, etc.) | ✅ Built-in |
@@ -128,7 +128,7 @@ if (result.hasIntervention) {
 | **Governance Δτ** | **+0.209** | **+0.087** | ✅ Direction consistent |
 | **Governance d** | 0.92 (p=0.0038) | 0.47 (p=0.086) | ✅ Direction consistent |
 | **Power** | 88% ✅ | 43% ⚠️ | Supplier needs n=72 for 80% |
-| **Consensus-Quality r** | −0.137 | −0.107 | ✅ Both ≈ 0 |
+| **Consensus-Quality r** | −0.0491 | −0.0291 | ✅ Both ≈ 0 (Kuramoto R 口径) |
 
 **Async engine** (thermodynamic termination): C group τ=0.64 vs B group τ=0.42, d=1.09, p=0.028. Cross-model: Zhipu C group τ=0.680 (+6.3% vs DeepSeek).
 
@@ -175,7 +175,7 @@ if (result.hasIntervention) {
 src/
 ├── runtime/              # Embeddable Governance Runtime (SDK)
 ├── lib/
-│   ├── governance/       # 7 bias detectors + 3 active + 4 deprecated interventions
+│   ├── governance/       # 16 bias detectors + 3 active + 4 deprecated interventions
 │   ├── evaluation/       # 5-dimension scoring engine
 │   ├── observation/      # LLM output parsing
 │   ├── inference/        # Belief evolution computation

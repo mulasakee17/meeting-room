@@ -14,9 +14,6 @@ import type { FrameworkAdapter } from "@/lib/adapters/types";
 import { safeJsonParse } from "@/lib/utils/jsonUtils";
 import { mulberry32 } from "@/lib/utils/statsUtils";
 
-// pipeline 无实验 seed，用固定 seed PRNG 保证 confidence fallback 可复现
-const pipelineFallbackRng = mulberry32(0x5EED);
-
 /**
  * 降级用空评估/治理结果常量。
  *
@@ -144,6 +141,8 @@ export interface PipelineInput {
   provider: "autogen" | "crewai" | "langgraph" | "custom";
   /** 智能体数量，默认 5 */
   agentCount?: number;
+  /** Maximum synchronous discussion rounds (default 3). */
+  maxRounds?: number;
   /** 可选的智能体类型列表（按索引循环分配） */
   agentTypes?: string[];
   /** LLM 配置 */
@@ -233,6 +232,10 @@ function buildAgentConfigs(input: PipelineInput) {
 function parseAgentStates(
   states: InteractionResult["agentStates"]
 ): AgentDecision[] {
+  // 审计 P2.3 修复（2026-08-06）：原为模块级 pipelineFallbackRng，状态跨请求累积，
+  // 长驻服务里每次请求的 fallback confidence 依赖先前请求顺序。
+  // 改为函数内新建——每次调用（= 每次 runSwarmPipeline）从固定 seed 重启，确定且无顺序依赖。
+  const fallbackRng = mulberry32(0x5EED);
   return states.map(state => {
     let parsedReasoning = state.reasoning || "";
     let parsedEmotion = 0;
@@ -249,7 +252,7 @@ function parseAgentStates(
     return {
       agentId: state.agentId,
       content: parsedReasoning || "No message",
-      confidence: state.confidence ?? (70 + pipelineFallbackRng() * 30),
+      confidence: state.confidence ?? (70 + fallbackRng() * 30),
       reasoning: parsedReasoning || "Default reasoning",
       belief,
     };
@@ -352,6 +355,15 @@ export async function runSwarmPipeline(
   input: PipelineInput,
   taskIdPrefix: string = "pipeline"
 ): Promise<PipelineOutput> {
+  const agentCount = input.agentCount ?? 5;
+  if (!Number.isInteger(agentCount) || agentCount < 1 || agentCount > 20) {
+    throw new Error("agentCount must be an integer between 1 and 20");
+  }
+  const maxRounds = input.maxRounds ?? 3;
+  if (!Number.isInteger(maxRounds) || maxRounds < 1 || maxRounds > 20) {
+    throw new Error("maxRounds must be an integer between 1 and 20");
+  }
+
   const startTime = new Date().toISOString();
   const phaseTimings: Array<{ phase: "input" | "agent_creation" | "interaction" | "evaluation" | "governance" | "output"; durationMs: number; failed?: boolean; errorMsg?: string }> = [];
 
@@ -364,9 +376,13 @@ export async function runSwarmPipeline(
   const agents = await adapter.createAgents(agentConfigs, input.llmConfig);
   phaseTimings.push({ phase: "agent_creation", durationMs: Date.now() - t0 });
 
+  try {
+
   // 2. 运行交互（失败立即上抛——核心交互，无法降级）
   const t1 = Date.now();
-  const interactionResult = await adapter.runInteraction(agents, input.input);
+  const interactionResult = await adapter.runInteraction(agents, input.input, {
+    maxRounds: input.maxRounds,
+  });
   phaseTimings.push({ phase: "interaction", durationMs: Date.now() - t1 });
 
   // 3. 解析智能体状态（已有 safeJsonParse 保护，不会抛）
@@ -435,4 +451,12 @@ export async function runSwarmPipeline(
   const output = buildOutput(interactionResult, evaluation, governance, agentInfo, agentDecisions, interactionHistory, trace);
   phaseTimings.push({ phase: "output", durationMs: Date.now() - t4 });
   return output;
+  } finally {
+    try {
+      await adapter.dispose(agents);
+    } catch (error) {
+      // Disposal is best-effort and must not replace a valid result or the root failure.
+      console.warn("[pipeline] Adapter disposal failed:", error instanceof Error ? error.message : String(error));
+    }
+  }
 }

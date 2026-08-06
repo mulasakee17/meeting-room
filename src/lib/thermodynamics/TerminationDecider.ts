@@ -1,32 +1,31 @@
 /**
  * 热力学终止决策器
  *
- * ⛔ **FROZEN (2026-08-01)** — 此模块已冻结，不再修改。
- * 冻结原因：仅被已冻结的 asyncEngine.ts（fraud 系列）使用，v6 主线不调用。
- * 冻结规则：E9 v6 实验不使用此模块。如需修改，必须先解除冻结并说明理由。
+ * v6 路径二解冻（2026-08-04）：原 FROZEN 状态解除。
+ * 解冻理由：三层级联架构补齐——F 需接入终止决策（设计意图，见 ROADMAP_V6 §3.1）。
  *
- * **@deprecated for v6 path**（v0.4.3 标注）
- * 此模块仅被 `asyncEngine.ts`（fraud 系列实验）使用。
- * v6 的 `NativeCognitiveEngine` 走 sync 路径，使用固定 `maxRounds=5` 硬上限，
- * **不调用此模块**。保留用于向后兼容 fraud 系列 async 实验。
+ * 双路径支持：
+ *   1. async 路径（fraud 系列）：evaluate(R,T,H,utteranceCount) — 基于 utteranceCount
+ *   2. sync 路径（v6 主线）：evaluateSync(R,T,H,F,round,maxRounds) — 基于 round，F 进决策
  *
- * 基于社会热力学状态 (R, T, H, F) 判断异步讨论是否该终止。
+ * v6 sync 路径的 F 进决策分支（设计意图落地）：
+ *   - 强结晶态：F < strongCrystallF → 立即终止（系统自由能耗尽，不可逆收敛）
+ *   - 普通结晶态：F 连续 N 轮 < crystallF → 终止
+ *   - 旧 async 路径仍用 R/T/H（向后兼容，不改动）
  *
- * 核心假设：F 分解的"系统是否冻结"诊断能力可以决定讨论何时结束，
- * 而非依赖固定轮次。
- *
- * 终止判据：
- * 1. 强结晶态：H < strongCrystallH 且 T < strongCrystallT → 立即终止（1 次即可）
- *    - 理由：H 极低说明 agent 信念完全聚集，T 极低说明噪声极小
+ * 终止判据（sync 路径）：
+ * 1. 强结晶态：F < strongCrystallF → 立即终止
+ *    - F = U - T·H 极低意味着系统自由能耗尽（U 低或 T·H 高）
  *    - 这是"不可逆收敛"信号，继续讨论只会打散已收敛的信念
- * 2. 普通结晶态连续出现 N 次 → 系统已冻结，终止
- * 3. 发言次数达硬上限 → 强制终止（标记为"未收敛"）
+ * 2. 普通结晶态连续 N 次 → 系统已冻结，终止
+ * 3. round >= maxRounds → 硬上限终止（标记为"未收敛"）
  * 4. 其他 → 继续
  *
  * 结晶态定义（阈值可通过 constructor 标定）：
  * - R > thresholdR（高同步）
  * - T < thresholdT（低噪声）
  * - H < thresholdH（低熵）
+ * - F < thresholdF（低自由能，v6 sync 路径新增）
  *
  * 淬火态判据（伪结晶）：
  * - R 高 + T 骤降（仅检测下降，不检测上升）+ H 不低
@@ -41,9 +40,9 @@ export interface ThermoSnapshot {
   T: number;
   /** Shannon 熵 H ∈ [0,1] */
   H: number;
-  /** 社会自由能 F = (1-R) + T·H */
+  /** 社会自由能 F。async 路径: F=(1-R)+T·H; sync 路径(v6): F=U-T·H(Helmholtz,由 caller 传入) */
   F: number;
-  /** 发言次数（累计） */
+  /** 发言次数（async 路径）或轮次（sync 路径，v6 复用此字段存 round） */
   utteranceCount: number;
   /** 评估序号 */
   evalIndex: number;
@@ -60,6 +59,12 @@ export interface TerminationDecision {
   /** 诊断信息 */
   message: string;
 }
+
+export type SyncTerminationPolicy =
+  | "fixed_rounds"
+  | "surface"
+  | "rht_joint"
+  | "rhtf_joint";
 
 /** 终止阈值配置 */
 export interface TerminationThresholds {
@@ -79,6 +84,12 @@ export interface TerminationThresholds {
   /** 强结晶态：H 低于此值（立即终止，无需连续 N 次） */
   strongCrystallH: number;
 
+  // ── v6 sync 路径 F 阈值（新增，2026-08-04）──
+  /** v6 sync 强结晶态：F 低于此值 → 立即终止（自由能耗尽） */
+  strongCrystallF: number;
+  /** v6 sync 普通结晶态：F 低于此值（连续 N 次后终止） */
+  crystallF: number;
+
   // ── 淬火态检测 ──
   /** T 骤降检测阈值：T_prev - T > 此值视为骤降 */
   suddenDropT: number;
@@ -92,7 +103,7 @@ export interface TerminationThresholds {
   chaoticH: number;
 
   // ── 硬上限 ──
-  /** 硬上限：发言次数 */
+  /** 硬上限：发言次数（async 路径） */
   hardCapUtterances: number;
 }
 
@@ -117,6 +128,13 @@ export const DEFAULT_TERMINATION_THRESHOLDS: TerminationThresholds = {
   strongCrystallT: 0.10,  // T < 0.10
   strongCrystallH: 0.20,  // H < 0.20（放宽：旧值 0.10 太严，Run 1 T<0.07 因 H=0.418 无法触发）
 
+  // v6 sync 路径 F 阈值（2026-08-04 新增）
+  // 标定依据：campaign native_cognitive 数据 F mean=0.45, range=[0.19, 0.89]
+  // strongCrystallF=0.15：F 极低（<15% 分位）→ 系统自由能耗尽，不可逆收敛
+  // crystallF=0.25：F 偏低（<25% 分位）→ 系统趋于冻结
+  strongCrystallF: 0.15,  // F < 0.15 → 立即终止
+  crystallF: 0.25,        // F < 0.25 连续 N 次 → 终止
+
   // 淬火态
   suddenDropT: 0.05,      // T 下降 > 0.05 视为骤降
 
@@ -133,6 +151,8 @@ export class TerminationDecider {
   private thresholds: TerminationThresholds;
   private history: ThermoSnapshot[] = [];
   private consecutiveCrystallCount = 0;
+  // v6 sync 路径独立的结晶计数器（与 async 路径隔离）
+  private syncConsecutiveCrystallCount = 0;
 
   constructor(thresholds: Partial<TerminationThresholds> = {}) {
     this.thresholds = { ...DEFAULT_TERMINATION_THRESHOLDS, ...thresholds };
@@ -142,6 +162,7 @@ export class TerminationDecider {
   reset(): void {
     this.history = [];
     this.consecutiveCrystallCount = 0;
+    this.syncConsecutiveCrystallCount = 0;
   }
 
   /** 获取历史快照（用于分析） */
@@ -213,6 +234,136 @@ export class TerminationDecider {
       stateType,
       message: this.getStateMessage(stateType, snapshot),
     };
+  }
+
+  /**
+   * v6 sync 路径终止评估（基于轮次制，F 进决策分支）
+   *
+   * 与 async 路径 evaluate() 的区别：
+   *   1. 基于 round 而非 utteranceCount（sync 引擎是轮次制）
+   *   2. F 进决策分支：强结晶态用 F < strongCrystallF 判定（设计意图落地）
+   *   3. 普通结晶态用 F < crystallF 作为额外条件（F 连续 N 轮低 → 终止）
+   *   4. 硬上限用 round >= maxRounds 而非 utteranceCount
+   *
+   * @param R/T/H/F 当前热力学状态（F = U - T·H，Helmholtz 形式）
+   * @param round 当前轮次（1-based）
+   * @param maxRounds 最大轮次（硬上限）
+   * @returns 终止决策
+   */
+  evaluateSync(
+    R: number,
+    T: number,
+    H: number,
+    F: number,
+    round: number,
+    maxRounds: number,
+    policy: SyncTerminationPolicy = "rht_joint",
+  ): TerminationDecision {
+    const snapshot: ThermoSnapshot = {
+      R, T, H, F,
+      utteranceCount: round,  // 复用字段记录轮次（sync 路径无 utteranceCount）
+      evalIndex: this.history.length,
+    };
+    this.history.push(snapshot);
+
+    // ── 1. 硬上限：round >= maxRounds → 强制终止 ──
+    if (round >= maxRounds) {
+      return {
+        shouldTerminate: true,
+        reason: "hard_cap",
+        stateType: "active",
+        message: `轮次达硬上限 ${maxRounds}，强制终止`,
+      };
+    }
+
+    // fixed/surface 策略不允许 thermo 信号提前终止；surface 由 DiscussionEngine 仲裁。
+    if (policy === "fixed_rounds" || policy === "surface") {
+      return {
+        shouldTerminate: false,
+        reason: "continue",
+        stateType: "active",
+        message: `${policy} 策略未启用热力学提前终止`,
+      };
+    }
+
+    const requireF = policy === "rhtf_joint";
+    const strongJoint = R > this.thresholds.crystallR
+      && T < this.thresholds.strongCrystallT
+      && H < this.thresholds.strongCrystallH
+      && (!requireF || F < this.thresholds.strongCrystallF);
+
+    // ── 2. 强结晶态：R 高 + T 低 + H 低；F 只能作为可选附加条件 ──
+    if (strongJoint) {
+      return {
+        shouldTerminate: true,
+        reason: "strong_crystallized",
+        stateType: "crystallized",
+        message: `强结晶候选（R=${R.toFixed(3)}, T=${T.toFixed(3)}, H=${H.toFixed(3)}${requireF ? `, F=${F.toFixed(3)}` : ""}），联合条件满足`,
+      };
+    }
+
+    // ── 3. 普通结晶态：R/T/H 联合条件连续 N 轮；F 仅在 rhtf_joint 中附加 ──
+    const stateType = this.classifyStateSync(snapshot, requireF);
+    if (stateType === "crystallized") {
+      this.syncConsecutiveCrystallCount++;
+      if (this.syncConsecutiveCrystallCount >= this.thresholds.consecutiveCrystallRequired) {
+        return {
+          shouldTerminate: true,
+          reason: "crystallized",
+          stateType: "crystallized",
+          message: `连续 ${this.syncConsecutiveCrystallCount} 轮结晶态（F=${F.toFixed(3)}, R=${R.toFixed(3)}, T=${T.toFixed(3)}, H=${H.toFixed(3)}），系统已冻结`,
+        };
+      }
+    } else {
+      this.syncConsecutiveCrystallCount = 0;
+    }
+
+    return {
+      shouldTerminate: false,
+      reason: "continue",
+      stateType,
+      message: this.getStateMessage(stateType, snapshot),
+    };
+  }
+
+  /**
+   * v6 sync 路径状态分类（F 进分类条件）
+   *
+   * 与 async 路径 classifyState 的区别：
+   *   - crystallized 增加 F < crystallF 条件（低自由能确认结晶）
+   *   - 其余状态分类保持一致（向后兼容）
+   */
+  private classifyStateSync(
+    snapshot: ThermoSnapshot,
+    requireF: boolean,
+  ): "crystallized" | "quenched" | "chaotic" | "active" {
+    const { R, T, H, F } = snapshot;
+    const th = this.thresholds;
+
+    // F 不能单独证明结晶；仅在 rhtf_joint 策略中作为 R/T/H 之后的附加条件。
+    if (R > th.crystallR
+      && T < th.crystallT
+      && H < th.crystallH
+      && (!requireF || F < th.crystallF)) {
+      return "crystallized";
+    }
+
+    // 检查 T 是否骤降
+    const prevSnapshot = this.history.length >= 2 ? this.history[this.history.length - 2] : null;
+    const tDecrease = prevSnapshot ? prevSnapshot.T - T : 0;
+    const isSuddenDrop = tDecrease > th.suddenDropT;
+
+    // 淬火态：R 高 + T 骤降 + H 不低（伪结晶）
+    if (R > th.crystallR && isSuddenDrop && H >= th.crystallH) {
+      return "quenched";
+    }
+
+    // 混沌态：R 低 + T 高 + H 高
+    if (R < th.chaoticR && T > th.chaoticT && H > th.chaoticH) {
+      return "chaotic";
+    }
+
+    return "active";
   }
 
   /**

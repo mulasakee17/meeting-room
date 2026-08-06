@@ -8,6 +8,7 @@ export type InterventionType =
   | "inject_evidence"
   | "rebalance_attention"
   | "shuffle_knowledge"
+  | "devils_advocate"
   | "none";
 
 export interface Intervention {
@@ -19,6 +20,16 @@ export interface Intervention {
   applied: boolean;
   /** 干预应用的轮次（由 GovernanceRuntime 设置） */
   round?: number;
+  /** 干预触发原因（NativeCognitiveEngine 同步路径携带，审计用） */
+  reason?: string;
+  /** 触发此干预的 δ 信号来源（e.g. δ_polarization） */
+  source?: string;
+  /** 生成该干预建议的诊断轮次。 */
+  diagnosedAtRound?: number;
+  /** 干预开始影响 agent prompt/state 的轮次；无执行窗口时为空。 */
+  effectiveFromRound?: number;
+  /** 区分“已生成建议”“已排队”和“实际没有下一轮可执行”。 */
+  applicationStatus?: "queued" | "applied" | "not_applied_no_next_round";
 }
 
 export interface GovernanceState {
@@ -247,6 +258,10 @@ export interface GovernanceIssue {
     parameters?: Record<string, unknown>;
     reason?: string;
   };
+  /** 检测时间（δ 诊断与语义路径写入，审计日志用） */
+  detectedAt?: string;
+  /** 检测器生成的 issue 标识（δ_* / delta_*_N） */
+  id?: string;
   /** 审计字段：detector 触发的结构化数值依据（第三方验证用）。
    *  例如 authority_bias: { influenceRatio: 0.44, threshold: 0.30 }
    *  例如 polarization: { polarizationIndex: 0.72, bimodalityCoefficient: 0.58, threshold: 0.15 }

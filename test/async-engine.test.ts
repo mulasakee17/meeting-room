@@ -588,6 +588,19 @@ describe("AsyncDiscussionEngine", () => {
       expect(Math.abs(a2Final - a2Initial)).toBeGreaterThan(0.001);
     });
   });
+
+  it("requires reset before reusing an async engine", async () => {
+    const engine = new AsyncDiscussionEngine(
+      { maxRounds: 5, seed: 42 },
+      { terminationMode: "fixed_rounds", fixedRounds: 1 },
+    );
+
+    await engine.runAsync(makeAgents(), makeTask());
+    await expect(engine.runAsync(makeAgents(), makeTask())).rejects.toThrow(/call reset/i);
+
+    engine.reset();
+    await expect(engine.runAsync(makeAgents(), makeTask())).resolves.toBeDefined();
+  });
 });
 
 /** 构建独有信息关键词映射（用于内容驱动模式） */

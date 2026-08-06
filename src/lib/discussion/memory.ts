@@ -5,23 +5,23 @@ export class InMemoryStrategy implements MemoryStrategy {
   private entries: DiscussionMemoryEntry[] = [];
 
   store(entry: DiscussionMemoryEntry): void {
-    this.entries.push(entry);
+    this.entries.push(structuredClone(entry));
   }
 
   getByRound(roundNumber: number): DiscussionMemoryEntry[] {
-    return this.entries.filter(e => e.roundNumber === roundNumber);
+    return structuredClone(this.entries.filter(e => e.roundNumber === roundNumber));
   }
 
   getByAgent(agentId: string): DiscussionMemoryEntry[] {
-    return this.entries.filter(e => e.agentId === agentId);
+    return structuredClone(this.entries.filter(e => e.agentId === agentId));
   }
 
   getAll(): DiscussionMemoryEntry[] {
-    return [...this.entries];
+    return structuredClone(this.entries);
   }
 
   getRecent(n: number): DiscussionMemoryEntry[] {
-    return [...this.entries].reverse().slice(0, n).reverse();
+    return structuredClone([...this.entries].reverse().slice(0, n).reverse());
   }
 
   clear(): void {

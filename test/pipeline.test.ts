@@ -157,4 +157,35 @@ describe("runSwarmPipeline", () => {
     expect(output.agents[2].role).toBe("Expert");
     expect(output.agents[3].role).toBe("Analyst");
   });
+
+  it("rejects resource-amplifying agent and round counts", async () => {
+    const base: PipelineInput = {
+      provider: "custom",
+      llmConfig: { provider: "deepseek", model: "deepseek-chat" },
+      input: { type: "text", content: "test" },
+    };
+
+    await expect(runSwarmPipeline({ ...base, agentCount: 21 })).rejects.toThrow(/agentCount/);
+    await expect(runSwarmPipeline({ ...base, maxRounds: 21 })).rejects.toThrow(/maxRounds/);
+  });
+
+  it("disposes adapter resources when interaction fails", async () => {
+    let disposed = false;
+    class FailingAdapter extends MockAdapter {
+      async runInteraction(): Promise<InteractionResult> {
+        throw new Error("interaction failed");
+      }
+      async dispose(): Promise<void> {
+        disposed = true;
+      }
+    }
+    adapterRegistry.register("custom", new FailingAdapter());
+
+    await expect(runSwarmPipeline({
+      provider: "custom",
+      llmConfig: { provider: "deepseek", model: "deepseek-chat" },
+      input: { type: "text", content: "test" },
+    })).rejects.toThrow(/interaction failed/);
+    expect(disposed).toBe(true);
+  });
 });

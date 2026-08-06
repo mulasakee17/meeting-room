@@ -57,13 +57,23 @@ export interface AgentOpinion {
    *  structuredEvidence 额外提供 supports/strength（新格式）。
    *  extractEvidenceItems 优先使用 structuredEvidence，无则回退到 evidence 启发式。 */
   structuredEvidence?: StructuredEvidenceItem[];
+  /** 选项标签在解析边界完成规范化后的状态；未配置 canonicalOptions 时为 not_applicable。 */
+  optionParseStatus?: "not_applicable" | "valid" | "incomplete" | "ambiguous" | "invalid";
+  /** 未能唯一映射到规范选项的原始标签，供审计和 invalid-rate 统计。 */
+  unmatchedOptionLabels?: string[];
 }
 
 export interface RoundResult {
   roundNumber: number;
   opinions: AgentOpinion[];
   timestamp: string;
+  /** 原始表面一致信号，可能被治理否决。 */
+  surfaceConverged: boolean;
+  /** 经治理检查后接受并真正导致 consensus termination 的共识。 */
+  acceptedConsensus: boolean;
+  /** @deprecated 使用 acceptedConsensus。保留旧字段避免历史消费者静默改义。 */
   converged: boolean;
+  stopDecision?: RoundStopDecision;
 }
 
 export interface DiscussionMemoryEntry {
@@ -294,6 +304,30 @@ export interface DiscussionConfig {
    * (all-agents) behavior is preserved exactly.
    */
   topology?: import("./topology").DiscussionTopology;
+  /**
+   * 声誉系统接口预留（未来工作，当前不实现具体逻辑）。
+   *
+   * 设计意图：agent 进入讨论框架前，由外部系统（如 AAMAS 2026 声誉系统）
+   * 预先标定其身份声誉。声誉高（信誉高）的 agent 获得更多容错率，
+   * 声誉低的 agent 触发 δ 阈值更严格。
+   *
+   * 与 SwarmAlpha 监测定位的关系：
+   *  - 声誉系统是"先验身份评估"（进入框架前）
+   *  - SwarmAlpha 是"运行时状态监测"（框架内每轮检测）
+   *  - 两者完全互补：声誉调节容错率，δ 检测当前异常
+   *
+   * 当前实现：字段存在但 MeasurementLayer/NativeCognitiveEngine 不读取。
+   * 未来实现方向：
+   *  - reputation > 0.8 的 agent：δ 阈值 × 1.2（更多容错）
+   *  - reputation < 0.3 的 agent：δ 阈值 × 0.8（更严格）
+   *  - influenceWeights 初始化时按 reputation 加权（替代等权 DeGroot）
+   */
+  reputation?: Record<string, number>;
+  /**
+   * 终止策略。NativeCognitiveEngine 默认 fixed_rounds；RHT/RHTF 仅用于显式消融。
+   * surface 表示允许经治理确认后的表面收敛提前终止。
+   */
+  terminationPolicy?: import("../thermodynamics/TerminationDecider").SyncTerminationPolicy;
 }
 
 export interface DiscussionResult {
@@ -302,7 +336,10 @@ export interface DiscussionResult {
   interactionGraph: InteractionGraph;
   finalDecision: string;
   finalBeliefs: Record<string, number>;
+  /** @deprecated 使用 acceptedConsensus。 */
   converged: boolean;
+  acceptedConsensus: boolean;
+  stopReason: RoundStopReason | "unknown";
   totalRounds: number;
 }
 
@@ -346,6 +383,10 @@ export interface DiscussionTask {
   createdAt: string;
   content: string | Record<string, unknown>;
   context?: string;
+  /** LLM 输出的 item/utility/evidence.supports 必须映射到这里的规范选项。 */
+  canonicalOptions?: string[];
+  /** 规范选项 → 预注册别名。只允许唯一匹配，不做位置猜测。 */
+  optionAliases?: Record<string, string[]>;
 }
 
 export interface AgentState {
@@ -365,6 +406,32 @@ export interface InfluenceEvent {
 }
 
 import type { GovernanceIssue, Intervention } from "../governance/types";
+import type { TerminationDecision } from "../thermodynamics/TerminationDecider";
+
+export type RoundStopReason =
+  | "surface_convergence"
+  | "thermo_termination"
+  | "hard_cap"
+  | "continue";
+
+/**
+ * 一轮完整提交后的终止仲裁结果。
+ *
+ * convergence / thermo 都只是候选信号；只有 finalizeRound 完成测量、治理和
+ * 审计记录后，stopDecision 才能控制主循环退出。
+ */
+export interface RoundStopDecision {
+  shouldStop: boolean;
+  reason: RoundStopReason;
+  candidates: {
+    surfaceConverged: boolean;
+    thermo?: TerminationDecision;
+    hardCap: boolean;
+  };
+  /** 治理问题或已排队干预是否否决了本轮的提前终止候选。 */
+  vetoedByGovernance: boolean;
+  explanation: string;
+}
 
 export interface RoundData {
   roundNumber: number;
@@ -383,11 +450,20 @@ export interface RoundData {
   influenceEvents: InfluenceEvent[];
   governanceIssues: GovernanceIssue[];
   interventions: Intervention[];
+  /** 原始表面一致信号，可能被 stopDecision 的治理否决覆盖。 */
+  surfaceConverged: boolean;
+  /** 最终被系统接受、且以共识原因终止的状态。 */
+  acceptedConsensus: boolean;
+  /** @deprecated 使用 acceptedConsensus。 */
   converged: boolean;
   /** 审计字段：干预效果度量（evaluateEffects 返回值，第三方验证用）。
    *  含 belief_diversity_change, consensus_level_change, intervention_success_rate 等 9 项指标。
    *  2026-07-23 新增：支持第三方独立验证治理决策的正确性 */
   effectMetrics?: Record<string, number>;
+  /** 本轮热力学终止候选；仅支持该能力的引擎填充。 */
+  terminationDecision?: TerminationDecision;
+  /** 在本轮所有记录提交后作出的最终终止仲裁。 */
+  stopDecision?: RoundStopDecision;
 }
 
 export interface FinalDecision {

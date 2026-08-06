@@ -28,13 +28,14 @@ import {
 import { computeDeltaDiagnosis } from "../../../src/lib/thermodynamics/computeDelta";
 import { estimateAll } from "../../../src/lib/thermodynamics/ProgressiveEstimator";
 import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
+import { runHiddenBenchProtocol } from "./hiddenbenchProtocol";
 
 // ============================================================================
 // Scenario Loading
 // ============================================================================
 
 /** 加载场景配置。taskIndex 仅 hiddenbench 使用（指定跑第几个 HiddenBench 任务） */
-function loadScenario(scenarioId: string, taskIndex?: number): { task: any; dataDir: string } {
+function loadScenario(scenarioId: string, taskIndex?: number, promptStyle?: "hint" | "nohint"): { task: any; dataDir: string } {
   switch (scenarioId) {
     case "ma": {
       const { TASK_MA } = require("../../lunar_survival/config");
@@ -43,6 +44,10 @@ function loadScenario(scenarioId: string, taskIndex?: number): { task: any; data
     case "crisis": {
       const { TASK_CRISIS } = require("../../v2/task_crisis");
       return { task: TASK_CRISIS, dataDir: "data_crisis" };
+    }
+    case "crisis_v2": {
+      const { TASK_CRISIS_V2 } = require("../../v2/task_crisis");
+      return { task: TASK_CRISIS_V2, dataDir: "data_crisis_v2" };
     }
     case "supplier": {
       const { TASK_SUPPLIER } = require("../../v2/task_supplier");
@@ -66,8 +71,9 @@ function loadScenario(scenarioId: string, taskIndex?: number): { task: any; data
     }
     case "hiddenbench": {
       // HiddenBench 外部任务集：taskIndex 指定第几个任务（0-64），缺省第 1 个
+      // promptStyle: "nohint" 对齐原论文主实验（不提示信息不对称），"hint" 为主动分享版
       const { loadAllConfigs } = require("../tasks/hiddenbench/adapter");
-      const all = loadAllConfigs();
+      const all = loadAllConfigs(undefined, undefined, promptStyle ?? "hint");
       const idx = typeof taskIndex === "number" && taskIndex >= 0 && taskIndex < all.length
         ? taskIndex
         : 0;
@@ -107,12 +113,19 @@ function createAgents(
     const initialConfidence = 50 + rng() * 20;
 
     // 构建独有知识提示（不包含 sharedBriefing，避免与 buildPrompt 中 Task 重复）
+    // promptStyle="nohint"：对齐 HiddenBench 原论文主实验——不提示信息不对称，
+    // 只给"你掌握的信息"块 + 中性讨论规则，靠讨论自然揭示（基线应重现"讨论后失败"）。
+    const noHint = task.promptStyle === "nohint";
     const customPrompt = agentDef.knownItems
-      ? `你的独有专业知识（其他成员不知道）：\n${agentDef.knownItems}\n\n${agentDef.initialBias || ""}\n\n`
+      ? `${noHint ? "你掌握的信息" : "你的独有专业知识（其他成员不知道）"}：\n${agentDef.knownItems}\n\n${agentDef.initialBias || ""}\n\n`
         + `讨论规则：\n`
-        + `1. 主动分享你的独有知识\n`
-        + `2. 对他人的判断提出质疑\n`
-        + `3. 如果他人与你独有知识矛盾，必须指出\n`
+        + (noHint
+          ? `1. 仔细考虑你掌握的所有信息\n`
+            + `2. 简洁地与组员分享你的想法\n`
+            + `3. 认真听取他人的分享\n`
+          : `1. 主动分享你的独有知识\n`
+            + `2. 对他人的判断提出质疑\n`
+            + `3. 如果他人与你独有知识矛盾，必须指出\n`)
         + `4. 最终以JSON格式给出你的判断，格式：\n`
         + `{\n`
         + `  "reasoning": "你的分析",\n`
@@ -278,6 +291,96 @@ function extractCognitiveSnapshots(
 // ============================================================================
 
 /** 运行单次实验 */
+/**
+ * HiddenBench 参考协议运行——完全独立的协议实现，不经过 SwarmAlpha engine。
+ * 对齐第三方 reference implementation（jonradoff/hiddenbench，非论文作者官方仓库；
+ * 协议细节最终以 arXiv:2505.11556 论文正文/附录为准）：
+ * 顺序 round-robin + 自由文本（1-2句）+ pre/post 独立投票 + average/majority rule。
+ */
+async function runHiddenBenchSingle(
+  config: ExperimentConfig,
+  runId: string,
+  seed: number,
+  runIndex: number,
+  outputDir: string,
+): Promise<RawRunData> {
+  const scenario = loadScenario(config.scenario, config.taskIndex, config.promptStyle);
+  const task = scenario.task;
+  const effectiveSeed = (seed + runIndex * 0x9E3779B1) >>> 0;
+
+  const llmConfig: LLMConfig = {
+    provider: detectLLMProvider(config.llmModel),
+    model: config.llmModel,
+    temperature: config.temperature,
+    seed: effectiveSeed,
+    ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
+  };
+
+  const hbResult = await runHiddenBenchProtocol(task, llmConfig, effectiveSeed, config.maxRounds);
+
+  // 提取 correctAnswer 中 rank=1 的选项，用于 finalAccuracy 兼容
+  const correctAnswer = task.correctAnswer as Record<string, number> | undefined;
+  const correctItem = correctAnswer
+    ? Object.entries(correctAnswer).find(([, r]) => r === 1)?.[0]
+    : undefined;
+
+  // HiddenBench 协议无 ranking，用 postAccuracy 作为 finalAccuracy
+  const finalAccuracy = hbResult.postAccuracy;
+  const finalKendallTau = 0; // HiddenBench 协议不产生 ranking → τ 无定义
+  const finalRanking: string[] = [];
+
+  const rawData: RawRunData = {
+    runId,
+    experimentId: config.id,
+    runtimeMode: "native_cognitive", // 占位——HiddenBench 协议不区分 runtime
+    seed,
+    runIndex,
+    timestamp: new Date().toISOString(),
+    scenario: config.scenario,
+    agentCount: config.agentCount,
+    maxRounds: config.maxRounds,
+    totalRounds: hbResult.totalRounds,
+    converged: false, // HiddenBench 协议无收敛检测
+    finalRanking,
+    finalKendallTau,
+    rankingMetricApplicable: false,
+    finalAccuracy,
+    individualAccuracy: hbResult.postAccuracy, // HiddenBench 协议 = average rule
+    beliefTrajectory: [],
+    interventions: [],
+    governanceIssues: [],
+    tokenUsage: {
+      promptTokens: hbResult.tokenUsage.promptTokens,
+      completionTokens: hbResult.tokenUsage.completionTokens,
+      totalTokens: hbResult.tokenUsage.totalTokens,
+    },
+    hiddenbenchResult: {
+      preVotes: hbResult.preVotes,
+      postVotes: hbResult.postVotes,
+      discussionHistory: hbResult.discussionHistory,
+      preAccuracy: hbResult.preAccuracy,
+      postAccuracy: hbResult.postAccuracy,
+      preMajorityCorrect: hbResult.preMajorityCorrect,
+      postMajorityCorrect: hbResult.postMajorityCorrect,
+      collectiveGain: hbResult.collectiveGain,
+      elapsedMs: hbResult.elapsedMs,
+    },
+  };
+
+  // 保存原始数据
+  const outPath = path.join(outputDir, `${runId}.json`);
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, JSON.stringify(rawData, null, 2));
+
+  console.log(
+    `  [${new Date().toISOString()}] Completed ${runId} in ${(hbResult.elapsedMs / 1000).toFixed(1)}s ` +
+    `(pre=${hbResult.preAccuracy.toFixed(2)} post=${hbResult.postAccuracy.toFixed(2)} ` +
+    `gain=${hbResult.collectiveGain >= 0 ? "+" : ""}${hbResult.collectiveGain.toFixed(2)} ` +
+    `maj=${hbResult.postMajorityCorrect ? "✓" : "✗"})`,
+  );
+  return rawData;
+}
+
 export async function runSingle(
   config: ExperimentConfig,
   runtimeMode: RuntimeMode,
@@ -288,17 +391,27 @@ export async function runSingle(
   const runId = `${config.id}_${runtimeMode}_seed${seed}_run${runIndex}`;
   console.log(`  [${new Date().toISOString()}] Starting ${runId}...`);
 
-  const scenario = loadScenario(config.scenario, config.taskIndex);
+  // ── HiddenBench 参考协议分叉 ──
+  // 对齐第三方 reference implementation：顺序 round-robin + 自由文本 + pre/post 独立投票 + average rule。
+  // 完全绕开 SwarmAlpha engine，使用独立的协议实现。
+  if (config.protocol === "hiddenbench") {
+    return runHiddenBenchSingle(config, runId, seed, runIndex, outputDir);
+  }
+
+  const scenario = loadScenario(config.scenario, config.taskIndex, config.promptStyle);
   const useCognitive = runtimeMode === "cognitive" || runtimeMode === "native_cognitive";
   const useNativeCognitive = runtimeMode === "native_cognitive";
+  const effectiveSeed = (seed + runIndex * 0x9E3779B1) >>> 0;
 
   const llmConfig: LLMConfig = {
     provider: detectLLMProvider(config.llmModel),
     model: config.llmModel,
     temperature: config.temperature,
+    seed: effectiveSeed,
+    ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
   };
 
-  const { agents, knowledge } = createAgents(scenario.task, config.agentCount, llmConfig, seed);
+  const { agents, knowledge } = createAgents(scenario.task, config.agentCount, llmConfig, effectiveSeed);
 
   // Phase 4B: "cognitive" governance mode → "full" + useCognitiveGovernance
   // diversity_only: 启用认知治理，但只保留 evidence imbalance + cognitive action mismatch 检测器
@@ -335,7 +448,8 @@ export async function runSingle(
     const nativeEngine = new NativeCognitiveEngine({
       maxRounds: config.maxRounds,
       governanceMode: govMode,
-      seed,
+      seed: effectiveSeed,
+      terminationPolicy: config.terminationPolicy ?? "fixed_rounds",
       useCognitiveGovernance,
       // v6 Phase 2.8: 传递 useSemanticTool 开关，C 组启用异步路径（Tier 1→2→3 含 SemanticTool）
       useSemanticTool: config.useSemanticTool ?? false,
@@ -352,7 +466,8 @@ export async function runSingle(
     engine = new DiscussionEngine({
       maxRounds: config.maxRounds,
       governanceMode: govMode,
-      seed,
+      seed: effectiveSeed,
+      terminationPolicy: config.terminationPolicy ?? "surface",
       useCognitiveState: useCognitive,
       governanceConfig: govConfig,
     });
@@ -363,12 +478,29 @@ export async function runSingle(
     engine.setAgentKnowledge(knowledge);
   }
 
+  // Phase D: static devil's advocate (HiddenBench §6.4) — 每轮强制注入
+  if (config.staticDevilsAdvocate) {
+    const devilsPrompt = `[治理干预 — static devil's advocate (HiddenBench §6.4)]
+在分享你的分析之前，请先完成以下步骤：
+1. 识别当前讨论中看起来最受欢迎的选项
+2. 找出至少一个反驳该选项的理由（基于你掌握的独有信息）
+3. 然后再给出你的完整分析
+这有助于防止过早共识和群体思维。`;
+    for (const agent of agents) {
+      engine.addGovernancePrompt(agent.id, devilsPrompt);
+    }
+  }
+
   const task = {
     id: scenario.task.id,
     description: scenario.task.sharedBriefing || scenario.task.title,
     type: "ranking",
     createdAt: new Date().toISOString(),
     content: scenario.task.sharedBriefing || "",
+    canonicalOptions: scenario.task.correctAnswer
+      ? Object.keys(scenario.task.correctAnswer)
+      : undefined,
+    optionAliases: scenario.task.searchKeys,
   };
 
   const startTime = Date.now();
@@ -382,25 +514,58 @@ export async function runSingle(
   let finalRanking: string[] = [];
   let finalKendallTau = 0;
   let finalAccuracy = 0;
+  let individualAccuracy = 0;
+  const rankingMetricApplicable = config.scenario !== "hiddenbench";
+  let optionParsing: RawRunData["optionParsing"] | undefined;
 
   if (result.roundResults.length > 0) {
     const lastRound = result.roundResults[result.roundResults.length - 1];
-    // 从最后一个 agent 的 opinion 提取 itemBeliefs
+    const statusCounts: Record<string, number> = {};
+    const unmatchedLabels = new Set<string>();
+    for (const opinion of lastRound.opinions) {
+      const status = opinion.optionParseStatus ?? "not_applicable";
+      statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+      for (const label of opinion.unmatchedOptionLabels ?? []) unmatchedLabels.add(label);
+    }
+    const validOpinions = statusCounts.valid ?? 0;
+    optionParsing = {
+      totalOpinions: lastRound.opinions.length,
+      validOpinions,
+      invalidRate: lastRound.opinions.length > 0
+        ? 1 - validOpinions / lastRound.opinions.length
+        : 1,
+      statusCounts,
+      unmatchedLabels: [...unmatchedLabels],
+    };
+
+    // 群体排名只接受所有 agent 均完整、唯一映射的输出；其余情况 fail closed。
     const allItemBeliefs = lastRound.opinions.flatMap(o => o.itemBeliefs || []);
-    if (allItemBeliefs.length > 0 && agentNames.length > 0) {
+    const allOpinionsValid = lastRound.opinions.length > 0
+      && validOpinions === lastRound.opinions.length;
+    if (allOpinionsValid && allItemBeliefs.length > 0 && agentNames.length > 0) {
       try {
-        finalRanking = extractRanking("", agentNames, allItemBeliefs);
+        finalRanking = extractRanking("", agentNames, allItemBeliefs, scenario.task.searchKeys);
         if (scenario.task.correctAnswer) {
-          finalKendallTau = kendallTau(scenario.task.correctAnswer, finalRanking);
+          if (rankingMetricApplicable) {
+            finalKendallTau = kendallTau(scenario.task.correctAnswer, finalRanking);
+          }
           // 单选准确率：finalRanking[0]（群体第一名）是否为 correctAnswer 中 rank=1 的方案
           // （HiddenBench 等单选任务用；与 HiddenBench 论文的准确率口径对齐）
           const correctItem = Object.entries(scenario.task.correctAnswer)
             .find(([, r]) => r === 1)?.[0];
           finalAccuracy = correctItem && finalRanking[0] === correctItem ? 1 : 0;
+          // item 已在 observation 边界规范化，指标层只允许精确比较。
+          individualAccuracy = correctItem ? (
+            allItemBeliefs.filter(ib => ib.rank === 1 && ib.item === correctItem).length /
+            Math.max(1, agents.filter(() => true).length)
+          ) : 0;
         }
-      } catch {
-        finalRanking = agentNames;
+      } catch (error) {
+        finalRanking = [];
+        optionParsing.rankingError = error instanceof Error ? error.message : String(error);
       }
+    } else if (optionParsing) {
+      optionParsing.rankingError = "final opinions contain invalid, ambiguous, or incomplete option labels";
     }
   }
 
@@ -427,11 +592,23 @@ export async function runSingle(
   // 提取热力学轨迹（RTHF，仅 native_cognitive 模式）
   let thermoHistory: RawRunData["thermoHistory"] | undefined;
   let semanticAuditLog: RawRunData["semanticAuditLog"] | undefined;
+  let terminationDecisions: RawRunData["terminationDecisions"] | undefined;
   if (useNativeCognitive) {
     const nativeEngine = engine as NativeCognitiveEngine;
     thermoHistory = nativeEngine.getThermoHistory();
     // v6: 提取 SemanticTool 审计日志（C 组实验论文分析用）
     semanticAuditLog = nativeEngine.getSemanticAuditLog();
+    // v6 路径二：提取终止决策历史（F 进决策的 reason/stateType，论文分析用）
+    const termHistory = nativeEngine.getTerminationHistory();
+    if (termHistory.length > 0) {
+      terminationDecisions = termHistory.map((snap, i) => ({
+        round: snap.utteranceCount,  // sync 路径 utteranceCount 实际存的是 round
+        shouldTerminate: i < termHistory.length - 1 ? false : (nativeEngine.getLastTerminationDecision()?.shouldTerminate ?? false),
+        reason: i < termHistory.length - 1 ? "continue" : (nativeEngine.getLastTerminationDecision()?.reason ?? "continue"),
+        stateType: "active",  // 历史快照不存 stateType，仅最后决策有
+        message: `R=${snap.R.toFixed(3)}, T=${snap.T.toFixed(3)}, H=${snap.H.toFixed(3)}, F=${snap.F.toFixed(3)}`,
+      }));
+    }
   }
 
   // ROADMAP_V5: 计算 δ 一致性诊断（仅 native_cognitive 模式）
@@ -549,10 +726,14 @@ export async function runSingle(
     converged: result.converged,
     finalRanking,
     finalKendallTau,
+    rankingMetricApplicable,
     finalAccuracy,
+    individualAccuracy,
+    optionParsing,
     beliefTrajectory,
     cognitiveTrajectory,
     thermoHistory,
+    terminationDecisions,
     deltaDiagnosis,
     interventions,
     governanceIssues,

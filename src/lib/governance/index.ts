@@ -458,23 +458,20 @@ export class GovernanceEngine {
     let influenceRatio: number;
     let dominantAgent: string | undefined;
 
-    if (totalReferences > 0) {
-      // 有引用数据：用引用份额作为权威偏差度量
-      const maxRefs = Math.max(...Object.values(referenceCounts));
-      influenceRatio = maxRefs / totalReferences;
-      dominantAgent = Object.keys(referenceCounts).find(id => referenceCounts[id] === maxRefs);
-    } else {
-      // 回退：首轮无引用数据时，用消息内容长度份额作为粗略代理
-      // （长发言 = 信息输出多 = 潜在权威影响）
-      const contentLengths: Record<string, number> = {};
-      messages.forEach(m => {
-        contentLengths[m.agentId] = (contentLengths[m.agentId] || 0) + (m.content?.length || 0);
-      });
-      const totalLength = Object.values(contentLengths).reduce((a, b) => a + b, 0) || 1;
-      const maxLength = Math.max(...Object.values(contentLengths));
-      influenceRatio = maxLength / totalLength;
-      dominantAgent = Object.keys(contentLengths).find(id => contentLengths[id] === maxLength);
+    // 修复（2026-08-03）：删除"发言内容长度份额"回退路径。
+    // 旧回退在首轮无引用数据时用消息长度度量影响力，导致"发言长"被误判为"权威"——
+    // 例如 HiddenBench 任务 12 r1：a1 仅因独有信息描述更长（占 50% 长度）被判为主导者并触发
+    // reduce_weight 降权（实际 a1 信念最弱 0.1）。发言长度 ≠ 权威影响力，级联误伤。
+    // 权威偏差是"持续对话中被反复引用"的现象，无引用数据或引用样本过少（<3）时
+    // 无法可靠评估，宁可漏检也不误伤。
+    if (totalReferences < 3) {
+      return notDetected();
     }
+
+    // 有引用数据：用引用份额作为权威偏差度量
+    const maxRefs = Math.max(...Object.values(referenceCounts));
+    influenceRatio = maxRefs / totalReferences;
+    dominantAgent = Object.keys(referenceCounts).find(id => referenceCounts[id] === maxRefs);
 
     const detected = influenceRatio >= (config.authorityBiasThreshold ?? GOVERNANCE_AUTHORITY_BIAS_THRESHOLD);
     const severity = this.getSeverity(influenceRatio, GOVERNANCE_SEVERITY_AUTHORITY_BIAS);

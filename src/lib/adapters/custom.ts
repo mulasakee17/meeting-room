@@ -6,6 +6,7 @@ import {
   TaskInput,
   InteractionResult,
   AgentState,
+  InteractionOptions,
 } from "./types";
 
 import { callLLM, LLMConfig, LLMResponse, TokenUsage } from "@/lib/llm/providers";
@@ -206,9 +207,9 @@ export class CustomAdapter implements FrameworkAdapter {
     );
   }
 
-  async runInteraction(agents: Agent[], input: TaskInput): Promise<InteractionResult> {
+  async runInteraction(agents: Agent[], input: TaskInput, options?: InteractionOptions): Promise<InteractionResult> {
     const discussionConfig: DiscussionConfig = {
-      maxRounds: 3,
+      maxRounds: options?.maxRounds ?? 3,
       convergenceThreshold: 0.15,
       beliefUpdateStrategy: "rule_based",
       influenceStrategy: "rule_based",

@@ -68,7 +68,16 @@ export class InteractionGraphBuilder {
   }
 
   getGraph(): InteractionGraph {
-    return { ...this.graph, nodes: [...this.graph.nodes], edges: [...this.graph.edges] };
+    return structuredClone(this.graph);
+  }
+
+  /** Explicit mutation boundary used by governance interventions. */
+  updateEdgeWeight(source: string, target: string, weight: number): void {
+    for (const edge of this.graph.edges) {
+      if (edge.source === source && edge.target === target) {
+        edge.weight = Math.max(0, Math.min(1, weight));
+      }
+    }
   }
 
   getInfluencers(agentId: string): { agentId: string; weight: number; type: InfluenceType }[] {
@@ -94,7 +103,8 @@ export class InteractionGraphBuilder {
   }
 
   getNode(agentId: string): AgentNode | undefined {
-    return this.graph.nodes.find(n => n.agentId === agentId);
+    const node = this.graph.nodes.find(n => n.agentId === agentId);
+    return node ? { ...node } : undefined;
   }
 
   clear(): void {

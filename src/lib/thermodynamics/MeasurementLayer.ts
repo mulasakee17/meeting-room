@@ -48,7 +48,7 @@ import {
 } from "../governance/cognitiveDetectors";
 import type { AgentOpinion } from "../discussion/types";
 import type { DiscussionAgent } from "../discussion/index";
-import { computeDeltaDiagnosis, type DeltaConfig, type DeltaDiagnosis } from "./computeDelta";
+import { computeDeltaDiagnosis, EMPTY_DELTA_DIAGNOSIS, type DeltaConfig, type DeltaDiagnosis } from "./computeDelta";
 import {
   estimateAll,
   detectBehaviorEvents,
@@ -86,7 +86,7 @@ const MAX_SEMANTIC_DEDUP_CALLS = 2;
  */
 export interface DeltaInterventionSuggestion {
   /** 干预类型 */
-  type: "inject_evidence" | "rebalance_attention";
+  type: "inject_evidence" | "rebalance_attention" | "devils_advocate";
   /** 目标 agent IDs */
   targetAgents: string[];
   /** 原因说明 */
@@ -232,13 +232,16 @@ export class MeasurementLayer {
    *   新实现用 evidence items 的 supports 分布，直接反映证据覆盖的选项多样性。
    *
    * v0.4.3 修正自由能（F 解耦）：
-   * - 旧 F=(1-R)+T·H 与 R/T/H 强耦合（验证 r=0.917），无法独立解释承诺失序度。
-   * - 新 F=U-T·H 三变量解耦（验证 r=0.274）：
+   * - 旧 F=(1-R)+T·H 与 R/T/H 强耦合（fraud 数据验证 r=0.917），无法独立解释承诺失序度。
+   * - 新 F=U-T·H 三变量解耦（2026-08-04 用 campaign native_cognitive 数据验证）：
+   *   r(U, T·H) = -0.087 (n=127, p=0.33) — 解耦成立，远优于旧 F
+   *   ⚠ 但 U 与 H 强相关 r(U,H) = -0.739，非完全正交；T 方差小压制了 T·H 的影响
+   *   ⚠ 旧注释 r=0.274 是标量 belief L1 范数的结果误归因到 utility 向量 L2，已修正
    *   U = 平均效用强度（‖u_i‖ 的均值，衡量群体偏好清晰度）
    *   T = Utility 波动度（已计算）
    *   S = H = 证据多样性熵（已计算）
-   * - F 不参与任何决策阈值（TerminationDecider/δ 诊断都不读 F），仅用于诊断分析。
-   *   因此本替换不影响运行路径，只让诊断指标更可解释。
+   * - v6 路径二（2026-08-04）：F 接入 TerminationDecider 终止决策，
+   *   Tier 1 热力学筛查门控 δ 诊断（热力学正常时跳过 δ）。
    *
    * 注意：此 R/T/H 与 asyncEngine.ts 的 R/T/H 是不同的实现。
    * - asyncEngine.ts 基于 scalar beliefs，用于 TerminationDecider 和论文已 claim 的结论。
@@ -283,6 +286,47 @@ export class MeasurementLayer {
     const F = U - T * H;
 
     return { R, T, H, F };
+  }
+
+  /**
+   * Tier 1 热力学筛查：判断当前热力学状态是否异常（需触发 δ 诊断）。
+   *
+   * 三层级联设计（ROADMAP_V6 §3.1）：
+   *   Tier 1 热力学正常 → 继续，无需 δ
+   *   Tier 1 异常 → 触发 Tier 2 δ 诊断
+   *
+   * 异常判据（任一满足即异常）：
+   *   1. 结晶化：R 高（>0.85）且 H 低（<0.42）→ 信息坍缩风险
+   *   2. 低自由能：F < 0.15 → 系统过度有序，可能伪收敛
+   *   3. 高熵无序：H 高（>0.95）且 R 低（<0.50）→ 证据分散无共识
+   *   4. 温度异常：T > 0.20 → 效用剧烈波动
+   *
+   * 阈值与 TerminationDecider 对齐（crystallR=0.85, crystallH=0.42），
+   * 但用途不同：TerminationDecider 判"是否终止"，此处判"是否需 δ 深查"。
+   *
+   * ⚠ 校准来源：这些阈值是人工设定的启发式值，未经 ground-truth 系统校准。
+   * 最初基于 deepseek-chat + Crisis V2 任务的经验观察设定，但 Crisis V2 存在
+   * 天花板效应（E12 实验 τ 全为 1.0），无法验证阈值的区分能力。
+   * 在 glm-4-flash + HiddenBench 任务上可能不适用（多数任务满分，thermo 可能不触发）。
+   * 未来工作：用 HiddenBench 全量数据做离线 grid search 校准。
+   *
+   * @param thermo 当前热力学状态
+   * @returns true=异常(需 δ), false=正常(跳过 δ)
+   */
+  isThermoAbnormal(thermo: ThermoState): boolean {
+    // 1. 结晶化风险：高同步 + 低熵 → 信息坍缩
+    if (thermo.R > 0.85 && thermo.H < 0.42) return true;
+
+    // 2. 低自由能：系统过度有序（F = U - T·H，F 极低意味着 U 低或 T·H 高）
+    if (thermo.F < 0.15) return true;
+
+    // 3. 高熵无序：证据分散且无共识
+    if (thermo.H > 0.95 && thermo.R < 0.50) return true;
+
+    // 4. 温度异常：效用剧烈波动
+    if (thermo.T > 0.20) return true;
+
+    return false;
   }
 
   /**
@@ -584,7 +628,12 @@ export class MeasurementLayer {
 
   /** 获取当前所有 agent 的认知状态 */
   getCognitiveStates(): Map<string, AgentCognitiveState> {
-    return new Map(this.cognitiveStates);
+    return structuredClone(this.cognitiveStates);
+  }
+
+  /** Run progressive estimation against owned state and persist its estimates. */
+  estimateProgressiveState(round: number): Map<string, ProgressiveEstimates> {
+    return estimateAll(this.cognitiveStates, round);
   }
 
   /**
@@ -592,7 +641,7 @@ export class MeasurementLayer {
    * 包含 evidence_dedup 和 gap_analysis 两种调用的完整记录。
    */
   getSemanticAuditLog(): SemanticAuditEntry[] {
-    return [...this.semanticAuditLog];
+    return structuredClone(this.semanticAuditLog);
   }
 
   /**
@@ -603,27 +652,27 @@ export class MeasurementLayer {
    * 注意：会完全替换当前 cognitiveStates。
    */
   setCognitiveStates(states: Map<string, AgentCognitiveState>): void {
-    this.cognitiveStates = new Map(states);
+    this.cognitiveStates = structuredClone(states);
   }
 
   /** 获取指定轮次的认知状态快照 */
   getCognitiveStateHistory(round: number): Map<string, AgentCognitiveState> {
-    return this.cognitiveStateHistory.get(round) ?? new Map();
+    return structuredClone(this.cognitiveStateHistory.get(round) ?? new Map());
   }
 
   /** 获取所有轮次的历史 */
   getAllCognitiveStateHistory(): Map<number, Map<string, AgentCognitiveState>> {
-    return this.cognitiveStateHistory;
+    return structuredClone(this.cognitiveStateHistory);
   }
 
   /** 获取影响权重 */
   getInfluenceWeights(): Map<string, Map<string, number>> {
-    return this.influenceWeights;
+    return structuredClone(this.influenceWeights);
   }
 
   /** 获取治理 prompt */
   getGovernancePrompts(): Map<string, string[]> {
-    return this.governancePrompts;
+    return structuredClone(this.governancePrompts);
   }
 
   // ==========================================================================
@@ -689,9 +738,6 @@ export class MeasurementLayer {
     // ── Step 3.5: 应用待处理的惯性因子（必须在 updateInertia 之后）──
     this.consumePendingInertiaFactors();
 
-    // ── Step 4: 存储本轮深拷贝快照 ──
-    this.storeSnapshot(round);
-
     // ── Step 5: v6 行为事件检测（驱动 ProgressiveEstimator）──
     // 必须在状态更新后调用，因为 detectBehaviorEvents 需要读取
     // 更新后的 utilityHistory 来检测 stance flip 和 exposure response。
@@ -711,6 +757,42 @@ export class MeasurementLayer {
     }
 
     detectBehaviorEvents(this.cognitiveStates, round, refutationMap, interventionTargets);
+
+    // ── Step 5.5: v6 ProgressiveEstimator 写回 I/Λ 到 cognitiveStates ──
+    // P0 修复（2026-08-04）：updateCognitiveStatesNative 仍调用 @deprecated 的 updateInertia，
+    // 且 susceptibility 直接复制 currentState（永不更新）。在此调用 estimateAll 写回
+    // ProgressiveEstimator 的新估计值（行为事件驱动），确保：
+    //   1. cognitiveStates 的 I/Λ 是 v6 新公式值（而非旧公式）
+    //   2. 下一轮 DeGroot 的 λ = max((1-I)(1-C), 0.05) 基于新估计值
+    //   3. buildDetectorInput 读取的 cs.susceptibility.usable 变为 true（不再永远走旧公式 fallback）
+    // 必须在 detectBehaviorEvents 之后（依赖 behaviorEvents），storeSnapshot 之前（确保快照含新值）。
+    //
+    // 注意 1：estimateAll 会写回 confidence.overall（backward compat），但 updateCognitiveStatesNative
+    // 的 shrinkage 校准（0.4×evidenceBased + 0.6×LLM）是更可靠的 overconfidence 抑制机制。
+    // 保存 shrinkage 值，调用 estimateAll 后恢复。
+    //
+    // 注意 2：estimateAll 会覆盖 inertia.strength（backward compat 字段）。
+    // 这是 P0 修复的预期效果：inertia.strength 从旧公式值变为 ProgressiveEstimator 新值。
+    // 旧 inertiaFactor 治理手段（consumePendingInertiaFactors 修改 strength）会被覆盖，
+    // 但 v6 δ 治理不使用 inertiaFactor（只有旧 generateCognitiveInterventions 生成），
+    // 因此对 v6 实验路径无影响。旧路径测试需更新以反映新语义。
+    const preservedConfidenceOverall = new Map<string, number>();
+    for (const [aid, cs] of this.cognitiveStates) {
+      preservedConfidenceOverall.set(aid, cs.confidence.overall);
+    }
+    estimateAll(this.cognitiveStates, round);
+    // 恢复 shrinkage 校准的 confidence.overall（ProgressiveEstimator 的 estimate 保留在 confidence.estimate）
+    for (const [aid, overall] of preservedConfidenceOverall) {
+      const cs = this.cognitiveStates.get(aid);
+      if (cs) cs.confidence.overall = overall;
+    }
+
+    // ── Step 4: 存储本轮深拷贝快照 ──
+    // P0 修复（2026-08-04）：storeSnapshot 从 Step 4 移到 Step 5.5 之后，
+    // 确保快照包含 ProgressiveEstimator 更新后的 I/Λ 值（而非旧公式值）。
+    // Runner.ts:236 通过 getCognitiveStateHistory 读取快照落盘，若快照过早存储，
+    // 论文分析数据中的 susceptibility.usable 会永远为 false，走 fallback 旧公式。
+    this.storeSnapshot(round);
 
     // ── Step 6: v6 跨 agent evidence 共享标记（Layer 1: 数学匹配）──
     this.markEvidenceSharing();
@@ -915,6 +997,13 @@ export class MeasurementLayer {
    *
    * LLM 仍输出 belief/confidence/itemBeliefs，
    * 系统从这些输出中反推 Utility/Evidence/Confidence。
+   *
+   * @deprecated v6 冻结（2026-08-04）。生产环境死代码：唯一生产调用方
+   *   NativeCognitiveEngine 固定传 mode:"native"，此路径无运行时消费者。
+   *   保留仅供 test/measurement-layer.test.ts 回溯。新代码不应以 mode:"posthoc"
+   *   调用 updateCognitiveStates。认知状态计算统一走 updateCognitiveStatesNative。
+   *   与 cognitiveState.ts 的 post-hoc 实现存在字段伪一致（Confidence.stated /
+   *   Evidence.coverage / Evidence.diversity 语义不同），详见项目 memory。
    */
   private updateCognitiveStatesPosthoc(
     opinions: AgentOpinion[],
@@ -1410,19 +1499,37 @@ export class MeasurementLayer {
    *
    * @param round 当前轮次
    * @param llmConfig LLM 配置（SemanticTool 需要）
+   * @param rawStatesOverride 可选的原始 cognitive states（未经 DeGroot 融合）。
+   *   传入时 δ 诊断用 rawStates（保留原始分歧），thermo 仍用 cognitiveStates（系统观测）。
+   *   不传时向后兼容：δ 和 thermo 都用 cognitiveStates（融合后）。
+   *   同步路径（applyCognitiveGovernance）已用 rawStates，异步路径应传入以保持一致。
    * @returns δ 诊断结果 + 干预建议列表
    */
   async diagnoseAndSuggest(
     round: number,
     llmConfig?: LLMConfig,
+    rawStatesOverride?: AgentCognitiveState[],
   ): Promise<{ thermo: ThermoState; delta: DeltaDiagnosis; suggestions: DeltaInterventionSuggestion[] }> {
-    const states = Array.from(this.cognitiveStates.values());
+    // thermo 始终用 cognitiveStates（融合后）——这是系统观测的群体状态
     const thermo = this.computeThermoState();
+    // δ 诊断优先用 rawStatesOverride（原始分歧），无 override 时向后兼容用 cognitiveStates
+    const states = rawStatesOverride ?? Array.from(this.cognitiveStates.values());
+
+    // ── Tier 1 热力学筛查（v6 路径二，2026-08-04）──
+    // 三层级联设计意图（ROADMAP_V6 §3.1）：热力学正常 → 继续，无需 δ；异常 → 触发 δ
+    // 修复前：δ 无条件计算（MeasurementLayer 旧 L1433），违背三层级联设计
+    // 修复后：热力学筛查通过时直接返回空 delta，零成本跳过 Tier 2/3
+    if (!this.isThermoAbnormal(thermo)) {
+      return { thermo, delta: EMPTY_DELTA_DIAGNOSIS, suggestions: [] };
+    }
 
     // ── ProgressiveEstimator: I/C/Λ 渐进估计 ──
+    // estimates 必须基于 cognitiveStates（有累积 behaviorEvents/utilityHistory），
+    // 不能用 rawStatesOverride（临时对象，无历史数据，estimateAll 会返回低置信度先验）。
     const estimates = estimateAll(this.cognitiveStates, round);
 
     // ── 运行 δ 诊断（自适应阈值已在各 δ 函数内处理）──
+    // states 可能是 rawStatesOverride（原始分歧）或 cognitiveStates（融合后，向后兼容）
     const delta = computeDeltaDiagnosis(states, thermo, estimates);
 
     // ── Layer 2: SemanticTool evidence 语义去重（批量补判 Layer 1 遗漏）──
@@ -1447,10 +1554,20 @@ export class MeasurementLayer {
     if (llmConfig && this.shouldConsultSemanticTool(delta, round)) {
       const enhancedSuggestions = await this.consultSemanticTool(delta, states, thermo, round, llmConfig);
       if (enhancedSuggestions.length > 0) {
-        // C1 修复（Phase 2.9）：合并而非替换。
-        // SemanticTool 主要增强 inject_evidence（信息层干预），
-        // 数学层的 rebalance_attention（结构层干预）必须保留，否则丢失关键干预。
-        const mathLayerKept = suggestions.filter(s => s.type !== "inject_evidence");
+        // C1 修复（Phase 2.9）+ C4 修复（2026-08-04 自检）+ 2026-08-06 修正：
+        // 旧逻辑 filter(s => s.type !== "inject_evidence") 丢弃所有数学层 inject_evidence，
+        // 包括 δ_stance_flip/δ_polarization/δ_confidence_gap 的 inject_evidence（SemanticTool 未覆盖）。
+        // 修复：按 targetAgents 展平后去重——SemanticTool 增强的 inject_evidence 覆盖数学层同 target 的，
+        // 保留数学层不同 target 的 inject_evidence 和所有 rebalance_attention。
+        // （此前误用不存在的 targetAgentId 字段 → enhancedTargets=Set([undefined]) → 数学层建议全被丢弃。）
+        const enhancedTargets = new Set(
+          enhancedSuggestions
+            .filter(s => s.type === "inject_evidence")
+            .flatMap(s => s.targetAgents),
+        );
+        const mathLayerKept = suggestions.filter(s =>
+          s.type !== "inject_evidence" || !s.targetAgents.some(t => enhancedTargets.has(t))
+        );
         return { thermo, delta, suggestions: [...mathLayerKept, ...enhancedSuggestions] };
       }
     }
@@ -1564,6 +1681,16 @@ export class MeasurementLayer {
     return suggestions;
   }
 
+  /** 将 δ 触发映射为干预建议（公共入口——NativeCognitiveEngine 从原始 LLM 输出调用） */
+  buildDeltaSuggestionsPublic(
+    delta: DeltaDiagnosis,
+    _states: AgentCognitiveState[],
+    _thermo: ThermoState,
+    _round: number,
+  ): DeltaInterventionSuggestion[] {
+    return this.buildDeltaSuggestions(delta, _states, _thermo, _round);
+  }
+
   /** 将 δ 触发映射为干预建议（纯数学路径） */
   private buildDeltaSuggestions(
     delta: DeltaDiagnosis,
@@ -1574,10 +1701,12 @@ export class MeasurementLayer {
     const suggestions: DeltaInterventionSuggestion[] = [];
 
     if (delta.oneDMask.triggered) {
+      // 标量共识掩盖向量分歧 → 强制 devil's advocate（对齐 HiddenBench §6.4 结构通信协议）
+      const allAgentIds = _states.map(s => s.agentId);
       suggestions.push({
-        type: "inject_evidence",
-        targetAgents: [],
-        reason: `δ_1d_mask=${delta.oneDMask.value.toFixed(3)}：标量共识掩盖向量分歧，注入差异性证据`,
+        type: "devils_advocate",
+        targetAgents: allAgentIds,
+        reason: `δ_1d_mask=${delta.oneDMask.value.toFixed(3)}：标量共识掩盖向量分歧，强制反驳当前主流选项`,
         source: "δ_1d_mask",
       });
     }
@@ -1593,9 +1722,10 @@ export class MeasurementLayer {
     }
 
     if (delta.stanceFlip.triggered) {
+      const flipped = delta.stanceFlip.flippedAgents ?? _states.map(s => s.agentId);
       suggestions.push({
         type: "inject_evidence",
-        targetAgents: [],
+        targetAgents: flipped.length > 0 ? flipped : _states.map(s => s.agentId),
         reason: `δ_stance_flip：多人立场翻转，注入稳定证据`,
         source: "δ_stance_flip",
       });
@@ -1612,10 +1742,40 @@ export class MeasurementLayer {
     }
 
     if (delta.polarization.triggered) {
+      // 极化 → 少数派被压制 → 让他们先发言
+      const groupMean: Record<string, number> = {};
+      const allOptions = new Set<string>();
+      for (const s of _states) for (const k of Object.keys(s.utility.scores)) allOptions.add(k);
+      for (const opt of allOptions) {
+        const vals = _states.map(s => s.utility.scores[opt] ?? 0);
+        groupMean[opt] = vals.reduce((a, b) => a + b, 0) / vals.length;
+      }
+      const minority = _states
+        .map(s => {
+          let dot = 0, normS = 0, normM = 0;
+          for (const opt of allOptions) {
+            const sv = s.utility.scores[opt] ?? 0;
+            const mv = groupMean[opt] ?? 0;
+            dot += sv * mv; normS += sv * sv; normM += mv * mv;
+          }
+          const cos = (Math.sqrt(normS) * Math.sqrt(normM)) === 0 ? 1 : dot / (Math.sqrt(normS) * Math.sqrt(normM));
+          return { agentId: s.agentId, dist: 1 - cos };
+        })
+        .sort((a, b) => b.dist - a.dist)
+        .slice(0, Math.ceil(_states.length / 3))
+        .map(s => s.agentId);
       suggestions.push({
-        type: "inject_evidence",
-        targetAgents: [],
-        reason: `δ_polarization=${delta.polarization.value.toFixed(3)}：效用极化，注入桥接证据`,
+        type: "rebalance_attention",
+        targetAgents: minority,
+        reason: `δ_polarization=${delta.polarization.value.toFixed(3)}：少数派(${minority.join(",")})被压制，提升发言优先级`,
+        source: "δ_polarization",
+      });
+      // 附加 devil's advocate：强制所有 agent 反驳主流选项
+      // 对齐 HiddenBench §6.4——极化时最需要打破均衡偏误
+      suggestions.push({
+        type: "devils_advocate",
+        targetAgents: _states.map(s => s.agentId),
+        reason: `δ_polarization=${delta.polarization.value.toFixed(3)}：强制反驳主流选项以打破均衡偏误`,
         source: "δ_polarization",
       });
     }
@@ -1662,6 +1822,12 @@ export class MeasurementLayer {
   ): { thermo: ThermoState; delta: DeltaDiagnosis; suggestions: DeltaInterventionSuggestion[] } {
     const states = Array.from(this.cognitiveStates.values());
     const thermo = this.computeThermoState();
+
+    // ── Tier 1 热力学筛查（v6 路径二，2026-08-04，与异步路径对齐）──
+    if (!this.isThermoAbnormal(thermo)) {
+      return { thermo, delta: EMPTY_DELTA_DIAGNOSIS, suggestions: [] };
+    }
+
     const estimates = estimateAll(this.cognitiveStates, round);
     const delta = computeDeltaDiagnosis(states, thermo, estimates, config);
 

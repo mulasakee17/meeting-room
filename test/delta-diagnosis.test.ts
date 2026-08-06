@@ -744,7 +744,8 @@ describe("置信度感知干预降级", () => {
 
   it("I 置信度低 → rebalance_attention 降级为 inject_evidence", () => {
     const states = makeGovStatesMap(["a1", "a2", "a3"]);
-    const estimates = makeEstimates(["a1", "a2", "a3"], 0.15, 0.5);
+    // CONFIDENCE_THRESHOLD=0.10（2026-08-04 降低，允许早期轮次介入），用 0.05 触发降级
+    const estimates = makeEstimates(["a1", "a2", "a3"], 0.05, 0.5);
     const issue: GovernanceIssue = {
       type: "echo_chamber_cognitive",
       severity: "medium",
@@ -761,7 +762,8 @@ describe("置信度感知干预降级", () => {
 
   it("C 置信度低 → inject_evidence 降级为 evidence guidance", () => {
     const states = makeGovStatesMap(["a1", "a2", "a3"]);
-    const estimates = makeEstimates(["a1", "a2", "a3"], 0.5, 0.15);
+    // CONFIDENCE_THRESHOLD=0.10（2026-08-04 降低），用 0.05 触发降级
+    const estimates = makeEstimates(["a1", "a2", "a3"], 0.5, 0.05);
     const issue: GovernanceIssue = {
       type: "polarization_cognitive",
       severity: "medium",
@@ -825,8 +827,9 @@ describe("markEvidenceSharing — Layer 1 数学匹配", () => {
     const ml = makeMeasurementLayerWithStates([state1, state2]);
     ml.markEvidenceSharing();
 
-    expect(state1.evidence.items[0].shared).toBe(true);
-    expect(state2.evidence.items[0].shared).toBe(true);
+    const updated = ml.getCognitiveStates();
+    expect(updated.get("a1")!.evidence.items[0].shared).toBe(true);
+    expect(updated.get("a2")!.evidence.items[0].shared).toBe(true);
   });
 
   it("子串匹配 → shared=true（一方包含另一方）", () => {
@@ -844,8 +847,9 @@ describe("markEvidenceSharing — Layer 1 数学匹配", () => {
     const ml = makeMeasurementLayerWithStates([state1, state2]);
     ml.markEvidenceSharing();
 
-    expect(state1.evidence.items[0].shared).toBe(true);
-    expect(state2.evidence.items[0].shared).toBe(true);
+    const updated = ml.getCognitiveStates();
+    expect(updated.get("a1")!.evidence.items[0].shared).toBe(true);
+    expect(updated.get("a2")!.evidence.items[0].shared).toBe(true);
   });
 
   it("无匹配 → shared=false（独有信息）", () => {

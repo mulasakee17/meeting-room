@@ -12,6 +12,7 @@ import {
   DiscussionEvent,
   DiscussionTask,
   AgentInfo,
+  RoundStopDecision,
 } from "./types";
 
 import { MemoryManager, InMemoryStrategy } from "./memory";
@@ -20,8 +21,10 @@ import { InteractionGraphBuilder } from "./interactionGraph";
 import { DecisionTraceBuilder } from "./decisionTrace";
 import { GovernanceEngine, AgentBelief, MessageInfo, GovernanceIssue, Intervention } from "../governance";
 import type { GovernanceConfig } from "../governance/types";
+import type { TerminationDecision } from "../thermodynamics/TerminationDecider";
 import { EventTracker } from "./eventTracker";
 import { DefaultOpinionParser } from "../observation";
+import { canonicalizeOpinionOptions } from "../observation/optionCanonicalization";
 import { safeJsonParse } from "../utils/jsonUtils";
 import { mulberry32 } from "../utils/statsUtils";
 import { InferenceLayer } from "../inference";
@@ -78,6 +81,21 @@ export interface DiscussionAgent {
   setState(state: { belief: number; confidence: number }): void;
 }
 
+type RoundGovernanceResult = {
+  hasIntervention: boolean;
+  interventions: Intervention[];
+  effectMetrics?: Record<string, number>;
+  issues: GovernanceIssue[];
+};
+
+interface FinalizedRound {
+  roundResult: RoundResult;
+  roundData: RoundData;
+  governanceResult: RoundGovernanceResult | null;
+  terminationDecision: TerminationDecision | null;
+  stopDecision: RoundStopDecision;
+}
+
 export class DiscussionEngine {
   protected memoryManager: MemoryManager;
   private influenceManager: InfluenceManager;
@@ -89,9 +107,32 @@ export class DiscussionEngine {
   protected agentKnowledge?: Map<string, string[]>;
   /** Accumulated governance prompts for next-round injection. Cleared after each round. */
   protected governancePrompts: Map<string, string[]> = new Map();
+
+  /** 注入治理 prompt（供 Phase D 等外部使用） */
+  addGovernancePrompt(agentId: string, prompt: string): void {
+    if (!this.governancePrompts.has(agentId)) this.governancePrompts.set(agentId, []);
+    this.governancePrompts.get(agentId)!.push(prompt);
+  }
   protected eventTracker: EventTracker;
   protected config: DiscussionConfig;
   protected roundDataArray: RoundData[] = [];
+  /** Mutable per-run state must never be shared across independent tasks. */
+  private lifecycleState: "idle" | "running" | "completed" = "idle";
+
+  protected beginRunLifecycle(): void {
+    if (this.lifecycleState === "running") {
+      throw new Error("DiscussionEngine is already running; concurrent runs are not supported");
+    }
+    if (this.lifecycleState === "completed") {
+      throw new Error("DiscussionEngine contains completed-run state; call reset() before reusing it");
+    }
+    this.lifecycleState = "running";
+  }
+
+  protected completeRunLifecycle(): void {
+    // A failed run also leaves partial state behind and therefore requires reset().
+    this.lifecycleState = "completed";
+  }
   private inferenceLayer: InferenceLayer;
   protected opinionParser: OpinionParser;
   private dropoutObservations: Array<{
@@ -114,6 +155,7 @@ export class DiscussionEngine {
       memoryStrategy: "in_memory",
       governanceMode: "full",
       enableCrossExamination: false,
+      terminationPolicy: "surface",
       ...config,
     };
 
@@ -141,22 +183,34 @@ export class DiscussionEngine {
    * converge? → update beliefs → govern → record) → build result.
    */
   async run(agents: DiscussionAgent[], task: DiscussionTask): Promise<DiscussionResult> {
-    this.eventTracker.track({
-      type: "round_start", timestamp: new Date().toISOString(), roundNumber: 0,
-      payload: { task: task.id, agentCount: agents.length },
-    });
+    this.beginRunLifecycle();
+    try {
+      this.eventTracker.track({
+        type: "round_start", timestamp: new Date().toISOString(), roundNumber: 0,
+        payload: { task: task.id, agentCount: agents.length },
+      });
 
-    const agentStates = this.initializeAgentStates(agents);
+      const agentStates = this.initializeAgentStates(agents);
 
-    const roundResults = await this.runMainLoop(agents, task, agentStates);
+      const roundResults = await this.runMainLoop(agents, task, agentStates);
+      const result = this.buildDiscussionResult(roundResults, agentStates);
 
-    this.eventTracker.track({
-      type: "decision", timestamp: new Date().toISOString(),
-      roundNumber: roundResults.length,
-      payload: { finalDecision: "", converged: false, totalRounds: roundResults.length },
-    });
+      this.eventTracker.track({
+        type: "decision", timestamp: new Date().toISOString(),
+        roundNumber: result.totalRounds,
+        payload: {
+          finalDecision: result.finalDecision,
+          converged: result.converged,
+          acceptedConsensus: result.acceptedConsensus,
+          stopReason: result.stopReason,
+          totalRounds: result.totalRounds,
+        },
+      });
 
-    return this.buildDiscussionResult(roundResults, agentStates);
+      return result;
+    } finally {
+      this.completeRunLifecycle();
+    }
   }
 
   // ==========================================================================
@@ -285,76 +339,303 @@ export class DiscussionEngine {
         }
       }
 
-      roundResults.push({
-        roundNumber: round, opinions: [...opinions],
-        timestamp: new Date().toISOString(),
-        converged: this.checkConvergence(opinions),
+      // 本轮唯一提交点：测量、治理、审计记录全部完成后，终止决策才能控制主循环。
+      const finalized = await this.finalizeRound({
+        round,
+        opinions,
+        agents,
+        agentStates,
       });
+      roundResults.push(finalized.roundResult);
 
-      this.graphBuilder.updateFromOpinions(opinions, round);
-
-      // -- trace building --------------------------------------------------
-      const graph = this.graphBuilder.getGraph();
-      const influenceFactorsMap = this.computeInfluenceFactors(opinions, graph);
-      this.traceBuilder.addRound(round, opinions, this.memoryManager.getAll(), graph, influenceFactorsMap);
-
-      if (this.checkConvergence(opinions)) break;
-
-      // -- belief update ---------------------------------------------------
-      const prevStates = new Map(agentStates);
-      this.updateBeliefs(opinions, agentStates, round);
-      this.updateAgentStates(agents, agentStates);
-
-      this.eventTracker.track({
-        type: "belief_update", timestamp: new Date().toISOString(),
-        roundNumber: round,
-        payload: { agentStates: Object.fromEntries(agentStates) },
-      });
-
-      // -- governance ------------------------------------------------------
-      // F1 修复（Phase 2.9）：applyGovernance 必须在 updateCognitiveStatesFromRound 之前，
-      // 这样 pendingCognitiveModifications 在同一轮的 updateCognitiveStatesFromRound 中被消费，
-      // 下一轮 runRound 的 buildPrompt 即可看到干预后的 cognitive state（1 轮生效，而非 2 轮）。
-      // 注：applyGovernance 的 δ 诊断基于上一轮更新后的 cognitive state + 当前轮 opinions，
-      // 1 轮的诊断滞后可接受（cognitive state 变化渐进），但避免了 5 轮讨论中干预仅剩 2-3 轮可用的致命问题。
-      const governanceResult = await this.applyGovernance(round, opinions, agentStates, agents);
-      const interventions = governanceResult?.hasIntervention ? governanceResult.interventions : [];
-
-      if (governanceResult?.hasIntervention) {
-        this.eventTracker.track({
-          type: "intervention", timestamp: new Date().toISOString(),
-          roundNumber: round, payload: { interventions },
-        });
-        this.traceBuilder.addRound(round, opinions, this.memoryManager.getAll(),
-          this.graphBuilder.getGraph(), new Map(), interventions);
-      }
-
-      // -- v3.0 cognitive state update (消费 pendingModifications) ----------
-      if (this.config.useCognitiveState) {
-        this.updateCognitiveStatesFromRound(opinions, agents, round);
-      }
-
-      // -- record round data ------------------------------------------------
-      const beliefChanges = this.buildBeliefChanges(prevStates, agentStates);
-      const influenceEvents = this.buildInfluenceEvents(graph, round);
-      const converged = this.checkConvergence(opinions);
-
-      this.roundDataArray.push({
-        roundNumber: round, timestamp: new Date().toISOString(),
-        opinions: [...opinions], beliefChanges, influenceEvents,
-        governanceIssues: governanceResult?.issues || [],
-        interventions, converged,
-        // 审计字段：存储干预效果度量（第三方验证用，2026-07-23 新增）
-        effectMetrics: governanceResult?.effectMetrics,
-      });
-
-      this.eventTracker.track({
-        type: "round_end", timestamp: new Date().toISOString(),
-        roundNumber: round, payload: { converged },
-      });
+      if (finalized.stopDecision.shouldStop) break;
     }
 
     return roundResults;
+  }
+
+  /**
+   * 一轮讨论的唯一提交点。
+   *
+   * 生命周期不变量：只要一轮已经产生 opinions，就必须先完成状态更新、治理诊断、
+   * trace/roundData/event 写入，随后终止仲裁才能让主循环退出。治理在当轮状态更新后
+   * 运行，因此本轮生成的干预从下一轮开始生效，避免当轮测量被事后干预污染。
+   */
+  private async finalizeRound(input: {
+    round: number;
+    opinions: AgentOpinion[];
+    agents: DiscussionAgent[];
+    agentStates: Map<string, { belief: number; confidence: number }>;
+  }): Promise<FinalizedRound> {
+    const { round, opinions, agents, agentStates } = input;
+    const timestamp = new Date().toISOString();
+
+    // 所有终止与记录路径复用同一个收敛计算，避免一轮多次计算产生漂移。
+    const surfaceConverged = this.checkConvergence(opinions);
+
+    this.graphBuilder.updateFromOpinions(opinions, round);
+    const graph = this.graphBuilder.getGraph();
+    const influenceFactorsMap = this.computeInfluenceFactors(opinions, graph);
+
+    // 保持旧路径语义：交叉质证造成的即时 state shift 已在进入 finalizeRound 前发生；
+    // beliefChanges 记录本轮常规 belief update 的变化。
+    const prevStates = new Map(agentStates);
+    this.updateBeliefs(opinions, agentStates, round);
+    this.updateAgentStates(agents, agentStates);
+
+    this.eventTracker.track({
+      type: "belief_update",
+      timestamp: new Date().toISOString(),
+      roundNumber: round,
+      payload: { agentStates: Object.fromEntries(agentStates) },
+    });
+
+    // 先形成当轮可观测 cognitive/thermo 状态，再基于该状态诊断。
+    // 上一轮排队的 pending modifications 会在这里消费；本轮新干预留到下一轮。
+    if (this.config.useCognitiveState) {
+      this.updateCognitiveStatesFromRound(opinions, agents, round);
+    }
+
+    const governanceResult = await this.applyGovernance(
+      round,
+      opinions,
+      agentStates,
+      agents,
+    );
+
+    const interventions = this.prepareInterventionsForRecord(
+      governanceResult?.hasIntervention ? governanceResult.interventions : [],
+      round,
+    );
+
+    // 终止在诊断之后计算，但此处仍只是候选；记录提交完成前不得退出。
+    const terminationDecision = this.evaluateTerminationCandidate(round);
+    const stopDecision = this.resolveStopDecision({
+      round,
+      opinions,
+      surfaceConverged,
+      governanceResult,
+      interventions,
+      terminationDecision,
+    });
+    const acceptedConsensus = stopDecision.shouldStop
+      && stopDecision.reason === "surface_convergence";
+
+    const beliefChanges = this.buildBeliefChanges(prevStates, agentStates);
+    const influenceEvents = this.buildInfluenceEvents(graph, round);
+
+    const roundResult: RoundResult = {
+      roundNumber: round,
+      opinions: [...opinions],
+      timestamp,
+      surfaceConverged,
+      acceptedConsensus,
+      converged: acceptedConsensus,
+      stopDecision,
+    };
+
+    const roundData: RoundData = {
+      roundNumber: round,
+      timestamp,
+      opinions: [...opinions],
+      beliefChanges,
+      influenceEvents,
+      governanceIssues: governanceResult?.issues ?? [],
+      interventions,
+      surfaceConverged,
+      acceptedConsensus,
+      converged: acceptedConsensus,
+      effectMetrics: governanceResult?.effectMetrics,
+      terminationDecision: terminationDecision ?? undefined,
+      stopDecision,
+    };
+
+    // 原子化提交：每轮只写一次 trace，避免有干预时重复 addRound。
+    this.roundDataArray.push(roundData);
+    this.traceBuilder.addRound(
+      round,
+      opinions,
+      this.memoryManager.getAll(),
+      graph,
+      influenceFactorsMap,
+      interventions,
+    );
+
+    if (interventions.length > 0) {
+      this.eventTracker.track({
+        type: "intervention",
+        timestamp: new Date().toISOString(),
+        roundNumber: round,
+        payload: { interventions },
+      });
+    }
+
+    this.eventTracker.track({
+      type: "round_end",
+      timestamp: new Date().toISOString(),
+      roundNumber: round,
+      payload: { surfaceConverged, acceptedConsensus, converged: acceptedConsensus, stopDecision },
+    });
+
+    return {
+      roundResult,
+      roundData,
+      governanceResult,
+      terminationDecision,
+      stopDecision,
+    };
+  }
+
+  /**
+   * 为审计日志补齐干预时序。
+   * hard cap 轮没有下一轮执行窗口，因此不能把建议记录成已应用。
+   */
+  private prepareInterventionsForRecord(
+    interventions: Intervention[],
+    round: number,
+  ): Intervention[] {
+    const hasNextRound = round < this.config.maxRounds;
+    return interventions.map(intervention => {
+      // 旧 belief-based 路径的 reduce_weight / introduce_diversity 会在
+      // applyGovernance 内立即修改 graph/agent state；prompt、attention 和认知状态
+      // modification 则只能影响下一轮。两者不能统一标成 queued。
+      const deferredToNextRound = this.isNextRoundIntervention(intervention.type);
+
+      if (!deferredToNextRound) {
+        return {
+          ...intervention,
+          diagnosedAtRound: round,
+          effectiveFromRound: intervention.applied ? round : undefined,
+          applicationStatus: intervention.applied ? "applied" : undefined,
+        };
+      }
+
+      return {
+        ...intervention,
+        diagnosedAtRound: round,
+        effectiveFromRound: hasNextRound ? round + 1 : undefined,
+        applied: hasNextRound ? intervention.applied : false,
+        applicationStatus: hasNextRound
+          ? "queued"
+          : "not_applied_no_next_round",
+      };
+    });
+  }
+
+  private isNextRoundIntervention(type: Intervention["type"]): boolean {
+    return type === "inject_evidence"
+      || type === "rebalance_attention"
+      || type === "shuffle_knowledge"
+      || type === "devils_advocate"
+      || type === "force_reflection"
+      || type === "continue_discussion";
+  }
+
+  /**
+   * 将表面收敛、热力学候选和治理否决合并为唯一 stopDecision。
+   * hard cap 不可否决；其他提前终止在高风险问题或已排队干预存在时至少延后一轮。
+   */
+  private resolveStopDecision(input: {
+    round: number;
+    opinions: AgentOpinion[];
+    surfaceConverged: boolean;
+    governanceResult: RoundGovernanceResult | null;
+    interventions: Intervention[];
+    terminationDecision: TerminationDecision | null;
+  }): RoundStopDecision {
+    const {
+      round,
+      opinions,
+      surfaceConverged,
+      governanceResult,
+      interventions,
+      terminationDecision,
+    } = input;
+
+    const hardCap = round >= this.config.maxRounds
+      || terminationDecision?.reason === "hard_cap";
+    const candidates = {
+      surfaceConverged,
+      thermo: terminationDecision ?? undefined,
+      hardCap,
+    };
+
+    if (hardCap) {
+      return {
+        shouldStop: true,
+        reason: "hard_cap",
+        candidates,
+        vetoedByGovernance: false,
+        explanation: terminationDecision?.message ?? `轮次达到硬上限 ${this.config.maxRounds}`,
+      };
+    }
+
+    // <2 个有效响应既不是共识，也不足以支持热力学提前终止。
+    if (opinions.length < 2) {
+      return {
+        shouldStop: false,
+        reason: "continue",
+        candidates: { ...candidates, surfaceConverged: false },
+        vetoedByGovernance: false,
+        explanation: "有效响应不足，继续至下一轮收集数据",
+      };
+    }
+
+    const hasQueuedIntervention = interventions.some(
+      intervention => intervention.applicationStatus === "queued" && intervention.applied,
+    );
+    const hasBlockingIssue = (governanceResult?.issues ?? []).some(issue =>
+      issue.severity === "high" || this.isTerminationBlockingIssue(issue.type),
+    );
+    const surfaceStopEnabled = (this.config.terminationPolicy ?? "surface") === "surface";
+    const hasEarlyStopCandidate = (surfaceStopEnabled && surfaceConverged)
+      || Boolean(terminationDecision?.shouldTerminate);
+
+    if (hasEarlyStopCandidate && (hasQueuedIntervention || hasBlockingIssue)) {
+      return {
+        shouldStop: false,
+        reason: "continue",
+        candidates,
+        vetoedByGovernance: true,
+        explanation: "治理诊断否决提前终止，保留下一轮干预效果观察窗口",
+      };
+    }
+
+    if (terminationDecision?.shouldTerminate) {
+      return {
+        shouldStop: true,
+        reason: "thermo_termination",
+        candidates,
+        vetoedByGovernance: false,
+        explanation: terminationDecision.message,
+      };
+    }
+
+    if (surfaceStopEnabled && surfaceConverged) {
+      return {
+        shouldStop: true,
+        reason: "surface_convergence",
+        candidates,
+        vetoedByGovernance: false,
+        explanation: "表面收敛已完成治理检查，未发现阻断性问题",
+      };
+    }
+
+    return {
+      shouldStop: false,
+      reason: "continue",
+      candidates,
+      vetoedByGovernance: false,
+      explanation: "未满足终止条件",
+    };
+  }
+
+  private isTerminationBlockingIssue(issueType: string): boolean {
+    const normalized = issueType.toLowerCase();
+    return normalized.includes("premature_consensus")
+      || normalized.includes("one_d_mask")
+      || normalized.includes("1d_mask")
+      || normalized.includes("evidence_silence");
   }
 
   /** Compute influence factor map for a round's opinions against the current graph. */
@@ -416,7 +697,7 @@ export class DiscussionEngine {
    * 返回浅拷贝数组，防止外部直接修改内部状态。
    */
   getRoundDataArray(): RoundData[] {
-    return [...this.roundDataArray];
+    return structuredClone(this.roundDataArray);
   }
 
   /** Phase 3: assemble the final DiscussionResult. */
@@ -434,7 +715,9 @@ export class DiscussionEngine {
       interactionGraph: this.graphBuilder.getGraph(),
       finalDecision,
       finalBeliefs,
-      converged: roundResults[roundResults.length - 1]?.converged || false,
+      converged: roundResults[roundResults.length - 1]?.acceptedConsensus || false,
+      acceptedConsensus: roundResults[roundResults.length - 1]?.acceptedConsensus || false,
+      stopReason: roundResults[roundResults.length - 1]?.stopDecision?.reason ?? "unknown",
       totalRounds: roundResults.length,
     };
   }
@@ -445,7 +728,9 @@ export class DiscussionEngine {
 
   /** Set agent-specific knowledge for information-layer intervention prompts. */
   setAgentKnowledge(knowledge: Map<string, string[]>): void {
-    this.agentKnowledge = knowledge;
+    this.agentKnowledge = new Map(
+      Array.from(knowledge, ([agentId, items]) => [agentId, [...items]])
+    );
   }
 
   getDiscussionData(task: DiscussionTask, agentInfos: AgentInfo[]): DiscussionData {
@@ -460,7 +745,10 @@ export class DiscussionEngine {
           roundNumber: r.roundNumber,
           opinions: r.opinions,
           timestamp: r.timestamp,
+          surfaceConverged: r.surfaceConverged,
+          acceptedConsensus: r.acceptedConsensus,
           converged: r.converged,
+          stopDecision: r.stopDecision,
         })))
         : "",
       belief: 0,
@@ -488,7 +776,7 @@ export class DiscussionEngine {
         startTime: this.eventTracker.getEvents("round_start")[0]?.timestamp || new Date().toISOString(),
         endTime: this.eventTracker.getEvents("decision")[0]?.timestamp || new Date().toISOString(),
         totalRounds: rounds.length,
-        converged: rounds.length > 0 && rounds[rounds.length - 1].converged,
+        converged: rounds.length > 0 && rounds[rounds.length - 1].acceptedConsensus,
       },
     };
   }
@@ -629,6 +917,7 @@ export class DiscussionEngine {
         belief: observation.parsedOpinion.belief,
         confidence: observation.parsedOpinion.confidence,
         referencedAgents: observation.parsedOpinion.referencedAgents,
+        itemBeliefs: observation.parsedOpinion.itemBeliefs,
         timestamp: observation.timestamp,
       });
     }
@@ -667,12 +956,17 @@ export class DiscussionEngine {
         );
         const response = await agent.sendMessage(prompt);
         // Use the shared parser instead of a private duplicate
-        const parsedOpinion = this.opinionParser.parseOpinion(
+        const rawParsedOpinion = this.opinionParser.parseOpinion(
           response,
           agent.id,
           state.belief,
           state.confidence,
           roundNumber
+        );
+        const parsedOpinion = canonicalizeOpinionOptions(
+          rawParsedOpinion,
+          task.canonicalOptions,
+          task.optionAliases,
         );
 
         const observation: RawObservation = {
@@ -794,7 +1088,11 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
   }
 
   protected checkConvergence(opinions: AgentOpinion[]): boolean {
-    if (opinions.length < 2) return true;
+    // 审计 P0.3 修复（2026-08-06）：<2 个响应不是收敛，是数据不足。
+    // 修复前 <2 直接返回 true → 全失败（0 响应）被标记为 converged，
+    // generateFinalDecision 再对空 opinions 做 0/0 平均产出 NaN。
+    // 0 响应 = 全 agent 失败；1 响应 = 无法达成共识；两者都应继续（受 maxRounds 约束）。
+    if (opinions.length < 2) return false;
 
     // V2: per-item convergence — all items must be converged
     if (opinions[0]?.itemBeliefs && opinions[0].itemBeliefs.length > 0) {
@@ -817,6 +1115,15 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     const beliefStd = Math.sqrt(beliefs.reduce((sum, b) => sum + Math.pow(b - meanBelief, 2), 0) / beliefs.length);
 
     return beliefStd < this.config.convergenceThreshold;
+  }
+
+  /**
+   * 计算热力学终止候选，不直接控制循环。
+   * 基类没有热力学终止能力；NativeCognitiveEngine 覆写后返回结构化候选，
+   * 最终是否退出由 finalizeRound 在完整提交审计记录后统一仲裁。
+   */
+  protected evaluateTerminationCandidate(_round: number): TerminationDecision | null {
+    return null;
   }
 
   /**
@@ -968,13 +1275,19 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
    * Get all cognitive states (v3.0). Returns empty map if useCognitiveState is false.
    */
   getCognitiveStates(): Map<string, AgentCognitiveState> {
-    return new Map(this.cognitiveStates);
+    return structuredClone(this.cognitiveStates);
   }
 
   private generateFinalDecision(roundResults: RoundResult[]): string {
     if (roundResults.length === 0) return "No decision reached";
 
     const lastRound = roundResults[roundResults.length - 1];
+    // 审计 P0.3 修复（2026-08-06）：空 opinions 时 0/0 = NaN，旧实现输出 "NaN - neutral"，
+    // 把失败伪装成中性共识。显式标注失败。
+    if (lastRound.opinions.length === 0) {
+      return `Final decision after ${roundResults.length} rounds (overall belief: no agent responses — FAILED, not a consensus)`;
+    }
+
     const reasonings = lastRound.opinions
       .filter(o => o.reasoning.length > 0)
       .map(o => `${o.agentId}: ${o.reasoning}`);
@@ -999,7 +1312,7 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
 
   /** Get dropout observations — used to build the sensitivity graph */
   getDropoutObservations() {
-    return this.dropoutObservations;
+    return structuredClone(this.dropoutObservations);
   }
 
   summarizeTrace() {
@@ -1470,6 +1783,11 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
           );
           if (existingEdge) {
             existingEdge.weight = updatedEdge.weight;
+            this.graphBuilder.updateEdgeWeight(
+              updatedEdge.source,
+              updatedEdge.target,
+              updatedEdge.weight,
+            );
           }
         }
       }
@@ -1488,7 +1806,9 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
 
   /** 获取交叉质证结果 (如果触发过) */
   getCrossExaminationResult(): CrossExaminationResult | null {
-    return this.crossExaminationResult;
+    return this.crossExaminationResult
+      ? structuredClone(this.crossExaminationResult)
+      : null;
   }
 
   // ==========================================================================
@@ -1637,6 +1957,9 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
   }
 
   reset(): void {
+    if (this.lifecycleState === "running") {
+      throw new Error("Cannot reset DiscussionEngine while a run is in progress");
+    }
     this.memoryManager = new MemoryManager(new InMemoryStrategy());
     this.influenceManager = new InfluenceManager(new RuleBasedInfluence());
     this.graphBuilder = new InteractionGraphBuilder();
@@ -1644,7 +1967,7 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     this.crossExaminationResult = null;
     // 补齐此前遗漏的重置项，防止跨实验状态泄漏
     this.governancePrompts.clear();
-    this.agentKnowledge?.clear();
+    this.agentKnowledge = undefined;
     this.eventTracker.clear();
     this.roundDataArray = [];
     this.dropoutObservations = [];
@@ -1654,6 +1977,7 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     this.randomInterveneRng = mulberry32((this.config.seed ?? 42) + 0x5A4D);
     // v3.0: 重置 cognitive states
     this.cognitiveStates.clear();
+    this.lifecycleState = "idle";
   }
 }
 

@@ -325,7 +325,9 @@ Items:
 | **none**（无治理） | 1 | 0.571 | 70.0% | 96,540 | baseline（university pilot） |
 | **delta**（δ 自适应治理） | 1 | 0.643 | 80.0% | 187,958 | δ 治理方向正确（IDR +10pp） |
 | **pool**（E10 证据池） | 1 | 0.571 | 75.0% | 193,376 | τ 无改善、IDR +5pp（低于 delta）、成本 2x |
-| **semantic**（δ + SemanticTool） | 3 | 0.571 / 0.571 / 0.000 | 80.0% | — | 第三次 2 轮即收敛（τ=0） |
+| **semantic**（δ + SemanticTool） | 3（有效 2）⚠️ | 0.571 / 0.571 / 0.000 | 80.0% | — | 第三次 2 轮即收敛（τ=0） |
+
+> ⚠️ **数据有效性标注（2026-08-06 审计）**：n=3 中的 τ=0.000 run 及"2 轮即收敛"系旧 `checkConvergence` 伪收敛（opinions<2 → return true）产物，08-06 fix#1/#2 已作废；run3/4 同为退化 run（未列入本表）。**有效 semantic 样本仅 run0/1（n=2，mean τ=0.571）**。80.0% 的 IDR_end 与 `idr_diffusion.json` 的 `idrEndMean=0.6375` 矛盾（系第 5 轮曲线值误当 end 均值），需按 n=2 重算。SemanticTool/δ+LLM 收益主张需用当前代码重跑（n≥10）。
 
 > **τ = Kendall τ-b**（对真实排名，见 §2.4）；**IDR_end** = 最终轮信息扩散率（非属主碎片吸收率均值，过程证据，`e9_analysis/idr_diffusion_report.md`）。IDR 匹配为词+值共现启发式，**不 claim 中介**。
 

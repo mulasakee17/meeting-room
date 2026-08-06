@@ -74,7 +74,7 @@ export interface DeltaDiagnosis {
 
 const DEFAULTS = {
   polarizationThreshold: 0.15, // δ 诊断层（比 cognitiveDetectors 的 0.25 更敏感，因用于分析而非实时干预）
-  oneDMaskThreshold: 0.40,
+  oneDMaskThreshold: 0.35, // 降低以捕捉均衡偏误（标量共识掩盖的向量分歧较弱但值得干预）
   evidenceSilenceThreshold: 0.50,
   confidenceGapThreshold: 0.60,
   stanceFlipThreshold: 0,       // 二进制：发生了就触发
@@ -95,6 +95,23 @@ const SAFETY_MARGINS = {
   concentration: 0.40,          // I 在短对话中不可靠
   consistency: 0.35,            // 同上
 } as const;
+
+// ============================================================================
+// Empty Diagnosis (Tier 1 热力学筛查通过时返回，避免重复构造)
+// ============================================================================
+
+/** 空 δ 诊断结果——所有信号未触发，用于 Tier 1 筛查通过时的早返回 */
+export const EMPTY_DELTA_DIAGNOSIS: DeltaDiagnosis = {
+  polarization: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算" },
+  oneDMask: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算" },
+  evidenceSilence: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算", silencedAgents: [] },
+  confidenceGap: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算", overconfidentAgents: [] },
+  stanceFlip: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算", flippedAgents: [] },
+  noResponse: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算", unresponsiveAgents: [] },
+  concentration: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算" },
+  consistency: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算" },
+  summary: "Tier 1 热力学筛查通过，未触发 δ 诊断",
+};
 
 // ============================================================================
 // Adaptive Threshold

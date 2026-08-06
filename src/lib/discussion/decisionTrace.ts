@@ -377,26 +377,26 @@ export class DecisionTraceBuilder {
   }
 
   getTrace(): DecisionTraceEntry[] {
-    return [...this.trace];
+    return structuredClone(this.trace);
   }
 
   getEnhancedTrace(): EnhancedDecisionTraceEntry[] {
-    return [...this.enhancedTrace];
+    return structuredClone(this.enhancedTrace);
   }
 
   getTraceByAgent(agentId: string): DecisionTraceEntry[] {
-    return this.trace.filter(t => t.agentId === agentId);
+    return structuredClone(this.trace.filter(t => t.agentId === agentId));
   }
 
   getEnhancedTraceByAgent(agentId: string): EnhancedDecisionTraceEntry[] {
-    return this.enhancedTrace.filter(t => t.agentId === agentId);
+    return structuredClone(this.enhancedTrace.filter(t => t.agentId === agentId));
   }
 
   getInfluenceChain(targetAgentId: string): DecisionTraceEntry[] {
     const result: DecisionTraceEntry[] = [];
     const visited = new Set<string>();
     this.buildInfluenceChain(targetAgentId, 0, visited, result);
-    return result;
+    return structuredClone(result);
   }
 
   private buildInfluenceChain(
@@ -604,8 +604,8 @@ export class DecisionTraceBuilder {
     return {
       entries: this.getTrace(),
       enhancedEntries: this.getEnhancedTrace(),
-      consensusEvents: [...this.consensusEvents],
-      influenceGraph: [...this.influenceRecords],
+      consensusEvents: structuredClone(this.consensusEvents),
+      influenceGraph: structuredClone(this.influenceRecords),
       beliefTrajectories,
     };
   }

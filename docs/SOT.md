@@ -3,7 +3,7 @@
 > **所有文档引用数字时，必须以本文件为准。**
 >
 > 更新规则：当代码或实验数据变化时，先更新本文件，再更新引用文档。
-> 最后更新：2026-07-31（基于代码实跑 + 文件计数 + v6 Phase 2.5-2.8 完成 + Pilot A/B 对照 + SemanticTool 审计日志补齐 + P0 统计 bug 修复 + 低风险代码清理）
+> 最后更新：2026-08-05（基于代码实跑 + 文件计数 + v6 Phase 2.5-2.8 完成 + Pilot A/B 对照 + SemanticTool 审计日志补齐 + P0 统计 bug 修复 + 低风险代码清理 + P0 I/Λ 统一修复 + P1 thermo @deprecated 标注 + 异步路径 rawStates 修复 + 文档对齐）
 
 ---
 
@@ -282,34 +282,45 @@
 
 ---
 
-## 6. 文档结构（14 个活跃文档 + 归档）
+## 6. 文档结构（18 个活跃文档 + 归档）
 
 ```
 docs/
 ├── SOT.md                          ← 本文件（单一真相源）
+├── SWARMALPHA_TECHNICAL_DOCUMENTATION.md  ← 技术文档（代码级导览，2026-08-04）
+├── EXPERIMENT_DESIGN_V7.md         ← 未来实验设计（HiddenBench 全量 + 监测定位，2026-08-04）
 ├── INTEGRATION.md                  ← 集成指南
 ├── GOVERNANCE_DESIGN.md            ← 治理引擎设计 ADR
 ├── COLLABORATION_GUIDE.md          ← 协作者指南（面向新成员）
+├── PROFESSOR_GUIDE.md              ← 研究导读（论文视角）
 ├── PITCH.html/pdf/png              ← 项目展示（3 格式）
 ├── architecture/
 │   ├── ARCHITECTURE.md             ← 核心架构文档
 │   ├── AGENT_SIMULATION.md         ← Agent 内部机制深入
+│   ├── CODE_MAP.md                 ← 代码地图
+│   ├── RUNTIME_GUIDE.md            ← 运行时技术指南
 │   └── AGENT_SOCIETY_VISION.md     ← 长期愿景
 ├── research/
 │   ├── THEORY.md                   ← 理论分析
-│   └── EXPERIMENT_DESIGN.md        ← 实验设计
+│   ├── EXPERIMENT_DESIGN.md        ← 实验设计（已完成实验）
+│   └── CONTRIBUTIONS.md            ← 贡献点清单
 ├── paper/
 │   ├── PAPER_DRAFT.md              ← 英文论文稿（投稿版）
 │   ├── PAPER_PROFESSOR_VERSION.md  ← 中文论文稿（沟通版）
-│   └── LIMITATIONS.md              ← 局限性 + 历史修复记录
+│   ├── LIMITATIONS.md              ← 局限性 + 历史修复记录
+│   ├── AAMAS_SUBMISSION_CHECKLIST.md ← AAMAS 审稿清单
+│   ├── PAPER_OPTIMIZATION_GUIDE.md ← 论文优化指南
+│   ├── ABLATION_PLAN.md            ← 消融计划
+│   └── TECHNICAL_APPENDIX.md       ← 技术附录
 ├── roadmap/
+│   ├── ROADMAP_V6.md               ← v6 路线图
 │   └── future.md                   ← 未来路线图
 └── archive/                        ← 归档文档（不删除，仅作 provenance）
     ├── architecture/ (3 个)
     ├── audits/ (4 个，含 data_mining_report.md)
     ├── paper/ (1 个：TECHNICAL_REPORT.md)
     ├── research/ (4 个)
-    └── roadmap/ (5 个)
+    └── roadmap/ (8 个)
 ```
 
 根目录：

@@ -1358,6 +1358,22 @@ export function computeMetrics(
   const beliefData = data.filter(d => d.runtimeMode === "belief");
   const cognitiveData = data.filter(d => d.runtimeMode === "cognitive" || d.runtimeMode === "native_cognitive");
 
+  // 伪一致门控（v6, 2026-08-04）：cognitiveData 若同时含 "cognitive"（post-hoc 路径）
+  // 与 "native_cognitive"（native 路径），Confidence.stated / Evidence.coverage /
+  // Evidence.diversity 字段语义不同（见 cognitiveState.ts @deprecated 说明），
+  // 混合计算这些字段会产生不可比数值。仅告警不阻断，供分析者判断。
+  const _hasPosthoc = cognitiveData.some(d => d.runtimeMode === "cognitive");
+  const _hasNative = cognitiveData.some(d => d.runtimeMode === "native_cognitive");
+  if (_hasPosthoc && _hasNative) {
+    const _nPosthoc = cognitiveData.filter(d => d.runtimeMode === "cognitive").length;
+    const _nNative = cognitiveData.filter(d => d.runtimeMode === "native_cognitive").length;
+    console.warn(
+      `[MetricComputer] 伪一致警告: cognitiveData 混合 post-hoc(${_nPosthoc}) 与 native(${_nNative}) ` +
+      `runtimeMode。Confidence.stated / Evidence.coverage / Evidence.diversity 语义不同，` +
+      `跨路径比较这些字段不可比。experimentId=${experimentId}`,
+    );
+  }
+
   let metrics: ExperimentMetrics;
 
   switch (experimentId) {

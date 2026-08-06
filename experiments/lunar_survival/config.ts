@@ -21,6 +21,13 @@ export interface TaskConfig {
     knownItems: string;
     initialBias: string;
   }>;
+  /**
+   * prompt 风格：是否提示"信息不对称"。
+   * "hint"（默认）：明确告知每位成员有他人不知道的独有信息，请主动分享。
+   * "nohint"：对齐 HiddenBench 原论文主实验——不提示信息不对称，
+   *   只给"## Your Information"式信息块，靠讨论自然揭示（基线应重现"讨论后失败"）。
+   */
+  promptStyle?: "hint" | "nohint";
 }
 
 export type AblationMode = "none" | "detect-only" | "random-intervene" | "full";

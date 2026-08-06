@@ -8,11 +8,13 @@
 
 ## 1. 架构概览
 
-SwarmAlpha 把"治理"从"执行"中剥离出来，作为一个**框架无关**的运行时，可以嵌入到任何多 Agent 框架（AutoGen / CrewAI / LangGraph / 自研框架）之上。
+SwarmAlpha 把"治理"从"执行"中剥离出来，作为一个**框架无关**的运行时，可以嵌入到任何多 Agent 框架（AutoGen / 自研框架）之上。
+
+> **注意**：CrewAI/LangGraph 已从路线图移除（2026-07-30），当前仅支持 AutoGen 和自研框架。
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  你的多 Agent 框架（AutoGen / CrewAI / 自研）                  │
+│  你的多 Agent 框架（AutoGen / 自研）                            │
 │  - agent 生命周期                                            │
 │  - 消息路由                                                  │
 │  - LLM 调用                                                  │
@@ -87,7 +89,7 @@ console.log(sessionResult.evaluation.grade);           // "excellent" | "good" |
 
 ### 路径 B：StateInferenceBridge（推荐用于外部框架）
 
-AutoGen / CrewAI / LangGraph 等 framework 的 agent 消息**不含** `belief` / `confidence` 字段。`StateInferenceBridge` 用三级策略补全：
+AutoGen 等框架的 agent 消息**不含** `belief` / `confidence` 字段。`StateInferenceBridge` 用三级策略补全：
 
 1. **显式字段**：`FrameworkMessage` 自带 `belief` / `confidence` → 直接使用
 2. **`[GOV]` 标签**：agent 发言末尾包含 `[GOV]{...}` JSON → 解析提取（需在 agent system prompt 末尾追加 `buildGovernanceExtension(itemNames)`）
@@ -172,7 +174,7 @@ new GovernanceRuntime(config?: Partial<RuntimeConfig>)
 | `enableAdaptiveDosage` | `boolean` | `false` | 基于历史效果自适应干预强度 |
 | `seed` | `number` | `42` | PRNG 种子，保证 `random-intervene` 等可复现 |
 
-`governanceConfig` 默认开启全部 7 个检测器（4 经典：Echo Chamber / Authority Bias / Polarization / Premature Consensus + 3 MAST FC2：Information Withholding / Ignored Input / Reasoning-Action Mismatch），干预级别 `medium`。
+`governanceConfig` 默认开启全部 16 个检测器（4 经典 + 3 MAST FC2 + 6 认知 + 3 FC1/FC3），干预级别 `medium`。
 
 ### 3.2 核心方法
 

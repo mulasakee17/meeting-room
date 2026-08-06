@@ -866,8 +866,15 @@ describe("MeasurementLayer pending modifications", () => {
     });
 
     const newInertia = layer.getCognitiveStates().get("a1")!.inertia.strength;
-    // inertiaFactor=0.5 应该降低惯性
-    expect(newInertia).toBeLessThan(origInertia);
+    // P0 修复（2026-08-04）：Step 5.5 的 estimateAll 覆盖 inertia.strength 为 ProgressiveEstimator 值。
+    // inertiaFactor（旧治理手段）修改的 strength 被 estimateAll 覆盖，这是预期行为。
+    // 验证：inertia.estimate 被 ProgressiveEstimator 更新（非 undefined）
+    const est = layer.getCognitiveStates().get("a1")!.inertia.estimate;
+    expect(est).toBeDefined();
+    expect(est).toBeGreaterThanOrEqual(0.05);
+    expect(est).toBeLessThanOrEqual(0.95);
+    // inertia.strength 现在等于 ProgressiveEstimator 的 estimate（backward compat）
+    expect(newInertia).toBe(est);
   });
 });
 
@@ -976,5 +983,20 @@ describe("MeasurementLayer.getAllCognitiveStateHistory", () => {
     expect(allHistory.has(1)).toBe(true);
     expect(allHistory.has(2)).toBe(true);
     expect(allHistory.has(3)).toBe(true);
+  });
+
+  it("returns deep state snapshots instead of mutable internal references", () => {
+    const layer = new MeasurementLayer();
+    const agents = [mockAgent("a1", "Alice", "analyst", 0.5, 0.8)];
+    const opinions: AgentOpinion[] = [mockOpinion("a1", 0.5, 0.8)];
+    layer.updateCognitiveStates(opinions, agents, 1, { mode: "posthoc" });
+
+    const current = layer.getCognitiveStates();
+    current.get("a1")!.utility.scores.tampered = 999;
+    expect(layer.getCognitiveStates().get("a1")!.utility.scores.tampered).toBeUndefined();
+
+    const history = layer.getAllCognitiveStateHistory();
+    history.get(1)!.get("a1")!.confidence.overall = 999;
+    expect(layer.getCognitiveStateHistory(1).get("a1")!.confidence.overall).not.toBe(999);
   });
 });
