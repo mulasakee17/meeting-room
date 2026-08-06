@@ -21,6 +21,31 @@ import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
 import { mulberry32 } from "../../../src/lib/utils/statsUtils";
 import type { TaskConfig } from "../../lunar_survival/config";
 
+/**
+ * Candidate labels are part of the task schema, not the answer key.
+ * `searchKeys` is the canonical candidate registry; `correctAnswer` is used
+ * only to validate schema completeness and later score predictions.
+ */
+export function resolveCandidateOptions(
+  task: Pick<TaskConfig, "searchKeys" | "correctAnswer">,
+): string[] {
+  const options = Object.keys(task.searchKeys ?? {});
+  if (options.length === 0) {
+    throw new Error("Task candidate schema is empty: searchKeys must declare every option");
+  }
+
+  const truthLabels = Object.keys(task.correctAnswer ?? {});
+  const optionSet = new Set(options);
+  const truthSet = new Set(truthLabels);
+  const schemaMismatch = optionSet.size !== truthSet.size
+    || options.some(option => !truthSet.has(option))
+    || truthLabels.some(label => !optionSet.has(label));
+  if (schemaMismatch) {
+    throw new Error("Task candidate schema does not match correctAnswer labels");
+  }
+  return options;
+}
+
 // ============================================================================
 // Free-text LLM call (no json_object constraint)
 // ============================================================================
@@ -370,7 +395,7 @@ export async function runHiddenBenchProtocol(
   let totalPrompt = 0;
   let totalCompletion = 0;
 
-  const options = Object.keys(task.correctAnswer);
+  const options = resolveCandidateOptions(task);
   const correctAnswer = Object.entries(task.correctAnswer).find(([, r]) => r === 1)?.[0] ?? "";
   const agentDefs = task.agents || [];
 

@@ -13,8 +13,9 @@
  * 2. hidden_information（独有事实，3-4 条）→ 循环分配给 4 个 agent 的 knownItems
  *    - HiddenBench 默认 4 agent，每条独有事实归一个 agent（与论文协议一致）
  *    - 每个 agent 拿 1 条 hidden，构成"无单 agent 能独立解出"的隐藏档案
- * 3. possible_answers（候选方案 3-4 个）→ correctAnswer 的 key
- *    - correct_answer 排第 1，其余按 possible_answers 原顺序排 2/3/4
+ * 3. possible_answers（候选方案 3-4 个）→ searchKeys 的 canonical key
+ *    - 展示顺序始终使用 possible_answers 原顺序，不从 correct_answer 派生
+ *    - correctAnswer 仅供评分；禁止用其 key 顺序构建 prompt
  *    - 效果：kendallTau 只在"正确选项被排第一"时为 1 —— 等价于单选准确率
  *    - ⚠️ 这是"排序等价单选"的适配；若需精确单选指标，Runner 需加 accuracy 计算
  *
@@ -107,7 +108,7 @@ export function taskToConfig(
     };
   });
 
-  // 3. correctAnswer：correct 排 1，其余按原顺序排 2/3/4
+  // 3. correctAnswer 仅供评分。对象插入顺序不得作为候选展示顺序。
   const answers = task.possible_answers ?? [];
   const correctAnswer: Record<string, number> = {};
   let rank = 1;

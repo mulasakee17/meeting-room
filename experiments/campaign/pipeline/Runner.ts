@@ -28,7 +28,7 @@ import {
 import { computeDeltaDiagnosis } from "../../../src/lib/thermodynamics/computeDelta";
 import { estimateAll } from "../../../src/lib/thermodynamics/ProgressiveEstimator";
 import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
-import { runHiddenBenchProtocol } from "./hiddenbenchProtocol";
+import { resolveCandidateOptions, runHiddenBenchProtocol } from "./hiddenbenchProtocol";
 
 // ============================================================================
 // Scenario Loading
@@ -97,6 +97,10 @@ function createAgents(
   const rng = mulberry32(seed);
   const agents: DiscussionAgent[] = [];
   const knowledge = new Map<string, string[]>();
+  const candidateOptions = resolveCandidateOptions(task);
+  const candidateContract = candidateOptions
+    .map((option, index) => `${index + 1}. ${option}`)
+    .join("\n");
 
   // 为每个 agent 分配独有信息
   const agentNames = task.agents || [];
@@ -126,6 +130,8 @@ function createAgents(
           : `1. 主动分享你的独有知识\n`
             + `2. 对他人的判断提出质疑\n`
             + `3. 如果他人与你独有知识矛盾，必须指出\n`)
+        + `候选标签契约（必须逐字使用，每个候选恰好输出一次）：\n${candidateContract}\n`
+        + `rank 必须是 1 到 ${candidateOptions.length} 的完整排列，不得重复或缺失。\n`
         + `4. 最终以JSON格式给出你的判断，格式：\n`
         + `{\n`
         + `  "reasoning": "你的分析",\n`
@@ -134,11 +140,7 @@ function createAgents(
         + `  "confidence": 0到100,\n`
         + `  "nextOpinion": "下一步讨论方向",\n`
         + `  "referencedAgents": ["a2"],\n`
-        + `  "itemBeliefs": [\n`
-        + `    {"item": "方案A", "rank": 3, "belief": -0.5, "confidence": 85},\n`
-        + `    {"item": "方案B", "rank": 1, "belief": 0.7, "confidence": 90},\n`
-        + `    {"item": "方案C", "rank": 2, "belief": 0.1, "confidence": 65}\n`
-        + `  ]\n`
+        + `  "itemBeliefs": [{"item": "<上述候选标签之一>", "rank": "<唯一整数>", "belief": 0.0, "confidence": 50}]\n`
         + `}\n`
         + `itemBeliefs中：rank为你认为的排名(1=最优)，belief为对该选项的独立偏好(-1=强烈反对,0=中立,1=强烈支持)，confidence为置信度(0-100)`
       : undefined;
@@ -168,6 +170,15 @@ function createAgents(
   }
 
   return { agents, knowledge };
+}
+
+export function buildDiscussionTaskContent(task: any): string {
+  const options = resolveCandidateOptions(task);
+  const briefing = task.sharedBriefing || task.title || "";
+  const optionList = options
+    .map((option, index) => `${index + 1}. ${option}`)
+    .join("\n");
+  return `${briefing}\n\nCandidate option schema (use these labels exactly; order is not a priority signal):\n${optionList}`;
 }
 
 // ============================================================================
@@ -317,12 +328,6 @@ async function runHiddenBenchSingle(
   };
 
   const hbResult = await runHiddenBenchProtocol(task, llmConfig, effectiveSeed, config.maxRounds);
-
-  // 提取 correctAnswer 中 rank=1 的选项，用于 finalAccuracy 兼容
-  const correctAnswer = task.correctAnswer as Record<string, number> | undefined;
-  const correctItem = correctAnswer
-    ? Object.entries(correctAnswer).find(([, r]) => r === 1)?.[0]
-    : undefined;
 
   // HiddenBench 协议无 ranking，用 postAccuracy 作为 finalAccuracy
   const finalAccuracy = hbResult.postAccuracy;
@@ -491,15 +496,14 @@ export async function runSingle(
     }
   }
 
+  const candidateOptions = resolveCandidateOptions(scenario.task);
   const task = {
     id: scenario.task.id,
     description: scenario.task.sharedBriefing || scenario.task.title,
     type: "ranking",
     createdAt: new Date().toISOString(),
-    content: scenario.task.sharedBriefing || "",
-    canonicalOptions: scenario.task.correctAnswer
-      ? Object.keys(scenario.task.correctAnswer)
-      : undefined,
+    content: buildDiscussionTaskContent(scenario.task),
+    canonicalOptions: candidateOptions,
     optionAliases: scenario.task.searchKeys,
   };
 
@@ -508,9 +512,7 @@ export async function runSingle(
   const elapsed = Date.now() - startTime;
 
   // 提取排名和 τ
-  const agentNames = scenario.task.correctAnswer
-    ? Object.keys(scenario.task.correctAnswer)
-    : [];
+  const agentNames = candidateOptions;
   let finalRanking: string[] = [];
   let finalKendallTau = 0;
   let finalAccuracy = 0;
