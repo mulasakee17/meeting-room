@@ -126,52 +126,59 @@ export class StateInferenceBridge implements GovernanceBridge {
       let reasoning: string;
       let stanceSource: LegacyQuantitySource;
       let confidenceSource: LegacyQuantitySource;
+      const extracted = extractGovTag(content);
+      const metadataBelief = msg.metadata?.belief;
+      const metadataConfidence = msg.metadata?.confidence;
+      const explicitBelief = this.isFiniteNumber(msg.belief) ? msg.belief : undefined;
+      const explicitConfidence = this.isFiniteNumber(msg.confidence) ? msg.confidence : undefined;
+      const fallbackBelief = this.isFiniteNumber(metadataBelief) ? metadataBelief : undefined;
+      const fallbackConfidence = this.isFiniteNumber(metadataConfidence) ? metadataConfidence : undefined;
 
-      // Level 1: 显式字段
-      if (typeof msg.belief === "number" && typeof msg.confidence === "number") {
-        belief = Math.max(-1, Math.min(1, msg.belief));
-        confidence = Math.max(0, Math.min(100, msg.confidence));
-        reasoning = (msg.metadata?.reasoning as string) || cleanContent;
+      if (explicitBelief !== undefined) {
+        belief = Math.max(-1, Math.min(1, explicitBelief));
         stanceSource = "framework_reported";
-        confidenceSource = "framework_reported";
-        this.stats.explicitField++;
+      } else if (extracted) {
+        belief = extracted.belief;
+        stanceSource = "agent_reported";
+      } else if (fallbackBelief !== undefined) {
+        belief = Math.max(-1, Math.min(1, fallbackBelief));
+        stanceSource = "framework_reported";
+      } else {
+        belief = 0;
+        stanceSource = "runtime_default";
       }
-      // Level 2: [GOV] 标签
-      else {
-        const extracted = extractGovTag(content);
-        if (extracted) {
-          belief = extracted.belief;
-          confidence = extracted.confidence;
-          itemBeliefs = extracted.itemBeliefs;
-          reasoning = cleanContent;
-          stanceSource = "agent_reported";
-          confidenceSource = "agent_reported";
-          this.stats.govTagExtracted++;
-        }
-        // Level 3: 默认值（标记待 LLM 推断）
-        else {
-          const metadataBelief = msg.metadata?.belief;
-          const metadataConfidence = msg.metadata?.confidence;
-          belief = typeof metadataBelief === "number"
-            ? Math.max(-1, Math.min(1, metadataBelief))
-            : 0;
-          confidence = typeof metadataConfidence === "number"
-            ? Math.max(0, Math.min(100, metadataConfidence))
-            : 50;
-          stanceSource = typeof metadataBelief === "number"
-            ? "framework_reported"
-            : "runtime_default";
-          confidenceSource = typeof metadataConfidence === "number"
-            ? "framework_reported"
-            : "runtime_default";
-          reasoning = (msg.metadata?.reasoning as string) || cleanContent;
-          this.stats.fallback++;
-          const inferStance = typeof metadataBelief !== "number";
-          const inferConfidence = typeof metadataConfidence !== "number";
-          if (inferStance || inferConfidence) {
-            this.pendingInference.push({ index: idx, inferStance, inferConfidence });
-          }
-        }
+
+      if (explicitConfidence !== undefined) {
+        confidence = Math.max(0, Math.min(100, explicitConfidence));
+        confidenceSource = "framework_reported";
+      } else if (extracted) {
+        confidence = extracted.confidence;
+        confidenceSource = "agent_reported";
+      } else if (fallbackConfidence !== undefined) {
+        confidence = Math.max(0, Math.min(100, fallbackConfidence));
+        confidenceSource = "framework_reported";
+      } else {
+        confidence = 50;
+        confidenceSource = "runtime_default";
+      }
+
+      itemBeliefs = extracted?.itemBeliefs;
+      reasoning = extracted
+        ? cleanContent
+        : ((msg.metadata?.reasoning as string) || cleanContent);
+
+      if (explicitBelief !== undefined && explicitConfidence !== undefined) {
+        this.stats.explicitField++;
+      } else if (extracted) {
+        this.stats.govTagExtracted++;
+      } else {
+        this.stats.fallback++;
+      }
+
+      const inferStance = stanceSource === "runtime_default";
+      const inferConfidence = confidenceSource === "runtime_default";
+      if (inferStance || inferConfidence) {
+        this.pendingInference.push({ index: idx, inferStance, inferConfidence });
       }
 
       const timestamp = this.normalizeObservedAt(msg.timestamp);
@@ -401,5 +408,9 @@ export class StateInferenceBridge implements GovernanceBridge {
       return new Date(timestamp).toISOString();
     }
     return new Date().toISOString();
+  }
+
+  private isFiniteNumber(value: unknown): value is number {
+    return typeof value === "number" && Number.isFinite(value);
   }
 }

@@ -415,6 +415,42 @@ describe("StateInferenceBridge", () => {
       expect(bridge.getStats().fallback).toBe(1);
     });
 
+    it("逐字段合并 top-level 与 [GOV]，不覆盖已有 framework report", () => {
+      const bridge = new StateInferenceBridge();
+      const msgs = bridge.adaptMessages([{
+        agentId: "a1",
+        content: 'Opinion.\n[GOV]{"belief": -0.6, "confidence": 75}',
+        belief: 0.4,
+        timestamp: "2026-01-01T00:00:00Z",
+      }], 1);
+
+      expect(msgs[0].belief).toBe(0.4);
+      expect(msgs[0].confidence).toBe(75);
+      expect(msgs[0].legacyTelemetry?.map(record => record.value.source)).toEqual([
+        "framework_reported",
+        "agent_reported",
+      ]);
+    });
+
+    it("把 NaN/Infinity 当作缺失输入而不是让整个批次崩溃", () => {
+      const bridge = new StateInferenceBridge();
+      const msgs = bridge.adaptMessages([{
+        agentId: "a1",
+        content: "Malformed host state.",
+        belief: Number.NaN,
+        confidence: Number.POSITIVE_INFINITY,
+        timestamp: "invalid",
+      }], 1);
+
+      expect(msgs[0].belief).toBe(0);
+      expect(msgs[0].confidence).toBe(50);
+      expect(Number.isFinite(Date.parse(msgs[0].timestamp))).toBe(true);
+      expect(msgs[0].legacyTelemetry?.map(record => record.value.source)).toEqual([
+        "runtime_default",
+        "runtime_default",
+      ]);
+    });
+
     it("从 metadata.referencedAgents 提取引用", () => {
       const bridge = new StateInferenceBridge();
       const raw = [{
