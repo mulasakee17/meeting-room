@@ -4,6 +4,9 @@
  * 统一实验战役的类型定义，供所有 pipeline 组件使用。
  */
 
+import type { GovernanceEstimate } from "../../src/lib/epistemic/semantics";
+import type { ProgressiveEstimates } from "../../src/lib/thermodynamics/ProgressiveEstimator";
+
 // ============================================================================
 // Experiment Configuration
 // ============================================================================
@@ -147,6 +150,12 @@ export interface RawRunData {
   }>;
   /** Cognitive state 轨迹（仅 cognitive 模式） */
   cognitiveTrajectory?: CognitiveStateSnapshot[];
+  /** Exact estimator records used online; analysis MUST prefer these over recomputation. */
+  governanceEstimateHistory?: Array<{
+    round: number;
+    agentId: string;
+    record: GovernanceEstimate<ProgressiveEstimates>;
+  }>;
   /** 热力学轨迹（RTHF 逐轮快照，仅 native_cognitive 模式） */
   thermoHistory?: Array<{
     round: number;

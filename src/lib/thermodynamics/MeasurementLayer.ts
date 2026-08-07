@@ -50,14 +50,17 @@ import type { AgentOpinion } from "../discussion/types";
 import type { DiscussionAgent } from "../discussion/index";
 import { computeDeltaDiagnosis, EMPTY_DELTA_DIAGNOSIS, type DeltaConfig, type DeltaDiagnosis } from "./computeDelta";
 import {
-  estimateAll,
+  estimateAllWithProvenance,
   detectBehaviorEvents,
   createInitialBehaviorEvents,
   createInitialSusceptibility,
   createInitialConfidence,
   createInitialInertia,
   type ProgressiveEstimates,
+  defaultProgressiveEstimatorRegistry,
 } from "./ProgressiveEstimator";
+import type { GovernanceEstimate } from "../epistemic/semantics";
+import type { GovernanceEstimatorRegistry } from "../epistemic/estimators";
 import { semanticConsult, type SemanticConsultRequest } from "./SemanticTool";
 import type { LLMConfig } from "../llm/providers";
 import {
@@ -178,6 +181,8 @@ export interface CognitiveUpdateResult {
 // ============================================================================
 
 export class MeasurementLayer {
+  private readonly governanceEstimatorRegistry: GovernanceEstimatorRegistry;
+
   /** 当前所有 agent 的认知状态 */
   private cognitiveStates: Map<string, AgentCognitiveState> = new Map();
 
@@ -205,6 +210,18 @@ export class MeasurementLayer {
 
   /** evidence_dedup 本 run 已调用次数——频率限制门控（2026-08-03 修复） */
   private semanticDedupCallCount = 0;
+
+  /** Round-indexed exact estimator provenance for paper analysis. */
+  private governanceEstimateHistory = new Map<
+    number,
+    Map<string, GovernanceEstimate<ProgressiveEstimates>>
+  >();
+
+  constructor(
+    governanceEstimatorRegistry: GovernanceEstimatorRegistry = defaultProgressiveEstimatorRegistry,
+  ) {
+    this.governanceEstimatorRegistry = governanceEstimatorRegistry.snapshot().seal();
+  }
 
   // ==========================================================================
   // Social Thermodynamics
@@ -633,7 +650,20 @@ export class MeasurementLayer {
 
   /** Run progressive estimation against owned state and persist its estimates. */
   estimateProgressiveState(round: number): Map<string, ProgressiveEstimates> {
-    return estimateAll(this.cognitiveStates, round);
+    return this.runProgressiveEstimation(round, new Map());
+  }
+
+  getGovernanceEstimateHistory(
+    round: number,
+  ): Map<string, GovernanceEstimate<ProgressiveEstimates>> {
+    return structuredClone(this.governanceEstimateHistory.get(round) ?? new Map());
+  }
+
+  getAllGovernanceEstimateHistory(): Map<
+    number,
+    Map<string, GovernanceEstimate<ProgressiveEstimates>>
+  > {
+    return structuredClone(this.governanceEstimateHistory);
   }
 
   /**
@@ -780,7 +810,14 @@ export class MeasurementLayer {
     for (const [aid, cs] of this.cognitiveStates) {
       preservedConfidenceOverall.set(aid, cs.confidence.overall);
     }
-    estimateAll(this.cognitiveStates, round);
+    const sourceEventIdsByAgent = new Map<string, string[]>();
+    for (const opinion of opinions) {
+      sourceEventIdsByAgent.set(
+        opinion.agentId,
+        (opinion.legacyTelemetry ?? []).map(record => record.eventId),
+      );
+    }
+    this.runProgressiveEstimation(round, sourceEventIdsByAgent);
     // 恢复 shrinkage 校准的 confidence.overall（ProgressiveEstimator 的 estimate 保留在 confidence.estimate）
     for (const [aid, overall] of preservedConfidenceOverall) {
       const cs = this.cognitiveStates.get(aid);
@@ -1526,7 +1563,7 @@ export class MeasurementLayer {
     // ── ProgressiveEstimator: I/C/Λ 渐进估计 ──
     // estimates 必须基于 cognitiveStates（有累积 behaviorEvents/utilityHistory），
     // 不能用 rawStatesOverride（临时对象，无历史数据，estimateAll 会返回低置信度先验）。
-    const estimates = estimateAll(this.cognitiveStates, round);
+    const estimates = this.getOrRunProgressiveEstimates(round);
 
     // ── 运行 δ 诊断（自适应阈值已在各 δ 函数内处理）──
     // states 可能是 rawStatesOverride（原始分歧）或 cognitiveStates（融合后，向后兼容）
@@ -1828,7 +1865,7 @@ export class MeasurementLayer {
       return { thermo, delta: EMPTY_DELTA_DIAGNOSIS, suggestions: [] };
     }
 
-    const estimates = estimateAll(this.cognitiveStates, round);
+    const estimates = this.getOrRunProgressiveEstimates(round);
     const delta = computeDeltaDiagnosis(states, thermo, estimates, config);
 
     const suggestions = this.buildDeltaSuggestions(delta, states, thermo, round);
@@ -1915,11 +1952,40 @@ export class MeasurementLayer {
     this.governancePrompts.clear();
     this.pendingInertiaFactors.clear();
     this.semanticAuditLog = [];
+    this.governanceEstimateHistory.clear();
     // 2026-08-03 修复：重置 SemanticTool 门控状态，防止跨 run 污染——
     // 旧实现遗漏 lastSemanticDedupUnsharedCount，上一 run 结束时该值很大，
     // 下一 run 首几轮未共享数都 ≤ 它 → evidence_dedup 被永久跳过（饿死）。
     this.lastSemanticDedupUnsharedCount = undefined;
     this.semanticDedupCallCount = 0;
+  }
+
+  private runProgressiveEstimation(
+    round: number,
+    sourceEventIdsByAgent: Map<string, string[]>,
+  ): Map<string, ProgressiveEstimates> {
+    const batch = estimateAllWithProvenance(
+      this.cognitiveStates,
+      round,
+      sourceEventIdsByAgent,
+      this.governanceEstimatorRegistry,
+    );
+    this.governanceEstimateHistory.set(round, structuredClone(batch.records));
+    return batch.estimates;
+  }
+
+  private getOrRunProgressiveEstimates(round: number): Map<string, ProgressiveEstimates> {
+    const recorded = this.governanceEstimateHistory.get(round);
+    const isComplete = recorded !== undefined
+      && recorded.size === this.cognitiveStates.size
+      && [...this.cognitiveStates.keys()].every(agentId => recorded.has(agentId));
+    if (isComplete && recorded) {
+      return new Map([...recorded].map(([agentId, record]) => [
+        agentId,
+        structuredClone(record.value),
+      ]));
+    }
+    return this.runProgressiveEstimation(round, new Map());
   }
 }
 

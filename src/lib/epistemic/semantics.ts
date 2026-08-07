@@ -35,7 +35,15 @@ export interface GovernanceEstimate<T = unknown> {
   layer: "governance_estimate";
   name: string;
   estimatorId: string;
+  estimatorVersion: string;
   sourceEventIds: string[];
+  inputFingerprint: string;
+  config: object;
+  configFingerprint: string;
+  outputFingerprint: string;
+  determinism:
+    | { kind: "deterministic" }
+    | { kind: "seeded"; seed: number; seedField: string };
   value: T;
 }
 

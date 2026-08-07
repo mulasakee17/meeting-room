@@ -2,6 +2,7 @@ import type {
   BeliefContractRegistry,
   BeliefValue,
   EpistemicClaim,
+  GovernanceEstimatorRegistry,
   LegacyQuantitySources,
   LegacySemanticTelemetry,
 } from "../epistemic";
@@ -247,6 +248,8 @@ export interface DiscussionConfig {
   memoryStrategy: string;
   /** Contract semantics are injected once and reused across reset boundaries. */
   epistemicContractRegistry?: BeliefContractRegistry;
+  /** Versioned, snapshotted estimator semantics for reproducible governance projections. */
+  governanceEstimatorRegistry?: GovernanceEstimatorRegistry;
   /** Enable agent dropout for sensitivity analysis (default false) */
   enableDropoutAnalysis?: boolean;
   /**

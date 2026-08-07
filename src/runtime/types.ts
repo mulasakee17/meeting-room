@@ -11,7 +11,7 @@
 
 import type { GovernanceConfig, GovernanceResult, Intervention } from "../lib/governance/types";
 import type { EvaluationResult, EvaluationConfig } from "../lib/evaluation/types";
-import type { LegacySemanticTelemetry } from "../lib/epistemic";
+import type { GovernanceEstimatorRegistry, LegacySemanticTelemetry } from "../lib/epistemic";
 
 // ============================================================================
 // Discussion Stream (framework-agnostic input)
@@ -180,6 +180,8 @@ export interface RuntimeConfig {
   enableCrossExamination?: boolean;
   /** 可复现性 seed — 传入 GovernanceEngine 的 mulberry32 PRNG，保证 introduce_diversity 等随机干预可复现 */
   seed?: number;
+  /** Versioned estimator semantics; snapshotted by MeasurementLayer. */
+  governanceEstimatorRegistry?: GovernanceEstimatorRegistry;
   // ── v3.2: Cognitive governance options ──
   /** Agent private knowledge (for inject_evidence intervention).
    *  Maps agentId → list of private knowledge strings. */

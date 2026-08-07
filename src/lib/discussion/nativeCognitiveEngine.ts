@@ -59,6 +59,8 @@ import { EvidencePool } from "../thermodynamics/EvidencePool";
 import { TerminationDecider, type TerminationDecision } from "../thermodynamics/TerminationDecider";
 import { mulberry32 } from "../utils/statsUtils";
 import type { LLMConfig } from "../llm/providers";
+import type { GovernanceEstimate } from "../epistemic/semantics";
+import type { ProgressiveEstimates } from "../thermodynamics/ProgressiveEstimator";
 
 /** v6: 治理结果类型（同步和异步路径共用） */
 type GovernanceResult = {
@@ -245,7 +247,7 @@ export class NativeCognitiveEngine extends DiscussionEngine {
    * 不变测量层：统一管理认知状态、热力学计算、检测器运行。
    * 替代了 v3.1 中分散在 NativeCognitiveEngine 的重复逻辑。
    */
-  private measurementLayer: MeasurementLayer = new MeasurementLayer();
+  private measurementLayer: MeasurementLayer;
 
   /**
    * 热力学历史：每轮 RTHF 快照，用于实验分析。
@@ -307,6 +309,7 @@ export class NativeCognitiveEngine extends DiscussionEngine {
 
   constructor(config?: Partial<DiscussionConfig>) {
     super(config);
+    this.measurementLayer = new MeasurementLayer(config?.governanceEstimatorRegistry);
     // 未经 held-out 校准前，native 主实验默认固定轮数；RHT/RHTF 只能显式开启。
     this.config.terminationPolicy = config?.terminationPolicy ?? "fixed_rounds";
     // 强制启用 cognitive state 追踪
@@ -393,6 +396,15 @@ export class NativeCognitiveEngine extends DiscussionEngine {
       console.log(`[TerminationDecider] round ${round}: ${decision.message}`);
     }
     return decision;
+  }
+
+  /** Exact versioned governance estimates consumed during each committed round. */
+  getGovernanceEstimateHistory(
+    round?: number,
+  ): Map<string, GovernanceEstimate<ProgressiveEstimates>>
+    | Map<number, Map<string, GovernanceEstimate<ProgressiveEstimates>>> {
+    if (round !== undefined) return this.measurementLayer.getGovernanceEstimateHistory(round);
+    return this.measurementLayer.getAllGovernanceEstimateHistory();
   }
 
   /**

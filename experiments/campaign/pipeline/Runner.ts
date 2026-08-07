@@ -26,7 +26,8 @@ import {
   type AgentCognitiveState,
 } from "../../../src/lib/agent/cognitiveState";
 import { computeDeltaDiagnosis } from "../../../src/lib/thermodynamics/computeDelta";
-import { estimateAll } from "../../../src/lib/thermodynamics/ProgressiveEstimator";
+import { estimateAll, type ProgressiveEstimates } from "../../../src/lib/thermodynamics/ProgressiveEstimator";
+import type { GovernanceEstimate } from "../../../src/lib/epistemic/semantics";
 import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
 import { resolveCandidateOptions, runHiddenBenchProtocol } from "./hiddenbenchProtocol";
 
@@ -593,11 +594,22 @@ export async function runSingle(
 
   // 提取热力学轨迹（RTHF，仅 native_cognitive 模式）
   let thermoHistory: RawRunData["thermoHistory"] | undefined;
+  let governanceEstimateHistory: RawRunData["governanceEstimateHistory"] | undefined;
   let semanticAuditLog: RawRunData["semanticAuditLog"] | undefined;
   let terminationDecisions: RawRunData["terminationDecisions"] | undefined;
   if (useNativeCognitive) {
     const nativeEngine = engine as NativeCognitiveEngine;
     thermoHistory = nativeEngine.getThermoHistory();
+    governanceEstimateHistory = [];
+    const estimateHistory = nativeEngine.getGovernanceEstimateHistory() as Map<
+      number,
+      Map<string, GovernanceEstimate<ProgressiveEstimates>>
+    >;
+    for (const [round, records] of estimateHistory) {
+      for (const [agentId, record] of records) {
+        governanceEstimateHistory.push({ round, agentId, record });
+      }
+    }
     // v6: 提取 SemanticTool 审计日志（C 组实验论文分析用）
     semanticAuditLog = nativeEngine.getSemanticAuditLog();
     // v6 路径二：提取终止决策历史（F 进决策的 reason/stateType，论文分析用）
@@ -622,7 +634,13 @@ export async function runSingle(
       const states = nativeEngine.getCognitiveStateHistory(r) as Map<string, AgentCognitiveState>;
       const thermo = thermoHistory.find(t => t.round === r);
       if (states.size > 0 && thermo) {
-        const estimates = estimateAll(states, r);
+        const recorded = nativeEngine.getGovernanceEstimateHistory(r) as Map<
+          string,
+          GovernanceEstimate<ProgressiveEstimates>
+        >;
+        const estimates = recorded.size > 0
+          ? new Map([...recorded].map(([agentId, record]) => [agentId, structuredClone(record.value)]))
+          : estimateAll(states, r);
         const diagnosis = computeDeltaDiagnosis(Array.from(states.values()), thermo, estimates);
         deltaDiagnosis.push({ round: r, ...diagnosis });
       }
@@ -734,6 +752,7 @@ export async function runSingle(
     optionParsing,
     beliefTrajectory,
     cognitiveTrajectory,
+    governanceEstimateHistory,
     thermoHistory,
     terminationDecisions,
     deltaDiagnosis,

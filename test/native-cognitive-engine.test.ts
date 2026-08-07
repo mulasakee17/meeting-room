@@ -94,6 +94,11 @@ describe("NativeCognitiveEngine 初始化", () => {
     const history = engine.getCognitiveStateHistory();
     expect(history.size).toBe(0);
   });
+
+  it("getGovernanceEstimateHistory 无数据时返回空 Map", () => {
+    const engine = new NativeCognitiveEngine({ seed: 42 });
+    expect(engine.getGovernanceEstimateHistory().size).toBe(0);
+  });
 });
 
 describe("NativeCognitiveEngine 状态权威", () => {
@@ -259,6 +264,9 @@ describe("NativeCognitiveEngine.updateCognitiveStatesFromRound", () => {
     expect(cogStates.size).toBe(2);
     expect(cogStates.has("a1")).toBe(true);
     expect(cogStates.has("a2")).toBe(true);
+    const estimates = engine.getGovernanceEstimateHistory(1) as Map<string, any>;
+    expect(estimates.size).toBe(2);
+    expect(estimates.get("a1").estimatorId).toBe("swarmalpha.progressive-icl");
   });
 
   it("更新后 thermoHistory 记录 RTHF", () => {
@@ -483,6 +491,7 @@ describe("NativeCognitiveEngine.reset", () => {
     expect((engine as any).speakingPriority.size).toBe(0);
     expect((engine as any).pendingShuffleKnowledge).toBe(false);
     expect(engine.getCognitiveStateHistory().size).toBe(0);
+    expect(engine.getGovernanceEstimateHistory().size).toBe(0);
   });
 
   it("reset 后可重新使用（无状态泄漏）", () => {

@@ -136,7 +136,7 @@ export class GovernanceRuntime {
     this.governanceEngine = new GovernanceEngine(this.config.governanceConfig, this.config.seed);
     this.evaluationEngine = new EvaluationEngine();
     // v3.2: MeasurementLayer for cognitive governance (lazy-initialized cognitive states)
-    this.measurementLayer = new MeasurementLayer();
+    this.measurementLayer = new MeasurementLayer(this.config.governanceEstimatorRegistry);
     // 持久 PRNG：random-intervene 模式下跨轮保持状态，避免每轮产生相同随机干预
     this.randomInterveneRng = mulberry32((this.config.seed ?? 42) + 0x5A4D);
 
@@ -633,7 +633,7 @@ export class GovernanceRuntime {
     this.governanceEngine.reset();
     // v3.2: 重置认知状态和 MeasurementLayer
     this.cognitiveStates.clear();
-    this.measurementLayer = new MeasurementLayer();
+    this.measurementLayer = new MeasurementLayer(this.config.governanceEstimatorRegistry);
   }
 
   /** Update configuration at runtime. */

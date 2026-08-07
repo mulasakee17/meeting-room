@@ -15,6 +15,12 @@ import { MeasurementLayer } from "@/lib/thermodynamics/MeasurementLayer";
 import type { ThermoState } from "@/lib/thermodynamics/MeasurementLayer";
 import type { AgentOpinion } from "@/lib/discussion/types";
 import type { DiscussionAgent } from "@/lib/discussion/index";
+import { observeLegacyQuantities } from "@/lib/epistemic";
+import { GovernanceEstimatorRegistry } from "@/lib/epistemic/estimators";
+import {
+  progressiveEstimatorContract,
+  type ProgressiveEstimates,
+} from "@/lib/thermodynamics/ProgressiveEstimator";
 
 // ============================================================================
 // Helpers
@@ -57,6 +63,8 @@ function mockOpinion(
     itemBeliefs: overrides?.itemBeliefs ?? [],
     cognitiveState: overrides?.cognitiveState,
     structuredEvidence: overrides?.structuredEvidence,
+    legacyQuantitySources: overrides?.legacyQuantitySources,
+    legacyTelemetry: overrides?.legacyTelemetry,
   };
 }
 
@@ -935,8 +943,89 @@ describe("MeasurementLayer.reset", () => {
 
     expect(layer.getCognitiveStates().size).toBe(0);
     expect(layer.getCognitiveStateHistory(1).size).toBe(0);
+    expect(layer.getGovernanceEstimateHistory(1).size).toBe(0);
     expect(layer.getGovernancePrompts().size).toBe(0);
     expect(layer.getInfluenceWeights().size).toBe(0);
+  });
+});
+
+// ============================================================================
+// Governance estimate provenance
+// ============================================================================
+
+describe("MeasurementLayer governance estimate provenance", () => {
+  it("records deterministic estimates without changing cognitive-state values", () => {
+    const agents = [mockAgent("a1", "Alice", "analyst", 0.5, 0.8)];
+    const telemetry = observeLegacyQuantities({
+      eventId: "observation:task:1:a1",
+      observedAt: "2026-08-07T00:00:00.000Z",
+      stance: 0.5,
+      confidence: 80,
+      sources: { stance: "agent_reported", confidence: "agent_reported" },
+    });
+    const opinions = [mockOpinion("a1", 0.5, 80, {
+      cognitiveState: {
+        utility: { A: 0.7, B: 0.2 },
+        evidenceCoverage: 0.6,
+        evidenceQuality: 0.7,
+      },
+      legacyTelemetry: telemetry,
+    })];
+    const first = new MeasurementLayer();
+    const second = new MeasurementLayer();
+
+    first.updateCognitiveStates(opinions, agents, 1, { mode: "native" });
+    second.updateCognitiveStates(opinions, agents, 1, { mode: "native" });
+
+    const firstRecord = first.getGovernanceEstimateHistory(1).get("a1")!;
+    const secondRecord = second.getGovernanceEstimateHistory(1).get("a1")!;
+    const state = first.getCognitiveStates().get("a1")!;
+    expect(firstRecord.layer).toBe("governance_estimate");
+    expect(firstRecord.estimatorId).toBe("swarmalpha.progressive-icl");
+    expect(firstRecord.estimatorVersion).toBe("1.0.0");
+    expect(firstRecord.sourceEventIds).toEqual(telemetry.map(record => record.eventId).sort());
+    expect(firstRecord.value.inertia.estimate).toBe(state.inertia.estimate);
+    expect(firstRecord.value.confidence.estimate).toBe(state.confidence.estimate);
+    expect(firstRecord.value.susceptibility).toEqual(state.susceptibility);
+    expect(firstRecord.inputFingerprint).toBe(secondRecord.inputFingerprint);
+    expect(firstRecord.configFingerprint).toBe(secondRecord.configFingerprint);
+    expect(firstRecord.outputFingerprint).toBe(secondRecord.outputFingerprint);
+  });
+
+  it("snapshots an injected estimator contract and exposes its exact versioned output", () => {
+    const fixed: ProgressiveEstimates = {
+      inertia: {
+        estimate: 0.21,
+        confidence: 0.31,
+        sourceWeights: { stated: 1, rolePrior: 0, behavioral: 0 },
+        behavioralRatio: 0.5,
+      },
+      confidence: {
+        estimate: 0.41,
+        confidence: 0.51,
+        sourceWeights: { stated: 1, stability: 0 },
+      },
+      susceptibility: { estimate: 0.61, confidence: 0.71, usable: true },
+    };
+    const registry = new GovernanceEstimatorRegistry([{
+      ...progressiveEstimatorContract,
+      estimate: () => structuredClone(fixed),
+    }]);
+    const layer = new MeasurementLayer(registry);
+    registry.register({
+      ...progressiveEstimatorContract,
+      id: "test.unrelated",
+    });
+    const agents = [mockAgent("a1", "Alice", "analyst", 0.5, 0.8)];
+
+    layer.updateCognitiveStates([], agents, 1, { mode: "posthoc" });
+
+    const record = layer.getGovernanceEstimateHistory(1).get("a1")!;
+    expect(record.value).toEqual(fixed);
+    expect(layer.getCognitiveStates().get("a1")!.inertia.estimate).toBe(0.21);
+    const exported = layer.getAllGovernanceEstimateHistory();
+    exported.get(1)!.get("a1")!.value.inertia.estimate = 999;
+    expect(layer.getGovernanceEstimateHistory(1).get("a1")!.value.inertia.estimate).toBe(0.21);
   });
 });
 
