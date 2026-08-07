@@ -106,6 +106,7 @@ export interface DiscussionMemoryEntry {
   timestamp: string;
   /** Per-item preferences (V2). Optional for backward compatibility. */
   itemBeliefs?: ItemBelief[];
+  claimReports?: ClaimBeliefSubmission[];
   epistemicReportIds?: string[];
 }
 

@@ -131,6 +131,7 @@ export class DiscussionEngine {
   protected eventTracker: EventTracker;
   protected config: DiscussionConfig;
   protected roundDataArray: RoundData[] = [];
+  protected epistemicRunActive = false;
   private epistemicLedger = new EpistemicLedger();
   private pendingEpistemicRounds = new Map<number, EpistemicRoundBatch>();
   private latestEpistemicReport = new Map<string, string>();
@@ -935,6 +936,10 @@ export class DiscussionEngine {
 
   protected initializeEpistemicTask(task: DiscussionTask): void {
     if (!task.epistemic) return;
+    if ((this.config.governanceMode ?? "full") !== "none") {
+      throw new Error("P1 EpistemicTaskContract currently requires governanceMode=none; accountable governance is a separate mechanism phase");
+    }
+    this.epistemicRunActive = true;
     if (this.config.enableCrossExamination) {
       throw new Error("EpistemicTaskContract is incompatible with legacy cross-examination until challenge exposures become auditable");
     }
@@ -1137,6 +1142,7 @@ Add this top-level field to your JSON response:
         confidence: observation.parsedOpinion.confidence,
         referencedAgents: observation.parsedOpinion.referencedAgents,
         itemBeliefs: observation.parsedOpinion.itemBeliefs,
+        claimReports: observation.parsedOpinion.claimReports,
         epistemicReportIds: observation.parsedOpinion.epistemicReportIds,
         timestamp: observation.timestamp,
       });
@@ -1157,7 +1163,7 @@ Add this top-level field to your JSON response:
     const allMemory = this.memoryManager.getAll();
     const observations: RawObservation[] = [];
     // 本轮已发言的观点，按发言顺序累积，后发言的 agent 能看到
-    const currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number; epistemicReportIds?: string[] }> = [];
+    const currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number; claimReports?: AgentOpinion["claimReports"]; epistemicReportIds?: string[] }> = [];
 
     for (const agent of agents) {
       try {
@@ -1211,6 +1217,7 @@ Add this top-level field to your JSON response:
           reasoning: parsedOpinion.reasoning,
           belief: parsedOpinion.belief,
           confidence: parsedOpinion.confidence,
+          claimReports: parsedOpinion.claimReports,
           epistemicReportIds: parsedOpinion.epistemicReportIds,
         });
         // EvidencePool hook：子类（NativeCognitiveEngine）可在此把本 agent 的
@@ -1228,13 +1235,20 @@ Add this top-level field to your JSON response:
   /** Hook：agent 发言被解析后调用（供 EvidencePool 等子类扩展）。默认 no-op。 */
   protected onOpinionObserved(_opinion: AgentOpinion, _roundNumber: number): void {}
 
+  protected formatClaimReportSummary(reports?: AgentOpinion["claimReports"]): string {
+    if (!reports || reports.length === 0) return "";
+    return ` [claims: ${reports.map(report =>
+      `${report.claimId}=P(${report.probability.toFixed(4)})`
+    ).join(", ")}]`;
+  }
+
   protected buildPrompt(
     agent: { name: string; role: string; id: string },
     task: string,
     memory: DiscussionMemoryEntry[],
     roundNumber: number,
     state: { belief: number; confidence: number },
-    currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number; epistemicReportIds?: string[] }> = []
+    currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number; claimReports?: AgentOpinion["claimReports"]; epistemicReportIds?: string[] }> = []
   ): string {
     // ── 历史窗口剪枝：防止全局历史无限制膨胀进 prompt ────────────
     // memory 按时间顺序存储（InMemoryStrategy 追加），slice(-N) 取最近 N 条。
@@ -1249,13 +1263,13 @@ Add this top-level field to your JSON response:
       if (ownEntries.length > 0) {
         memoryContext += "你之前的发言:\n";
         for (const entry of ownEntries) {
-          memoryContext += `- 第${entry.roundNumber}轮: ${entry.reasoning} (信念: ${entry.belief.toFixed(2)})\n`;
+          memoryContext += `- 第${entry.roundNumber}轮: ${entry.reasoning} (信念: ${entry.belief.toFixed(2)})${this.formatClaimReportSummary(entry.claimReports)}\n`;
         }
       }
       if (repliedToMe.length > 0) {
         memoryContext += "对你的回应:\n";
         for (const entry of repliedToMe) {
-          memoryContext += `- 第${entry.roundNumber}轮 ${entry.agentId}: ${entry.reasoning} (信念: ${entry.belief.toFixed(2)})\n`;
+          memoryContext += `- 第${entry.roundNumber}轮 ${entry.agentId}: ${entry.reasoning} (信念: ${entry.belief.toFixed(2)})${this.formatClaimReportSummary(entry.claimReports)}\n`;
         }
       }
     }
@@ -1276,10 +1290,18 @@ Add this top-level field to your JSON response:
     if (currentRoundOpinions.length > 0) {
       currentRoundContext = "\n\n本轮其他 agent 已发表的观点:\n";
       for (const op of currentRoundOpinions.slice(-MAX_CURRENT_ROUND)) {
-        currentRoundContext += `- ${op.agentId}: ${op.reasoning} (信念: ${op.belief.toFixed(2)}, 置信度: ${op.confidence.toFixed(0)}%)\n`;
+        currentRoundContext += `- ${op.agentId}: ${op.reasoning} (信念: ${op.belief.toFixed(2)}, 置信度: ${op.confidence.toFixed(0)}%)${this.formatClaimReportSummary(op.claimReports)}\n`;
       }
       currentRoundContext += "你可以参考或反驳上述观点。\n";
     }
+
+    const systemStateContext = this.epistemicRunActive
+      ? "Explicit epistemic mode is active. No system-derived belief or cognitive-state estimate is supplied."
+      : `【系统参考（仅背景，非强制）】系统基于讨论历史计算的群体倾向：
+- 信念强度：${state.belief.toFixed(2)}（范围 -1 到 1）
+- 置信度：${state.confidence.toFixed(0)}%（范围 0-100）
+
+以上为外部计算值（DeGroot 更新），仅作背景参考，不代表你的实际判断。`;
 
     return `You are ${agent.name}, a ${agent.role}.
 
@@ -1287,11 +1309,7 @@ Task: ${task}
 
 Round: ${roundNumber}/${this.config.maxRounds}
 
-【系统参考（仅背景，非强制）】系统基于讨论历史计算的群体倾向：
-- 信念强度：${state.belief.toFixed(2)}（范围 -1 到 1）
-- 置信度：${state.confidence.toFixed(0)}%（范围 0-100）
-
-以上为外部计算值（DeGroot 更新），仅作背景参考，不代表你的实际判断。
+${systemStateContext}
 
 【你的自主判断】请基于本轮讨论的事实与逻辑独立评估你的立场——
 不要简单复述上述系统参考值，你的信念应反映你对证据的真实判断。
@@ -2205,6 +2223,7 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     this.latestEpistemicReport.clear();
     this.epistemicReportClaims.clear();
     this.epistemicSequence = 0;
+    this.epistemicRunActive = false;
     // H23 修复：重置 GovernanceEngine 运行时状态，防止跨实验校准缓存/干预历史污染
     this.governanceEngine.reset();
     // H-Fix: 重置 random-intervene PRNG 到初始 seed 状态，保证跨实验可复现

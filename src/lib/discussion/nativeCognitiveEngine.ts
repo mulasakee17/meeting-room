@@ -411,7 +411,7 @@ export class NativeCognitiveEngine extends DiscussionEngine {
     memory: DiscussionMemoryEntry[],
     roundNumber: number,
     state: { belief: number; confidence: number },
-    currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number; epistemicReportIds?: string[] }> = [],
+    currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number; claimReports?: AgentOpinion["claimReports"]; epistemicReportIds?: string[] }> = [],
   ): string {
     // ── Phase 4A: Belief Context Decoupling ──────────────────────────
     // 移除所有 belief context leakage。state.belief / state.confidence 来自父类
@@ -432,13 +432,13 @@ export class NativeCognitiveEngine extends DiscussionEngine {
         memoryContext += "你之前的发言:\n";
         for (const entry of ownEntries) {
           // Phase 4A: 移除 belief 标签，仅保留 reasoning（避免 belief context leakage）
-          memoryContext += `- 第${entry.roundNumber}轮: ${entry.reasoning}\n`;
+          memoryContext += `- 第${entry.roundNumber}轮: ${entry.reasoning}${this.formatClaimReportSummary(entry.claimReports)}\n`;
         }
       }
       if (repliedToMe.length > 0) {
         memoryContext += "对你的回应:\n";
         for (const entry of repliedToMe) {
-          memoryContext += `- 第${entry.roundNumber}轮 ${entry.agentId}: ${entry.reasoning}\n`;
+          memoryContext += `- 第${entry.roundNumber}轮 ${entry.agentId}: ${entry.reasoning}${this.formatClaimReportSummary(entry.claimReports)}\n`;
         }
       }
     }
@@ -458,7 +458,7 @@ export class NativeCognitiveEngine extends DiscussionEngine {
       currentRoundContext = "\n\n本轮其他 agent 已发表的观点:\n";
       for (const op of currentRoundOpinions) {
         // Phase 4A: 移除 belief/confidence 标签，仅保留 reasoning
-        currentRoundContext += `- ${op.agentId}: ${op.reasoning}\n`;
+        currentRoundContext += `- ${op.agentId}: ${op.reasoning}${this.formatClaimReportSummary(op.claimReports)}\n`;
       }
       currentRoundContext += "你可以参考或反驳上述观点。\n";
     }
@@ -466,7 +466,9 @@ export class NativeCognitiveEngine extends DiscussionEngine {
     // ── 认知状态注入（替代旧 belief/confidence）──────────────────────────
     // 从 cognitiveStates 读取当前认知状态，向 LLM 注入 cognitive-only context
     let cognitiveContext = "";
-    if (myCog) {
+    if (this.epistemicRunActive) {
+      cognitiveContext = "Explicit epistemic mode is active. No system-derived belief or cognitive-state estimate is supplied.";
+    } else if (myCog) {
       const topChoice = myCog.utility.topChoice || "未定";
       const clarity = myCog.utility.preferenceClarity.toFixed(2);
       const intensity = myCog.utility.intensity.toFixed(2);

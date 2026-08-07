@@ -67,7 +67,9 @@ describe("epistemic runtime boundary", () => {
 
     expect(prompts).toHaveLength(2);
     expect(prompts[0]).toContain("EPISTEMIC REPORTING CONTRACT");
+    expect(prompts[0]).not.toContain("DeGroot");
     expect(prompts[1]).toContain("a1 assessment");
+    expect(prompts[1]).toContain("claim-c=P(0.8000)");
 
     const events = engine.getEpistemicEvents();
     const reports = events
