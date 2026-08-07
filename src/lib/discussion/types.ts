@@ -1,4 +1,4 @@
-import type { EpistemicClaim } from "../epistemic";
+import type { BeliefValue, EpistemicClaim } from "../epistemic";
 
 export interface ItemBelief {
   item: string;
@@ -50,7 +50,7 @@ export interface ClaimEvidenceSubmission {
 /** Agent-authored payload. IDs, provenance and exposure are added by the runtime. */
 export interface ClaimBeliefSubmission {
   claimId: string;
-  probability: number;
+  value: BeliefValue;
   evidence: ClaimEvidenceSubmission[];
 }
 
@@ -410,7 +410,8 @@ export interface DiscussionTask {
   optionAliases?: Record<string, string[]>;
   /** No probability semantics are inferred when this capability is absent. */
   epistemic?: {
-    reportingMode: "explicit_probability";
+    /** explicit_probability is the binary-only P1 compatibility mode. */
+    reportingMode: "explicit_belief" | "explicit_probability";
     claims: EpistemicClaim[];
     requireAllClaims?: boolean;
   };

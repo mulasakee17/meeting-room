@@ -55,6 +55,58 @@ function agent(
   };
 }
 
+function categoricalTask(): DiscussionTask {
+  return {
+    id: "categorical-epistemic-task",
+    description: "Test explicit categorical belief reporting",
+    type: "categorical-verifiable",
+    content: "Which option is correct?",
+    createdAt: "2026-08-07T00:00:00.000Z",
+    epistemic: {
+      reportingMode: "explicit_belief",
+      requireAllClaims: true,
+      claims: [{
+        id: "claim-choice",
+        proposition: "The correct option",
+        domain: "test",
+        createdAt: "2026-08-07T00:00:00.000Z",
+        options: ["A", "B", "C"],
+        resolutionPolicy: { kind: "categorical", resolverId: "test-oracle" },
+      }],
+    },
+  };
+}
+
+function categoricalAgent(
+  id: string,
+  probabilities: Record<string, number>,
+  prompts: string[],
+): DiscussionAgent {
+  let state = { belief: 0, confidence: 50 };
+  return {
+    id,
+    name: id,
+    role: "analyst",
+    type: "llm",
+    getState: () => ({ ...state }),
+    setState: next => { state = { ...next }; },
+    sendMessage: async prompt => {
+      prompts.push(prompt);
+      return JSON.stringify({
+        reasoning: `${id} categorical assessment`,
+        evidence: [],
+        belief: 0,
+        confidence: 80,
+        claims: [{
+          claimId: "claim-choice",
+          probabilities,
+          evidence: [],
+        }],
+      });
+    },
+  };
+}
+
 describe("epistemic runtime boundary", () => {
   it("atomically commits reports and architecture-observed same-round exposure", async () => {
     const prompts: string[] = [];
@@ -180,5 +232,38 @@ describe("epistemic runtime boundary", () => {
       agent("a2", 0.3, []),
     ], task())).rejects.toThrow("legacy cross-examination");
     expect(engine.getEpistemicEvents()).toEqual([]);
+  });
+
+  it("commits and renders categorical belief distributions without scalar coercion", async () => {
+    const prompts: string[] = [];
+    const engine = new DiscussionEngine({ maxRounds: 1, governanceMode: "none", seed: 1 });
+
+    await engine.run([
+      categoricalAgent("a1", { A: 0.2, B: 0.7, C: 0.1 }, prompts),
+      categoricalAgent("a2", { A: 0.4, B: 0.4, C: 0.2 }, prompts),
+    ], categoricalTask());
+
+    expect(prompts[0]).toContain('"beliefKind":"categorical"');
+    expect(prompts[0]).toContain('"options":["A","B","C"]');
+    expect(prompts[1]).toContain("claim-choice=P(A)=0.2000;P(B)=0.7000;P(C)=0.1000");
+    const reports = engine.getEpistemicEvents()
+      .filter(event => event.type === "belief_reported")
+      .map(event => event.report);
+    expect(reports).toHaveLength(2);
+    expect(reports[0].value).toEqual({
+      kind: "categorical",
+      probabilities: { A: 0.2, B: 0.7, C: 0.1 },
+    });
+  });
+
+  it("rejects a categorical report that is not a complete normalized simplex", async () => {
+    const engine = new DiscussionEngine({ maxRounds: 1, governanceMode: "none" });
+    await engine.run([
+      categoricalAgent("a1", { A: 0.7, B: 0.3 }, []),
+    ], categoricalTask());
+
+    const opinion = engine.getRoundDataArray()[0].opinions[0];
+    expect(opinion.claimParseStatus).toBe("invalid");
+    expect(engine.getEpistemicEvents().filter(event => event.type === "belief_reported")).toEqual([]);
   });
 });

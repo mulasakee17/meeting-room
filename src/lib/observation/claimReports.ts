@@ -20,11 +20,41 @@ export function parseClaimReports(value: unknown): ParsedClaimReports {
       return { claimReports: [], claimParseStatus: "invalid" };
     }
     if (claimIds.has(candidate.claimId)) return { claimReports: [], claimParseStatus: "invalid" };
-    if (typeof candidate.probability !== "number"
-      || !Number.isFinite(candidate.probability)
-      || candidate.probability < 0
-      || candidate.probability > 1) {
+    const hasBinaryValue = Object.prototype.hasOwnProperty.call(candidate, "probability");
+    const hasCategoricalValue = Object.prototype.hasOwnProperty.call(candidate, "probabilities");
+    if (hasBinaryValue === hasCategoricalValue) {
       return { claimReports: [], claimParseStatus: "invalid" };
+    }
+    let value: ClaimBeliefSubmission["value"];
+    if (hasBinaryValue) {
+      if (typeof candidate.probability !== "number"
+        || !Number.isFinite(candidate.probability)
+        || candidate.probability < 0
+        || candidate.probability > 1) {
+        return { claimReports: [], claimParseStatus: "invalid" };
+      }
+      value = { kind: "binary", probability: candidate.probability };
+    } else {
+      if (!candidate.probabilities
+        || typeof candidate.probabilities !== "object"
+        || Array.isArray(candidate.probabilities)) {
+        return { claimReports: [], claimParseStatus: "invalid" };
+      }
+      const probabilities: Record<string, number> = {};
+      for (const [option, probability] of Object.entries(candidate.probabilities as Record<string, unknown>)) {
+        if (option.trim().length === 0
+          || typeof probability !== "number"
+          || !Number.isFinite(probability)
+          || probability < 0
+          || probability > 1) {
+          return { claimReports: [], claimParseStatus: "invalid" };
+        }
+        probabilities[option] = probability;
+      }
+      if (Object.keys(probabilities).length === 0) {
+        return { claimReports: [], claimParseStatus: "invalid" };
+      }
+      value = { kind: "categorical", probabilities };
     }
     if (!Array.isArray(candidate.evidence)) return { claimReports: [], claimParseStatus: "invalid" };
 
@@ -44,7 +74,7 @@ export function parseClaimReports(value: unknown): ParsedClaimReports {
     claimIds.add(candidate.claimId);
     reports.push({
       claimId: candidate.claimId,
-      probability: candidate.probability,
+      value,
       evidence,
     });
   }

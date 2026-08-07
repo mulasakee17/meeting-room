@@ -64,6 +64,8 @@ import type { RuntimeContext, CollectiveDecisionState, ExperimentConfig } from "
 import { createHash } from "node:crypto";
 import {
   EpistemicLedger,
+  getBeliefContract,
+  isCategoricalClaim,
   type BeliefExposure,
   type BeliefReport,
   type EpistemicEvidence,
@@ -943,11 +945,16 @@ export class DiscussionEngine {
     if (this.config.enableCrossExamination) {
       throw new Error("EpistemicTaskContract is incompatible with legacy cross-examination until challenge exposures become auditable");
     }
-    if (task.epistemic.reportingMode !== "explicit_probability") {
+    if (task.epistemic.reportingMode !== "explicit_probability"
+      && task.epistemic.reportingMode !== "explicit_belief") {
       throw new Error(`Unsupported epistemic reporting mode: ${task.epistemic.reportingMode}`);
     }
     if (task.epistemic.claims.length === 0) {
       throw new Error("Epistemic task contract must register at least one claim");
+    }
+    if (task.epistemic.reportingMode === "explicit_probability"
+      && task.epistemic.claims.some(claim => claim.resolutionPolicy.kind !== "binary")) {
+      throw new Error("explicit_probability supports binary claims only; use explicit_belief for mixed or categorical claims");
     }
     for (const claim of task.epistemic.claims) this.epistemicLedger.registerClaim(claim);
   }
@@ -970,19 +977,26 @@ export class DiscussionEngine {
       claimId: claim.id,
       proposition: claim.proposition,
       domain: claim.domain,
+      beliefKind: claim.resolutionPolicy.kind,
+      ...(isCategoricalClaim(claim) ? { options: claim.options } : {}),
     }));
     return `\n\nEPISTEMIC REPORTING CONTRACT
-Report a probability for each registered claim you assess. Probability is a number in [0,1], not the legacy belief [-1,1] or confidence [0,100]. Do not invent claim IDs.
+Report an explicit belief for each registered claim you assess. For binary claims use one probability in [0,1]. For categorical claims assign probability to every canonical option and make the values sum to 1. These are not the legacy belief [-1,1] or confidence [0,100]. Do not invent claim IDs or options.
 Registered claims: ${JSON.stringify(claims)}
 Add this top-level field to your JSON response:
 "claims": [
   {
-    "claimId": "registered claim ID",
+    "claimId": "binary claim ID",
     "probability": 0.0,
     "evidence": [
       {"content": "specific evidence", "relation": "supports"},
       {"content": "specific counterevidence", "relation": "attacks"}
     ]
+  },
+  {
+    "claimId": "categorical claim ID",
+    "probabilities": {"canonical option A": 0.5, "canonical option B": 0.5},
+    "evidence": []
   }
 ]`;
   }
@@ -1052,12 +1066,23 @@ Add this top-level field to your JSON response:
     const submissions = opinion.claimReports ?? [];
     const submittedClaims = new Set(submissions.map(report => report.claimId));
     const invalidClaim = submissions.some(report => !registeredClaims.has(report.claimId));
+    const invalidValue = submissions.some(submission => {
+      const claim = contract.claims.find(candidate => candidate.id === submission.claimId);
+      if (!claim) return true;
+      try {
+        submission.value = getBeliefContract(claim.resolutionPolicy.kind)
+          .normalizeValue(claim, submission.value);
+        return false;
+      } catch {
+        return true;
+      }
+    });
     const missingRequired = contract.requireAllClaims === true
       && contract.claims.some(claim => !submittedClaims.has(claim.id));
-    if (opinion.claimParseStatus !== "valid" || invalidClaim || missingRequired) {
+    if (opinion.claimParseStatus !== "valid" || invalidClaim || invalidValue || missingRequired) {
       opinion.claimReports = [];
       opinion.epistemicReportIds = [];
-      opinion.claimParseStatus = invalidClaim ? "invalid" : "incomplete";
+      opinion.claimParseStatus = invalidClaim || invalidValue ? "invalid" : "incomplete";
       return;
     }
 
@@ -1092,7 +1117,7 @@ Add this top-level field to your JSON response:
         claimId: submission.claimId,
         agentId: opinion.agentId,
         round,
-        probability: submission.probability,
+        value: structuredClone(submission.value),
         evidence: evidenceReferences,
         // Capital is intentionally inactive in P1; P2 must lock a real balance.
         stake: 0,
@@ -1238,7 +1263,7 @@ Add this top-level field to your JSON response:
   protected formatClaimReportSummary(reports?: AgentOpinion["claimReports"]): string {
     if (!reports || reports.length === 0) return "";
     return ` [claims: ${reports.map(report =>
-      `${report.claimId}=P(${report.probability.toFixed(4)})`
+      `${report.claimId}=${getBeliefContract(report.value.kind).formatValue(report.value)}`
     ).join(", ")}]`;
   }
 
