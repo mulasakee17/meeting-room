@@ -1,6 +1,7 @@
 export type ClaimId = string;
 export type EvidenceId = string;
 export type BeliefReportId = string;
+export type BeliefExposureId = string;
 
 export interface BinaryResolutionPolicy {
   kind: "binary";
@@ -60,6 +61,17 @@ export interface BeliefReport {
   observedReportIds?: BeliefReportId[];
 }
 
+/** Records architecture-observed delivery, not a citation inferred from text. */
+export interface BeliefExposure {
+  id: BeliefExposureId;
+  claimId: ClaimId;
+  sourceReportId: BeliefReportId;
+  targetAgentId: string;
+  round: number;
+  channel: "memory" | "current_round";
+  exposedAt: string;
+}
+
 export interface ClaimResolution {
   claimId: ClaimId;
   outcome: boolean;
@@ -72,4 +84,5 @@ export type EpistemicEvent =
   | { type: "claim_registered"; claim: EpistemicClaim }
   | { type: "evidence_registered"; evidence: EpistemicEvidence }
   | { type: "belief_reported"; report: BeliefReport }
+  | { type: "belief_exposed"; exposure: BeliefExposure }
   | { type: "claim_resolved"; resolution: ClaimResolution };

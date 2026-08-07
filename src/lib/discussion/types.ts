@@ -1,3 +1,5 @@
+import type { EpistemicClaim } from "../epistemic";
+
 export interface ItemBelief {
   item: string;
   rank: number;
@@ -40,6 +42,18 @@ export interface NativeCognitiveOutput {
   evidenceQuality: number;
 }
 
+export interface ClaimEvidenceSubmission {
+  content: string;
+  relation: "supports" | "attacks";
+}
+
+/** Agent-authored payload. IDs, provenance and exposure are added by the runtime. */
+export interface ClaimBeliefSubmission {
+  claimId: string;
+  probability: number;
+  evidence: ClaimEvidenceSubmission[];
+}
+
 export interface AgentOpinion {
   agentId: string;
   reasoning: string;
@@ -61,6 +75,11 @@ export interface AgentOpinion {
   optionParseStatus?: "not_applicable" | "valid" | "incomplete" | "ambiguous" | "invalid";
   /** 未能唯一映射到规范选项的原始标签，供审计和 invalid-rate 统计。 */
   unmatchedOptionLabels?: string[];
+  /** Explicit probabilities accepted only for task-registered claims. */
+  claimReports?: ClaimBeliefSubmission[];
+  /** Runtime-generated IDs; model-provided values are never trusted. */
+  epistemicReportIds?: string[];
+  claimParseStatus?: "not_applicable" | "valid" | "incomplete" | "invalid";
 }
 
 export interface RoundResult {
@@ -87,6 +106,7 @@ export interface DiscussionMemoryEntry {
   timestamp: string;
   /** Per-item preferences (V2). Optional for backward compatibility. */
   itemBeliefs?: ItemBelief[];
+  epistemicReportIds?: string[];
 }
 
 export interface InfluenceWeight {
@@ -387,6 +407,12 @@ export interface DiscussionTask {
   canonicalOptions?: string[];
   /** 规范选项 → 预注册别名。只允许唯一匹配，不做位置猜测。 */
   optionAliases?: Record<string, string[]>;
+  /** No probability semantics are inferred when this capability is absent. */
+  epistemic?: {
+    reportingMode: "explicit_probability";
+    claims: EpistemicClaim[];
+    requireAllClaims?: boolean;
+  };
 }
 
 export interface AgentState {
@@ -456,6 +482,11 @@ export interface RoundData {
   opinions: AgentOpinion[];
   /** Auditable declaration of the transition that produced this round's state. */
   stateCommit: RoundStateCommit;
+  epistemicCommit?: {
+    evidenceCount: number;
+    reportCount: number;
+    exposureCount: number;
+  };
   beliefChanges: Record<string, { old: number; new: number; reason: string }>;
   /** Per-utterance 信念快照（asyncEngine 逐发言者处理时填充，质量因子验证用） */
   perUtteranceSnapshots?: Array<{

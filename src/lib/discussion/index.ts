@@ -61,6 +61,14 @@ import type { DiscussionMessage } from "@/runtime/types";
 // RuntimeContext / CollectiveDecisionState 定义在 src/lib/discussion-types/types.ts（runtime 内部类型），
 // 不在 src/runtime/types.ts（框架适配层）。makeInferenceContext 需要这两个类型构造 inference 上下文。
 import type { RuntimeContext, CollectiveDecisionState, ExperimentConfig } from "../discussion-types/types";
+import { createHash } from "node:crypto";
+import {
+  EpistemicLedger,
+  type BeliefExposure,
+  type BeliefReport,
+  type EpistemicEvidence,
+  type EpistemicEvent,
+} from "../epistemic";
 import {
   beliefToCognitiveState,
   updateCognitiveState,
@@ -97,6 +105,12 @@ interface FinalizedRound {
   stopDecision: RoundStopDecision;
 }
 
+type EpistemicRoundBatch = {
+  evidence: EpistemicEvidence[];
+  reports: BeliefReport[];
+  exposures: BeliefExposure[];
+};
+
 export class DiscussionEngine {
   protected memoryManager: MemoryManager;
   private influenceManager: InfluenceManager;
@@ -117,6 +131,11 @@ export class DiscussionEngine {
   protected eventTracker: EventTracker;
   protected config: DiscussionConfig;
   protected roundDataArray: RoundData[] = [];
+  private epistemicLedger = new EpistemicLedger();
+  private pendingEpistemicRounds = new Map<number, EpistemicRoundBatch>();
+  private latestEpistemicReport = new Map<string, string>();
+  private epistemicReportClaims = new Map<string, string>();
+  private epistemicSequence = 0;
   /** Mutable per-run state must never be shared across independent tasks. */
   private lifecycleState: "idle" | "running" | "completed" = "idle";
 
@@ -186,6 +205,7 @@ export class DiscussionEngine {
   async run(agents: DiscussionAgent[], task: DiscussionTask): Promise<DiscussionResult> {
     this.beginRunLifecycle();
     try {
+      this.initializeEpistemicTask(task);
       this.eventTracker.track({
         type: "round_start", timestamp: new Date().toISOString(), roundNumber: 0,
         payload: { task: task.id, agentCount: agents.length },
@@ -346,6 +366,7 @@ export class DiscussionEngine {
         opinions,
         agents,
         agentStates,
+        task,
       });
       roundResults.push(finalized.roundResult);
 
@@ -367,8 +388,9 @@ export class DiscussionEngine {
     opinions: AgentOpinion[];
     agents: DiscussionAgent[];
     agentStates: Map<string, { belief: number; confidence: number }>;
+    task: DiscussionTask;
   }): Promise<FinalizedRound> {
-    const { round, opinions, agents, agentStates } = input;
+    const { round, opinions, agents, agentStates, task } = input;
     const timestamp = new Date().toISOString();
 
     // 所有终止与记录路径复用同一个收敛计算，避免一轮多次计算产生漂移。
@@ -450,6 +472,9 @@ export class DiscussionEngine {
       terminationDecision: terminationDecision ?? undefined,
       stopDecision,
     };
+
+    const epistemicCommit = this.commitEpistemicRound(round, task);
+    if (epistemicCommit) roundData.epistemicCommit = epistemicCommit;
 
     // 原子化提交：每轮只写一次 trace，避免有干预时重复 addRound。
     this.roundDataArray.push(roundData);
@@ -701,6 +726,10 @@ export class DiscussionEngine {
     return structuredClone(this.roundDataArray);
   }
 
+  getEpistemicEvents(): EpistemicEvent[] {
+    return this.epistemicLedger.getEvents();
+  }
+
   /** Phase 3: assemble the final DiscussionResult. */
   protected buildDiscussionResult(
     roundResults: RoundResult[],
@@ -855,6 +884,9 @@ export class DiscussionEngine {
     graph: InteractionGraph;
     converged: boolean;
   }> {
+    if (task.epistemic) {
+      throw new Error("runRoundWithArtifacts does not own a finalizeRound boundary for EpistemicTaskContract; use run()");
+    }
     const opinions = await this.runRound(agents, task, roundNumber, agentStates);
     const prevStates = new Map(agentStates);
 
@@ -901,6 +933,192 @@ export class DiscussionEngine {
     };
   }
 
+  protected initializeEpistemicTask(task: DiscussionTask): void {
+    if (!task.epistemic) return;
+    if (this.config.enableCrossExamination) {
+      throw new Error("EpistemicTaskContract is incompatible with legacy cross-examination until challenge exposures become auditable");
+    }
+    if (task.epistemic.reportingMode !== "explicit_probability") {
+      throw new Error(`Unsupported epistemic reporting mode: ${task.epistemic.reportingMode}`);
+    }
+    if (task.epistemic.claims.length === 0) {
+      throw new Error("Epistemic task contract must register at least one claim");
+    }
+    for (const claim of task.epistemic.claims) this.epistemicLedger.registerClaim(claim);
+  }
+
+  /** Select exactly the memory records that the prompt builder is allowed to render. */
+  protected selectPromptMemory(
+    memory: DiscussionMemoryEntry[],
+    agentId: string,
+  ): DiscussionMemoryEntry[] {
+    const ownEntries = memory.filter(entry => entry.agentId === agentId).slice(-6);
+    const mentionsMe = memory.filter(entry =>
+      entry.agentId !== agentId && entry.referencedAgents?.includes(agentId)
+    ).slice(-4);
+    return [...ownEntries, ...mentionsMe].sort((a, b) => a.roundNumber - b.roundNumber);
+  }
+
+  private buildEpistemicPrompt(task: DiscussionTask): string {
+    if (!task.epistemic) return "";
+    const claims = task.epistemic.claims.map(claim => ({
+      claimId: claim.id,
+      proposition: claim.proposition,
+      domain: claim.domain,
+    }));
+    return `\n\nEPISTEMIC REPORTING CONTRACT
+Report a probability for each registered claim you assess. Probability is a number in [0,1], not the legacy belief [-1,1] or confidence [0,100]. Do not invent claim IDs.
+Registered claims: ${JSON.stringify(claims)}
+Add this top-level field to your JSON response:
+"claims": [
+  {
+    "claimId": "registered claim ID",
+    "probability": 0.0,
+    "evidence": [
+      {"content": "specific evidence", "relation": "supports"},
+      {"content": "specific counterevidence", "relation": "attacks"}
+    ]
+  }
+]`;
+  }
+
+  private getEpistemicBatch(round: number): EpistemicRoundBatch {
+    let batch = this.pendingEpistemicRounds.get(round);
+    if (!batch) {
+      batch = { evidence: [], reports: [], exposures: [] };
+      this.pendingEpistemicRounds.set(round, batch);
+    }
+    return batch;
+  }
+
+  private recordPromptExposures(
+    targetAgentId: string,
+    round: number,
+    memory: DiscussionMemoryEntry[],
+    currentRoundOpinions: Array<{ epistemicReportIds?: string[] }>,
+  ): string[] {
+    const visible: Array<{ reportId: string; channel: "memory" | "current_round" }> = [];
+    for (const entry of memory) {
+      for (const reportId of entry.epistemicReportIds ?? []) visible.push({ reportId, channel: "memory" });
+    }
+    for (const opinion of currentRoundOpinions) {
+      for (const reportId of opinion.epistemicReportIds ?? []) {
+        visible.push({ reportId, channel: "current_round" });
+      }
+    }
+
+    const seen = new Set<string>();
+    const batch = this.getEpistemicBatch(round);
+    for (const item of visible) {
+      if (seen.has(item.reportId)) continue;
+      const claimId = this.epistemicReportClaims.get(item.reportId)
+        ?? this.epistemicLedger.getReport(item.reportId)?.claimId;
+      if (!claimId) continue;
+      seen.add(item.reportId);
+      batch.exposures.push({
+        id: `exposure:${round}:${++this.epistemicSequence}`,
+        claimId,
+        sourceReportId: item.reportId,
+        targetAgentId,
+        round,
+        channel: item.channel,
+        exposedAt: new Date().toISOString(),
+      });
+    }
+    return [...seen];
+  }
+
+  private prepareEpistemicOpinion(
+    opinion: AgentOpinion,
+    task: DiscussionTask,
+    round: number,
+    observedReportIds: string[],
+    createdAt: string,
+  ): void {
+    const contract = task.epistemic;
+    if (!contract) {
+      opinion.claimReports = undefined;
+      opinion.epistemicReportIds = undefined;
+      opinion.claimParseStatus = "not_applicable";
+      return;
+    }
+
+    const registeredClaims = new Set(contract.claims.map(claim => claim.id));
+    const submissions = opinion.claimReports ?? [];
+    const submittedClaims = new Set(submissions.map(report => report.claimId));
+    const invalidClaim = submissions.some(report => !registeredClaims.has(report.claimId));
+    const missingRequired = contract.requireAllClaims === true
+      && contract.claims.some(claim => !submittedClaims.has(claim.id));
+    if (opinion.claimParseStatus !== "valid" || invalidClaim || missingRequired) {
+      opinion.claimReports = [];
+      opinion.epistemicReportIds = [];
+      opinion.claimParseStatus = invalidClaim ? "invalid" : "incomplete";
+      return;
+    }
+
+    const batch = this.getEpistemicBatch(round);
+    const reportIds: string[] = [];
+    for (const submission of submissions) {
+      const reportId = `report:${task.id}:${round}:${opinion.agentId}:${++this.epistemicSequence}`;
+      const evidenceReferences: BeliefReport["evidence"] = [];
+      submission.evidence.forEach((submittedEvidence, index) => {
+        const evidenceId = `${reportId}:evidence:${index + 1}`;
+        batch.evidence.push({
+          id: evidenceId,
+          content: submittedEvidence.content,
+          createdAt,
+          provenance: {
+            sourceKind: "agent",
+            sourceId: opinion.agentId,
+            contentHash: `sha256:${createHash("sha256").update(submittedEvidence.content).digest("hex")}`,
+          },
+        });
+        evidenceReferences.push({ evidenceId, relation: submittedEvidence.relation });
+      });
+
+      const agentClaimKey = `${opinion.agentId}\u0000${submission.claimId}`;
+      const supersedesReportId = this.latestEpistemicReport.get(agentClaimKey);
+      const observedForClaim = observedReportIds.filter(reportIdValue =>
+        this.epistemicReportClaims.get(reportIdValue) === submission.claimId
+          || this.epistemicLedger.getReport(reportIdValue)?.claimId === submission.claimId
+      );
+      const report: BeliefReport = {
+        id: reportId,
+        claimId: submission.claimId,
+        agentId: opinion.agentId,
+        round,
+        probability: submission.probability,
+        evidence: evidenceReferences,
+        // Capital is intentionally inactive in P1; P2 must lock a real balance.
+        stake: 0,
+        createdAt,
+        supersedesReportId,
+        observedReportIds: observedForClaim,
+      };
+      batch.reports.push(report);
+      reportIds.push(reportId);
+      this.latestEpistemicReport.set(agentClaimKey, reportId);
+      this.epistemicReportClaims.set(reportId, submission.claimId);
+    }
+    opinion.epistemicReportIds = reportIds;
+  }
+
+  private commitEpistemicRound(
+    round: number,
+    task: DiscussionTask,
+  ): RoundData["epistemicCommit"] | undefined {
+    if (!task.epistemic) return undefined;
+    const batch = this.pendingEpistemicRounds.get(round)
+      ?? { evidence: [], reports: [], exposures: [] };
+    this.epistemicLedger.commitRound(batch);
+    this.pendingEpistemicRounds.delete(round);
+    return {
+      evidenceCount: batch.evidence.length,
+      reportCount: batch.reports.length,
+      exposureCount: batch.exposures.length,
+    };
+  }
+
   private async runRound(
     agents: DiscussionAgent[],
     task: DiscussionTask,
@@ -919,6 +1137,7 @@ export class DiscussionEngine {
         confidence: observation.parsedOpinion.confidence,
         referencedAgents: observation.parsedOpinion.referencedAgents,
         itemBeliefs: observation.parsedOpinion.itemBeliefs,
+        epistemicReportIds: observation.parsedOpinion.epistemicReportIds,
         timestamp: observation.timestamp,
       });
     }
@@ -938,24 +1157,24 @@ export class DiscussionEngine {
     const allMemory = this.memoryManager.getAll();
     const observations: RawObservation[] = [];
     // 本轮已发言的观点，按发言顺序累积，后发言的 agent 能看到
-    const currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number }> = [];
+    const currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number; epistemicReportIds?: string[] }> = [];
 
     for (const agent of agents) {
       try {
         const state = agent.getState();
-        // 个性化 memory：agent 自己说过的 + 别人 @ 它的
-        const ownEntries = allMemory.filter(e => e.agentId === agent.id);
-        const mentionsMe = allMemory.filter(e =>
-          e.agentId !== agent.id && e.referencedAgents?.includes(agent.id)
-        );
-        const personalMemory = [...ownEntries, ...mentionsMe]
-          .sort((a, b) => a.roundNumber - b.roundNumber);
+        const personalMemory = this.selectPromptMemory(allMemory, agent.id);
+        const visibleCurrentRound = currentRoundOpinions.slice(-8);
         const prompt = this.buildPrompt(
           { name: agent.name, role: agent.role, id: agent.id },
           typeof task.content === "string" ? task.content : JSON.stringify(task.content),
-          personalMemory, roundNumber, state, currentRoundOpinions
-        );
+          personalMemory, roundNumber, state, visibleCurrentRound
+        ) + this.buildEpistemicPrompt(task);
         const response = await agent.sendMessage(prompt);
+        // A completed sendMessage call is the observation boundary. Failed
+        // calls are not recorded as delivered exposures.
+        const observedReportIds = task.epistemic
+          ? this.recordPromptExposures(agent.id, roundNumber, personalMemory, visibleCurrentRound)
+          : [];
         // Use the shared parser instead of a private duplicate
         const rawParsedOpinion = this.opinionParser.parseOpinion(
           response,
@@ -969,11 +1188,19 @@ export class DiscussionEngine {
           task.canonicalOptions,
           task.optionAliases,
         );
+        const observationTimestamp = new Date().toISOString();
+        this.prepareEpistemicOpinion(
+          parsedOpinion,
+          task,
+          roundNumber,
+          observedReportIds,
+          observationTimestamp,
+        );
 
         const observation: RawObservation = {
           agentId: agent.id,
           roundNumber,
-          timestamp: new Date().toISOString(),
+          timestamp: observationTimestamp,
           rawResponse: response,
           parsedOpinion,
         };
@@ -984,6 +1211,7 @@ export class DiscussionEngine {
           reasoning: parsedOpinion.reasoning,
           belief: parsedOpinion.belief,
           confidence: parsedOpinion.confidence,
+          epistemicReportIds: parsedOpinion.epistemicReportIds,
         });
         // EvidencePool hook：子类（NativeCognitiveEngine）可在此把本 agent 的
         // 结构化证据喂入共享池，供后续发言者参考（顺序发言机制）。
@@ -1006,7 +1234,7 @@ export class DiscussionEngine {
     memory: DiscussionMemoryEntry[],
     roundNumber: number,
     state: { belief: number; confidence: number },
-    currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number }> = []
+    currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number; epistemicReportIds?: string[] }> = []
   ): string {
     // ── 历史窗口剪枝：防止全局历史无限制膨胀进 prompt ────────────
     // memory 按时间顺序存储（InMemoryStrategy 追加），slice(-N) 取最近 N 条。
@@ -1972,6 +2200,11 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     this.eventTracker.clear();
     this.roundDataArray = [];
     this.dropoutObservations = [];
+    this.epistemicLedger = new EpistemicLedger();
+    this.pendingEpistemicRounds.clear();
+    this.latestEpistemicReport.clear();
+    this.epistemicReportClaims.clear();
+    this.epistemicSequence = 0;
     // H23 修复：重置 GovernanceEngine 运行时状态，防止跨实验校准缓存/干预历史污染
     this.governanceEngine.reset();
     // H-Fix: 重置 random-intervene PRNG 到初始 seed 状态，保证跨实验可复现

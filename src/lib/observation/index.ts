@@ -2,6 +2,7 @@ import type { RawObservation, ObservationConfig, PromptBuilder, OpinionParser, O
 import type { AgentOpinion, DiscussionTask, DiscussionMemoryEntry } from "../discussion/types";
 import type { RuntimeContext } from "../discussion-types/types";
 import { safeJsonParse } from "../utils/jsonUtils";
+import { parseClaimReports } from "./claimReports";
 
 class DefaultPromptBuilder implements PromptBuilder {
   buildPrompt(
@@ -59,6 +60,7 @@ class DefaultOpinionParser implements OpinionParser {
       // H35 修复：用 safeJsonParse 替代裸 JSON.parse，处理 markdown 代码块/截断等异常
       const parsed = safeJsonParse(response);
       if (!parsed) throw new Error("Empty parse result");
+      const parsedClaims = parseClaimReports(parsed.claims);
 
       return {
         agentId,
@@ -80,6 +82,7 @@ class DefaultOpinionParser implements OpinionParser {
               confidence: typeof ib.confidence === "number" ? Math.max(0, Math.min(100, ib.confidence)) : 50,
             }))
           : undefined,
+        ...parsedClaims,
       };
     } catch (err) {
       console.warn(`[ObservationLayer] Agent ${agentId} response parse failed:`, err instanceof Error ? err.message : err);
@@ -113,6 +116,9 @@ export class ObservationLayer {
     round: number,
     context: RuntimeContext
   ): Promise<RawObservation[]> {
+    if (task.epistemic) {
+      throw new Error("Standalone ObservationLayer does not own an epistemic finalize boundary; use DiscussionEngine.run()");
+    }
     const taskContent = typeof task.content === "string" ? task.content : JSON.stringify(task.content);
     const maxRounds = context.round.max;
 
@@ -158,4 +164,5 @@ export class ObservationLayer {
 }
 
 export { DefaultPromptBuilder, DefaultOpinionParser };
+export { parseClaimReports } from "./claimReports";
 export type { RawObservation, ObservationConfig, PromptBuilder, OpinionParser, ObserverAgent };

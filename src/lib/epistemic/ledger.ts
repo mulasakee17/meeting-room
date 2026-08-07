@@ -1,5 +1,6 @@
 import type {
   BeliefReport,
+  BeliefExposure,
   ClaimResolution,
   EpistemicClaim,
   EpistemicEvent,
@@ -25,6 +26,7 @@ export class EpistemicLedger {
   private readonly claims = new Map<string, EpistemicClaim>();
   private readonly evidence = new Map<string, EpistemicEvidence>();
   private readonly reports = new Map<string, BeliefReport>();
+  private readonly exposures = new Map<string, BeliefExposure>();
   private readonly resolutions = new Map<string, ClaimResolution>();
   private readonly latestReportByAgentClaim = new Map<string, string>();
   private readonly events: EpistemicEvent[] = [];
@@ -84,6 +86,14 @@ export class EpistemicLedger {
       if (observed.round > report.round) {
         throw new Error(`Observed report ${observedId} is from a future round`);
       }
+      const hasExposure = [...this.exposures.values()].some(exposure =>
+        exposure.sourceReportId === observedId
+        && exposure.targetAgentId === report.agentId
+        && exposure.round <= report.round
+      );
+      if (!hasExposure) {
+        throw new Error(`Observed report ${observedId} has no matching architecture-recorded exposure for ${report.agentId}`);
+      }
     }
 
     const agentClaimKey = `${report.agentId}\u0000${report.claimId}`;
@@ -99,6 +109,39 @@ export class EpistemicLedger {
     this.reports.set(stored.id, stored);
     this.latestReportByAgentClaim.set(agentClaimKey, stored.id);
     this.events.push({ type: "belief_reported", report: stored });
+  }
+
+  appendExposure(exposure: BeliefExposure): void {
+    requireNonEmpty(exposure.id, "exposure.id");
+    requireNonEmpty(exposure.targetAgentId, "exposure.targetAgentId");
+    if (this.exposures.has(exposure.id)) throw new Error(`Exposure ${exposure.id} already exists`);
+    const source = this.reports.get(exposure.sourceReportId);
+    if (!source) throw new Error(`Unknown source report ${exposure.sourceReportId}`);
+    if (source.claimId !== exposure.claimId) {
+      throw new Error(`Exposure ${exposure.id} claim does not match its source report`);
+    }
+    if (!Number.isInteger(exposure.round) || exposure.round < source.round) {
+      throw new Error(`Exposure ${exposure.id} must occur at or after its source report`);
+    }
+    const stored = structuredClone(exposure);
+    this.exposures.set(stored.id, stored);
+    this.events.push({ type: "belief_exposed", exposure: stored });
+  }
+
+  /**
+   * Validate a whole round against an isolated clone, then commit it. This is
+   * the ledger-side transaction boundary used by finalizeRound: a bad report
+   * or exposure cannot leave a partially appended round behind.
+   */
+  commitRound(batch: {
+    evidence: EpistemicEvidence[];
+    reports: BeliefReport[];
+    exposures: BeliefExposure[];
+  }): void {
+    const staged = this.clone();
+    staged.applyBatch(batch);
+    staged.assertObservedReportsWereExposed(batch.reports);
+    this.applyBatch(batch);
   }
 
   resolveClaim(resolution: ClaimResolution): void {
@@ -124,8 +167,68 @@ export class EpistemicLedger {
     return structuredClone([...this.reports.values()].filter(report => report.claimId === claimId));
   }
 
+  getExposuresForClaim(claimId: string): BeliefExposure[] {
+    return structuredClone([...this.exposures.values()].filter(exposure => exposure.claimId === claimId));
+  }
+
+  getReport(reportId: string): BeliefReport | undefined {
+    const report = this.reports.get(reportId);
+    return report ? structuredClone(report) : undefined;
+  }
+
   getResolution(claimId: string): ClaimResolution | undefined {
     const resolution = this.resolutions.get(claimId);
     return resolution ? structuredClone(resolution) : undefined;
+  }
+
+
+  private applyBatch(batch: {
+    evidence: EpistemicEvidence[];
+    reports: BeliefReport[];
+    exposures: BeliefExposure[];
+  }): void {
+    for (const item of batch.evidence) this.registerEvidence(item);
+    const pendingExposures = [...batch.exposures];
+    for (const report of batch.reports) {
+      for (const observedReportId of report.observedReportIds ?? []) {
+        const exposureIndex = pendingExposures.findIndex(exposure =>
+          exposure.sourceReportId === observedReportId
+          && exposure.targetAgentId === report.agentId
+        );
+        if (exposureIndex >= 0) {
+          this.appendExposure(pendingExposures[exposureIndex]);
+          pendingExposures.splice(exposureIndex, 1);
+        }
+      }
+      this.appendBeliefReport(report);
+    }
+    for (const exposure of pendingExposures) this.appendExposure(exposure);
+  }
+
+  private assertObservedReportsWereExposed(reports: BeliefReport[]): void {
+    for (const report of reports) {
+      for (const observedReportId of report.observedReportIds ?? []) {
+        const matchedExposure = [...this.exposures.values()].some(exposure =>
+          exposure.sourceReportId === observedReportId
+          && exposure.targetAgentId === report.agentId
+          && exposure.round <= report.round
+        );
+        if (!matchedExposure) {
+          throw new Error(`Observed report ${observedReportId} has no matching architecture-recorded exposure for ${report.agentId}`);
+        }
+      }
+    }
+  }
+
+  private clone(): EpistemicLedger {
+    const clone = new EpistemicLedger();
+    for (const event of this.events) {
+      if (event.type === "claim_registered") clone.registerClaim(event.claim);
+      else if (event.type === "evidence_registered") clone.registerEvidence(event.evidence);
+      else if (event.type === "belief_reported") clone.appendBeliefReport(event.report);
+      else if (event.type === "belief_exposed") clone.appendExposure(event.exposure);
+      else clone.resolveClaim(event.resolution);
+    }
+    return clone;
   }
 }

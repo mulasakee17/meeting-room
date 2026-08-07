@@ -45,6 +45,7 @@ import {
   stanceFromItemBeliefs,
 } from "../agent/cognitiveState";
 import type { OpinionParser } from "../observation";
+import { parseClaimReports } from "../observation";
 import {
   generateCognitiveInterventions,
 } from "../governance/cognitiveInterventions";
@@ -94,6 +95,7 @@ class NativeCognitiveOpinionParser implements OpinionParser {
     try {
       const parsed = safeJsonParse(response);
       if (!parsed) throw new Error("Empty parse result");
+      const parsedClaims = parseClaimReports(parsed.claims);
 
       // 提取原生 cognitiveState
       let cognitiveState: NativeCognitiveOutput | undefined;
@@ -185,6 +187,7 @@ class NativeCognitiveOpinionParser implements OpinionParser {
           : undefined,
         cognitiveState,
         structuredEvidence,
+        ...parsedClaims,
       };
     } catch (err) {
       console.warn(`[NativeCognitiveEngine] Agent ${agentId} response parse failed:`, err instanceof Error ? err.message : err);
@@ -408,7 +411,7 @@ export class NativeCognitiveEngine extends DiscussionEngine {
     memory: DiscussionMemoryEntry[],
     roundNumber: number,
     state: { belief: number; confidence: number },
-    currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number }> = [],
+    currentRoundOpinions: Array<{ agentId: string; reasoning: string; belief: number; confidence: number; epistemicReportIds?: string[] }> = [],
   ): string {
     // ── Phase 4A: Belief Context Decoupling ──────────────────────────
     // 移除所有 belief context leakage。state.belief / state.confidence 来自父类
@@ -898,6 +901,13 @@ Field explanations:
       console.warn(`[NativeCognitiveEngine] SemanticTool diagnosis failed, falling back to sync: ${err instanceof Error ? err.message : err}`);
       return this.applyCognitiveGovernance(_round, opinions, agents, currentRound, _maxRounds);
     }
+  }
+
+  protected initializeEpistemicTask(task: import("./types").DiscussionTask): void {
+    if (task.epistemic && this.evidencePool) {
+      throw new Error("EpistemicTaskContract cannot use the legacy EvidencePool because pooled-evidence exposure is not yet auditable");
+    }
+    super.initializeEpistemicTask(task);
   }
 
   /**

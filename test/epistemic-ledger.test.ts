@@ -42,6 +42,15 @@ describe("EpistemicLedger", () => {
     ledger.registerClaim(claim);
     ledger.registerEvidence(evidence);
     ledger.appendBeliefReport(report());
+    ledger.appendExposure({
+      id: "exposure-1",
+      claimId: claim.id,
+      sourceReportId: "report-1",
+      targetAgentId: "agent-1",
+      round: 2,
+      channel: "memory",
+      exposedAt: "2026-08-07T00:00:02.500Z",
+    });
     ledger.appendBeliefReport(report({
       id: "report-2",
       round: 2,
@@ -61,6 +70,7 @@ describe("EpistemicLedger", () => {
       "claim_registered",
       "evidence_registered",
       "belief_reported",
+      "belief_exposed",
       "belief_reported",
       "claim_resolved",
     ]);
@@ -98,6 +108,28 @@ describe("EpistemicLedger", () => {
 
     expect(() => ledger.appendBeliefReport(report({ evidence: [] })))
       .toThrow("already resolved");
+  });
+
+  it("does not partially append a round when an exposure is invalid", () => {
+    const ledger = new EpistemicLedger();
+    ledger.registerClaim(claim);
+
+    expect(() => ledger.commitRound({
+      evidence: [evidence],
+      reports: [report()],
+      exposures: [{
+        id: "exposure-1",
+        claimId: claim.id,
+        sourceReportId: "missing-report",
+        targetAgentId: "agent-2",
+        round: 1,
+        channel: "current_round",
+        exposedAt: "2026-08-07T00:00:03.000Z",
+      }],
+    })).toThrow("Unknown source report missing-report");
+
+    expect(ledger.getEvents().map(event => event.type)).toEqual(["claim_registered"]);
+    expect(ledger.getReportsForClaim(claim.id)).toEqual([]);
   });
 });
 

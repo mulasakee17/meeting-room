@@ -197,6 +197,9 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
   ): Promise<AsyncDiscussionResult> {
     this.beginRunLifecycle();
     try {
+    if (task.epistemic) {
+      throw new Error("EpistemicTaskContract is not yet supported by AsyncDiscussionEngine; use DiscussionEngine or NativeCognitiveEngine");
+    }
     this.eventTracker.track({
       type: "round_start", timestamp: new Date().toISOString(), roundNumber: 0,
       payload: { task: task.id, agentCount: agents.length, mode: "async", speakMode: this.asyncConfig.speakMode },
