@@ -26,7 +26,7 @@ import {
   type AgentCognitiveState,
 } from "../../../src/lib/agent/cognitiveState";
 import { computeDeltaDiagnosis } from "../../../src/lib/thermodynamics/computeDelta";
-import { estimateAll, type ProgressiveEstimates } from "../../../src/lib/thermodynamics/ProgressiveEstimator";
+import type { ProgressiveEstimates } from "../../../src/lib/thermodynamics/ProgressiveEstimator";
 import type { GovernanceEstimate } from "../../../src/lib/epistemic/semantics";
 import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
 import { resolveCandidateOptions, runHiddenBenchProtocol } from "./hiddenbenchProtocol";
@@ -605,8 +605,8 @@ export async function runSingle(
       number,
       Map<string, GovernanceEstimate<ProgressiveEstimates>>
     >;
-    for (const [round, records] of estimateHistory) {
-      for (const [agentId, record] of records) {
+    for (const [round, records] of [...estimateHistory].sort(([left], [right]) => left - right)) {
+      for (const [agentId, record] of [...records].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)) {
         governanceEstimateHistory.push({ round, agentId, record });
       }
     }
@@ -638,9 +638,14 @@ export async function runSingle(
           string,
           GovernanceEstimate<ProgressiveEstimates>
         >;
-        const estimates = recorded.size > 0
-          ? new Map([...recorded].map(([agentId, record]) => [agentId, structuredClone(record.value)]))
-          : estimateAll(states, r);
+        if (recorded.size !== states.size) {
+          throw new Error(
+            `Missing governance estimate provenance for round ${r}: expected ${states.size}, recorded ${recorded.size}`,
+          );
+        }
+        const estimates = new Map(
+          [...recorded].map(([agentId, record]) => [agentId, structuredClone(record.value)]),
+        );
         const diagnosis = computeDeltaDiagnosis(Array.from(states.values()), thermo, estimates);
         deltaDiagnosis.push({ round: r, ...diagnosis });
       }

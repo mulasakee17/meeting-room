@@ -58,9 +58,13 @@ import {
   createInitialInertia,
   type ProgressiveEstimates,
   defaultProgressiveEstimatorRegistry,
+  DEFAULT_PROGRESSIVE_ESTIMATOR_REFERENCE,
 } from "./ProgressiveEstimator";
 import type { GovernanceEstimate } from "../epistemic/semantics";
-import type { GovernanceEstimatorRegistry } from "../epistemic/estimators";
+import type {
+  GovernanceEstimatorReference,
+  GovernanceEstimatorRegistry,
+} from "../epistemic/estimators";
 import { semanticConsult, type SemanticConsultRequest } from "./SemanticTool";
 import type { LLMConfig } from "../llm/providers";
 import {
@@ -216,11 +220,18 @@ export class MeasurementLayer {
     number,
     Map<string, GovernanceEstimate<ProgressiveEstimates>>
   >();
+  private readonly governanceEstimatorReference: GovernanceEstimatorReference;
 
   constructor(
     governanceEstimatorRegistry: GovernanceEstimatorRegistry = defaultProgressiveEstimatorRegistry,
+    governanceEstimatorReference: GovernanceEstimatorReference = DEFAULT_PROGRESSIVE_ESTIMATOR_REFERENCE,
   ) {
     this.governanceEstimatorRegistry = governanceEstimatorRegistry.snapshot().seal();
+    this.governanceEstimatorRegistry.get(
+      governanceEstimatorReference.id,
+      governanceEstimatorReference.version,
+    );
+    this.governanceEstimatorReference = { ...governanceEstimatorReference };
   }
 
   // ==========================================================================
@@ -1969,6 +1980,7 @@ export class MeasurementLayer {
       round,
       sourceEventIdsByAgent,
       this.governanceEstimatorRegistry,
+      this.governanceEstimatorReference,
     );
     this.governanceEstimateHistory.set(round, structuredClone(batch.records));
     return batch.estimates;

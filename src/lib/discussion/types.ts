@@ -3,6 +3,7 @@ import type {
   BeliefValue,
   EpistemicClaim,
   GovernanceEstimatorRegistry,
+  GovernanceEstimatorReference,
   LegacyQuantitySources,
   LegacySemanticTelemetry,
 } from "../epistemic";
@@ -250,6 +251,8 @@ export interface DiscussionConfig {
   epistemicContractRegistry?: BeliefContractRegistry;
   /** Versioned, snapshotted estimator semantics for reproducible governance projections. */
   governanceEstimatorRegistry?: GovernanceEstimatorRegistry;
+  /** Exact estimator id and version to select from governanceEstimatorRegistry. */
+  governanceEstimatorReference?: GovernanceEstimatorReference;
   /** Enable agent dropout for sensitivity analysis (default false) */
   enableDropoutAnalysis?: boolean;
   /**

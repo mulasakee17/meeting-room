@@ -16,6 +16,7 @@ import type {
 import {
   GovernanceEstimatorRegistry,
   type GovernanceEstimatorContract,
+  type GovernanceEstimatorReference,
 } from "../epistemic/estimators";
 import type { GovernanceEstimate } from "../epistemic/semantics";
 
@@ -154,6 +155,10 @@ export const DEFAULT_PROGRESSIVE_ESTIMATOR_CONFIG: ProgressiveEstimatorConfig = 
 
 export const PROGRESSIVE_ESTIMATOR_ID = "swarmalpha.progressive-icl";
 export const PROGRESSIVE_ESTIMATOR_VERSION = "1.0.0";
+export const DEFAULT_PROGRESSIVE_ESTIMATOR_REFERENCE: GovernanceEstimatorReference = Object.freeze({
+  id: PROGRESSIVE_ESTIMATOR_ID,
+  version: PROGRESSIVE_ESTIMATOR_VERSION,
+});
 
 // ============================================================================
 // Core
@@ -183,6 +188,7 @@ export function estimateAllWithProvenance(
   round: number,
   sourceEventIdsByAgent: Map<string, string[]> = new Map(),
   registry: GovernanceEstimatorRegistry = defaultProgressiveEstimatorRegistry,
+  estimator: GovernanceEstimatorReference = DEFAULT_PROGRESSIVE_ESTIMATOR_REFERENCE,
 ): ProgressiveEstimationBatch {
   const results = new Map<string, ProgressiveEstimates>();
   const records = new Map<string, GovernanceEstimate<ProgressiveEstimates>>();
@@ -190,8 +196,8 @@ export function estimateAllWithProvenance(
   for (const [agentId, cs] of cognitiveStates) {
     const input = buildProgressiveEstimatorInput(cs, round);
     const record = registry.project<ProgressiveEstimatorInput, ProgressiveEstimates, ProgressiveEstimatorConfig>(
-      PROGRESSIVE_ESTIMATOR_ID,
-      PROGRESSIVE_ESTIMATOR_VERSION,
+      estimator.id,
+      estimator.version,
       {
         name: `progressive_icl:${agentId}:round:${round}`,
         input,
@@ -572,11 +578,22 @@ function validateProgressiveInput(value: unknown): void {
   if (!value || typeof value !== "object") throw new Error("progressive estimator input must be an object");
   const input = value as ProgressiveEstimatorInput;
   if (!Number.isSafeInteger(input.round) || input.round < 0) throw new Error("input.round must be a non-negative safe integer");
-  if (typeof input.agentRole !== "string") throw new Error("input.agentRole must be a string");
+  if (typeof input.agentRole !== "string" || input.agentRole.trim().length === 0) {
+    throw new Error("input.agentRole must be a non-empty string");
+  }
   if (input.statedOpenness !== undefined) requireFiniteRange(input.statedOpenness, 0, 1, "input.statedOpenness");
-  const eventValues = Object.values(input.behaviorEvents ?? {});
-  if (eventValues.length !== 5 || eventValues.some(count => !Number.isSafeInteger(count) || count < 0)) {
-    throw new Error("input.behaviorEvents must contain five non-negative integer counters");
+  const eventFields: Array<keyof BehaviorEvents> = [
+    "timesRefuted",
+    "timesChangedAfterRefutation",
+    "spontaneousFlips",
+    "timesExposed",
+    "timesRespondedAfterExposure",
+  ];
+  const eventRecord = input.behaviorEvents as unknown as Record<string, unknown> | undefined;
+  if (!eventRecord || typeof eventRecord !== "object"
+    || Object.keys(eventRecord).length !== eventFields.length
+    || eventFields.some(field => !Number.isSafeInteger(eventRecord[field]) || (eventRecord[field] as number) < 0)) {
+    throw new Error("input.behaviorEvents must contain exactly the five named non-negative integer counters");
   }
   if (input.behaviorEvents.timesChangedAfterRefutation > input.behaviorEvents.timesRefuted) {
     throw new Error("timesChangedAfterRefutation must not exceed timesRefuted");
@@ -589,6 +606,10 @@ function validateProgressiveInput(value: unknown): void {
   if (input.confidence.overall !== undefined) requireFiniteRange(input.confidence.overall, 0, 1, "input.confidence.overall");
   if (!Array.isArray(input.utilityHistory)) throw new Error("input.utilityHistory must be an array");
   for (const entry of input.utilityHistory) {
+    if (!entry || typeof entry !== "object" || !entry.scores || typeof entry.scores !== "object"
+      || Array.isArray(entry.scores)) {
+      throw new Error("utilityHistory entries must contain a score object");
+    }
     if (!Number.isSafeInteger(entry.round) || entry.round < 0) throw new Error("utilityHistory.round must be a non-negative safe integer");
     for (const score of Object.values(entry.scores)) {
       if (!Number.isFinite(score)) throw new Error("utilityHistory scores must be finite");
@@ -638,11 +659,24 @@ function validateProgressiveOutput(value: unknown): void {
   const inertiaWeights = output.inertia.sourceWeights;
   const confidenceWeights = output.confidence.sourceWeights;
   if (!inertiaWeights || !confidenceWeights) throw new Error("progressive estimator sourceWeights are required");
+  const inertiaWeightFields = ["stated", "rolePrior", "behavioral"] as const;
+  const confidenceWeightFields = ["stated", "stability"] as const;
+  if (Object.keys(inertiaWeights).length !== inertiaWeightFields.length
+    || inertiaWeightFields.some(field => !Object.prototype.hasOwnProperty.call(inertiaWeights, field))
+    || Object.keys(confidenceWeights).length !== confidenceWeightFields.length
+    || confidenceWeightFields.some(field => !Object.prototype.hasOwnProperty.call(confidenceWeights, field))) {
+    throw new Error("progressive estimator sourceWeights must use the exact declared fields");
+  }
   for (const [name, weight] of Object.entries(inertiaWeights)) {
     requireFiniteRange(weight, 0, 1, `output.inertia.sourceWeights.${name}`);
   }
   for (const [name, weight] of Object.entries(confidenceWeights)) {
     requireFiniteRange(weight, 0, 1, `output.confidence.sourceWeights.${name}`);
+  }
+  const inertiaWeightSum = Object.values(inertiaWeights).reduce((sum, weight) => sum + weight, 0);
+  const confidenceWeightSum = Object.values(confidenceWeights).reduce((sum, weight) => sum + weight, 0);
+  if (Math.abs(inertiaWeightSum - 1) > 1e-12 || Math.abs(confidenceWeightSum - 1) > 1e-12) {
+    throw new Error("progressive estimator sourceWeights must sum to one");
   }
   requireFiniteRange(output.inertia.behavioralRatio, 0, 1, "output.inertia.behavioralRatio");
   if (typeof output.susceptibility.usable !== "boolean") throw new Error("output.susceptibility.usable must be boolean");

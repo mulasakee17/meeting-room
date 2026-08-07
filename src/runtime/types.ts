@@ -11,7 +11,11 @@
 
 import type { GovernanceConfig, GovernanceResult, Intervention } from "../lib/governance/types";
 import type { EvaluationResult, EvaluationConfig } from "../lib/evaluation/types";
-import type { GovernanceEstimatorRegistry, LegacySemanticTelemetry } from "../lib/epistemic";
+import type {
+  GovernanceEstimatorReference,
+  GovernanceEstimatorRegistry,
+  LegacySemanticTelemetry,
+} from "../lib/epistemic";
 
 // ============================================================================
 // Discussion Stream (framework-agnostic input)
@@ -182,6 +186,8 @@ export interface RuntimeConfig {
   seed?: number;
   /** Versioned estimator semantics; snapshotted by MeasurementLayer. */
   governanceEstimatorRegistry?: GovernanceEstimatorRegistry;
+  /** Exact estimator id and version to select from governanceEstimatorRegistry. */
+  governanceEstimatorReference?: GovernanceEstimatorReference;
   // ── v3.2: Cognitive governance options ──
   /** Agent private knowledge (for inject_evidence intervention).
    *  Maps agentId → list of private knowledge strings. */

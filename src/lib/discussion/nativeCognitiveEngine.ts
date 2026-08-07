@@ -309,7 +309,10 @@ export class NativeCognitiveEngine extends DiscussionEngine {
 
   constructor(config?: Partial<DiscussionConfig>) {
     super(config);
-    this.measurementLayer = new MeasurementLayer(config?.governanceEstimatorRegistry);
+    this.measurementLayer = new MeasurementLayer(
+      config?.governanceEstimatorRegistry,
+      config?.governanceEstimatorReference,
+    );
     // 未经 held-out 校准前，native 主实验默认固定轮数；RHT/RHTF 只能显式开启。
     this.config.terminationPolicy = config?.terminationPolicy ?? "fixed_rounds";
     // 强制启用 cognitive state 追踪

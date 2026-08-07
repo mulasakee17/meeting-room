@@ -5,6 +5,14 @@ import {
   fingerprintEstimatorValue,
   type GovernanceEstimatorContract,
 } from "@/lib/epistemic";
+import {
+  PROGRESSIVE_ESTIMATOR_ID,
+  PROGRESSIVE_ESTIMATOR_VERSION,
+  defaultProgressiveEstimatorRegistry,
+  type ProgressiveEstimatorConfig,
+  type ProgressiveEstimatorInput,
+  type ProgressiveEstimates,
+} from "@/lib/thermodynamics/ProgressiveEstimator";
 
 type SumInput = { values: number[] };
 type SumConfig = { scale: number };
@@ -56,6 +64,25 @@ describe("GovernanceEstimatorRegistry", () => {
     expect(() => canonicalizeEstimatorValue(symbolKeyed)).toThrow(/symbol keys/);
   });
 
+  it("rejects cycles and accessor-backed state instead of executing hidden behavior", () => {
+    const cyclic: { self?: unknown } = {};
+    cyclic.self = cyclic;
+    const accessor = Object.defineProperty({}, "value", { enumerable: true, get: () => 1 });
+
+    expect(() => canonicalizeEstimatorValue(cyclic)).toThrow(/cycles/);
+    expect(() => canonicalizeEstimatorValue(accessor)).toThrow(/data property/);
+  });
+
+  it("rejects custom or accessor-backed array properties", () => {
+    const custom = [1] as number[] & { note?: string };
+    custom.note = "hidden";
+    const accessor = [1];
+    Object.defineProperty(accessor, "0", { enumerable: true, get: () => 1 });
+
+    expect(() => canonicalizeEstimatorValue(custom)).toThrow(/custom properties/);
+    expect(() => canonicalizeEstimatorValue(accessor)).toThrow(/data property/);
+  });
+
   it("projects with exact version, stable fingerprints, and sorted unique sources", () => {
     const registry = new GovernanceEstimatorRegistry([sumContract]).seal();
     const first = registry.project<SumInput, SumOutput, SumConfig>("test.sum", "1.0.0", {
@@ -90,6 +117,24 @@ describe("GovernanceEstimatorRegistry", () => {
     expect(() => snapshot.register({ ...sumContract, version: "3.0.0" })).toThrow(/sealed/);
   });
 
+  it("copies contracts on registration so later caller mutation cannot change semantics", () => {
+    const mutable = {
+      ...sumContract,
+      defaultConfig: { scale: 2 },
+    };
+    const registry = new GovernanceEstimatorRegistry([mutable]).seal();
+    mutable.defaultConfig.scale = 99;
+    mutable.version = "9.9.9";
+
+    const record = registry.project("test.sum", "1.0.0", {
+      name: "isolated_sum",
+      input: { values: [2] },
+      sourceEventIds: [],
+    });
+    expect(record.value).toEqual({ total: 4 });
+    expect(registry.list()).toEqual([{ id: "test.sum", version: "1.0.0" }]);
+  });
+
   it("requires a safe integer seed for seeded estimators", () => {
     const seeded: GovernanceEstimatorContract<SumInput, SumOutput, SumConfig & { seed: number }> = {
       ...sumContract,
@@ -109,5 +154,59 @@ describe("GovernanceEstimatorRegistry", () => {
       config: { scale: 1, seed: 1.5 },
       sourceEventIds: [],
     })).toThrow(/safe integer/);
+  });
+
+  it("rejects behavior telemetry with the wrong field names", () => {
+    expect(() => defaultProgressiveEstimatorRegistry.project(
+      PROGRESSIVE_ESTIMATOR_ID,
+      PROGRESSIVE_ESTIMATOR_VERSION,
+      {
+        name: "invalid_behavior_shape",
+        input: {
+          round: 1,
+          agentRole: "analyst",
+          behaviorEvents: { a: 0, b: 0, c: 0, d: 0, e: 0 },
+          confidence: { stated: 0.5 },
+          utilityHistory: [],
+        },
+        sourceEventIds: [],
+      },
+    )).toThrow(/five named/);
+  });
+
+  it("normalizes score-map key order before fingerprinting and estimation", () => {
+    const input = (reverse: boolean): ProgressiveEstimatorInput => ({
+      round: 3,
+      agentRole: "analyst",
+      behaviorEvents: {
+        timesRefuted: 0,
+        timesChangedAfterRefutation: 0,
+        spontaneousFlips: 0,
+        timesExposed: 0,
+        timesRespondedAfterExposure: 0,
+      },
+      confidence: { stated: 0.7 },
+      utilityHistory: [1, 2, 3].map(round => ({
+        round,
+        scores: reverse
+          ? { z: 0.1 * round, a: 0.2 * round, m: 0.3 * round }
+          : { a: 0.2 * round, m: 0.3 * round, z: 0.1 * round },
+      })),
+    });
+    const project = (value: ProgressiveEstimatorInput) => defaultProgressiveEstimatorRegistry.project<
+      ProgressiveEstimatorInput,
+      ProgressiveEstimates,
+      ProgressiveEstimatorConfig
+    >(PROGRESSIVE_ESTIMATOR_ID, PROGRESSIVE_ESTIMATOR_VERSION, {
+      name: "key_order_invariant",
+      input: value,
+      sourceEventIds: [],
+    });
+
+    const ordered = project(input(false));
+    const reversed = project(input(true));
+    expect(ordered.inputFingerprint).toBe(reversed.inputFingerprint);
+    expect(ordered.outputFingerprint).toBe(reversed.outputFingerprint);
+    expect(ordered.value).toEqual(reversed.value);
   });
 });

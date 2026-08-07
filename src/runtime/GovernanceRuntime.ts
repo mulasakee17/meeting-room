@@ -50,7 +50,8 @@ import type {
 } from "../lib/governance/types";
 import { generateCognitiveInterventions } from "../lib/governance/cognitiveInterventions";
 import { MeasurementLayer } from "../lib/thermodynamics/MeasurementLayer";
-import { estimateAll } from "../lib/thermodynamics/ProgressiveEstimator";
+import type { ProgressiveEstimates } from "../lib/thermodynamics/ProgressiveEstimator";
+import type { GovernanceEstimate } from "../lib/epistemic/semantics";
 import {
   beliefToCognitiveState,
   utilityFromItemBeliefs,
@@ -136,7 +137,10 @@ export class GovernanceRuntime {
     this.governanceEngine = new GovernanceEngine(this.config.governanceConfig, this.config.seed);
     this.evaluationEngine = new EvaluationEngine();
     // v3.2: MeasurementLayer for cognitive governance (lazy-initialized cognitive states)
-    this.measurementLayer = new MeasurementLayer(this.config.governanceEstimatorRegistry);
+    this.measurementLayer = new MeasurementLayer(
+      this.config.governanceEstimatorRegistry,
+      this.config.governanceEstimatorReference,
+    );
     // 持久 PRNG：random-intervene 模式下跨轮保持状态，避免每轮产生相同随机干预
     this.randomInterveneRng = mulberry32((this.config.seed ?? 42) + 0x5A4D);
 
@@ -633,15 +637,40 @@ export class GovernanceRuntime {
     this.governanceEngine.reset();
     // v3.2: 重置认知状态和 MeasurementLayer
     this.cognitiveStates.clear();
-    this.measurementLayer = new MeasurementLayer(this.config.governanceEstimatorRegistry);
+    this.measurementLayer = new MeasurementLayer(
+      this.config.governanceEstimatorRegistry,
+      this.config.governanceEstimatorReference,
+    );
   }
 
   /** Update configuration at runtime. */
   configure(config: Partial<RuntimeConfig>): void {
+    if (config.governanceEstimatorRegistry !== undefined
+      || config.governanceEstimatorReference !== undefined) {
+      if (this.state.rounds.length > 0 || this.cognitiveStates.size > 0) {
+        throw new Error("Cannot replace governance estimator semantics during an active session; call reset() first");
+      }
+      this.measurementLayer = new MeasurementLayer(
+        config.governanceEstimatorRegistry ?? this.config.governanceEstimatorRegistry,
+        config.governanceEstimatorReference ?? this.config.governanceEstimatorReference,
+      );
+    }
     this.config = { ...this.config, ...config };
     if (config.maxRounds !== undefined) {
       this.state.maxRounds = config.maxRounds;
     }
+  }
+
+  /** Exact versioned governance estimates emitted by the cognitive path. */
+  getGovernanceEstimateHistory(): Map<number, Map<string, GovernanceEstimate<ProgressiveEstimates>>>;
+  getGovernanceEstimateHistory(round: number): Map<string, GovernanceEstimate<ProgressiveEstimates>>;
+  getGovernanceEstimateHistory(
+    round?: number,
+  ): Map<number, Map<string, GovernanceEstimate<ProgressiveEstimates>>>
+    | Map<string, GovernanceEstimate<ProgressiveEstimates>> {
+    return round === undefined
+      ? this.measurementLayer.getAllGovernanceEstimateHistory()
+      : this.measurementLayer.getGovernanceEstimateHistory(round);
   }
 
   // ==========================================================================
@@ -814,7 +843,7 @@ export class GovernanceRuntime {
     }));
 
     // Step 5: v6 渐进估计（用于置信度感知干预降级）
-    const progressiveEstimates = estimateAll(this.cognitiveStates, roundNumber);
+    const progressiveEstimates = this.measurementLayer.estimateProgressiveState(roundNumber);
 
     // Step 6: Generate non-destructive interventions
     const agentKnowledge = this.config.agentKnowledge;
