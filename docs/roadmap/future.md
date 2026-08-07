@@ -182,14 +182,18 @@ Text Communication
 #### 当前已经实现的地基（2026-08-07）
 
 - 任务必须显式声明 `EpistemicTaskContract`；未声明时，系统不会把旧 `belief [-1,1]` 或 `confidence [0,100]` 偷换成概率。
-- Agent 可对预注册二元 claim 输出 `[0,1]` 概率和支持/反对证据；未知 claim、重复 claim、越界概率和不完整报告在解析边界 fail closed。
+- `BeliefReport` 只保存一个可判别的 `BeliefValue`：binary 使用单一概率，categorical 使用概率分布，不维护平行的隐藏标量。
+- 内建 `BeliefContract` 语义支持 binary 与 categorical 两类 claim；categorical 值必须恰好覆盖全部 canonical options 且各值之和为 1，随后按 canonical option 顺序重建为确定性表示。
+- Agent 可对预注册 claim 输出概率或 categorical 分布以及支持/反对证据；未知 claim、重复 claim、越界概率和不完整报告在解析边界 fail closed。
 - 运行时生成 report/evidence/exposure ID 与 SHA-256 内容哈希，不信任模型自报的审计标识。
 - append-only ledger 记录 claim、evidence provenance、belief report、revision lineage、外部 resolution 和实际 prompt exposure。
+- `ResolverRegistry` 依据 task-specific oracle 输入生成 resolution，并校验 resolver 身份与 claim 种类；ledger 写入时会再次独立校验。
 - `observedReportIds` 必须存在匹配的架构 exposure；不能仅凭文本引用推断“看见过”。
 - 每轮 evidence、report 与 exposure 在 `finalizeRound` 中批量验证后提交；非法批次不会留下部分记录。
-- 已提供二元 Brier score 与 stake-weighted loss 原语，但当前 stake 固定为 0。
+- 提供通用 proper-loss 评分，覆盖 binary 与 multiclass Brier；旧 `scoreBinaryReport` 作为 binary-only 兼容路径保留，但当前 runtime 的 stake 仍固定为 0。
+- 同步 `DiscussionEngine` 端到端接受 `explicit_belief`，同时保留 binary-only 的 `explicit_probability` 作为兼容入口。
 
-以下能力**尚未实现**，不得写成当前系统能力：真实资本余额与锁定、跨 episode 持久身份、领域化信誉、验证 oracle、相关来源/Sybil 折扣、串谋检测、链上结算、智能合约和零知识证明。
+以下能力**尚未实现**，不得写成当前系统能力：ranking / continuous / open-ended / preference 类 claim 契约、集体聚合（collective aggregation）、信誉/抵押/验证机制、实验 runner 集成，以及真实资本余额与锁定、跨 episode 持久身份、领域化信誉、验证 oracle、相关来源/Sybil 折扣、串谋检测、链上结算、智能合约和零知识证明。
 
 #### 三阶段路线
 
