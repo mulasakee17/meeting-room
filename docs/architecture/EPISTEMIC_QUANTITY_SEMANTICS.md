@@ -168,6 +168,48 @@ Derived 量 MUST 携带 `methodId`，标明来源方法。
 
 - 永不输出 probability 或 `reported_belief`；
 - 永不声称已核验的 evidence quality；
-- downstream governance projection 尚未实现。
+- 除 I/C/Λ 渐进估计外，其余 downstream governance projection 尚未实现。
 
 验证声明：截至 `87eb5b1`，全量测试 746 通过、3 跳过，typecheck 与 production build 均通过。
+
+## 12. Governance estimator reproducibility contract
+
+`ce8be58`、`a85319f` 与 `96ba06b` 将 legacy telemetry 到 I/C/Λ 的渐进估计显式化为可审计的 `governance_estimate`。这一层是版本化计算契约，不提升输入量的认识论地位。
+
+每次 projection MUST：
+
+- 从 registry 精确选择 `estimatorId + estimatorVersion`，不得按“最新版本”隐式解析；
+- 使用完整 config，而不是依赖未记录的 partial merge；
+- 记录 canonical JSON-compatible input、config 与 output 的 SHA-256 fingerprint；
+- 保存实际 config、排序去重后的 `sourceEventIds`，以及 `deterministic` 或带 seed/seedField 的 `seeded` 声明；
+- 在执行前验证输入和配置，在执行后验证输出；非法、含环、稀疏、有 accessor、Symbol key 或隐藏属性的值 MUST fail closed；
+- 使用隔离并 seal 的 registry snapshot，避免调用方后续 mutation 改变本次运行语义。
+
+这里的 canonical serializer 是项目内严格、确定性的 JSON-compatible serializer，借鉴 [RFC 8785 JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785.html) 的原则，但不声称完整实现或符合 JCS。`determinism` 是 estimator contract 的声明和可测试 invariant，不是对任意第三方 estimator 代码的形式证明。seeded estimator 目前只验证 seed 是安全整数；estimator 是否只消费该 seed 仍由实现者和复现实验负责。
+
+运行时生命周期约束：
+
+- `MeasurementLayer` 在构造时复制 exact estimator reference 并隔离 registry snapshot；
+- `GovernanceRuntime.reset()` 保留同一 registry 与 exact estimator reference；
+- active session 中替换 estimator registry 或 reference MUST 被拒绝，避免同一 run 混用两套语义；
+- native cognitive engine 与兼容 runtime cognitive path 均通过 owned `MeasurementLayer` 估计，不得旁路到 module-level default；
+- campaign raw output 持久化实际记录的 estimate；生成 `deltaDiagnosis` 时若任一 agent 的 provenance 缺失，MUST fail closed，不得用默认 estimator 静默重算；
+- 记录按 round 与 agent id 稳定排序，以降低文件顺序造成的非语义差异。
+
+`sourceEventIds` 当前主要列出本轮可审计 legacy telemetry；它可能为空，也不一定覆盖 utility history 等历史状态。`inputFingerprint` 覆盖 estimator 实际消费的完整输入状态，但 fingerprint 本身不能替代原始状态快照。需要重放时，必须同时保留 cognitive trajectory、exact estimator reference、config 与实现版本。该 provenance 设计与 [W3C PROV-DM](https://www.w3.org/TR/prov-dm/) 的 entity/activity/derivation 分离原则一致，但当前记录不是完整 PROV-DM 实现。
+
+语义边界保持不变：
+
+- I/C/Λ 输出是 task-specific latent-state proxy，属于 `governance_estimate`；
+- 它们不是 probability、ground truth、verified evidence quality 或 identified causal effect；
+- model-reported `evidenceCoverage/evidenceQuality` 仍是带 source 的 telemetry；
+- `confidence` estimator 的 confidence 字段表示估计器自身的启发式可靠度，不是 agent 正确概率，也不是经过样本校准的 calibration score。
+
+仍未消除的 semantic debt：
+
+- susceptibility 同时存在 progressive exposure-response estimate 与旧式局部公式 `(1-I)(1-C)`，两者用途和命名仍需统一；
+- progressive estimator 与 legacy `updateInertia` 仍各自维护 role prior table；
+- estimator record 重复保存完整 config，优先保证单条记录可审计，尚未做 manifest-level 去重；
+- ranking、continuous、open-ended belief contract 与 verified evidence oracle 仍未实现。
+
+验证声明：截至 `96ba06b`，36 个测试文件中 767 项通过、3 项按既有设置跳过；TypeScript check 与 production build 均通过。
