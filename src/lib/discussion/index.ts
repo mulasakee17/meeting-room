@@ -13,6 +13,7 @@ import {
   DiscussionTask,
   AgentInfo,
   RoundStopDecision,
+  RoundStateCommit,
 } from "./types";
 
 import { MemoryManager, InMemoryStrategy } from "./memory";
@@ -380,14 +381,13 @@ export class DiscussionEngine {
     // 保持旧路径语义：交叉质证造成的即时 state shift 已在进入 finalizeRound 前发生；
     // beliefChanges 记录本轮常规 belief update 的变化。
     const prevStates = new Map(agentStates);
-    this.updateBeliefs(opinions, agentStates, round);
-    this.updateAgentStates(agents, agentStates);
+    const stateCommit = this.commitRoundState(opinions, agentStates, agents, round);
 
     this.eventTracker.track({
       type: "belief_update",
       timestamp: new Date().toISOString(),
       roundNumber: round,
-      payload: { agentStates: Object.fromEntries(agentStates) },
+      payload: { stateCommit, agentStates: Object.fromEntries(agentStates) },
     });
 
     // 先形成当轮可观测 cognitive/thermo 状态，再基于该状态诊断。
@@ -438,6 +438,7 @@ export class DiscussionEngine {
       roundNumber: round,
       timestamp,
       opinions: [...opinions],
+      stateCommit,
       beliefChanges,
       influenceEvents,
       governanceIssues: governanceResult?.issues ?? [],
@@ -1978,6 +1979,28 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     // v3.0: 重置 cognitive states
     this.cognitiveStates.clear();
     this.lifecycleState = "idle";
+  }
+
+  /**
+   * Commit the authoritative per-round state transition.
+   *
+   * Subclasses with a different epistemic state model must override this
+   * method instead of silently running the legacy scalar inference alongside
+   * their own state transition. The returned descriptor is persisted in both
+   * RoundData and the belief_update event for auditability.
+   */
+  protected commitRoundState(
+    opinions: AgentOpinion[],
+    agentStates: Map<string, { belief: number; confidence: number }>,
+    agents: DiscussionAgent[],
+    roundNumber: number,
+  ): RoundStateCommit {
+    this.updateBeliefs(opinions, agentStates, roundNumber);
+    this.updateAgentStates(agents, agentStates);
+    return {
+      authority: "legacy_inference",
+      committedAgentIds: opinions.map(opinion => opinion.agentId),
+    };
   }
 }
 

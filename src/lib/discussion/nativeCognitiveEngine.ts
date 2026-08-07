@@ -36,6 +36,7 @@ import type {
   DiscussionMemoryEntry,
   NativeCognitiveOutput,
   StructuredEvidenceItem,
+  RoundStateCommit,
 } from "./types";
 import type { GovernanceIssue, Intervention } from "../governance/types";
 import { safeJsonParse } from "../utils/jsonUtils";
@@ -362,6 +363,31 @@ export class NativeCognitiveEngine extends DiscussionEngine {
       console.log(`[TerminationDecider] round ${round}: ${decision.message}`);
     }
     return decision;
+  }
+
+  /**
+   * Native mode has one authoritative transition: the explicit cognitive
+   * report consumed by MeasurementLayer. `agentStates` remains only a scalar
+   * compatibility projection for legacy consumers, so it mirrors the parsed
+   * report and must not receive a second DeGroot/FJ update.
+   */
+  protected commitRoundState(
+    opinions: AgentOpinion[],
+    agentStates: Map<string, { belief: number; confidence: number }>,
+    agents: DiscussionAgent[],
+    _roundNumber: number,
+  ): RoundStateCommit {
+    for (const opinion of opinions) {
+      agentStates.set(opinion.agentId, {
+        belief: Math.max(-1, Math.min(1, opinion.belief)),
+        confidence: Math.max(0, Math.min(100, opinion.confidence)),
+      });
+    }
+    this.updateAgentStates(agents, agentStates);
+    return {
+      authority: "explicit_report_projection",
+      committedAgentIds: opinions.map(opinion => opinion.agentId),
+    };
   }
 
   /**

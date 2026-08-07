@@ -396,6 +396,10 @@ export class AsyncDiscussionEngine extends DiscussionEngine {
         roundNumber: evalCycle,
         timestamp: new Date().toISOString(),
         opinions: [...allOpinions],
+        stateCommit: {
+          authority: "legacy_inference",
+          committedAgentIds: allOpinions.map(opinion => opinion.agentId),
+        },
         beliefChanges,
         perUtteranceSnapshots,
         influenceEvents: [],

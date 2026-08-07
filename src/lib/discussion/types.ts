@@ -433,10 +433,29 @@ export interface RoundStopDecision {
   explanation: string;
 }
 
+/**
+ * Declares which state transition is authoritative for a committed round.
+ *
+ * `legacy_inference` is the original scalar DeGroot/FJ-compatible path.
+ * `explicit_report_projection` mirrors the agent's parsed report into the
+ * scalar compatibility view without performing an additional hidden update.
+ */
+export type RoundStateAuthority =
+  | "legacy_inference"
+  | "explicit_report_projection";
+
+export interface RoundStateCommit {
+  authority: RoundStateAuthority;
+  /** Agents whose compatibility state was committed in this round. */
+  committedAgentIds: string[];
+}
+
 export interface RoundData {
   roundNumber: number;
   timestamp: string;
   opinions: AgentOpinion[];
+  /** Auditable declaration of the transition that produced this round's state. */
+  stateCommit: RoundStateCommit;
   beliefChanges: Record<string, { old: number; new: number; reason: string }>;
   /** Per-utterance 信念快照（asyncEngine 逐发言者处理时填充，质量因子验证用） */
   perUtteranceSnapshots?: Array<{

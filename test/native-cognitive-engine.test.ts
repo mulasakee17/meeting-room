@@ -11,7 +11,7 @@
  *
  * 设计原则：纯单元测试，零 LLM 调用，零 API 成本，确定性。
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NativeCognitiveEngine } from "@/lib/discussion/nativeCognitiveEngine";
 import type { AgentOpinion } from "@/lib/discussion/types";
 import type { DiscussionAgent } from "@/lib/discussion/index";
@@ -93,6 +93,65 @@ describe("NativeCognitiveEngine 初始化", () => {
     const engine = new NativeCognitiveEngine({ seed: 42 });
     const history = engine.getCognitiveStateHistory();
     expect(history.size).toBe(0);
+  });
+});
+
+describe("NativeCognitiveEngine 状态权威", () => {
+  it("run 不执行旧 scalar inference，并把显式报告作为兼容投影", async () => {
+    const reports: Record<string, { belief: number; confidence: number }> = {
+      a1: { belief: 0.9, confidence: 91 },
+      a2: { belief: -0.8, confidence: 82 },
+    };
+    const states = new Map<string, { belief: number; confidence: number }>([
+      ["a1", { belief: 0, confidence: 50 }],
+      ["a2", { belief: 0, confidence: 50 }],
+    ]);
+    const agents: DiscussionAgent[] = ["a1", "a2"].map(id => ({
+      id,
+      name: id,
+      role: "analyst",
+      type: "llm",
+      getState: () => ({ ...states.get(id)! }),
+      setState: state => states.set(id, { ...state }),
+      sendMessage: async () => JSON.stringify({
+        reasoning: `${id} report`,
+        evidence: [],
+        belief: reports[id].belief,
+        confidence: reports[id].confidence,
+        cognitiveState: {
+          utility: { A: reports[id].belief, B: -reports[id].belief },
+          evidenceCoverage: 0.5,
+          evidenceQuality: 0.5,
+        },
+        nextOpinion: "",
+        referencedAgents: [],
+      }),
+    }));
+    const engine = new NativeCognitiveEngine({
+      seed: 42,
+      maxRounds: 1,
+      governanceMode: "none",
+    });
+    const legacyUpdate = vi.spyOn(engine as any, "updateBeliefs");
+
+    const result = await engine.run(agents, {
+      id: "state-authority",
+      description: "Verify state authority",
+      type: "binary-choice",
+      content: "Choose A or B",
+      createdAt: "2026-08-07T00:00:00.000Z",
+    });
+
+    expect(legacyUpdate).not.toHaveBeenCalled();
+    expect(result.finalBeliefs).toEqual({ a1: 0.9, a2: -0.8 });
+    expect(states.get("a1")).toEqual({ belief: 0.9, confidence: 91 });
+    expect(states.get("a2")).toEqual({ belief: -0.8, confidence: 82 });
+    expect(engine.getRoundDataArray()[0].stateCommit.authority)
+      .toBe("explicit_report_projection");
+    expect(engine.getRoundDataArray()[0].stateCommit.committedAgentIds)
+      .toEqual(expect.arrayContaining(["a1", "a2"]));
+    expect(engine.getEventTracker().getEvents("belief_update")[0].payload.stateCommit)
+      .toEqual(engine.getRoundDataArray()[0].stateCommit);
   });
 });
 
