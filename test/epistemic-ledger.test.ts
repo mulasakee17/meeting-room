@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  BeliefContractRegistry,
   EpistemicLedger,
   ResolverRegistry,
+  createDefaultBeliefContractRegistry,
+  getBeliefContract,
   scoreBeliefReport,
   scoreBinaryReport,
 } from "@/lib/epistemic";
@@ -247,5 +250,80 @@ describe("scoreBeliefReport", () => {
     expect(wrongAndCertain.kind).toBe("categorical");
     expect(wrongAndCertain.properLoss).toBeGreaterThan(uncertain.properLoss);
     expect(wrongAndCertain.stakeWeightedLoss).toBeCloseTo(wrongAndCertain.properLoss * 10);
+  });
+});
+
+describe("Belief contracts", () => {
+  it("rejects duplicate registration and mutation after sealing", () => {
+    const registry = createDefaultBeliefContractRegistry();
+    expect(registry.listKinds()).toEqual(["binary", "categorical"]);
+    expect(() => registry.register(registry.get("binary"))).toThrow("already exists");
+
+    registry.seal();
+    expect(Object.isFrozen(registry.get("binary"))).toBe(true);
+    expect(() => registry.register(registry.get("binary"))).toThrow("is sealed");
+  });
+
+  it("defines binary total-variation distance and normalized entropy", () => {
+    const binary = getBeliefContract("binary");
+    expect(binary.distance(
+      { kind: "binary", probability: 0.2 },
+      { kind: "binary", probability: 0.6 },
+    )).toBeCloseTo(0.4);
+    expect(binary.uncertainty({ kind: "binary", probability: 0.5 })).toBeCloseTo(1);
+    expect(binary.uncertainty({ kind: "binary", probability: 0 })).toBe(0);
+    expect(binary.uncertainty({ kind: "binary", probability: 1 })).toBe(0);
+    expect(() => binary.distance(
+      { kind: "binary", probability: -0.1 },
+      { kind: "binary", probability: 0.5 },
+    )).toThrow("within [0, 1]");
+  });
+
+  it("defines categorical total-variation distance and normalized entropy", () => {
+    const categorical = getBeliefContract("categorical");
+    expect(categorical.distance(
+      { kind: "categorical", probabilities: { A: 1, B: 0, C: 0 } },
+      { kind: "categorical", probabilities: { A: 0, B: 1, C: 0 } },
+    )).toBeCloseTo(1);
+    expect(categorical.uncertainty({
+      kind: "categorical",
+      probabilities: { A: 1 / 3, B: 1 / 3, C: 1 / 3 },
+    })).toBeCloseTo(1);
+    expect(categorical.uncertainty({
+      kind: "categorical",
+      probabilities: { A: 1, B: 0, C: 0 },
+    })).toBe(0);
+    expect(() => categorical.distance(
+      { kind: "categorical", probabilities: { A: 0.2, B: 0.2, C: 0.2 } },
+      { kind: "categorical", probabilities: { A: 0.3, B: 0.3, C: 0.4 } },
+    )).toThrow("sum to 1");
+  });
+
+  it("preserves an injected registry across atomic ledger staging", () => {
+    const base = getBeliefContract("binary");
+    let claimValidations = 0;
+    let normalizations = 0;
+    const registry = new BeliefContractRegistry([{
+      ...base,
+      validateClaim(candidate) {
+        claimValidations++;
+        base.validateClaim(candidate);
+      },
+      normalizeValue(candidate, value) {
+        normalizations++;
+        return base.normalizeValue(candidate, value);
+      },
+    }]);
+    const ledger = new EpistemicLedger(registry);
+    ledger.registerClaim(claim);
+    ledger.commitRound({
+      evidence: [evidence],
+      reports: [report()],
+      exposures: [],
+    });
+
+    expect(claimValidations).toBeGreaterThanOrEqual(2);
+    expect(normalizations).toBe(2);
+    expect(ledger.getReportsForClaim(claim.id)).toHaveLength(1);
   });
 });

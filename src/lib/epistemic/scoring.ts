@@ -1,4 +1,7 @@
-import { getBeliefContract } from "./contracts";
+import {
+  defaultBeliefContractRegistry,
+  type BeliefContractRegistry,
+} from "./contracts";
 import type {
   BeliefKind,
   BeliefReport,
@@ -27,6 +30,7 @@ export function scoreBeliefReport(
   claim: EpistemicClaim,
   report: Pick<BeliefReport, "claimId" | "value" | "stake">,
   resolution: ClaimResolution,
+  contractRegistry: BeliefContractRegistry = defaultBeliefContractRegistry,
 ): BeliefReportScore {
   if (claim.id !== report.claimId || claim.id !== resolution.claimId) {
     throw new Error("Cannot score a report or resolution against a different claim");
@@ -34,7 +38,7 @@ export function scoreBeliefReport(
   if (!Number.isFinite(report.stake) || report.stake < 0) {
     throw new Error("Report stake must be finite and non-negative");
   }
-  const contract = getBeliefContract(claim.resolutionPolicy.kind);
+  const contract = contractRegistry.get(claim.resolutionPolicy.kind);
   const properLoss = contract.properLoss(claim, report.value, resolution);
   return {
     kind: contract.kind,
@@ -66,7 +70,8 @@ export function scoreCategoricalReport(
   claim: Extract<EpistemicClaim, { resolutionPolicy: { kind: "categorical" } }>,
   report: Pick<BeliefReport, "claimId" | "value" | "stake">,
   resolution: Extract<ClaimResolution, { kind: "categorical" }>,
+  contractRegistry: BeliefContractRegistry = defaultBeliefContractRegistry,
 ): CategoricalReportScore {
-  const scored = scoreBeliefReport(claim, report, resolution);
+  const scored = scoreBeliefReport(claim, report, resolution, contractRegistry);
   return { brierLoss: scored.properLoss, stakeWeightedLoss: scored.stakeWeightedLoss };
 }

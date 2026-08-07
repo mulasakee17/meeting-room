@@ -1,4 +1,7 @@
-import { getBeliefContract } from "./contracts";
+import {
+  defaultBeliefContractRegistry,
+  type BeliefContractRegistry,
+} from "./contracts";
 import type { BeliefKind, ClaimResolution, EpistemicClaim, EvidenceId } from "./types";
 
 /** Converts task-specific oracle input into one canonical claim outcome. */
@@ -15,6 +18,11 @@ export interface ResolutionMetadata {
 
 export class ResolverRegistry {
   private readonly resolvers = new Map<string, ClaimResolver>();
+  private readonly contractRegistry: BeliefContractRegistry;
+
+  constructor(contractRegistry: BeliefContractRegistry = defaultBeliefContractRegistry) {
+    this.contractRegistry = contractRegistry.snapshot().seal();
+  }
 
   register(resolver: ClaimResolver): void {
     if (resolver.id.trim().length === 0) throw new Error("resolver.id must not be empty");
@@ -42,7 +50,7 @@ export class ResolverRegistry {
     const resolution: ClaimResolution = claim.resolutionPolicy.kind === "binary"
       ? { ...common, kind: "binary", outcome: outcome as boolean }
       : { ...common, kind: "categorical", outcome: outcome as string };
-    getBeliefContract(claim.resolutionPolicy.kind).validateResolution(claim, resolution);
+    this.contractRegistry.get(claim.resolutionPolicy.kind).validateResolution(claim, resolution);
     return resolution;
   }
 }

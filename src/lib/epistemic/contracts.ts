@@ -30,7 +30,17 @@ export interface BeliefContract {
   normalizeValue(claim: EpistemicClaim, value: BeliefValue): BeliefValue;
   validateResolution(claim: EpistemicClaim, resolution: ClaimResolution): void;
   formatValue(value: BeliefValue): string;
+  /** Normalized task-family distance in [0,1]; descriptive, not causal. */
+  distance(left: BeliefValue, right: BeliefValue): number;
+  /** Normalized distributional entropy in [0,1]; not self-reported confidence. */
+  uncertainty(value: BeliefValue): number;
   properLoss(claim: EpistemicClaim, value: BeliefValue, resolution: ClaimResolution): number;
+}
+
+function binaryEntropy(probability: number): number {
+  if (probability === 0 || probability === 1) return 0;
+  return -(probability * Math.log(probability)
+    + (1 - probability) * Math.log(1 - probability)) / Math.log(2);
 }
 
 const binaryContract: BeliefContract = {
@@ -58,6 +68,19 @@ const binaryContract: BeliefContract = {
     if (value.kind !== "binary") throw new Error("Cannot format a non-binary value as binary");
     // Preserve the existing compact prompt projection for binary reports.
     return `P(${value.probability.toFixed(4)})`;
+  },
+  distance(left, right) {
+    if (left.kind !== "binary" || right.kind !== "binary") {
+      throw new Error("Binary distance requires two binary values");
+    }
+    validateProbability(left.probability, "left belief.probability");
+    validateProbability(right.probability, "right belief.probability");
+    return Math.abs(left.probability - right.probability);
+  },
+  uncertainty(value) {
+    if (value.kind !== "binary") throw new Error("Binary uncertainty requires a binary value");
+    validateProbability(value.probability, "belief.probability");
+    return binaryEntropy(value.probability);
   },
   properLoss(claim, value, resolution) {
     this.validateValue(claim, value);
@@ -126,6 +149,50 @@ const categoricalContract: BeliefContract = {
       .map(([option, probability]) => `P(${option})=${probability.toFixed(4)}`)
       .join(";");
   },
+  distance(left, right) {
+    if (left.kind !== "categorical" || right.kind !== "categorical") {
+      throw new Error("Categorical distance requires two categorical values");
+    }
+    const leftOptions = Object.keys(left.probabilities);
+    const rightOptions = Object.keys(right.probabilities);
+    if (leftOptions.length !== rightOptions.length
+      || leftOptions.some(option => !Object.prototype.hasOwnProperty.call(right.probabilities, option))) {
+      throw new Error("Categorical distance requires identical canonical option sets");
+    }
+    let leftTotal = 0;
+    let rightTotal = 0;
+    let l1Distance = 0;
+    for (const option of leftOptions) {
+      const leftProbability = left.probabilities[option];
+      const rightProbability = right.probabilities[option];
+      validateProbability(leftProbability, `left belief.probabilities.${option}`);
+      validateProbability(rightProbability, `right belief.probabilities.${option}`);
+      leftTotal += leftProbability;
+      rightTotal += rightProbability;
+      l1Distance += Math.abs(leftProbability - rightProbability);
+    }
+    if (Math.abs(leftTotal - 1) > PROBABILITY_TOLERANCE
+      || Math.abs(rightTotal - 1) > PROBABILITY_TOLERANCE) {
+      throw new Error("Categorical distance requires probabilities that sum to 1");
+    }
+    return 0.5 * l1Distance;
+  },
+  uncertainty(value) {
+    if (value.kind !== "categorical") throw new Error("Categorical uncertainty requires a categorical value");
+    const probabilities = Object.values(value.probabilities);
+    if (probabilities.length < 2) throw new Error("Categorical uncertainty requires at least two options");
+    let total = 0;
+    let entropy = 0;
+    for (const probability of probabilities) {
+      validateProbability(probability, "belief.probabilities");
+      total += probability;
+      if (probability > 0) entropy -= probability * Math.log(probability);
+    }
+    if (Math.abs(total - 1) > PROBABILITY_TOLERANCE) {
+      throw new Error("Categorical uncertainty requires probabilities that sum to 1");
+    }
+    return entropy / Math.log(probabilities.length);
+  },
   properLoss(claim, value, resolution) {
     this.validateValue(claim, value);
     this.validateResolution(claim, resolution);
@@ -141,19 +208,63 @@ const categoricalContract: BeliefContract = {
   },
 };
 
-const contracts: Record<BeliefKind, BeliefContract> = {
-  binary: binaryContract,
-  categorical: categoricalContract,
-};
+/** Explicit registry boundary; callers may inject an isolated supported-kind registry. */
+export class BeliefContractRegistry {
+  private readonly contracts = new Map<BeliefKind, BeliefContract>();
+  private sealed = false;
 
-export function getBeliefContract(kind: BeliefKind): BeliefContract {
-  return contracts[kind];
+  constructor(initialContracts: BeliefContract[] = []) {
+    for (const contract of initialContracts) this.register(contract);
+  }
+
+  register(contract: BeliefContract): void {
+    if (this.sealed) throw new Error("BeliefContractRegistry is sealed");
+    if (this.contracts.has(contract.kind)) {
+      throw new Error(`Belief contract ${contract.kind} already exists`);
+    }
+    this.contracts.set(contract.kind, contract);
+  }
+
+  get(kind: BeliefKind): BeliefContract {
+    const contract = this.contracts.get(kind);
+    if (!contract) throw new Error(`Belief contract ${kind} is not registered`);
+    return contract;
+  }
+
+  listKinds(): BeliefKind[] {
+    return [...this.contracts.keys()];
+  }
+
+  snapshot(): BeliefContractRegistry {
+    return new BeliefContractRegistry(
+      [...this.contracts.values()].map(contract => ({ ...contract })),
+    );
+  }
+
+  seal(): this {
+    for (const contract of this.contracts.values()) Object.freeze(contract);
+    this.sealed = true;
+    return this;
+  }
 }
 
-export function validateEpistemicClaim(claim: EpistemicClaim): void {
+export function createDefaultBeliefContractRegistry(): BeliefContractRegistry {
+  return new BeliefContractRegistry([binaryContract, categoricalContract]);
+}
+
+export const defaultBeliefContractRegistry = createDefaultBeliefContractRegistry().seal();
+
+export function getBeliefContract(kind: BeliefKind): BeliefContract {
+  return defaultBeliefContractRegistry.get(kind);
+}
+
+export function validateEpistemicClaim(
+  claim: EpistemicClaim,
+  contractRegistry: BeliefContractRegistry = defaultBeliefContractRegistry,
+): void {
   requireNonEmpty(claim.id, "claim.id");
   requireNonEmpty(claim.proposition, "claim.proposition");
   requireNonEmpty(claim.domain, "claim.domain");
   requireNonEmpty(claim.resolutionPolicy.resolverId, "claim.resolutionPolicy.resolverId");
-  getBeliefContract(claim.resolutionPolicy.kind).validateClaim(claim);
+  contractRegistry.get(claim.resolutionPolicy.kind).validateClaim(claim);
 }

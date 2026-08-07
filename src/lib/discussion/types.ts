@@ -1,4 +1,4 @@
-import type { BeliefValue, EpistemicClaim } from "../epistemic";
+import type { BeliefContractRegistry, BeliefValue, EpistemicClaim } from "../epistemic";
 
 export interface ItemBelief {
   item: string;
@@ -234,6 +234,8 @@ export interface DiscussionConfig {
   beliefUpdateStrategy: string;
   influenceStrategy: string;
   memoryStrategy: string;
+  /** Contract semantics are injected once and reused across reset boundaries. */
+  epistemicContractRegistry?: BeliefContractRegistry;
   /** Enable agent dropout for sensitivity analysis (default false) */
   enableDropoutAnalysis?: boolean;
   /**

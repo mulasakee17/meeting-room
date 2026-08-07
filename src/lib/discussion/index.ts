@@ -64,8 +64,9 @@ import type { RuntimeContext, CollectiveDecisionState, ExperimentConfig } from "
 import { createHash } from "node:crypto";
 import {
   EpistemicLedger,
-  getBeliefContract,
+  defaultBeliefContractRegistry,
   isCategoricalClaim,
+  type BeliefContractRegistry,
   type BeliefExposure,
   type BeliefReport,
   type EpistemicEvidence,
@@ -134,7 +135,8 @@ export class DiscussionEngine {
   protected config: DiscussionConfig;
   protected roundDataArray: RoundData[] = [];
   protected epistemicRunActive = false;
-  private epistemicLedger = new EpistemicLedger();
+  private readonly epistemicContractRegistry: BeliefContractRegistry;
+  private epistemicLedger: EpistemicLedger;
   private pendingEpistemicRounds = new Map<number, EpistemicRoundBatch>();
   private latestEpistemicReport = new Map<string, string>();
   private epistemicReportClaims = new Map<string, string>();
@@ -182,6 +184,9 @@ export class DiscussionEngine {
       ...config,
     };
 
+    this.epistemicContractRegistry = (config?.epistemicContractRegistry
+      ?? defaultBeliefContractRegistry).snapshot().seal();
+    this.epistemicLedger = new EpistemicLedger(this.epistemicContractRegistry);
     this.memoryManager = new MemoryManager(new InMemoryStrategy());
     this.influenceManager = new InfluenceManager(new RuleBasedInfluence());
     this.graphBuilder = new InteractionGraphBuilder();
@@ -1070,7 +1075,7 @@ Add this top-level field to your JSON response:
       const claim = contract.claims.find(candidate => candidate.id === submission.claimId);
       if (!claim) return true;
       try {
-        submission.value = getBeliefContract(claim.resolutionPolicy.kind)
+        submission.value = this.epistemicContractRegistry.get(claim.resolutionPolicy.kind)
           .normalizeValue(claim, submission.value);
         return false;
       } catch {
@@ -1263,7 +1268,7 @@ Add this top-level field to your JSON response:
   protected formatClaimReportSummary(reports?: AgentOpinion["claimReports"]): string {
     if (!reports || reports.length === 0) return "";
     return ` [claims: ${reports.map(report =>
-      `${report.claimId}=${getBeliefContract(report.value.kind).formatValue(report.value)}`
+      `${report.claimId}=${this.epistemicContractRegistry.get(report.value.kind).formatValue(report.value)}`
     ).join(", ")}]`;
   }
 
@@ -2243,7 +2248,7 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
     this.eventTracker.clear();
     this.roundDataArray = [];
     this.dropoutObservations = [];
-    this.epistemicLedger = new EpistemicLedger();
+    this.epistemicLedger = new EpistemicLedger(this.epistemicContractRegistry);
     this.pendingEpistemicRounds.clear();
     this.latestEpistemicReport.clear();
     this.epistemicReportClaims.clear();

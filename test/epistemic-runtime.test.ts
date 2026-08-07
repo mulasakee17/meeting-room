@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DiscussionEngine, type DiscussionAgent } from "@/lib/discussion";
 import type { DiscussionTask } from "@/lib/discussion/types";
+import { BeliefContractRegistry, getBeliefContract } from "@/lib/epistemic";
 
 function task(epistemic = true): DiscussionTask {
   return {
@@ -265,5 +266,28 @@ describe("epistemic runtime boundary", () => {
     const opinion = engine.getRoundDataArray()[0].opinions[0];
     expect(opinion.claimParseStatus).toBe("invalid");
     expect(engine.getEpistemicEvents().filter(event => event.type === "belief_reported")).toEqual([]);
+  });
+
+  it("uses the injected contract registry across engine reset boundaries", async () => {
+    const base = getBeliefContract("binary");
+    let normalizations = 0;
+    const registry = new BeliefContractRegistry([{
+      ...base,
+      normalizeValue(candidate, value) {
+        normalizations++;
+        return base.normalizeValue(candidate, value);
+      },
+    }]);
+    const engine = new DiscussionEngine({
+      maxRounds: 1,
+      governanceMode: "none",
+      epistemicContractRegistry: registry,
+    });
+
+    await engine.run([agent("a1", 0.8, [])], task());
+    engine.reset();
+    await engine.run([agent("a1", 0.7, [])], task());
+
+    expect(normalizations).toBeGreaterThanOrEqual(4);
   });
 });

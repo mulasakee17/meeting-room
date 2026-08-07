@@ -6,7 +6,11 @@ import type {
   EpistemicEvent,
   EpistemicEvidence,
 } from "./types";
-import { getBeliefContract, validateEpistemicClaim } from "./contracts";
+import {
+  defaultBeliefContractRegistry,
+  type BeliefContractRegistry,
+  validateEpistemicClaim,
+} from "./contracts";
 
 function requireNonEmpty(value: string, field: string): void {
   if (value.trim().length === 0) throw new Error(`${field} must not be empty`);
@@ -32,8 +36,14 @@ export class EpistemicLedger {
   private readonly latestReportByAgentClaim = new Map<string, string>();
   private readonly events: EpistemicEvent[] = [];
 
+  private readonly contractRegistry: BeliefContractRegistry;
+
+  constructor(contractRegistry: BeliefContractRegistry = defaultBeliefContractRegistry) {
+    this.contractRegistry = contractRegistry.snapshot().seal();
+  }
+
   registerClaim(claim: EpistemicClaim): void {
-    validateEpistemicClaim(claim);
+    validateEpistemicClaim(claim, this.contractRegistry);
     if (this.claims.has(claim.id)) throw new Error(`Claim ${claim.id} already exists`);
     const stored = structuredClone(claim);
     this.claims.set(stored.id, stored);
@@ -61,7 +71,7 @@ export class EpistemicLedger {
       throw new Error("report.round must be a non-negative integer");
     }
     const claim = this.claims.get(report.claimId)!;
-    const normalizedValue = getBeliefContract(claim.resolutionPolicy.kind)
+    const normalizedValue = this.contractRegistry.get(claim.resolutionPolicy.kind)
       .normalizeValue(claim, report.value);
     if (!Number.isFinite(report.stake) || report.stake < 0) {
       throw new Error("report.stake must be finite and non-negative");
@@ -149,7 +159,7 @@ export class EpistemicLedger {
     if (resolution.resolverId !== claim.resolutionPolicy.resolverId) {
       throw new Error(`Resolver ${resolution.resolverId} is not authorized for claim ${resolution.claimId}`);
     }
-    getBeliefContract(claim.resolutionPolicy.kind).validateResolution(claim, resolution);
+    this.contractRegistry.get(claim.resolutionPolicy.kind).validateResolution(claim, resolution);
     for (const evidenceId of resolution.evidenceIds ?? []) {
       if (!this.evidence.has(evidenceId)) throw new Error(`Unknown resolution evidence ${evidenceId}`);
     }
@@ -220,7 +230,7 @@ export class EpistemicLedger {
   }
 
   private clone(): EpistemicLedger {
-    const clone = new EpistemicLedger();
+    const clone = new EpistemicLedger(this.contractRegistry);
     for (const event of this.events) {
       if (event.type === "claim_registered") clone.registerClaim(event.claim);
       else if (event.type === "evidence_registered") clone.registerEvidence(event.evidence);
