@@ -139,3 +139,35 @@ Consensus MUST 基于 contract-owned distance 产生带 `methodId` 的派生量�
 - [Agent Forge](https://github.com/FrostLogic-AB/agent-forge) 提供通用 agent plugin lifecycle，但不提供 task-owned probability contract、proper scoring 或 exposure audit。
 
 因此当前不引入新依赖，只复用分层与 registry 设计原则。
+
+## 11. Legacy adapter implementation status
+
+本节的 legacy adapter 已由 `623c236`（审计遗留认知量）与 `87eb5b1`（保留部分框架状态 provenance）落地。它把第 7 节的 legacy 量显式归类为 `behavioral_telemetry`，不引入任何新的 epistemic 语义。
+
+`observeLegacyQuantities` 只发射 `behavioral_telemetry` 事件，其 source 标签限定为：
+
+- `agent_reported`
+- `framework_reported`
+- `model_inferred`
+- `derived_from_item_preferences`
+- `compatibility_carry_forward`
+- `runtime_default`
+- `unspecified_parser_output`
+
+Derived 量 MUST 携带 `methodId`，标明来源方法。
+
+替换型观测保持 append-only：新观测通过 `supersedesEventId` 指向被替换的旧事件，MUST NOT 改写或删除原记录。`latestLegacyTelemetry` 按追加顺序选择最新同名观测；替代链与当前态选择是两个独立机制。
+
+`DiscussionEngine`、独立 `ObservationLayer` 与 `StateInferenceBridge` 都在观测边界挂接记录。
+
+`StateInferenceBridge` 对每个字段独立解析，优先级为：顶层字段 > GOV tag > metadata > runtime default，随后仅推断缺失字段。
+
+非法时间戳做归一化处理。
+
+显式非目标：
+
+- 永不输出 probability 或 `reported_belief`；
+- 永不声称已核验的 evidence quality；
+- downstream governance projection 尚未实现。
+
+验证声明：截至 `87eb5b1`，全量测试 746 通过、3 跳过，typecheck 与 production build 均通过。
