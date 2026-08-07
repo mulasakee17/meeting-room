@@ -135,6 +135,18 @@ describe("GovernanceEstimatorRegistry", () => {
     expect(registry.list()).toEqual([{ id: "test.sum", version: "1.0.0" }]);
   });
 
+  it("does not expose mutable registered semantics before the registry is sealed", () => {
+    const registry = new GovernanceEstimatorRegistry([sumContract]);
+    const exposed = registry.get<SumInput, SumOutput, SumConfig>("test.sum", "1.0.0");
+
+    expect(() => { exposed.defaultConfig.scale = 7; }).toThrow();
+    expect(registry.project("test.sum", "1.0.0", {
+      name: "still_isolated",
+      input: { values: [2] },
+      sourceEventIds: [],
+    }).value).toEqual({ total: 2 });
+  });
+
   it("requires a safe integer seed for seeded estimators", () => {
     const seeded: GovernanceEstimatorContract<SumInput, SumOutput, SumConfig & { seed: number }> = {
       ...sumContract,

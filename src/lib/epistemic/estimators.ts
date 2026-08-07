@@ -159,7 +159,7 @@ export class GovernanceEstimatorRegistry {
     }
     const key = contractKey(contract.id, contract.version);
     if (this.contracts.has(key)) throw new Error(`Governance estimator ${key} already exists`);
-    this.contracts.set(key, {
+    const storedContract: GovernanceEstimatorContract<Input, Output, Config> = {
       id: contract.id,
       version: contract.version,
       determinism: { ...contract.determinism },
@@ -168,7 +168,11 @@ export class GovernanceEstimatorRegistry {
       validateConfig: contract.validateConfig,
       estimate: contract.estimate,
       validateOutput: contract.validateOutput,
-    });
+    };
+    deepFreeze(storedContract.defaultConfig);
+    Object.freeze(storedContract.determinism);
+    Object.freeze(storedContract);
+    this.contracts.set(key, storedContract);
   }
 
   get<Input, Output, Config extends object>(
