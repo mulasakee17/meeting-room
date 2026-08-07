@@ -1,4 +1,10 @@
-import type { BeliefContractRegistry, BeliefValue, EpistemicClaim } from "../epistemic";
+import type {
+  BeliefContractRegistry,
+  BeliefValue,
+  EpistemicClaim,
+  LegacyQuantitySources,
+  LegacySemanticTelemetry,
+} from "../epistemic";
 
 export interface ItemBelief {
   item: string;
@@ -80,6 +86,10 @@ export interface AgentOpinion {
   /** Runtime-generated IDs; model-provided values are never trusted. */
   epistemicReportIds?: string[];
   claimParseStatus?: "not_applicable" | "valid" | "incomplete" | "invalid";
+  /** Parser provenance for compatibility fields; not epistemic authority. */
+  legacyQuantitySources?: LegacyQuantitySources;
+  /** Observation-boundary projection of legacy fields into auditable telemetry. */
+  legacyTelemetry?: LegacySemanticTelemetry[];
 }
 
 export interface RoundResult {
@@ -108,6 +118,7 @@ export interface DiscussionMemoryEntry {
   itemBeliefs?: ItemBelief[];
   claimReports?: ClaimBeliefSubmission[];
   epistemicReportIds?: string[];
+  legacyTelemetry?: LegacySemanticTelemetry[];
 }
 
 export interface InfluenceWeight {

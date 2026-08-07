@@ -3,6 +3,7 @@ import type { AgentOpinion, DiscussionTask, DiscussionMemoryEntry } from "../dis
 import type { RuntimeContext } from "../discussion-types/types";
 import { safeJsonParse } from "../utils/jsonUtils";
 import { parseClaimReports } from "./claimReports";
+import { observeLegacyQuantities } from "../epistemic";
 
 class DefaultPromptBuilder implements PromptBuilder {
   buildPrompt(
@@ -82,6 +83,14 @@ class DefaultOpinionParser implements OpinionParser {
               confidence: typeof ib.confidence === "number" ? Math.max(0, Math.min(100, ib.confidence)) : 50,
             }))
           : undefined,
+        legacyQuantitySources: {
+          stance: typeof parsed.belief === "number"
+            ? "agent_reported"
+            : "compatibility_carry_forward",
+          confidence: typeof parsed.confidence === "number"
+            ? "agent_reported"
+            : "compatibility_carry_forward",
+        },
         ...parsedClaims,
       };
     } catch (err) {
@@ -94,6 +103,10 @@ class DefaultOpinionParser implements OpinionParser {
         confidence: currentConfidence,
         nextOpinion: "",
         referencedAgents: [],
+        legacyQuantitySources: {
+          stance: "compatibility_carry_forward",
+          confidence: "compatibility_carry_forward",
+        },
       };
     }
   }
@@ -141,11 +154,22 @@ export class ObservationLayer {
         state.confidence,
         round
       );
+      const timestamp = new Date().toISOString();
+      parsedOpinion.legacyTelemetry = observeLegacyQuantities({
+        eventId: `observation:standalone:${task.id}:${round}:${agent.id}:${timestamp}`,
+        observedAt: timestamp,
+        stance: parsedOpinion.belief,
+        confidence: parsedOpinion.confidence,
+        utility: parsedOpinion.cognitiveState?.utility,
+        evidenceCoverage: parsedOpinion.cognitiveState?.evidenceCoverage,
+        evidenceQuality: parsedOpinion.cognitiveState?.evidenceQuality,
+        sources: parsedOpinion.legacyQuantitySources,
+      });
 
       return {
         agentId: agent.id,
         roundNumber: round,
-        timestamp: new Date().toISOString(),
+        timestamp,
         rawResponse: response,
         parsedOpinion,
       };

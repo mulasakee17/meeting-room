@@ -11,6 +11,7 @@
 
 import type { GovernanceConfig, GovernanceResult, Intervention } from "../lib/governance/types";
 import type { EvaluationResult, EvaluationConfig } from "../lib/evaluation/types";
+import type { LegacySemanticTelemetry } from "../lib/epistemic";
 
 // ============================================================================
 // Discussion Stream (framework-agnostic input)
@@ -52,6 +53,8 @@ export interface DiscussionMessage {
     evidenceCoverage?: number;
     evidenceQuality?: number;
   };
+  /** Auditable source classification for compatibility-era scalar fields. */
+  legacyTelemetry?: LegacySemanticTelemetry[];
 }
 
 /**

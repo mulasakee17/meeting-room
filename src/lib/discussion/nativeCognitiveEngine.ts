@@ -99,6 +99,7 @@ class NativeCognitiveOpinionParser implements OpinionParser {
 
       // 提取原生 cognitiveState
       let cognitiveState: NativeCognitiveOutput | undefined;
+      let cognitiveQuantitySources: AgentOpinion["legacyQuantitySources"] = {};
       if (parsed.cognitiveState && typeof parsed.cognitiveState === "object") {
         const cs = parsed.cognitiveState as Record<string, unknown>;
         const utility: Record<string, number> = {};
@@ -117,6 +118,17 @@ class NativeCognitiveOpinionParser implements OpinionParser {
           evidenceQuality: typeof cs.evidenceQuality === "number"
             ? Math.max(0, Math.min(1, cs.evidenceQuality as number))
             : 0.5,
+        };
+        cognitiveQuantitySources = {
+          utility: cs.utility && typeof cs.utility === "object"
+            ? "agent_reported"
+            : "runtime_default",
+          evidenceCoverage: typeof cs.evidenceCoverage === "number"
+            ? "agent_reported"
+            : "runtime_default",
+          evidenceQuality: typeof cs.evidenceQuality === "number"
+            ? "agent_reported"
+            : "runtime_default",
         };
       }
 
@@ -187,6 +199,17 @@ class NativeCognitiveOpinionParser implements OpinionParser {
           : undefined,
         cognitiveState,
         structuredEvidence,
+        legacyQuantitySources: {
+          stance: typeof parsed.belief === "number"
+            ? "agent_reported"
+            : (Array.isArray(parsed.itemBeliefs) && parsed.itemBeliefs.length > 0
+              ? "derived_from_item_preferences"
+              : "compatibility_carry_forward"),
+          confidence: typeof parsed.confidence === "number"
+            ? "agent_reported"
+            : "compatibility_carry_forward",
+          ...cognitiveQuantitySources,
+        },
         ...parsedClaims,
       };
     } catch (err) {
@@ -200,6 +223,10 @@ class NativeCognitiveOpinionParser implements OpinionParser {
         nextOpinion: "",
         referencedAgents: [],
         cognitiveState: undefined,
+        legacyQuantitySources: {
+          stance: "compatibility_carry_forward",
+          confidence: "compatibility_carry_forward",
+        },
       };
     }
   }

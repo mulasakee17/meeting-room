@@ -49,6 +49,11 @@ import type { LLMConfig } from "../../lib/llm/providers";
 import { callLLM } from "../../lib/llm/providers";
 import { safeJsonParse } from "../../lib/utils/jsonUtils";
 import {
+  latestLegacyTelemetry,
+  observeLegacyQuantities,
+  type LegacyQuantitySource,
+} from "../../lib/epistemic";
+import {
   extractGovTag,
   stripGovTag,
   interventionToPrompt,
@@ -68,7 +73,11 @@ export class StateInferenceBridge implements GovernanceBridge {
   /** LLM 配置——用于 Level 3 推断（agent 不输出 [GOV] 标签时用 LLM 推断信念） */
   private llmConfig?: LLMConfig;
   /** 标记 adaptMessages 中用了默认值的消息索引，供 inferMissingBeliefs 使用 */
-  private pendingInference: number[] = [];
+  private pendingInference: Array<{
+    index: number;
+    inferStance: boolean;
+    inferConfidence: boolean;
+  }> = [];
   /** 统计：提取成功/失败次数，用于监控 [GOV] 标签的遵从率 */
   private stats = {
     explicitField: 0,
@@ -115,12 +124,16 @@ export class StateInferenceBridge implements GovernanceBridge {
       let confidence: number;
       let itemBeliefs: ExtractedState["itemBeliefs"];
       let reasoning: string;
+      let stanceSource: LegacyQuantitySource;
+      let confidenceSource: LegacyQuantitySource;
 
       // Level 1: 显式字段
       if (typeof msg.belief === "number" && typeof msg.confidence === "number") {
         belief = Math.max(-1, Math.min(1, msg.belief));
         confidence = Math.max(0, Math.min(100, msg.confidence));
         reasoning = (msg.metadata?.reasoning as string) || cleanContent;
+        stanceSource = "framework_reported";
+        confidenceSource = "framework_reported";
         this.stats.explicitField++;
       }
       // Level 2: [GOV] 标签
@@ -131,18 +144,37 @@ export class StateInferenceBridge implements GovernanceBridge {
           confidence = extracted.confidence;
           itemBeliefs = extracted.itemBeliefs;
           reasoning = cleanContent;
+          stanceSource = "agent_reported";
+          confidenceSource = "agent_reported";
           this.stats.govTagExtracted++;
         }
         // Level 3: 默认值（标记待 LLM 推断）
         else {
-          belief = (msg.metadata?.belief as number) ?? 0;
-          confidence = (msg.metadata?.confidence as number) ?? 50;
+          const metadataBelief = msg.metadata?.belief;
+          const metadataConfidence = msg.metadata?.confidence;
+          belief = typeof metadataBelief === "number"
+            ? Math.max(-1, Math.min(1, metadataBelief))
+            : 0;
+          confidence = typeof metadataConfidence === "number"
+            ? Math.max(0, Math.min(100, metadataConfidence))
+            : 50;
+          stanceSource = typeof metadataBelief === "number"
+            ? "framework_reported"
+            : "runtime_default";
+          confidenceSource = typeof metadataConfidence === "number"
+            ? "framework_reported"
+            : "runtime_default";
           reasoning = (msg.metadata?.reasoning as string) || cleanContent;
           this.stats.fallback++;
-          this.pendingInference.push(idx);
+          const inferStance = typeof metadataBelief !== "number";
+          const inferConfidence = typeof metadataConfidence !== "number";
+          if (inferStance || inferConfidence) {
+            this.pendingInference.push({ index: idx, inferStance, inferConfidence });
+          }
         }
       }
 
+      const timestamp = this.normalizeObservedAt(msg.timestamp);
       return {
         agentId,
         agentName: msg.agentName || (msg.metadata?.name as string) || agentId,
@@ -150,10 +182,21 @@ export class StateInferenceBridge implements GovernanceBridge {
         content: cleanContent,
         belief,
         confidence,
-        timestamp: msg.timestamp || new Date().toISOString(),
+        timestamp,
         referencedAgents: (msg.metadata?.referencedAgents as string[]) || [],
         reasoning,
         roundNumber,
+        itemBeliefs,
+        legacyTelemetry: observeLegacyQuantities({
+          eventId: `framework-message:${roundNumber}:${agentId}:${idx}:${timestamp}`,
+          observedAt: timestamp,
+          stance: belief,
+          confidence,
+          sources: {
+            stance: stanceSource,
+            confidence: confidenceSource,
+          },
+        }),
       };
     });
   }
@@ -177,8 +220,8 @@ export class StateInferenceBridge implements GovernanceBridge {
 - confidence: 0 到 100（0=完全不确定，100=完全确定）
 只返回 JSON，不要其他内容：{"belief": <number>, "confidence": <number>}`;
 
-    for (const idx of this.pendingInference) {
-      const msg = messages[idx];
+    for (const pending of this.pendingInference) {
+      const msg = messages[pending.index];
       if (!msg) continue;
       try {
         const response = await callLLM(
@@ -189,13 +232,48 @@ export class StateInferenceBridge implements GovernanceBridge {
         // 从 LLM 输出解析 JSON
         const parsed = safeJsonParse<{ belief?: number; confidence?: number }>(response.rawContent);
         if (parsed) {
-          if (typeof parsed.belief === "number") {
-            msg.belief = Math.max(-1, Math.min(1, parsed.belief));
+          const priorStance = latestLegacyTelemetry(msg.legacyTelemetry ?? [], "legacy_stance");
+          const priorConfidence = latestLegacyTelemetry(msg.legacyTelemetry ?? [], "legacy_confidence");
+          let stanceSource = priorStance?.value.source ?? "unspecified_parser_output";
+          let confidenceSource = priorConfidence?.value.source ?? "unspecified_parser_output";
+          const inferredStance = typeof parsed.belief === "number" ? parsed.belief : undefined;
+          const inferredConfidence = typeof parsed.confidence === "number" ? parsed.confidence : undefined;
+          const stanceUpdated = pending.inferStance && inferredStance !== undefined;
+          const confidenceUpdated = pending.inferConfidence && inferredConfidence !== undefined;
+          if (stanceUpdated) {
+            msg.belief = Math.max(-1, Math.min(1, inferredStance));
+            stanceSource = "model_inferred";
           }
-          if (typeof parsed.confidence === "number") {
-            msg.confidence = Math.max(0, Math.min(100, parsed.confidence));
+          if (confidenceUpdated) {
+            msg.confidence = Math.max(0, Math.min(100, inferredConfidence));
+            confidenceSource = "model_inferred";
           }
-          this.stats.llmInferred++;
+          if (stanceUpdated || confidenceUpdated) {
+            const observedAt = new Date().toISOString();
+            msg.legacyTelemetry = [
+              ...(msg.legacyTelemetry ?? []),
+              ...observeLegacyQuantities({
+                eventId: `legacy-inference:${msg.roundNumber}:${msg.agentId}:${observedAt}`,
+                observedAt,
+                stance: stanceUpdated ? msg.belief : undefined,
+                confidence: confidenceUpdated ? msg.confidence : undefined,
+                sources: { stance: stanceSource, confidence: confidenceSource },
+                methods: {
+                  stance: stanceSource === "model_inferred"
+                    ? `state-inference.${this.llmConfig?.provider}.${this.llmConfig?.model}.v1`
+                    : undefined,
+                  confidence: confidenceSource === "model_inferred"
+                    ? `state-inference.${this.llmConfig?.provider}.${this.llmConfig?.model}.v1`
+                    : undefined,
+                },
+                supersedes: {
+                  stance: stanceUpdated ? priorStance?.eventId : undefined,
+                  confidence: confidenceUpdated ? priorConfidence?.eventId : undefined,
+                },
+              }),
+            ];
+            this.stats.llmInferred++;
+          }
         }
       } catch {
         // LLM 推断失败，保持默认值
@@ -316,5 +394,12 @@ export class StateInferenceBridge implements GovernanceBridge {
       interventionsFailed: 0,
     };
     this.pendingInference = [];
+  }
+
+  private normalizeObservedAt(timestamp: string | undefined): string {
+    if (timestamp && Number.isFinite(Date.parse(timestamp))) {
+      return new Date(timestamp).toISOString();
+    }
+    return new Date().toISOString();
   }
 }

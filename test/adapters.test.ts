@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { CustomAdapter } from "@/runtime/adapters/CustomAdapter";
 import { AutoGenAdapter } from "@/runtime/adapters/AutoGenAdapter";
 import { StateInferenceBridge } from "@/runtime/adapters/StateInferenceBridge";
@@ -10,6 +10,11 @@ import {
   getInterventionTargets,
 } from "@/runtime/adapters/PromptInjector";
 import type { Intervention } from "@/lib/governance/types";
+import { callLLM } from "@/lib/llm/providers";
+
+vi.mock("@/lib/llm/providers", () => ({
+  callLLM: vi.fn(),
+}));
 
 /** 简易 mock agent，模拟 CustomAgent 的 getState/setState 接口 */
 function makeMockAgent(id: string, belief: number, confidence: number) {
@@ -368,6 +373,10 @@ describe("StateInferenceBridge", () => {
       const msgs = bridge.adaptMessages(raw, 1);
       expect(msgs[0].belief).toBe(0.8);
       expect(msgs[0].confidence).toBe(90);
+      expect(msgs[0].legacyTelemetry?.map(record => record.value.source)).toEqual([
+        "framework_reported",
+        "framework_reported",
+      ]);
       expect(bridge.getStats().explicitField).toBe(1);
     });
 
@@ -382,6 +391,10 @@ describe("StateInferenceBridge", () => {
       expect(msgs[0].belief).toBe(0.6);
       expect(msgs[0].confidence).toBe(75);
       expect(msgs[0].content).toBe("My opinion.");
+      expect(msgs[0].legacyTelemetry?.map(record => record.value.source)).toEqual([
+        "agent_reported",
+        "agent_reported",
+      ]);
       expect(bridge.getStats().govTagExtracted).toBe(1);
     });
 
@@ -395,6 +408,10 @@ describe("StateInferenceBridge", () => {
       const msgs = bridge.adaptMessages(raw, 1);
       expect(msgs[0].belief).toBe(0);
       expect(msgs[0].confidence).toBe(50);
+      expect(msgs[0].legacyTelemetry?.map(record => record.value.source)).toEqual([
+        "runtime_default",
+        "runtime_default",
+      ]);
       expect(bridge.getStats().fallback).toBe(1);
     });
 
@@ -528,6 +545,39 @@ describe("StateInferenceBridge", () => {
   });
 
   describe("inferMissingBeliefs", () => {
+    it("only infers missing fields and links the replacement telemetry", async () => {
+      vi.mocked(callLLM).mockResolvedValue({
+        emotion: 0,
+        reasoning: "inferred",
+        rawContent: '{"belief": -0.9, "confidence": 88}',
+      });
+      const bridge = new StateInferenceBridge({
+        llmConfig: { provider: "deepseek", model: "deepseek-chat" },
+      });
+      const msgs = bridge.adaptMessages([{
+        agentId: "a1",
+        content: "plain message",
+        timestamp: "not-a-timestamp",
+        metadata: { belief: 0.7 },
+      }], 1);
+      const originalConfidence = msgs[0].legacyTelemetry?.find(
+        record => record.name === "legacy_confidence",
+      );
+
+      await bridge.inferMissingBeliefs(msgs);
+
+      expect(msgs[0].belief).toBe(0.7);
+      expect(msgs[0].confidence).toBe(88);
+      expect(Number.isFinite(Date.parse(msgs[0].timestamp))).toBe(true);
+      expect(msgs[0].legacyTelemetry).toHaveLength(3);
+      const latest = msgs[0].legacyTelemetry?.at(-1);
+      expect(latest?.name).toBe("legacy_confidence");
+      expect(latest?.value.source).toBe("model_inferred");
+      expect(latest?.value.methodId).toBe("state-inference.deepseek.deepseek-chat.v1");
+      expect(latest?.supersedesEventId).toBe(originalConfidence?.eventId);
+      expect(bridge.getStats().llmInferred).toBe(1);
+    });
+
     it("无 llmConfig 时直接返回原消息", async () => {
       const bridge = new StateInferenceBridge();
       const raw = [{ agentId: "a1", content: "plain message", timestamp: "" }];

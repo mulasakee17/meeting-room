@@ -66,6 +66,7 @@ import {
   EpistemicLedger,
   defaultBeliefContractRegistry,
   isCategoricalClaim,
+  observeLegacyQuantities,
   type BeliefContractRegistry,
   type BeliefExposure,
   type BeliefReport,
@@ -1174,6 +1175,7 @@ Add this top-level field to your JSON response:
         itemBeliefs: observation.parsedOpinion.itemBeliefs,
         claimReports: observation.parsedOpinion.claimReports,
         epistemicReportIds: observation.parsedOpinion.epistemicReportIds,
+        legacyTelemetry: observation.parsedOpinion.legacyTelemetry,
         timestamp: observation.timestamp,
       });
     }
@@ -1225,6 +1227,16 @@ Add this top-level field to your JSON response:
           task.optionAliases,
         );
         const observationTimestamp = new Date().toISOString();
+        parsedOpinion.legacyTelemetry = observeLegacyQuantities({
+          eventId: `observation:${task.id}:${roundNumber}:${agent.id}:${observationTimestamp}`,
+          observedAt: observationTimestamp,
+          stance: parsedOpinion.belief,
+          confidence: parsedOpinion.confidence,
+          utility: parsedOpinion.cognitiveState?.utility,
+          evidenceCoverage: parsedOpinion.cognitiveState?.evidenceCoverage,
+          evidenceQuality: parsedOpinion.cognitiveState?.evidenceQuality,
+          sources: parsedOpinion.legacyQuantitySources,
+        });
         this.prepareEpistemicOpinion(
           parsedOpinion,
           task,
