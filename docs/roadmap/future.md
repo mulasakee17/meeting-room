@@ -5,6 +5,8 @@
 > **状态**：动态文档 —— SwarmAlpha 项目的战略愿景与路线图
 > **目的**：梳理核心创新（社会热力学用于多智能体治理）可衍生的全部学术贡献，与前沿工作逐一比对，评估可行性，并判断整合后的学术贡献是否足以获得《Science》等顶级平台的报道。
 
+> **2026-08-07 局部更新说明**：路径一已按当前代码重写为 Epistemic Governance；其余章节仍含历史指标、旧定位和未复核的前沿工作，不应作为当前 SOT 或论文事实来源。
+
 ---
 
 ## 目录
@@ -153,38 +155,55 @@ Smoke Test 暴露了旧干预策略（reduce_weight + force_reflection）的根�
 
 ## 3. 五条战略路径：逐一深度分析
 
-### 路径一：Web3 / 区块链 + 多智能体治理
+### 路径一：Epistemic Governance（Web3 作为未来结算层）
 
-#### 原始想法
-> 将各个 agent 作为一个节点，用 agent card 做身份证，相互的交流看作链条，分输出和输入，影响就用我们的方法进行量化，用 web3 的设计哲学来定义多 agent 社会。
+#### 核心定位
 
-#### 拓展思路
-每个智能体作为去中心化网络中的一个节点运行。社会热力学变量（R, T, H, F）作为**链上治理信号**——信誉评分、信任度量、影响力追踪——具有以下特性：
-- **确定性可计算**（基础计算无需预言机）
-- **可验证**（可封装为零知识证明，在链上验证）
-- **实时性**（每轮更新，而非事后分析）
+这条路径不把 R/T/H/F 或普通文本记录直接搬上链，也不以“Agent 答错就罚”为目标。研究对象是可验证命题上的认识论行为：Agent 提出了什么 claim，以多大概率相信它，依据了什么证据，在更新前实际看到了哪些他人报告，以及错误信念如何沿通信路径扩散。
 
-这将创造一个新的原语：**可证明的智能体影响力量化**。不同于 Shapley 值方法（需要遍历所有可能联盟的反事实计算），热力学方法提供了流式、逐轮的影响力度量。
+核心链路为：
 
-#### 与前沿工作比对
+```text
+Text Communication
+→ Explicit Probability Reports
+→ Append-only Epistemic Ledger
+→ Evidence / Provenance / Exposure / Revision
+→ Proper-scoring Accountability
+→ Reputation and Capital Allocation
+→ Collective Decision
+```
 
-| 工作 | 机构 | 方法 | 缺口 |
-|---|---|---|---|
-| **DAO-Agent**（arXiv 2512.20973，2025.12） | 深圳大学 | Shapley 值 + 零知识证明做贡献度量 | 事后分析，非实时；不追踪影响力动态 |
-| **ERC-8004**（2026.01，以太坊主网） | MetaMask、以太坊基金会、Google、Coinbase | 身份、信誉、验证注册表 | 提供基础设施，但无治理启发式方法 |
-| **Shapley-Coop**（NeurIPS 2025） | 华东师大 | 基于 Shapley 的信用分配，用于自利 LLM 智能体 | 聚焦奖励分配，非治理 |
-| **x402 协议**（Coinbase） | Coinbase | 智能体间支付协议 | 仅支付层；无治理信号 |
+研究问题暂定为：
 
-#### 潜在学术贡献
-- **论文方向**：「去中心化多智能体治理中的可证明影响力量化」（目标：AAMAS 2027 / ICBC 2027）
-- **创新点**：实时热力学影响力度量 vs. 事后 Shapley 值；可零知识证明验证的治理信号
-- **竞争格局**：拥挤（深圳大学、ETH、Coinbase 均在布局），但你的方法与之正交
+> Can architecture-enforced explicit belief states and proper-scoring accountability improve calibration and contain false-belief cascades in LLM multi-agent systems?
 
-#### 可行性评估
-- **技术难度**：中等（需链上集成、零知识证明封装）
-- **所需时间**：4-6 个月（原型 + 实验）
-- **数据可用性**：需构建多智能体 Web3 模拟环境
-- **风险**：竞争激烈，来自资金充裕的实验室；需证明相比 Shapley 方法的明确优势
+这里治理的是 **miscalibration 与传播外部性**，而不只是最终正误。对于二元 claim，Brier loss 会使高置信度错误自然承担更大的 outcome loss；证据缺失、伪造和来源不可追踪属于独立的 process violation，不能随意混入 proper score，否则可能破坏诚实概率报告的激励性质。
+
+#### 当前已经实现的地基（2026-08-07）
+
+- 任务必须显式声明 `EpistemicTaskContract`；未声明时，系统不会把旧 `belief [-1,1]` 或 `confidence [0,100]` 偷换成概率。
+- Agent 可对预注册二元 claim 输出 `[0,1]` 概率和支持/反对证据；未知 claim、重复 claim、越界概率和不完整报告在解析边界 fail closed。
+- 运行时生成 report/evidence/exposure ID 与 SHA-256 内容哈希，不信任模型自报的审计标识。
+- append-only ledger 记录 claim、evidence provenance、belief report、revision lineage、外部 resolution 和实际 prompt exposure。
+- `observedReportIds` 必须存在匹配的架构 exposure；不能仅凭文本引用推断“看见过”。
+- 每轮 evidence、report 与 exposure 在 `finalizeRound` 中批量验证后提交；非法批次不会留下部分记录。
+- 已提供二元 Brier score 与 stake-weighted loss 原语，但当前 stake 固定为 0。
+
+以下能力**尚未实现**，不得写成当前系统能力：真实资本余额与锁定、跨 episode 持久身份、领域化信誉、验证 oracle、相关来源/Sybil 折扣、串谋检测、链上结算、智能合约和零知识证明。
+
+#### 三阶段路线
+
+1. **Belief State 实验**：在可解析真值的二元或单选任务上完成 text-only、explicit-belief、cost-matched independent ensemble 对照。先验证结构化报告本身是否改善 Brier、校准和错误恢复，不引入信誉。
+2. **Epistemic Accountability**：实现有限 epistemic capital。资本必须在获知真值前锁定，按 proper score 结算；信誉是按 agent × domain × claim type、带样本量收缩和时间衰减的可重算投影，而不是全局常数。
+3. **Adversarial Mechanism Design**：加入验证器噪声、伪证据、同模型同 prompt 的相关性 Sybil、身份洗白、串谋背书、正确低信誉少数派和跨领域迁移，研究何种机制能降低级联而不压制异议。
+
+核心指标包括 Accuracy、Brier 与 calibration decomposition、False Consensus Rate、Error Cascade Size、Recovery Time、Correct Minority Survival、Sybil Amplification、Influence Gini、Abstention、token/验证成本和 cost-matched Net Swarm Alpha。因果 cascade 必须依赖随机化暴露或其他识别设计；仅有时间先后时只能称传播轨迹。
+
+#### Web3 的位置与停止条件
+
+Web3 在本路线中是未来的身份、资本承诺和可验证结算基础设施，而不是论文的新颖性来源。只有当中心化版本已经证明“持续身份 + 有限资本 + proper-score 结算”在重复任务中产生稳定增益，而且存在多组织互不信任、需要共享审计结果的真实需求时，才进入链上原型。否则数据库中的 append-only ledger 已足够，区块链只会增加成本。
+
+任一条件成立即暂停该路线：显式 belief 相对 cost-matched 基线没有稳定收益；信誉导致锁定效应并持续压制正确少数派；收益小于验证与通信成本；结果只在单一任务或单一模型成立；无法获得可信 resolution；或者 Sybil/collusion 在合理约束下仍可低成本操纵机制。
 
 ---
 
@@ -708,7 +727,7 @@ Google 的 A2A 协议定义了**智能体如何通信**（通过 Agent Card 发�
 - Tsekov（2023）. "Social Thermodynamics 2.0." arXiv:2307.05984.
 - López-Corona 等（2015）. "Helmholtz free energy for social cooperation." arXiv:1502.05741.
 
-### 路径一：Web3 参考
+### 路径一：Web3 参考（待逐条复核，不作为当前贡献依据）
 - Xia 等（2025）. "DAO-Agent: Zero Knowledge-Verified Incentives." arXiv:2512.20973.
 - ERC-8004（2026）. 以太坊身份与信誉标准.
 - Hua 等（2025）. "Shapley-Coop: Credit Assignment for Emergent Cooperation." NeurIPS 2025.
@@ -740,6 +759,6 @@ Google 的 A2A 协议定义了**智能体如何通信**（通过 Agent Card 发�
 
 ---
 
-> **文档版本**：v2.2（中文版，2026-07-26 更新：数字与 SOT.md 对齐）
+> **文档版本**：v2.3（2026-08-07：路径一重写为 Epistemic Governance；其余章节待系统复核）
 > **下次审阅**：2026 年 Q3 三步走完成后
 > **本文档为动态路线图。随着实验产出结果和竞争格局变化，各路径的优先级和评估应相应调整。**
