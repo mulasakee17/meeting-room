@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { taskToConfig, type HiddenBenchTask } from "../experiments/campaign/tasks/hiddenbench/adapter";
 import { resolveCandidateOptions } from "../experiments/campaign/pipeline/hiddenbenchProtocol";
 import { buildDiscussionTaskContent } from "../experiments/campaign/pipeline/Runner";
+import {
+  taskConfigToBundle,
+  validateLegacyTruthCompleteness,
+} from "../experiments/campaign/tasks/legacyAdapter";
 
 function makeTask(): HiddenBenchTask {
   return {
@@ -23,15 +27,19 @@ describe("HiddenBench candidate schema isolation", () => {
     expect(resolveCandidateOptions(config)).toEqual(["Option B", "Option A", "Option C"]);
   });
 
-  it("fails closed when candidate schema and answer labels diverge", () => {
+  it("fails closed in the loader when candidate schema and answer labels diverge", () => {
     const config = taskToConfig(makeTask());
     delete config.searchKeys["Option C"];
 
-    expect(() => resolveCandidateOptions(config)).toThrow(/does not match/);
+    // WP1: truth completeness is validated at the loader/adapter boundary,
+    // not in the prompt resolver.
+    expect(() => validateLegacyTruthCompleteness(config)).toThrow(/does not match/);
+    expect(() => taskConfigToBundle(config)).toThrow(/does not match/);
   });
 
   it("injects candidate labels without revealing which option is correct", () => {
-    const content = buildDiscussionTaskContent(taskToConfig(makeTask()));
+    const bundle = taskConfigToBundle(taskToConfig(makeTask()));
+    const content = buildDiscussionTaskContent(bundle.promptTask);
 
     expect(content).toContain("1. Option B\n2. Option A\n3. Option C");
     expect(content).not.toMatch(/correct answer|正确答案/i);

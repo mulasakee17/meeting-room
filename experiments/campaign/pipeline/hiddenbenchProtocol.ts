@@ -19,29 +19,18 @@
 import { callLLM, fetchWithTimeout, type LLMConfig, type LLMResponse, LLMError, LLMErrorType } from "../../../src/lib/llm/providers";
 import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
 import { mulberry32 } from "../../../src/lib/utils/statsUtils";
-import type { TaskConfig } from "../../lunar_survival/config";
+import { candidateCanonicals, type ExperimentTaskBundle } from "../../../src/lib/experiment-contracts/contracts";
 
 /**
  * Candidate labels are part of the task schema, not the answer key.
- * `searchKeys` is the canonical candidate registry; `correctAnswer` is used
- * only to validate schema completeness and later score predictions.
+ * Since WP1, this resolver consumes only the candidate registry (searchKeys)
+ * and never the truth: label completeness is validated in the task loader
+ * (`experiments/campaign/tasks/legacyAdapter.ts`).
  */
-export function resolveCandidateOptions(
-  task: Pick<TaskConfig, "searchKeys" | "correctAnswer">,
-): string[] {
+export function resolveCandidateOptions(task: { searchKeys: Record<string, string[]> }): string[] {
   const options = Object.keys(task.searchKeys ?? {});
   if (options.length === 0) {
     throw new Error("Task candidate schema is empty: searchKeys must declare every option");
-  }
-
-  const truthLabels = Object.keys(task.correctAnswer ?? {});
-  const optionSet = new Set(options);
-  const truthSet = new Set(truthLabels);
-  const schemaMismatch = optionSet.size !== truthSet.size
-    || options.some(option => !truthSet.has(option))
-    || truthLabels.some(label => !optionSet.has(label));
-  if (schemaMismatch) {
-    throw new Error("Task candidate schema does not match correctAnswer labels");
   }
   return options;
 }
@@ -386,7 +375,7 @@ function parseVote(
  *   3. Post-discussion: 每个 agent 看到完整历史后再次投票
  */
 export async function runHiddenBenchProtocol(
-  task: TaskConfig,
+  bundle: ExperimentTaskBundle,
   llmConfig: LLMConfig,
   seed: number,
   maxRounds: number = 15,
@@ -395,15 +384,19 @@ export async function runHiddenBenchProtocol(
   let totalPrompt = 0;
   let totalCompletion = 0;
 
-  const options = resolveCandidateOptions(task);
-  const correctAnswer = Object.entries(task.correctAnswer).find(([, r]) => r === 1)?.[0] ?? "";
-  const agentDefs = task.agents || [];
+  // Prompt side reads only the PromptTask (no truth); truth comes from the
+  // scoringTask and is used exclusively for vote correctness scoring.
+  const promptTask = bundle.promptTask;
+  const options = candidateCanonicals(promptTask);
+  const truthRanks = bundle.scoringTask.groundTruth.value as Record<string, number>;
+  const correctAnswer = Object.entries(truthRanks).find(([, rank]) => rank === 1)?.[0] ?? "";
+  const agentDefs = promptTask.schema.agents || [];
 
   // --- 调试：保存 agent prompts 到结果中以验证信息隔离 ---
   const agentPrompts: Record<string, { scenarioPrompt: string; preVotePrompt: string; postVotePrompt: string }> = {};
 
   // --- 为每个 agent 准备信息 ---
-  const description = task.sharedBriefing
+  const description = promptTask.schema.publicContext
     .replace(/注意：.*$/m, "")
     .replace(/以上列表顺序不代表任何优先级.*$/m, "")
     .trim();
@@ -414,9 +407,9 @@ export async function runHiddenBenchProtocol(
     const def = agentDefs[agentIndex];
     const lines: string[] = [];
 
-    // 仅使用 knownItems 作为 agent 专属信息（不混合 sharedBriefing 中的垃圾正则匹配）
-    if (def.knownItems) {
-      const items = def.knownItems
+    // 仅使用 privateInformation 作为 agent 专属信息（不混合 sharedBriefing 中的垃圾正则匹配）
+    if (def.privateInformation) {
+      const items = def.privateInformation
         .split(/[；;\n]/)
         .map(s => s.replace(/^[•\-\s]+/, "").trim())
         .filter(s => s.length > 3);

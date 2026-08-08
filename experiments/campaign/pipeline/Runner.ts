@@ -36,7 +36,13 @@ import { computeDeltaDiagnosis } from "../../../src/lib/thermodynamics/computeDe
 import type { ProgressiveEstimates } from "../../../src/lib/thermodynamics/ProgressiveEstimator";
 import type { GovernanceEstimate } from "../../../src/lib/epistemic/semantics";
 import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
-import { resolveCandidateOptions, runHiddenBenchProtocol } from "./hiddenbenchProtocol";
+import {
+  candidateCanonicals,
+  candidateAliases,
+  type PromptTask,
+} from "../../../src/lib/experiment-contracts/contracts";
+import { taskConfigToBundle, extractEvidenceIds } from "../tasks/legacyAdapter";
+import { runHiddenBenchProtocol } from "./hiddenbenchProtocol";
 
 // ============================================================================
 // Scenario Loading
@@ -114,7 +120,7 @@ function loadScenario(scenarioId: string, taskIndex?: number, promptStyle?: "hin
 // ============================================================================
 
 function createAgents(
-  task: any,
+  promptTask: PromptTask,
   agentCount: number,
   llmConfig: LLMConfig,
   seed: number,
@@ -122,14 +128,13 @@ function createAgents(
   const rng = mulberry32(seed);
   const agents: DiscussionAgent[] = [];
   const knowledge = new Map<string, string[]>();
-  const candidateOptions = resolveCandidateOptions(task);
+  const candidateOptions = candidateCanonicals(promptTask);
   const candidateContract = candidateOptions
     .map((option, index) => `${index + 1}. ${option}`)
     .join("\n");
 
-  // 为每个 agent 分配独有信息
-  const agentNames = task.agents || [];
-  const selected = agentNames.slice(0, agentCount);
+  // 为每个 agent 分配独有信息（来自 PromptTask 的 prompt 侧角色定义）
+  const selected = promptTask.schema.agents.slice(0, agentCount);
 
   for (let i = 0; i < selected.length; i++) {
     const agentDef = selected[i];
@@ -144,9 +149,9 @@ function createAgents(
     // 构建独有知识提示（不包含 sharedBriefing，避免与 buildPrompt 中 Task 重复）
     // promptStyle="nohint"：对齐 HiddenBench 原论文主实验——不提示信息不对称，
     // 只给"你掌握的信息"块 + 中性讨论规则，靠讨论自然揭示（基线应重现"讨论后失败"）。
-    const noHint = task.promptStyle === "nohint";
-    const customPrompt = agentDef.knownItems
-      ? `${noHint ? "你掌握的信息" : "你的独有专业知识（其他成员不知道）"}：\n${agentDef.knownItems}\n\n${agentDef.initialBias || ""}\n\n`
+    const noHint = promptTask.schema.promptStyle === "nohint";
+    const customPrompt = agentDef.privateInformation
+      ? `${noHint ? "你掌握的信息" : "你的独有专业知识（其他成员不知道）"}：\n${agentDef.privateInformation}\n\n${agentDef.initialBias || ""}\n\n`
         + `讨论规则：\n`
         + (noHint
           ? `1. 仔细考虑你掌握的所有信息\n`
@@ -185,21 +190,17 @@ function createAgents(
     agents.push(agent as unknown as DiscussionAgent);
 
     // 构建 agent knowledge（用于 governance 信息层干预）
-    if (agentDef.knownItems) {
-      const items = agentDef.knownItems
-        .split(/[；;\n]/)
-        .map((s: string) => s.replace(/^[•\-\s]+/, "").trim())
-        .filter((s: string) => s.length > 10);
-      knowledge.set(agentId, items);
+    if (agentDef.privateInformation) {
+      knowledge.set(agentId, extractEvidenceIds(agentDef.privateInformation));
     }
   }
 
   return { agents, knowledge };
 }
 
-export function buildDiscussionTaskContent(task: any): string {
-  const options = resolveCandidateOptions(task);
-  const briefing = task.sharedBriefing || task.title || "";
+export function buildDiscussionTaskContent(promptTask: PromptTask): string {
+  const options = candidateCanonicals(promptTask);
+  const briefing = promptTask.schema.publicContext || "";
   const optionList = options
     .map((option, index) => `${index + 1}. ${option}`)
     .join("\n");
@@ -354,7 +355,7 @@ async function runHiddenBenchSingle(
     ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
   };
 
-  const hbResult = await runHiddenBenchProtocol(task, llmConfig, effectiveSeed, config.maxRounds);
+  const hbResult = await runHiddenBenchProtocol(taskConfigToBundle(task), llmConfig, effectiveSeed, config.maxRounds);
 
   // HiddenBench 协议无 ranking，用 postAccuracy 作为 finalAccuracy
   const finalAccuracy = hbResult.postAccuracy;
@@ -436,6 +437,11 @@ export async function runSingle(
   const useNativeCognitive = runtimeMode === "native_cognitive";
   const effectiveSeed = (seed + runIndex * 0x9E3779B1) >>> 0;
 
+  // WP1: legacy TaskConfig → ExperimentTaskBundle. Prompt path consumes only
+  // the PromptTask; scoring consumes only the scoringTask (truth released
+  // after discussion). candidate/truth completeness is validated in the loader.
+  const bundle = taskConfigToBundle(scenario.task);
+
   const llmConfig: LLMConfig = {
     provider: detectLLMProvider(config.llmModel),
     model: config.llmModel,
@@ -444,7 +450,7 @@ export async function runSingle(
     ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
   };
 
-  const { agents, knowledge } = createAgents(scenario.task, config.agentCount, llmConfig, effectiveSeed);
+  const { agents, knowledge } = createAgents(bundle.promptTask, config.agentCount, llmConfig, effectiveSeed);
 
   // Phase 4B: "cognitive" governance mode → "full" + useCognitiveGovernance
   // diversity_only: 启用认知治理，但只保留 evidence imbalance + cognitive action mismatch 检测器
@@ -524,15 +530,15 @@ export async function runSingle(
     }
   }
 
-  const candidateOptions = resolveCandidateOptions(scenario.task);
+  const candidateOptions = candidateCanonicals(bundle.promptTask);
   const task = {
-    id: scenario.task.id,
-    description: scenario.task.sharedBriefing || scenario.task.title,
+    id: bundle.promptTask.schema.id,
+    description: bundle.promptTask.schema.publicContext,
     type: "ranking",
     createdAt: new Date().toISOString(),
-    content: buildDiscussionTaskContent(scenario.task),
+    content: buildDiscussionTaskContent(bundle.promptTask),
     canonicalOptions: candidateOptions,
-    optionAliases: scenario.task.searchKeys,
+    optionAliases: candidateAliases(bundle.promptTask),
   };
 
   const startTime = Date.now();
@@ -574,14 +580,15 @@ export async function runSingle(
       && validOpinions === lastRound.opinions.length;
     if (allOpinionsValid && allItemBeliefs.length > 0 && agentNames.length > 0) {
       try {
-        finalRanking = extractRanking("", agentNames, allItemBeliefs, scenario.task.searchKeys);
-        if (scenario.task.correctAnswer) {
+        finalRanking = extractRanking("", agentNames, allItemBeliefs, candidateAliases(bundle.promptTask));
+        const correctAnswer = bundle.scoringTask.groundTruth.value as Record<string, number>;
+        if (correctAnswer) {
           if (rankingMetricApplicable) {
-            finalKendallTau = kendallTau(scenario.task.correctAnswer, finalRanking);
+            finalKendallTau = kendallTau(correctAnswer, finalRanking);
           }
           // 单选准确率：finalRanking[0]（群体第一名）是否为 correctAnswer 中 rank=1 的方案
           // （HiddenBench 等单选任务用；与 HiddenBench 论文的准确率口径对齐）
-          const correctItem = Object.entries(scenario.task.correctAnswer)
+          const correctItem = Object.entries(correctAnswer)
             .find(([, r]) => r === 1)?.[0];
           finalAccuracy = correctItem && finalRanking[0] === correctItem ? 1 : 0;
           // item 已在 observation 边界规范化，指标层只允许精确比较。
