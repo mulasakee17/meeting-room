@@ -190,6 +190,8 @@ describe("TerminationDecider", () => {
     it("快照包含 F = (1-R) + T·H", () => {
       decider.evaluate(0.8, 0.1, 0.2, 3);
       const snap = decider.getHistory()[0];
+      expect(snap.signalSetId).toBe("swarmalpha.scalar_belief_macro");
+      expect(snap.signalSetVersion).toBe("1.0.0");
       expect(snap.F).toBeCloseTo((1 - 0.8) + 0.1 * 0.2, 5);
     });
 
@@ -285,6 +287,11 @@ describe("TerminationDecider", () => {
   });
 
   describe("sync 终止策略（P0d）", () => {
+    it("省略 policy 时默认 fixed_rounds，不允许未校准信号提前停止", () => {
+      const decision = decider.evaluateSync(0.99, 0.01, 0.01, 0.01, 1, 3);
+      expect(decision.shouldTerminate).toBe(false);
+    });
+
     it("低 F 但高 T/高 H 不得被判为结晶", () => {
       const decision = decider.evaluateSync(0.2, 0.9, 0.9, -0.7, 1, 5, "rht_joint");
       expect(decision.shouldTerminate).toBe(false);
@@ -295,6 +302,7 @@ describe("TerminationDecider", () => {
       const decision = decider.evaluateSync(0.95, 0.05, 0.10, 0.8, 1, 5, "rht_joint");
       expect(decision.shouldTerminate).toBe(true);
       expect(decision.reason).toBe("strong_crystallized");
+      expect(decider.getHistory()[0].signalSetId).toBe("swarmalpha.cognitive_macro");
     });
 
     it("rhtf_joint 只把 F 作为 R/T/H 之后的附加条件", () => {

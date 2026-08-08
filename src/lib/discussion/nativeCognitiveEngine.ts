@@ -25,8 +25,7 @@
  *     Inertia           → 角色 + 反驳检测 + 衰减
  *     Susceptibility    → (1-ι)(1-c)
  *
- * v3.2 变更：将认知状态更新、检测器运行、热力学计算委托给 MeasurementLayer，
- * 消除与 MeasurementLayer 的重复逻辑，确保 RTHF 从 5 变量而非 beliefs 派生。
+ * v3.2 变更：将结构化状态更新、检测器和宏观监测委托给 MeasurementLayer。
  */
 
 import { DiscussionEngine, type DiscussionAgent } from "./index";
@@ -55,7 +54,7 @@ import type {
   CognitiveGovernanceState,
   CognitiveStateModification,
 } from "../governance/types";
-import { MeasurementLayer, type ThermoState } from "../thermodynamics/MeasurementLayer";
+import { MeasurementLayer, type CognitiveMacroState } from "../thermodynamics/MeasurementLayer";
 import { EvidencePool } from "../thermodynamics/EvidencePool";
 import { TerminationDecider, type TerminationDecision } from "../thermodynamics/TerminationDecider";
 import { mulberry32 } from "../utils/statsUtils";
@@ -245,20 +244,17 @@ export class NativeCognitiveEngine extends DiscussionEngine {
   // ==========================================================================
 
   /**
-   * 不变测量层：统一管理认知状态、热力学计算、检测器运行。
+   * 不变测量层：统一管理结构化自报/估计状态、版本化监测和检测器运行。
    * 替代了 v3.1 中分散在 NativeCognitiveEngine 的重复逻辑。
    */
   private measurementLayer: MeasurementLayer;
 
-  /**
-   * 热力学历史：每轮 RTHF 快照，用于实验分析。
-   */
-  private thermoHistory: Array<{ round: number } & ThermoState> = [];
+  /** Versioned cognitive macro signal history; R/T/H/F are compatibility aliases. */
+  private thermoHistory: Array<{ round: number } & CognitiveMacroState> = [];
 
   /**
-   * v6 路径二（2026-08-04）：热力学终止决策器。
-   * F 进决策分支——强结晶态 F<0.15 立即终止，普通结晶态 F<0.25 连续 3 轮终止。
-   * 解冻自原 FROZEN 状态，适配 sync 路径（基于 round 而非 utteranceCount）。
+   * Experimental macro-signal stopping evaluator. The default policy remains
+   * fixed_rounds; RHT/RHTF policies require explicit opt-in.
    */
   private terminationDecider: TerminationDecider = new TerminationDecider();
 
@@ -362,12 +358,12 @@ export class NativeCognitiveEngine extends DiscussionEngine {
     return this.measurementLayer.getAllCognitiveStateHistory();
   }
 
-  /** 获取热力学历史（RTHF 逐轮轨迹） */
-  getThermoHistory(): Array<{ round: number } & ThermoState> {
+  /** Get versioned cognitive macro signal history. */
+  getThermoHistory(): Array<{ round: number } & CognitiveMacroState> {
     return structuredClone(this.thermoHistory);
   }
 
-  /** v6 路径二：获取热力学快照历史（论文分析用，不重新评估） */
+  /** Get versioned stopping-policy snapshots without recomputation. */
   getTerminationHistory() {
     return this.terminationDecider.getHistory();
   }
@@ -378,7 +374,7 @@ export class NativeCognitiveEngine extends DiscussionEngine {
   }
 
   /**
-   * v6 热力学终止候选。
+   * Experimental macro-signal stop candidate.
    *
    * 只负责基于当前轮 post-update thermoState 计算结构化候选，不再直接让主循环
    * break。父类 finalizeRound 会先完成治理诊断、roundData/trace/event 提交，再统一
@@ -596,7 +592,7 @@ Field explanations:
    * v3.2 变更：不再在 NativeCognitiveEngine 中重复实现认知状态更新逻辑，
    * 而是委托给 MeasurementLayer.updateCognitiveStates("native")。
    * 更新后同步 cognitiveStates 和 governancePrompts 到父类字段，
-   * 并计算 RTHF 存入 thermoHistory。
+   * 并计算版本化 macro signals 存入兼容字段 thermoHistory。
    */
   protected updateCognitiveStatesFromRound(
     opinions: AgentOpinion[],
@@ -620,8 +616,8 @@ Field explanations:
     this.speakingPriority = result.speakingPriority;
     this.pendingShuffleKnowledge = result.shuffleKnowledge;
 
-    // ── 计算 RTHF 并存入热力学历史 ──
-    const thermoState = this.measurementLayer.computeThermoState();
+    // Persist canonical names, signal identity, and compatibility aliases.
+    const thermoState = this.measurementLayer.computeCognitiveMacroState();
     this.thermoHistory.push({ round, ...thermoState });
   }
 
@@ -758,7 +754,7 @@ Field explanations:
       // 关键修复：从原始 LLM 输出构建 cognitive states 做 δ 诊断，
       // 而非从 MeasurementLayer 读取（已被 DeGroot 融合抹平了分歧）。
       const rawStates = this.buildRawCognitiveStates(opinions, agents);
-      const thermo = this.measurementLayer.computeThermoState();
+      const thermo = this.measurementLayer.computeCognitiveMacroState();
       // P1-C 修复（2026-08-04）：estimates 基于 cognitiveStates（有累积 behaviorEvents），
       // 而非 rawStates（临时对象，behaviorEvents 全 0）。
       // 修复前：estimateAll(rawStates) → susceptibility.usable=false（暴露事件<2）

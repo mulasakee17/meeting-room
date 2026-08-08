@@ -98,7 +98,7 @@ export function round(value: number, decimals: number = 2): number {
 }
 
 // ============================================================================
-// 社会热力学指标 — Social Thermodynamics Metrics
+// Legacy scalar-belief monitoring metrics
 // ============================================================================
 
 /** Shannon 信息熵（归一化到 [0,1]） */
@@ -153,8 +153,11 @@ export function normalizeTemperature(
   return Math.min(1, Math.max(0, std / maxStd));
 }
 
-/** 社会自由能 F = (1-R) + T·H */
-export function socialFreeEnergy(
+/**
+ * Versioned compatibility score for the frozen scalar-belief path.
+ * This is an uncalibrated heuristic, not a physical free energy.
+ */
+export function legacyScalarDisorderScoreV1(
   orderParam: number,
   temperature: number,
   entropy: number
@@ -164,3 +167,5 @@ export function socialFreeEnergy(
   return U + TS;
 }
 
+/** @deprecated Use legacyScalarDisorderScoreV1(). */
+export const socialFreeEnergy = legacyScalarDisorderScoreV1;

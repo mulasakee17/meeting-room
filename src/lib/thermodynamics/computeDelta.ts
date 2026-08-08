@@ -97,7 +97,7 @@ const SAFETY_MARGINS = {
 } as const;
 
 // ============================================================================
-// Empty Diagnosis (Tier 1 热力学筛查通过时返回，避免重复构造)
+// Empty diagnosis used only by explicit legacy macro-screening compatibility mode.
 // ============================================================================
 
 /** 空 δ 诊断结果——所有信号未触发，用于 Tier 1 筛查通过时的早返回 */
@@ -110,7 +110,7 @@ export const EMPTY_DELTA_DIAGNOSIS: DeltaDiagnosis = {
   noResponse: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算", unresponsiveAgents: [] },
   concentration: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算" },
   consistency: { triggered: false, value: 0, minConfidence: 0, effectiveThreshold: 0, explanation: "Tier 1 筛查通过，未计算" },
-  summary: "Tier 1 热力学筛查通过，未触发 δ 诊断",
+  summary: "显式 legacy macro screening 未触发，已跳过 δ 诊断",
 };
 
 // ============================================================================

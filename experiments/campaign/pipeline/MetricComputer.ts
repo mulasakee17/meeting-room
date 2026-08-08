@@ -18,7 +18,12 @@
  *   - 不应在 Campaign Pipeline 中引用
  */
 
-import type { RawRunData, ExperimentMetrics, CognitiveStateSnapshot } from "../types";
+import {
+  hasReplayableEstimatorSchema,
+  type RawRunData,
+  type ExperimentMetrics,
+  type CognitiveStateSnapshot,
+} from "../types";
 import { mean, sampleStd, mulberry32, BOOTSTRAP_SEED } from "../../v2/statsShared";
 
 // ============================================================================
@@ -716,7 +721,7 @@ export function computeE6Decoupling(data: RawRunData[]): ExperimentMetrics {
 
     // 仅 schema-2 纳入 confirmatory 解耦分析：Λ 必须用干净的 usable 行为估计，
     // schema-1 混合易感性不消费。为保持相关矩阵数组对齐，schema-1 run 整体排除。
-    if (run.rawSchemaVersion !== "2.0") {
+    if (!hasReplayableEstimatorSchema(run.rawSchemaVersion)) {
       legacyMixedExcludedCount += run.cognitiveTrajectory.length;
       continue;
     }
@@ -1071,7 +1076,7 @@ export function computeE8Susceptibility(data: RawRunData[]): ExperimentMetrics {
 
     // schema-1 混合易感性：按 E8 的实际分析单位（transition）统计排除数，
     // 不 substitute socialUpdateGain。
-    if (run.rawSchemaVersion !== "2.0") {
+    if (!hasReplayableEstimatorSchema(run.rawSchemaVersion)) {
       legacyMixedExcludedCount += countTransitions(run.cognitiveTrajectory);
       continue;
     }

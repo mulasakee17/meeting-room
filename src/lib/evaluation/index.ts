@@ -15,7 +15,7 @@ import {
   InfluencePath,
 } from "./types";
 import { EVALUATION_DEFAULT_WEIGHTS } from "../constants";
-import { shannonEntropy, socialFreeEnergy, normalizeTemperature, computeKuramotoOrder } from "../utils/statsUtils";
+import { shannonEntropy, legacyScalarDisorderScoreV1, normalizeTemperature, computeKuramotoOrder } from "../utils/statsUtils";
 
 export class EvaluationEngine {
   private defaultWeights = EVALUATION_DEFAULT_WEIGHTS;
@@ -99,9 +99,13 @@ export class EvaluationEngine {
     const kuramotoOrder = computeKuramotoOrder(beliefs);
     const trajectory = this.computeConsensusTrajectory(interactionHistory);
 
-    // 社会热力学指标：信息熵 H + 自由能 F
+    // Scalar-belief descriptive signals. The composite is a legacy heuristic.
     const entropy = shannonEntropy(beliefs);
-    const freeEnergy = socialFreeEnergy(kuramotoOrder, normalizeTemperature(beliefStd), entropy);
+    const legacyScalarDisorderScore = legacyScalarDisorderScoreV1(
+      kuramotoOrder,
+      normalizeTemperature(beliefStd),
+      entropy,
+    );
 
     // Composite score: Kuramoto (30%) + inverse-std (40%) + agreement (30%)
     const score = (kuramotoOrder * 30) + ((1 - beliefStd / 2) * 40) + (agreementRate / 100 * 30);
@@ -112,7 +116,8 @@ export class EvaluationEngine {
       beliefStd: Math.round(beliefStd * 100) / 100,
       agreementRate: Math.round(agreementRate),
       entropy: Math.round(entropy * 1000) / 1000,
-      freeEnergy: Math.round(freeEnergy * 1000) / 1000,
+      legacyScalarDisorderScore: Math.round(legacyScalarDisorderScore * 1000) / 1000,
+      freeEnergy: Math.round(legacyScalarDisorderScore * 1000) / 1000,
       trajectory,
       details: beliefStd < 0.3 ? "High consensus, beliefs are closely aligned" :
                beliefStd < 0.6 ? "Moderate consensus, some divergence" :

@@ -269,7 +269,7 @@ describe("NativeCognitiveEngine.updateCognitiveStatesFromRound", () => {
     expect(estimates.get("a1").estimatorId).toBe("swarmalpha.progressive-icl");
   });
 
-  it("更新后 thermoHistory 记录 RTHF", () => {
+  it("更新后 history 记录版本化 macro signals 与精确兼容别名", () => {
     const agents: DiscussionAgent[] = [
       mockAgent("a1", "Alice", "analyst"),
       mockAgent("a2", "Bob", "critic"),
@@ -284,10 +284,12 @@ describe("NativeCognitiveEngine.updateCognitiveStatesFromRound", () => {
     const thermo = engine.getThermoHistory();
     expect(thermo.length).toBe(1);
     expect(thermo[0].round).toBe(1);
-    expect(thermo[0]).toHaveProperty("R");
-    expect(thermo[0]).toHaveProperty("T");
-    expect(thermo[0]).toHaveProperty("H");
-    expect(thermo[0]).toHaveProperty("F");
+    expect(thermo[0].signalSetId).toBe("swarmalpha.cognitive_macro");
+    expect(thermo[0].signalSetVersion).toBe("1.0.0");
+    expect(thermo[0].R).toBe(thermo[0].reportedUtilityAlignment);
+    expect(thermo[0].T).toBe(thermo[0].updateVolatility);
+    expect(thermo[0].H).toBe(thermo[0].evidenceSupportEntropy);
+    expect(thermo[0].F).toBe(thermo[0].utilityVolatilityEntropyComposite);
   });
 
   it("两 agent utility 对齐时 R 接近 1", () => {

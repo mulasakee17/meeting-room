@@ -567,7 +567,7 @@ export class DiscussionEngine {
   }
 
   /**
-   * 将表面收敛、热力学候选和治理否决合并为唯一 stopDecision。
+   * 将表面收敛、实验性 macro-signal 候选和治理否决合并为唯一 stopDecision。
    * hard cap 不可否决；其他提前终止在高风险问题或已排队干预存在时至少延后一轮。
    */
   private resolveStopDecision(input: {
@@ -605,7 +605,7 @@ export class DiscussionEngine {
       };
     }
 
-    // <2 个有效响应既不是共识，也不足以支持热力学提前终止。
+    // <2 个有效响应既不是共识，也不足以支持 macro-signal 提前终止。
     if (opinions.length < 2) {
       return {
         shouldStop: false,
@@ -1407,8 +1407,8 @@ itemBeliefs: rank (1=best), belief (-1=oppose, 1=support) for each option.`;
   }
 
   /**
-   * 计算热力学终止候选，不直接控制循环。
-   * 基类没有热力学终止能力；NativeCognitiveEngine 覆写后返回结构化候选，
+   * 计算实验性 macro-signal 终止候选，不直接控制循环。
+   * 基类没有此能力；NativeCognitiveEngine 覆写后返回结构化候选，
    * 最终是否退出由 finalizeRound 在完整提交审计记录后统一仲裁。
    */
   protected evaluateTerminationCandidate(_round: number): TerminationDecision | null {

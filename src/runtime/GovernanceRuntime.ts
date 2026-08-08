@@ -801,7 +801,7 @@ export class GovernanceRuntime {
    * - 使用 6 个认知检测器（基于 Utility/Evidence/Inertia，而非标量 belief）
    * - 生成非破坏性干预（inject_evidence, rebalance_attention, shuffle_knowledge）
    * - 不直接修改 agent 的 belief/confidence，只通过 prompt 注入和发言优先级调整
-   * - 计算 R/T/H/F 热力学状态，暴露给外部监控
+   * - 计算版本化 cognitive macro signals，暴露给外部监控
    *
    * 降级策略：
    * - 若 message 不含 itemBeliefs/cognitiveState → 从 belief/confidence 反推认知状态
@@ -853,8 +853,8 @@ export class GovernanceRuntime {
       progressiveEstimates,
     );
 
-    // Step 7: Compute thermo state (R/T/H/F)
-    const thermo = this.measurementLayer.computeThermoState();
+    // Step 7: Compute versioned cognitive macro signals.
+    const thermo = this.measurementLayer.computeCognitiveMacroState();
 
     // Step 8: Build governance result
     const governanceResult = this.buildCognitiveGovernanceResult(
@@ -867,6 +867,11 @@ export class GovernanceRuntime {
       thermo_T: thermo.T,
       thermo_H: thermo.H,
       thermo_F: thermo.F,
+      reported_utility_alignment: thermo.reportedUtilityAlignment,
+      update_volatility: thermo.updateVolatility,
+      evidence_support_entropy: thermo.evidenceSupportEntropy,
+      reported_utility_intensity: thermo.reportedUtilityIntensity,
+      utility_volatility_entropy_composite: thermo.utilityVolatilityEntropyComposite,
       cognitive_issues_count: deltaIssues.length,
       cognitive_interventions_count: interventions.length,
     };

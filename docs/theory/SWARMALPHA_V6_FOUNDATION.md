@@ -1,9 +1,11 @@
 # SwarmAlpha v6：受治理集体推理的理论基线
 
-> 状态：规范性定义草案（Normative Foundation）  
-> 日期：2026-08-07  
-> 依据：核心执行路径的代码审计与外部原始研究；不继承旧文档中的理论主张  
+> 状态：v6 Research Candidate 规范合同（Normative Contract）
+> 日期：2026-08-08
+> 依据：核心执行路径的代码审计与外部原始研究；不继承旧文档中的理论主张
 > 约束：本文中的“已实现”“待实现”“待验证”必须严格区分
+
+本文是 v6 理论与实验命名的最高优先级来源。历史文档、变量名或图表与本文冲突时，必须降格为兼容语义并注明版本，不能反向修改理论解释去迎合旧实现。
 
 ## 0. 一句话定义
 
@@ -14,6 +16,17 @@
 > **SwarmAlpha v6: A Causal Testbed for Governed Collective Inference under Distributed Information**
 
 这里的研究对象是 **governed collective inference（受治理的集体推理）**，不是泛化到任意多智能体任务的“万能 agent 框架”，也不是把 LLM 自报变量当作真实心智状态的“认知模拟器”。
+
+### 0.1 六条不可撤销的理论约束
+
+1. **可观测性约束**：平台只能直接观测输出、事件和外部结果；latent belief、真实意图和真实认知过程不可被代码字段直接获得。
+2. **本体约束**：事实判断、偏好聚合和开放生成使用不同的评价契约；不得用 accuracy 或 consensus 统一三者。
+3. **语义约束**：reported、derived、estimated、behavioral、governance 与 outcome quantity 必须分层；跨层转换必须带方法与来源身份。
+4. **控制约束**：未经 held-out 校准的监测量默认只能描述（C0），不得静默决定排序、干预或停止。
+5. **因果约束**：没有 treatment assignment 和成本匹配对照，就只能报告相关、轨迹或预测，不能报告治理导致了改善。
+6. **版本约束**：公式、输入、归一化、缺失值或支持域任一变化都产生新的 signal/estimator version；跨版本值默认不可直接比较。
+
+这六条同时给出项目的下限与上限：下限是任何实验都不能破坏的科学卫生；上限则是把多 agent 讨论变成可观测、可干预、可复现实验对象，而不是继续堆叠 agent persona 或 prompt 技巧。
 
 ## 1. 为什么叫 SwarmAlpha
 
@@ -108,7 +121,22 @@ o_i,t ~ pi_i(. | private_signal_i, visible_history_i,t, intervention_i,t)
 
 所以当前代码中的 utility、confidence、evidence coverage 等首先是 **reported state（自报状态）**；经过历史行为融合后也只能称为 **estimated behavioral state（行为估计状态）**，不能称为真实认知状态。
 
-### 3.3 单轮动力学
+### 3.3 两类 belief 不得混用
+
+v6 同时存在两个历史来源不同的对象：
+
+1. **Claim-relative probabilistic belief**：显式绑定 `claimId`，值为二元或类别概率分布，满足概率单纯形约束；可以在 resolution 后使用 proper scoring rule 评估 calibration。这是 epistemic governance 的规范 belief。
+2. **Legacy scalar stance / reported utility**：`[-1,1]` 立场、排序分数或 utility 向量，是任务相关自报与兼容遥测。它可以描述方向、更新和群体结构，但不是概率 belief，也不能直接计算 Brier calibration。
+
+因此，“信念计算严谨”必须拆成三问：
+
+- **表示是否严谨**：规范 belief 已做到 claim-relative、归一化、版本化和可审计；
+- **产生是否严谨**：概率目前主要由 agent 自报，尚未证明统计校准；
+- **更新是否严谨**：legacy DeGroot 更新是可复现的社会影响算子，不是 Bayesian posterior；规范 belief DAG 已记录 supersession/exposure，但尚未提供通用 Bayesian 更新器。
+
+论文可以主张 architecture-enforced explicit belief representation 和 proper ex-post scoring，不能主张平台已经恢复了 agent 的真实信念或实现了普适 Bayesian cognition。
+
+### 3.4 单轮动力学
 
 规范性的单轮顺序为：
 
@@ -175,6 +203,19 @@ private state / evidence
 
 这些量可以用于描述、预测和控制，但不具有物理单位。
 
+当前已冻结的第一版监测契约如下；表中“默认控制”是代码约束，不是写作建议：
+
+| Signal contract | 主字段 | 支持域 | 当前证据等级 | 默认控制 |
+|---|---|---:|---|---|
+| `swarmalpha.reported_utility_alignment@1.0.0` | `reportedUtilityAlignment` | `[0,1]` | C0 | 禁止 |
+| `swarmalpha.update_volatility@1.0.0` | `updateVolatility` | `[0,1]` | C0 | 禁止 |
+| `swarmalpha.evidence_support_entropy@1.0.0` | `evidenceSupportEntropy` | `[0,1]` | C0 | 禁止 |
+| `swarmalpha.reported_utility_intensity@1.0.0` | `reportedUtilityIntensity` | `[0,1]` | C0 | 禁止 |
+| `swarmalpha.utility_volatility_entropy_composite@1.0.0` | `utilityVolatilityEntropyComposite` | `[-1,1]` | C0 | 禁止 |
+| `swarmalpha.legacy_scalar_disorder_score@1.0.0` | `legacyScalarDisorderScore` | `[0,2]` | C0 | 禁止 |
+
+历史字段 `R/T/H/F` 仅为重放旧数据的精确别名；新代码和论文必须使用主字段与 signal-set identity。`zero_is_defined` 也不总表示现象为零，例如第一轮 update volatility 为零只表示没有可比较的上一轮。
+
 ### 5.3 撤销自由能本体论
 
 当前代码存在两套同名量：旧异步路径的 `F=(1-R)+T*H`，以及 native 路径的 `F=U-T*H`。其中 `U` 是自报效用向量强度，`T` 是更新幅度，`H` 是证据支持熵；三者没有物理共轭关系，也没有温度、能量和熵的统一量纲。
@@ -186,6 +227,16 @@ private state / evidence
 - 旧公式可保留为带版本命名的启发式 `legacy_disorder_score`；
 - 新实验优先使用可解释的观测向量，不强行压成单标量；
 - 若未来定义综合风险分数，必须在 held-out 数据上校准并报告消融，不能借用物理定律赋予合法性。
+
+实现层进一步规定：
+
+- native cognitive 快照必须写入 `swarmalpha.cognitive_macro@1.0.0`；
+- 新写入 raw artifact 必须使用 schema `3.0`；schema 2.0 可读且保留 estimator replay contract，但其未标注 macro 快照不得与 schema 3.0 信号合并；
+- frozen async scalar 快照必须写入 `swarmalpha.scalar_belief_macro@1.0.0`；
+- 两类快照即使都含 `R/T/H/F` 也不得合并分析；
+- legacy scalar decomposition 排序只能显式 opt-in，默认治理保持固定顺序；
+- legacy macro screening 只能显式 opt-in，默认不得以未校准复合量跳过 δ 诊断；
+- native 主实验默认固定轮数；`rht_joint/rhtf_joint` 仅是实验性停止策略，必须与 hard-cap 结果并报。
 
 “社会热力学”可以作为启发式可视化语言，但不能作为 v6 的理论地基。
 
@@ -263,6 +314,20 @@ diagnostic_belief_t = M(history_<=t)
 intervention_t      = G(diagnostic_belief_t, budget_t, treatment_history)
 outcome_t+1         = observe(next_round)
 ```
+
+一个可支持治理效果 claim 的最小记录单元为：
+
+```text
+diagnosis
+  -> eligibility
+  -> assignment_probability + randomization_unit + seed
+  -> assigned_treatment
+  -> applied_action
+  -> proximal_observation_window
+  -> task_outcome
+```
+
+只有 `diagnosis -> intervention` 记录，没有 assignment 的系统至多是规则控制器；只有 intervention 后状态变化，没有同期对照的分析至多是 before/after 轨迹。SwarmAlpha 的论文含金量来自把这条链做完整，而不是让检测器名称听起来更像机制解释。
 
 ### 9.1 干预族
 
@@ -358,12 +423,16 @@ v6 不是“多 agent 更好”的论证，而是一组可能被证伪的命题�
 - `GovernanceEngine` 和 cognitive interventions：控制动作空间；
 - `Runner`：随机种子、协议、结果落盘与多条件实验入口；
 - TaskSchema/GroundTruth 在 campaign/HiddenBench 主路径上的初步解耦。
+- `epistemic` claim/report/evidence/exposure/resolution ledger：显式概率 belief、来源、替代关系和 proper ex-post scoring；
+- `MonitoringSignalContract`：信号 ID、版本、来源层、公式、支持域、校准状态、claim ceiling 与控制许可；
+- cognitive macro 快照：显式五字段、signal-set identity 与旧 R/T/H/F 精确别名；
+- 默认控制安全性：未校准 legacy 排序和 macro screening 已改为显式 opt-in。
 
 ### 13.2 当前最重要的概念债
 
 1. `cognitiveState` 混合 LLM 自报、系统估计和心理术语；
 2. utility、belief、preference、stance 在不同路径中互换；
-3. sync 与 async 的 R/T/H/F 同名异义且阈值来源不一致；
+3. sync 与 async 历史上仍保留 R/T/H/F 别名，但新快照已用 signal-set identity 隔离；旧数据仍需迁移标注；
 4. evidence coverage 仍部分依赖 agent 对“全部信息”的不可验证自报；
 5. evidence entropy 只按已出现 support 归一化，不能表示候选空间覆盖；
 6. authority、withholding、causal 等名称超过了观测所能支持的结论；
@@ -378,7 +447,7 @@ v6 不是“多 agent 更好”的论证，而是一组可能被证伪的命题�
 
 - 引入 `TaskSchema / InformationMap / GroundTruth / EvaluationContract`；
 - 将 reported、estimated、behavioral、outcome 字段分命名空间；
-- 将 R/T/H/F 改为版本化 descriptive metrics，主实验默认不使用 F 终止；
+- ~~将 R/T/H/F 改为版本化 descriptive metrics，主实验默认不使用 F 终止；~~ 已完成核心路径，旧实验脚本与历史数据待迁移标注；
 - 建立 independent ensemble、full-information 和 cost-matched 基线；
 - 将 sensitivity/causal 命名降格，除非存在随机处理分配；
 - 静态禁止 prompt 层读取 GroundTruth。
@@ -439,6 +508,8 @@ SwarmAlpha 的差异化不应是再提出一种 debate prompt，而是建立 **�
 9. Li, Y., Naito, A., & Shirado, H. (2025). [HiddenBench: Assessing Collective Reasoning in Multi-Agent LLMs via Hidden Profile Tasks](https://arxiv.org/abs/2505.11556).
 10. Zhu, X. et al. (2026). [Demystifying Multi-Agent Debate: The Role of Confidence and Diversity](https://aclanthology.org/2026.findings-acl.1694/).
 11. IFAAMAS (2026). [Proceedings of AAMAS 2026](https://www.ifaamas.org/Proceedings/aamas2026/).
+12. Gneiting, T., & Raftery, A. E. (2007). [Strictly Proper Scoring Rules, Prediction, and Estimation](https://doi.org/10.1198/016214506000001437).
+13. Friedkin, N. E., & Johnsen, E. C. (1990). [Social Influence and Opinions](https://escholarship.org/uc/item/2r82w1vs).
 
 ## 17. v6 完成判据
 

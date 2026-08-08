@@ -51,6 +51,8 @@ describe("EvaluationEngine", () => {
     expect(result.score).toBeGreaterThan(50);
     expect(result.kuramotoOrder).toBeGreaterThan(0.5);
     expect(result.beliefStd).toBeLessThan(0.5);
+    expect(result.legacyScalarDisorderScore).toBeDefined();
+    expect(result.freeEnergy).toBe(result.legacyScalarDisorderScore);
   });
 
   it("should evaluate consensus with diverse beliefs", () => {

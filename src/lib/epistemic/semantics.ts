@@ -6,6 +6,7 @@ import type { BeliefKind, BeliefReportId, BeliefValue, ClaimId } from "./types";
  */
 export type EpistemicQuantityLayer =
   | "reported_belief"
+  | "reported_state"
   | "derived_epistemic"
   | "governance_estimate"
   | "behavioral_telemetry"
@@ -18,6 +19,20 @@ export interface ReportedBeliefState {
   claimId: ClaimId;
   agentId: string;
   value: BeliefValue;
+}
+
+/**
+ * A structured self-report that is not a probability-bearing belief about a
+ * registered claim (for example a utility vector or an evidence annotation).
+ * It is observable as output, but must not be presented as latent cognition.
+ */
+export interface ReportedAgentState<T = unknown> {
+  layer: "reported_state";
+  reportId: string;
+  agentId: string;
+  schemaId: string;
+  schemaVersion: string;
+  value: T;
 }
 
 /** An aggregate or transformation; never overwrite the source reports. */
@@ -91,6 +106,7 @@ export interface GovernanceState<T = unknown> {
 
 export type EpistemicSemanticQuantity =
   | ReportedBeliefState
+  | ReportedAgentState
   | DerivedEpistemicEstimate
   | GovernanceEstimate
   | BehavioralTelemetry

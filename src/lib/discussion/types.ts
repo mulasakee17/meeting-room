@@ -531,7 +531,7 @@ export interface RoundData {
    *  含 belief_diversity_change, consensus_level_change, intervention_success_rate 等 9 项指标。
    *  2026-07-23 新增：支持第三方独立验证治理决策的正确性 */
   effectMetrics?: Record<string, number>;
-  /** 本轮热力学终止候选；仅支持该能力的引擎填充。 */
+  /** 本轮实验性 macro-signal 终止候选；仅支持该能力的引擎填充。 */
   terminationDecision?: TerminationDecision;
   /** 在本轮所有记录提交后作出的最终终止仲裁。 */
   stopDecision?: RoundStopDecision;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mean, std, sampleStd, variance, range, normalize, round, shannonEntropy, socialFreeEnergy, normalizeTemperature } from "@/lib/utils/statsUtils";
+import { mean, std, sampleStd, variance, range, normalize, round, shannonEntropy, legacyScalarDisorderScoreV1, socialFreeEnergy, normalizeTemperature } from "@/lib/utils/statsUtils";
 
 describe("statsUtils", () => {
   describe("mean", () => {
@@ -108,6 +108,11 @@ describe("statsUtils", () => {
   });
 
   describe("socialFreeEnergy", () => {
+    it("is an exact deprecated alias of the versioned legacy score", () => {
+      expect(socialFreeEnergy(0.4, 0.2, 0.8)).toBe(
+        legacyScalarDisorderScoreV1(0.4, 0.2, 0.8),
+      );
+    });
     it("完全共识时 F 最小", () => {
       // R=1, T=0, H=0 → F=0
       const F = socialFreeEnergy(1, 0, 0);

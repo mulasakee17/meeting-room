@@ -26,7 +26,7 @@ import {
 import { ReduceWeightIntervention, IntroduceDiversityIntervention, ForceReflectionIntervention, ContinueDiscussionIntervention } from "./interventions";
 import { computeAdaptiveThresholds, computeCalibrationMetrics, type CalibrationMetrics } from "./adaptiveThresholds";
 import { computeAdaptiveDosage } from "./adaptiveDosage";
-import { mulberry32, shannonEntropy, socialFreeEnergy, normalizeTemperature, computeKuramotoOrder } from "../utils/statsUtils";
+import { mulberry32, shannonEntropy, legacyScalarDisorderScoreV1, normalizeTemperature, computeKuramotoOrder } from "../utils/statsUtils";
 import {
   GOVERNANCE_ECHO_CHAMBER_THRESHOLD,
   GOVERNANCE_AUTHORITY_BIAS_THRESHOLD,
@@ -821,7 +821,7 @@ export class GovernanceEngine {
   }
 
   /**
-   * 社会热力学 F 分解驱动的干预优先级排序
+   * Historical scalar-belief decomposition ordering heuristic.
    *
    * F = (1-R) + T·H，其中：
    *   - 结构性无序 (1-R)：agent 信念方向不同步 → force_reflection 优先
@@ -829,9 +829,9 @@ export class GovernanceEngine {
    *   - R 高 H 低（虚假共识/过早收敛）→ introduce_diversity / continue_discussion 优先
    *
    * 当多个检测器同时触发时，按当前系统状态与干预类型的匹配度排序，
-   * 使最契合当前"物理状态"的干预排在前面。
+   * This policy is uncalibrated and must be explicitly enabled.
    */
-  private rankInterventionsByFreeEnergy(
+  private rankInterventionsByLegacyScalarDecomposition(
     interventions: Intervention[],
     beliefs: number[]
   ): Intervention[] {
@@ -860,7 +860,7 @@ export class GovernanceEngine {
           return R * (1 - H);
         case "continue_discussion":
           // 过早收敛（R 高 H 低，且 F 低）—— 已被实验证伪（0% 有效率，已默认禁用）
-          return R * (1 - H) * (1 - socialFreeEnergy(R, T, H));
+          return R * (1 - H) * (1 - legacyScalarDisorderScoreV1(R, T, H));
         default:
           return 0;
       }
@@ -875,7 +875,7 @@ export class GovernanceEngine {
    * 固定排序：保持检测器触发顺序（push 顺序），不按系统状态重排。
    *
    * 用于 A/B 对照实验的 B 组：
-   *   A 组（sortingMode='fdecomposition'）：F 分解按当前系统"物理状态"排序干预
+   *   A 组（sortingMode='legacy_scalar_decomposition_v1'）：按版本化兼容启发式排序
    *   B 组（sortingMode='fixed'）：保持检测器触发顺序不变
    *
    * 触发顺序 = diagnoseAndIntervene 中 push 进数组的顺序：
@@ -884,7 +884,7 @@ export class GovernanceEngine {
    *   3. force_reflection（polarization 检测）
    *   4. continue_discussion（premature consensus 检测）
    *
-   * 这代表"未引入 F 分解前"的现实基线——多检测器并发时按代码固定顺序应用干预。
+   * 这是默认基线：多检测器并发时按代码固定顺序应用干预。
    */
   private rankInterventionsByFixedOrder(interventions: Intervention[]): Intervention[] {
     // 保持原序：检测器触发顺序即为应用顺序，不重排
@@ -1363,13 +1363,12 @@ export class GovernanceEngine {
       this.pendingFeedback = [];
     }
 
-    // 干预优先级排序：根据 sortingMode 选择 F 分解排序或固定排序
-    // - 'fdecomposition'（默认）：社会热力学 F 分解按当前系统"物理状态"排序
-    // - 'fixed'：保持检测器触发顺序（A/B 对照实验 B 组）
-    const sortingMode = mergedConfig.sortingMode ?? "fdecomposition";
+    // Uncalibrated signal-based ordering is opt-in. The deprecated
+    // `fdecomposition` spelling remains replay-compatible.
+    const sortingMode = mergedConfig.sortingMode ?? "fixed";
     const rankedInterventions = sortingMode === "fixed"
       ? this.rankInterventionsByFixedOrder(interventions)
-      : this.rankInterventionsByFreeEnergy(
+      : this.rankInterventionsByLegacyScalarDecomposition(
           interventions,
           agentBeliefs.map(b => b.belief)
         );

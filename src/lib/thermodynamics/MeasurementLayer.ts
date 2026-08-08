@@ -13,7 +13,7 @@
  * - 模式无感知：不知道讨论是 sync 还是 async，flat 还是 grouped
  *
  * 双层架构（ROADMAP_V5）：
- * - 热力学筛查层（标量）：R/T/H/F 做零成本异常检测，95% 轮次无需触发诊断
+ * - 版本化宏观监测层：从结构化自报与行为轨迹导出描述信号
  * - 信息层诊断（向量）：E/U/I/C/Λ 做定向根因定位，仅异常轮次触发
  * - δ 一致性层：自报 vs 行为对比，检测过早共识、权威集中、异常立场变化
  *
@@ -130,27 +130,38 @@ export interface SemanticAuditEntry {
 }
 
 // ============================================================================
-// Thermo State
+// Versioned cognitive macro monitoring state
 // ============================================================================
 
-/**
- * 群体动态筛查指标（ROADMAP_V5: 操作化启发式，非物理量）。
- *
- * R/T/H/F 是零成本筛查信号，从标量立场汇总（statedStance）确定性计算。
- * 它们不声称热力学自由能——F 是操作化综合失序指标，工程价值在于
- * 把四维压缩到一个标量便于异常检测。
- *
- * R/T/H 在小群体 MAS 中强相关（r=0.917）是结构性特征，而非 bug。
- */
+/** Historical four-field compatibility projection. */
 export interface ThermoState {
-  /** 方向对齐度 [0, 1] — 群体标量立场的方向一致性 */
+  /** @deprecated Use reportedUtilityAlignment on CognitiveMacroState. */
   R: number;
-  /** 强度分散度 [0, 1] — 标量立场的离散程度 */
+  /** @deprecated Use updateVolatility on CognitiveMacroState. */
   T: number;
-  /** 分布形状 [0, 1] — 标量立场分布的信息熵 */
+  /** @deprecated Use evidenceSupportEntropy on CognitiveMacroState. */
   H: number;
-  /** 操作化综合失序指标 F = (1-R) + T·H */
+  /** @deprecated Use utilityVolatilityEntropyComposite. Not free energy. */
   F: number;
+}
+
+/**
+ * Versioned, descriptive projections of structured agent reports.
+ * The explicit names are canonical; inherited R/T/H/F are exact aliases.
+ */
+export interface CognitiveMacroState extends ThermoState {
+  signalSetId: "swarmalpha.cognitive_macro";
+  signalSetVersion: "1.0.0";
+  /** Mean pairwise cosine alignment of reported utility vectors. */
+  reportedUtilityAlignment: number;
+  /** Mean adjacent-round change in reported utility vectors. */
+  updateVolatility: number;
+  /** Entropy of support labels among currently represented evidence items. */
+  evidenceSupportEntropy: number;
+  /** Mean normalized magnitude of reported utility vectors. */
+  reportedUtilityIntensity: number;
+  /** Uncalibrated compatibility composite: intensity - volatility * entropy. */
+  utilityVolatilityEntropyComposite: number;
 }
 
 // ============================================================================
@@ -178,6 +189,14 @@ export interface CognitiveUpdateResult {
   speakingPriority: Map<string, number>;
   /** 是否触发知识重排 */
   shuffleKnowledge: boolean;
+}
+
+export interface MonitoringControlOptions {
+  /**
+   * Explicitly enable the historical, uncalibrated macro screening gate.
+   * Off by default so a descriptive proxy cannot silently suppress diagnosis.
+   */
+  useLegacyUncalibratedScreening?: boolean;
 }
 
 // ============================================================================
@@ -235,11 +254,11 @@ export class MeasurementLayer {
   }
 
   // ==========================================================================
-  // Social Thermodynamics
+  // Cognitive macro monitoring
   // ==========================================================================
 
   /**
-   * 从 5 变量认知状态计算热力学状态 (R, T, H, F)。
+   * 从结构化 agent 自报计算版本化宏观监测状态。
    *
    * v3.2.1 修正（2026-07-26）：三维度计算全部重写，修复 v3.2 的失真问题。
    *
@@ -247,7 +266,7 @@ export class MeasurementLayer {
    *   R (共识度) ← Utility 向量平均 cosine 相似度，归一化到 [0,1]
    *   T (温度)   ← Utility 逐轮 L2 距离的归一化均值（真正反映信念波动）
    *   H (熵)     ← Evidence items 的 supports 分布的归一化 Shannon 熵
-   *   F (修正自由能) = U - T·H
+   *   composite = U - T·H（未校准兼容复合量，非物理量）
    *
    * v3.2 → v3.2.1 修正原因：
    * - R 旧实现用 topChoice 熵，N=5 时只有 0/0.03/0.28/1 几个离散值，分辨率过粗。
@@ -259,7 +278,7 @@ export class MeasurementLayer {
    *   硬编码影响，V2 任务有 25 条信息时 3 轮后 coverage 饱和到 1.0，H 恒=0。
    *   新实现用 evidence items 的 supports 分布，直接反映证据覆盖的选项多样性。
    *
-   * v0.4.3 修正自由能（F 解耦）：
+   * 历史 v0.4.3 复合量变更：
    * - 旧 F=(1-R)+T·H 与 R/T/H 强耦合（fraud 数据验证 r=0.917），无法独立解释承诺失序度。
    * - 新 F=U-T·H 三变量解耦（2026-08-04 用 campaign native_cognitive 数据验证）：
    *   r(U, T·H) = -0.087 (n=127, p=0.33) — 解耦成立，远优于旧 F
@@ -268,8 +287,7 @@ export class MeasurementLayer {
    *   U = 平均效用强度（‖u_i‖ 的均值，衡量群体偏好清晰度）
    *   T = Utility 波动度（已计算）
    *   S = H = 证据多样性熵（已计算）
-   * - v6 路径二（2026-08-04）：F 接入 TerminationDecider 终止决策，
-   *   Tier 1 热力学筛查门控 δ 诊断（热力学正常时跳过 δ）。
+   * - v6 theory closure：复合量仅在显式实验策略中参与停止或筛查；默认禁止控制。
    *
    * 注意：此 R/T/H 与 asyncEngine.ts 的 R/T/H 是不同的实现。
    * - asyncEngine.ts 基于 scalar beliefs，用于 TerminationDecider 和论文已 claim 的结论。
@@ -278,17 +296,31 @@ export class MeasurementLayer {
    * @returns ThermoState，若 cognitiveStates 为空则返回全零
    */
   /**
-   * 计算热力学状态（v6 重定义）。
+   * 计算 cognitive macro signal set v1。
    *
    * ⚠️ R/T/H 在 v6 中基于认知状态向量重定义，与旧路径（asyncEngine，belief 相位）含义不同：
    *   - R: utility 向量 cosine 对齐（旧：Kuramoto 序参量 |Σe^(iθ)|/N）
    *   - T: utility 逐轮波动（旧：belief 总体标准差）
    *   - H: evidence supports 分布熵（旧：belief 5-bin Shannon 熵）
-   *   - F = U - T·H（Helmholtz 形式；旧：F = (1-R) + T·H）
+   *   - compatibility composite = U - T·H（旧 async 公式另有 signal-set identity）
    */
-  computeThermoState(): ThermoState {
+  computeCognitiveMacroState(): CognitiveMacroState {
     const states = Array.from(this.cognitiveStates.values());
-    if (states.length === 0) return { R: 0, T: 0, H: 0, F: 0 };
+    if (states.length === 0) {
+      return {
+        signalSetId: "swarmalpha.cognitive_macro",
+        signalSetVersion: "1.0.0",
+        reportedUtilityAlignment: 0,
+        updateVolatility: 0,
+        evidenceSupportEntropy: 0,
+        reportedUtilityIntensity: 0,
+        utilityVolatilityEntropyComposite: 0,
+        R: 0,
+        T: 0,
+        H: 0,
+        F: 0,
+      };
+    }
 
     // ── R: Utility 向量平均 cosine 相似度（归一化到 [0,1]）──
     const R = this.computeUtilityAlignment(states);
@@ -299,33 +331,59 @@ export class MeasurementLayer {
     // ── H: Evidence items 的 supports 分布的归一化 Shannon 熵 ──
     const H = this.computeEvidenceDiversity(states);
 
-    // ── F = U - T·H（v0.4.3 修正自由能，Helmholtz 形式，三变量解耦）──
+    // ── Uncalibrated compatibility composite = U - T·H ──
     // U: 平均效用强度 = mean(‖u_i‖)，L2 范数归一化到 [0,1]（每维已 clamp 到 [-1,1]，
     //    L2 范数上限为 √K，除以 √K 归一化）
     // T: 效用波动（computeUtilityVolatility）；H: 证据熵（computeEvidenceDiversity）
     // 注：S 不再单列——熵分量即 H，F = U - T·H（消除冗余符号 S）
-    const K = states[0]?.utility.scores ? Object.keys(states[0].utility.scores).length : 1;
+    // Use the union option space so intensity is permutation-invariant and
+    // remains in [0,1] when agents report heterogeneous option sets.
+    const optionKeys = new Set<string>();
+    for (const state of states) {
+      for (const key of Object.keys(state.utility.scores)) optionKeys.add(key);
+    }
+    const K = Math.max(1, optionKeys.size);
     const sqrtK = Math.sqrt(Math.max(1, K));
     const U = states.reduce((sum, s) => {
       const scores = Object.values(s.utility.scores);
       const norm = Math.sqrt(scores.reduce((ss, v) => ss + v * v, 0)); // L2 范数
-      return sum + norm / sqrtK;
+      return sum + Math.min(1, norm / sqrtK);
     }, 0) / states.length;
     const F = U - T * H;
 
-    return { R, T, H, F };
+    return {
+      signalSetId: "swarmalpha.cognitive_macro",
+      signalSetVersion: "1.0.0",
+      reportedUtilityAlignment: R,
+      updateVolatility: T,
+      evidenceSupportEntropy: H,
+      reportedUtilityIntensity: U,
+      utilityVolatilityEntropyComposite: F,
+      R,
+      T,
+      H,
+      F,
+    };
   }
 
   /**
-   * Tier 1 热力学筛查：判断当前热力学状态是否异常（需触发 δ 诊断）。
+   * @deprecated Use computeCognitiveMacroState(). This wrapper preserves the
+   * historical API and exact R/T/H/F aliases for replay compatibility.
+   */
+  computeThermoState(): ThermoState {
+    return this.computeCognitiveMacroState();
+  }
+
+  /**
+   * Historical uncalibrated macro screening predicate.
    *
    * 三层级联设计（ROADMAP_V6 §3.1）：
-   *   Tier 1 热力学正常 → 继续，无需 δ
-   *   Tier 1 异常 → 触发 Tier 2 δ 诊断
+   * It may be used only through an explicit compatibility opt-in. A false
+   * result must not suppress δ diagnostics in the default path.
    *
    * 异常判据（任一满足即异常）：
    *   1. 结晶化：R 高（>0.85）且 H 低（<0.42）→ 信息坍缩风险
-   *   2. 低自由能：F < 0.15 → 系统过度有序，可能伪收敛
+   *   2. 低兼容复合量：composite < 0.15
    *   3. 高熵无序：H 高（>0.95）且 R 低（<0.50）→ 证据分散无共识
    *   4. 温度异常：T > 0.20 → 效用剧烈波动
    *
@@ -338,23 +396,41 @@ export class MeasurementLayer {
    * 在 glm-4-flash + HiddenBench 任务上可能不适用（多数任务满分，thermo 可能不触发）。
    * 未来工作：用 HiddenBench 全量数据做离线 grid search 校准。
    *
-   * @param thermo 当前热力学状态
+   * @param thermo 当前版本化 macro state
    * @returns true=异常(需 δ), false=正常(跳过 δ)
    */
-  isThermoAbnormal(thermo: ThermoState): boolean {
-    // 1. 结晶化风险：高同步 + 低熵 → 信息坍缩
-    if (thermo.R > 0.85 && thermo.H < 0.42) return true;
+  isLegacyMacroScreeningTriggered(thermo: CognitiveMacroState | ThermoState): boolean {
+    const alignment = "reportedUtilityAlignment" in thermo
+      ? thermo.reportedUtilityAlignment
+      : thermo.R;
+    const entropy = "evidenceSupportEntropy" in thermo
+      ? thermo.evidenceSupportEntropy
+      : thermo.H;
+    const volatility = "updateVolatility" in thermo
+      ? thermo.updateVolatility
+      : thermo.T;
+    const composite = "utilityVolatilityEntropyComposite" in thermo
+      ? thermo.utilityVolatilityEntropyComposite
+      : thermo.F;
 
-    // 2. 低自由能：系统过度有序（F = U - T·H，F 极低意味着 U 低或 T·H 高）
-    if (thermo.F < 0.15) return true;
+    // 1. 结晶化风险：高同步 + 低熵 → 信息坍缩
+    if (alignment > 0.85 && entropy < 0.42) return true;
+
+    // 2. Low uncalibrated compatibility composite.
+    if (composite < 0.15) return true;
 
     // 3. 高熵无序：证据分散且无共识
-    if (thermo.H > 0.95 && thermo.R < 0.50) return true;
+    if (entropy > 0.95 && alignment < 0.50) return true;
 
     // 4. 温度异常：效用剧烈波动
-    if (thermo.T > 0.20) return true;
+    if (volatility > 0.20) return true;
 
     return false;
+  }
+
+  /** @deprecated Use isLegacyMacroScreeningTriggered(). */
+  isThermoAbnormal(thermo: ThermoState): boolean {
+    return this.isLegacyMacroScreeningTriggered(thermo);
   }
 
   /**
@@ -430,9 +506,9 @@ export class MeasurementLayer {
    *
    * T = mean_i( ||u_i(t) - u_i(t-1)|| / (2*sqrt(K)) )
    *
-   * - 第一轮无历史 → T=0（系统稳定）
-   * - utility 向量逐轮剧烈变化 → T→1（系统高温）
-   * - utility 向量逐轮不变 → T=0（系统冻结）
+   * - 第一轮无历史 → T=0（缺少可比较前态，不表示稳定）
+   * - utility 向量逐轮剧烈变化 → T→1
+   * - utility 向量逐轮不变 → T=0
    *
    * 相比 v3.2 的 1-mean(stabilityBased)：
    * - 不依赖 LLM 自报 confidence（避免 overconfidence 偏差）
@@ -478,13 +554,16 @@ export class MeasurementLayer {
    * 计算 Evidence 多样性（H 的子计算）— v3.2.1 重写。
    *
    * H = ShannonEntropy(supports 分布) / log2(|unique supports|)
-   * - 所有 evidence 支持同一选项 → H=0（低多样性，可能回声室）
-   * - evidence 均匀支持所有选项 → H=1（高多样性，信息全面）
+   * - 所有已记录 evidence 支持同一标签 → H=0
+   * - 已记录 evidence 在已出现标签间均匀 → H=1
    * - 无 evidence → H=0
+   *
+   * 注意：归一化分母是“已出现 support 标签数”，不是任务候选总数；
+   * 因此 H=1 不表示证据充分、候选覆盖完整或证据真实。
    *
    * 相比 v3.2 的 shannonEntropy(coverages)：
    * - 不依赖 GLOBAL_INFO_POOL_SIZE 硬编码（避免 coverage 饱和）
-   * - 直接反映证据覆盖的选项多样性（真正的"信息结构多样性"）
+   * - 仅描述当前记录中 support 标签的分布形状
    * - 对任务规模自适应（无需手动调参）
    */
   private computeEvidenceDiversity(states: AgentCognitiveState[]): number {
@@ -1528,12 +1607,12 @@ export class MeasurementLayer {
   }
 
   // ==========================================================================
-  // Thermo → δ → Intervention Pipeline (ROADMAP_V5 闭环)
+  // Monitoring → δ → Intervention Pipeline
   // ==========================================================================
   //
   // 双层架构的完整链路：
-  //   1. 热力学筛查（computeThermoState）：R/T/H/F 零成本异常检测
-  //   2. δ 诊断（computeDeltaDiagnosis）：仅异常轮次触发，定位根因
+  //   1. 版本化描述信号（computeCognitiveMacroState）
+  //   2. δ 诊断（computeDeltaDiagnosis）：默认每轮计算；旧筛查仅显式 opt-in
   //   3. 干预建议（δ triggers → InterventionType 映射）：定向干预
   //
   // 与旧 detector 系统（runDetectors）的区别：
@@ -1544,7 +1623,7 @@ export class MeasurementLayer {
   /**
    * 运行 Thermo → δ → 干预 完整诊断链路（v6：集成 ProgressiveEstimator + SemanticTool）。
    *
-   * 1. 计算热力学状态（R/T/H/F）
+   * 1. 计算版本化 cognitive macro signals
    * 2. 运行 ProgressiveEstimator（I/C/Λ 渐进估计）
    * 3. 运行 6 信号 δ 诊断（自适应阈值）
    * 4. δ 根因模糊时 → 调用 SemanticTool（Tier 3）
@@ -1562,17 +1641,18 @@ export class MeasurementLayer {
     round: number,
     llmConfig?: LLMConfig,
     rawStatesOverride?: AgentCognitiveState[],
+    controlOptions: MonitoringControlOptions = {},
   ): Promise<{ thermo: ThermoState; delta: DeltaDiagnosis; suggestions: DeltaInterventionSuggestion[] }> {
     // thermo 始终用 cognitiveStates（融合后）——这是系统观测的群体状态
-    const thermo = this.computeThermoState();
+    const thermo = this.computeCognitiveMacroState();
     // δ 诊断优先用 rawStatesOverride（原始分歧），无 override 时向后兼容用 cognitiveStates
     const states = rawStatesOverride ?? Array.from(this.cognitiveStates.values());
 
-    // ── Tier 1 热力学筛查（v6 路径二，2026-08-04）──
-    // 三层级联设计意图（ROADMAP_V6 §3.1）：热力学正常 → 继续，无需 δ；异常 → 触发 δ
-    // 修复前：δ 无条件计算（MeasurementLayer 旧 L1433），违背三层级联设计
-    // 修复后：热力学筛查通过时直接返回空 delta，零成本跳过 Tier 2/3
-    if (!this.isThermoAbnormal(thermo)) {
+    // Historical macro screening is uncalibrated and therefore opt-in only.
+    // The default path computes all mathematical diagnostics; otherwise a C0
+    // descriptive proxy could silently create false-negative governance data.
+    if (controlOptions.useLegacyUncalibratedScreening
+      && !this.isLegacyMacroScreeningTriggered(thermo)) {
       return { thermo, delta: EMPTY_DELTA_DIAGNOSIS, suggestions: [] };
     }
 
@@ -1872,12 +1952,13 @@ export class MeasurementLayer {
   diagnoseAndSuggestSync(
     round: number,
     config?: DeltaConfig,
+    controlOptions: MonitoringControlOptions = {},
   ): { thermo: ThermoState; delta: DeltaDiagnosis; suggestions: DeltaInterventionSuggestion[] } {
     const states = Array.from(this.cognitiveStates.values());
-    const thermo = this.computeThermoState();
+    const thermo = this.computeCognitiveMacroState();
 
-    // ── Tier 1 热力学筛查（v6 路径二，2026-08-04，与异步路径对齐）──
-    if (!this.isThermoAbnormal(thermo)) {
+    if (controlOptions.useLegacyUncalibratedScreening
+      && !this.isLegacyMacroScreeningTriggered(thermo)) {
       return { thermo, delta: EMPTY_DELTA_DIAGNOSIS, suggestions: [] };
     }
 

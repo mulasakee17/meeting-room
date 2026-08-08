@@ -224,10 +224,39 @@ describe("GovernanceEngine", () => {
   });
 
   // ==========================================================================
-  // 社会热力学 F 分解驱动的干预优先级排序
+  // Versioned intervention ordering policies
   // ==========================================================================
 
-  it("F 分解排序：极化（结构性主导）时 reduce_weight 排在 force_reflection 前（回测证伪后修正）", () => {
+  it("未指定 sortingMode 时与显式 fixed 完全一致", () => {
+    const beliefs: AgentBelief[] = [
+      { agentId: "a1", belief: -1.0, confidence: 80 },
+      { agentId: "a2", belief: -0.9, confidence: 80 },
+      { agentId: "a3", belief: 0.9, confidence: 80 },
+      { agentId: "a4", belief: 1.0, confidence: 80 },
+      { agentId: "a5", belief: -0.95, confidence: 80 },
+    ];
+    const messages = createMockMessagesWithRefs(15, "a3");
+    const config: GovernanceConfig = {
+      enableEchoChamberDetection: true,
+      enableAuthorityBiasDetection: true,
+      enablePolarizationDetection: true,
+      enablePrematureConsensusDetection: true,
+      interventionLevel: "medium",
+      currentRound: 2,
+      maxRounds: 5,
+    };
+
+    const defaultTypes = engine
+      .diagnoseAndIntervene(beliefs, messages, agentIds, undefined, config)
+      .interventions.map(intervention => intervention.type);
+    const fixedTypes = engine
+      .diagnoseAndIntervene(beliefs, messages, agentIds, undefined, { ...config, sortingMode: "fixed" })
+      .interventions.map(intervention => intervention.type);
+
+    expect(defaultTypes).toEqual(fixedTypes);
+  });
+
+  it("显式 legacy_scalar_decomposition_v1：极化时 reduce_weight 排在 force_reflection 前", () => {
     // 极化双峰信念：structural(1-R)=0.786 > thermal(T·H)=0.390，结构性无序主导（极化）。
     // 经数学验证：R≈0.214, T≈0.932, H≈0.418, F≈1.175。
     // 回测证伪原假设后修正：force_reflection 在极化时有害（Δτ=-0.033），
@@ -249,6 +278,7 @@ describe("GovernanceEngine", () => {
       interventionLevel: "medium",
       currentRound: 2,
       maxRounds: 5,
+      sortingMode: "legacy_scalar_decomposition_v1",
     };
 
     const { interventions } = engine.diagnoseAndIntervene(beliefs, messages, agentIds, undefined, config);

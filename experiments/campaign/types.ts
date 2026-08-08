@@ -136,13 +136,37 @@ export interface CognitiveStateSnapshot {
  *
  * - "1.0"（缺省）：governanceEstimateHistory 记录无精确 input 快照，
  *   无法从记录本身重放，视为 legacy_unverifiable。
- * - "2.0"：governanceEstimateHistory 记录（若存在）含精确 input 快照，
- *   可通过 verify_replay 逐条重放验证。
+ * - "2.0"：governanceEstimateHistory 记录（若存在）含精确 input 快照。
+ * - "3.0"：继承 2.0 的 replay contract，并要求新写入的 native macro
+ *   snapshots 带 signal-set identity 和 canonical signal fields。
  */
-export type RawSchemaVersion = "1.0" | "2.0";
+export type RawSchemaVersion = "1.0" | "2.0" | "3.0";
 
 /** 当前 Runner 写出的 schema 版本。两条写路径必须一致使用此常量。 */
-export const RAW_SCHEMA_VERSION: RawSchemaVersion = "2.0";
+export const RAW_SCHEMA_VERSION: RawSchemaVersion = "3.0";
+
+/** Schema 2+ retain the exact estimator-input replay contract. */
+export function hasReplayableEstimatorSchema(version: unknown): boolean {
+  return version === "2.0" || version === "3.0";
+}
+
+export interface LegacyThermoSnapshot {
+  round: number;
+  R: number;
+  T: number;
+  H: number;
+  F: number;
+}
+
+export interface CognitiveMacroSnapshotV1 extends LegacyThermoSnapshot {
+  signalSetId: "swarmalpha.cognitive_macro";
+  signalSetVersion: "1.0.0";
+  reportedUtilityAlignment: number;
+  updateVolatility: number;
+  evidenceSupportEntropy: number;
+  reportedUtilityIntensity: number;
+  utilityVolatilityEntropyComposite: number;
+}
 
 /** 单次运行原始数据 */
 export interface RawRunData {
@@ -179,7 +203,7 @@ export interface RawRunData {
   };
   /**
    * 原始数据 schema 版本（additive）。缺省视为 "1.0"（旧数据）。
-   * "2.0" 表示 governanceEstimateHistory 记录（若存在）含精确 input 快照。
+   * "2.0" adds replayable estimator inputs; "3.0" adds versioned macro signals.
    */
   rawSchemaVersion?: RawSchemaVersion;
   /** 每轮信念快照 */
@@ -196,19 +220,9 @@ export interface RawRunData {
     agentId: string;
     record: GovernanceEstimate<ProgressiveEstimates>;
   }>;
-  /** 热力学轨迹（RTHF 逐轮快照，仅 native_cognitive 模式） */
-  thermoHistory?: Array<{
-    round: number;
-    /** 方向对齐度 [0, 1] */
-    R: number;
-    /** 强度分散度 [0, 1] */
-    T: number;
-    /** 分布形状 [0, 1] */
-    H: number;
-    /** 操作化综合失序指标 */
-    F: number;
-  }>;
-  /** v6 路径二：热力学终止决策历史（仅 native_cognitive 模式，F 进决策） */
+  /** Versioned cognitive macro monitoring trajectory (native_cognitive only). */
+  thermoHistory?: Array<LegacyThermoSnapshot | CognitiveMacroSnapshotV1>;
+  /** Experimental macro-signal stopping decisions (native_cognitive only). */
   terminationDecisions?: Array<{
     round: number;
     shouldTerminate: boolean;

@@ -9,7 +9,7 @@
  *     name 一致性、duplicate、混合版本、计数自洽（recordCount === Σcounts）
  *   - CLI：真实退出码（零记录 → absent 非零；正常 → 0；篡改 → 非零）
  *   - manifest/CLI 一致性：共享 deriveReplayStatus，禁止 manifest 重复实现
- *   - Runner 两条写路径均发出 rawSchemaVersion="2.0"
+ *   - Runner 两条写路径均发出当前 raw schema version
  */
 
 import { describe, expect, it, beforeEach, beforeAll, afterAll, vi } from "vitest";
@@ -403,6 +403,16 @@ describe("verifyRawRunData (run-level verifier)", () => {
     expect(result.counts.unsupported_estimator).toBe(1);
   });
 
+  it("schema-3 retains schema-2 estimator replay invariants", () => {
+    const second = asRaw(projectFixture());
+    second.estimatorVersion = "2.0.0";
+    const result = verifyRawRunData("mixed-v3.json", makeRawData([
+      { round: 1, agentId: "a", record: asRaw(projectFixture()) },
+      { round: 2, agentId: "a", record: second },
+    ], "3.0"));
+    expect(result.runIssues.some(i => i.code === "mixed_estimator")).toBe(true);
+  });
+
   it("returns an absent-style result for data with no history", () => {
     const result = verifyRawRunData("none.json", { runId: "x" });
     expect(result.recordCount).toBe(0);
@@ -504,8 +514,8 @@ describe("manifest/CLI replay status consistency", () => {
   });
 });
 
-describe("Runner schema-2 write paths", () => {
-  it("emits rawSchemaVersion 2.0 on the swarmalpha protocol path", async () => {
+describe("Runner current-schema write paths", () => {
+  it("emits rawSchemaVersion 3.0 on the swarmalpha protocol path", async () => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "replay-run-"));
     try {
       const config: ExperimentConfig = {
@@ -528,13 +538,13 @@ describe("Runner schema-2 write paths", () => {
       const written = JSON.parse(
         fs.readFileSync(path.join(outDir, "t_replay_run_belief_seed7_run0.json"), "utf8"),
       );
-      expect(written.rawSchemaVersion).toBe("2.0");
+      expect(written.rawSchemaVersion).toBe("3.0");
     } finally {
       fs.rmSync(outDir, { recursive: true, force: true });
     }
   });
 
-  it("emits rawSchemaVersion 2.0 on the hiddenbench protocol path", async () => {
+  it("emits rawSchemaVersion 3.0 on the hiddenbench protocol path", async () => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "replay-hb-"));
     try {
       const config: ExperimentConfig = {
@@ -558,14 +568,14 @@ describe("Runner schema-2 write paths", () => {
       const written = JSON.parse(
         fs.readFileSync(path.join(outDir, "t_replay_hb_native_cognitive_seed7_run0.json"), "utf8"),
       );
-      expect(written.rawSchemaVersion).toBe("2.0");
+      expect(written.rawSchemaVersion).toBe("3.0");
     } finally {
       fs.rmSync(outDir, { recursive: true, force: true });
     }
   });
 
-  it("defines the shared schema constant as 2.0", () => {
-    expect(RAW_SCHEMA_VERSION).toBe("2.0");
+  it("defines the shared schema constant as 3.0", () => {
+    expect(RAW_SCHEMA_VERSION).toBe("3.0");
   });
 });
 

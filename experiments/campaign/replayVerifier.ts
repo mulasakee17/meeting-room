@@ -26,6 +26,7 @@ import {
   verifyGovernanceEstimateRecord,
   type ReplayStatus,
 } from "../../src/lib/epistemic/replay";
+import { hasReplayableEstimatorSchema } from "./types";
 import {
   defaultProgressiveEstimatorRegistry,
   PROGRESSIVE_ESTIMATOR_ID,
@@ -234,8 +235,8 @@ export function verifyRawRunData(file: string, data: unknown): ReplayFileResult 
         }
       }
 
-      // ── 稳定 id/version：同一 run 内只允许一个估算器版本（仅 schema-2 强制）──
-      if (result.schemaVersion === "2.0"
+      // ── 稳定 id/version：schema 2+ 保留同一 estimator replay contract ──
+      if (hasReplayableEstimatorSchema(result.schemaVersion)
         && replayResult.estimatorId && replayResult.estimatorVersion) {
         const ref = `${replayResult.estimatorId}@${replayResult.estimatorVersion}`;
         if (seenEstimatorRefs.size > 0 && !seenEstimatorRefs.has(ref)) {

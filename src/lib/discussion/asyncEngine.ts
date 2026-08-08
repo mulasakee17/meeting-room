@@ -8,7 +8,7 @@
  *
  * 与 DiscussionEngine（同步全员发言）不同，AsyncDiscussionEngine 采用：
  * 1. 异步发言：每轮只有部分 agent 发言（内容驱动或随机概率）
- * 2. 热力学自适应终止：F 分解决定讨论何时结束（非固定轮次）
+ * 2. 历史 scalar-belief 启发式停止（非物理量，仅兼容旧实验）
  * 3. 信息依赖链触发：依赖前置信息的 agent 发言意愿提高
  *
  * 继承 DiscussionEngine，复用所有核心逻辑（observeAgents、buildPrompt、

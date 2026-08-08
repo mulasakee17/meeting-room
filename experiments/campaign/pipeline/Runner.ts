@@ -12,7 +12,13 @@ import { DiscussionEngine, type DiscussionAgent } from "../../../src/lib/discuss
 import { NativeCognitiveEngine } from "../../../src/lib/discussion/nativeCognitiveEngine";
 import type { LLMConfig } from "../../../src/lib/llm/providers";
 import { detectLLMProvider } from "../../../src/lib/llm/providers";
-import type { ExperimentConfig, RawRunData, CognitiveStateSnapshot, RuntimeMode } from "../types";
+import type {
+  ExperimentConfig,
+  RawRunData,
+  CognitiveStateSnapshot,
+  CognitiveMacroSnapshotV1,
+  RuntimeMode,
+} from "../types";
 import { RAW_SCHEMA_VERSION } from "../types";
 import {
   extractRanking,
@@ -613,8 +619,8 @@ export async function runSingle(
     }
   }
 
-  // 提取热力学轨迹（RTHF，仅 native_cognitive 模式）
-  let thermoHistory: RawRunData["thermoHistory"] | undefined;
+  // Extract versioned cognitive macro trajectory (native_cognitive only).
+  let thermoHistory: CognitiveMacroSnapshotV1[] | undefined;
   let governanceEstimateHistory: RawRunData["governanceEstimateHistory"] | undefined;
   let semanticAuditLog: RawRunData["semanticAuditLog"] | undefined;
   let terminationDecisions: RawRunData["terminationDecisions"] | undefined;

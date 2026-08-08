@@ -32,7 +32,7 @@ import {
 } from "@/lib/thermodynamics/computeDelta";
 import type { AgentCognitiveState, BehaviorEvents } from "@/lib/agent/cognitiveState";
 import { MeasurementLayer } from "@/lib/thermodynamics/MeasurementLayer";
-import type { ThermoState } from "@/lib/thermodynamics/MeasurementLayer";
+import type { CognitiveMacroState, ThermoState } from "@/lib/thermodynamics/MeasurementLayer";
 
 // ============================================================================
 // Mock AgentCognitiveState 工厂
@@ -46,6 +46,28 @@ function makeBehaviorEvents(overrides?: Partial<BehaviorEvents>): BehaviorEvents
     timesExposed: 0,
     timesRespondedAfterExposure: 0,
     ...overrides,
+  };
+}
+
+function makeMacroState(
+  overrides: Partial<Pick<ThermoState, "R" | "T" | "H" | "F">> = {},
+): CognitiveMacroState {
+  const R = overrides.R ?? 0.5;
+  const T = overrides.T ?? 0.3;
+  const H = overrides.H ?? 0.4;
+  const F = overrides.F ?? 0.6;
+  return {
+    signalSetId: "swarmalpha.cognitive_macro",
+    signalSetVersion: "1.0.0",
+    reportedUtilityAlignment: R,
+    updateVolatility: T,
+    evidenceSupportEntropy: H,
+    reportedUtilityIntensity: 0.7,
+    utilityVolatilityEntropyComposite: F,
+    R,
+    T,
+    H,
+    F,
   };
 }
 
@@ -366,7 +388,7 @@ describe("ProgressiveEstimator", () => {
 
 describe("computeDelta", () => {
   const emptyEstimates = new Map<string, ProgressiveEstimates>();
-  const boilerplateThermo: ThermoState = { R: 0.5, T: 0.3, H: 0.4, F: 0.6 };
+  const boilerplateThermo = makeMacroState();
 
   describe("δ_polarization", () => {
     it("agent 不足 → 不触发", () => {
@@ -410,7 +432,7 @@ describe("computeDelta", () => {
         makeCognitiveState("a1", { utilityScores: { A: 1, B: 0 } }),
         makeCognitiveState("a2", { utilityScores: { A: 0, B: 1 } }),
       ];
-      const thermo: ThermoState = { R: 0.9, T: 0.3, H: 0.4, F: 0.6 };
+      const thermo = makeMacroState({ R: 0.9 });
       const result = computeDelta1DMask(states, thermo, { oneDMaskThreshold: 0.20 });
       expect(result.triggered).toBe(true);
     });
@@ -420,7 +442,7 @@ describe("computeDelta", () => {
         makeCognitiveState("a1", { utilityScores: { A: 1, B: 0 } }),
         makeCognitiveState("a2", { utilityScores: { A: 0, B: 1 } }),
       ];
-      const thermo: ThermoState = { R: 0.1, T: 0.3, H: 0.4, F: 0.6 };
+      const thermo = makeMacroState({ R: 0.1 });
       const result = computeDelta1DMask(states, thermo);
       expect(result.triggered).toBe(false);
     });
@@ -650,7 +672,7 @@ describe("computeDelta", () => {
         makeCognitiveState("a1", { utilityScores: { A: 0.5, B: 0.5 } }),
         makeCognitiveState("a2", { utilityScores: { A: 0.5, B: 0.5 } }),
       ];
-      const thermo: ThermoState = { R: 0.5, T: 0.3, H: 0.4, F: 0.6 };
+      const thermo = makeMacroState();
       const estimates = new Map<string, ProgressiveEstimates>();
       for (const s of states) {
         estimates.set(s.agentId, {

@@ -1,46 +1,25 @@
 /**
- * 热力学终止决策器
+ * Versioned heuristic stopping-policy evaluator.
  *
- * v6 路径二解冻（2026-08-04）：原 FROZEN 状态解除。
- * 解冻理由：三层级联架构补齐——F 需接入终止决策（设计意图，见 ROADMAP_V6 §3.1）。
- *
- * 双路径支持：
- *   1. async 路径（fraud 系列）：evaluate(R,T,H,utteranceCount) — 基于 utteranceCount
- *   2. sync 路径（v6 主线）：evaluateSync(R,T,H,F,round,maxRounds) — 基于 round，F 进决策
- *
- * v6 sync 路径的 F 进决策分支（设计意图落地）：
- *   - 强结晶态：F < strongCrystallF → 立即终止（系统自由能耗尽，不可逆收敛）
- *   - 普通结晶态：F 连续 N 轮 < crystallF → 终止
- *   - 旧 async 路径仍用 R/T/H（向后兼容，不改动）
- *
- * 终止判据（sync 路径）：
- * 1. 强结晶态：F < strongCrystallF → 立即终止
- *    - F = U - T·H 极低意味着系统自由能耗尽（U 低或 T·H 高）
- *    - 这是"不可逆收敛"信号，继续讨论只会打散已收敛的信念
- * 2. 普通结晶态连续 N 次 → 系统已冻结，终止
- * 3. round >= maxRounds → 硬上限终止（标记为"未收敛"）
- * 4. 其他 → 继续
- *
- * 结晶态定义（阈值可通过 constructor 标定）：
- * - R > thresholdR（高同步）
- * - T < thresholdT（低噪声）
- * - H < thresholdH（低熵）
- * - F < thresholdF（低自由能，v6 sync 路径新增）
- *
- * 淬火态判据（伪结晶）：
- * - R 高 + T 骤降（仅检测下降，不检测上升）+ H 不低
- * - T 骤降但 H 仍高说明 agent 被迫同步但内心仍分散
+ * The async compatibility path and sync cognitive path use different signal
+ * definitions. Every persisted snapshot therefore carries a signal-set id.
+ * The default sync policy is fixed-rounds; R/H/T and the composite are used
+ * only by explicit experimental policies. None of these signals proves
+ * truth, irreversibility, epistemic adequacy, or physical crystallization.
  */
 
-/** 热力学快照 */
+/** Versioned monitoring snapshot used by compatibility stopping policies. */
 export interface ThermoSnapshot {
+  /** Identifies the exact, non-interchangeable monitoring semantics. */
+  signalSetId: "swarmalpha.scalar_belief_macro" | "swarmalpha.cognitive_macro";
+  signalSetVersion: "1.0.0";
   /** Kuramoto 序参量 R ∈ [0,1] */
   R: number;
   /** 归一化温度 T ∈ [0,1] */
   T: number;
   /** Shannon 熵 H ∈ [0,1] */
   H: number;
-  /** 社会自由能 F。async 路径: F=(1-R)+T·H; sync 路径(v6): F=U-T·H(Helmholtz,由 caller 传入) */
+  /** Deprecated compatibility composite; interpretation is fixed by signalSetId. */
   F: number;
   /** 发言次数（async 路径）或轮次（sync 路径，v6 复用此字段存 round） */
   utteranceCount: number;
@@ -85,7 +64,7 @@ export interface TerminationThresholds {
   strongCrystallH: number;
 
   // ── v6 sync 路径 F 阈值（新增，2026-08-04）──
-  /** v6 sync 强结晶态：F 低于此值 → 立即终止（自由能耗尽） */
+  /** Experimental sync policy: compatibility composite threshold for fast stop. */
   strongCrystallF: number;
   /** v6 sync 普通结晶态：F 低于此值（连续 N 次后终止） */
   crystallF: number;
@@ -130,7 +109,7 @@ export const DEFAULT_TERMINATION_THRESHOLDS: TerminationThresholds = {
 
   // v6 sync 路径 F 阈值（2026-08-04 新增）
   // 标定依据：campaign native_cognitive 数据 F mean=0.45, range=[0.19, 0.89]
-  // strongCrystallF=0.15：F 极低（<15% 分位）→ 系统自由能耗尽，不可逆收敛
+  // strongCrystallF=0.15：历史数据上的经验分位阈值；未经 held-out 校准
   // crystallF=0.25：F 偏低（<25% 分位）→ 系统趋于冻结
   strongCrystallF: 0.15,  // F < 0.15 → 立即终止
   crystallF: 0.25,        // F < 0.25 连续 N 次 → 终止
@@ -182,6 +161,8 @@ export class TerminationDecider {
   evaluate(R: number, T: number, H: number, utteranceCount: number): TerminationDecision {
     const F = (1 - R) + T * H;
     const snapshot: ThermoSnapshot = {
+      signalSetId: "swarmalpha.scalar_belief_macro",
+      signalSetVersion: "1.0.0",
       R, T, H, F,
       utteranceCount,
       evalIndex: this.history.length,
@@ -202,14 +183,13 @@ export class TerminationDecider {
     const stateType = this.classifyState(snapshot);
 
     // ── 2. 强结晶态：H 极低 + T 极低 → 立即终止 ──
-    // 不需要 R 条件：H 极低意味着所有 agent 信念聚集在同一个 bin，
-    // T 极低意味着信念方差极小——两者同时满足已是不可逆收敛
+    // Compatibility heuristic: low histogram entropy and low dispersion.
     if (T < this.thresholds.strongCrystallT && H < this.thresholds.strongCrystallH) {
       return {
         shouldTerminate: true,
         reason: "strong_crystallized",
         stateType: "crystallized",
-        message: `强结晶态（R=${R.toFixed(3)}, T=${T.toFixed(3)}, H=${H.toFixed(3)}），立即终止（不可逆收敛）`,
+        message: `历史稳定性候选（R=${R.toFixed(3)}, T=${T.toFixed(3)}, H=${H.toFixed(3)}），触发兼容快速停止规则`,
       };
     }
 
@@ -245,7 +225,7 @@ export class TerminationDecider {
    *   3. 普通结晶态用 F < crystallF 作为额外条件（F 连续 N 轮低 → 终止）
    *   4. 硬上限用 round >= maxRounds 而非 utteranceCount
    *
-   * @param R/T/H/F 当前热力学状态（F = U - T·H，Helmholtz 形式）
+   * @param R/T/H/F 兼容字段；语义固定为 cognitive macro signal set v1
    * @param round 当前轮次（1-based）
    * @param maxRounds 最大轮次（硬上限）
    * @returns 终止决策
@@ -257,9 +237,11 @@ export class TerminationDecider {
     F: number,
     round: number,
     maxRounds: number,
-    policy: SyncTerminationPolicy = "rht_joint",
+    policy: SyncTerminationPolicy = "fixed_rounds",
   ): TerminationDecision {
     const snapshot: ThermoSnapshot = {
+      signalSetId: "swarmalpha.cognitive_macro",
+      signalSetVersion: "1.0.0",
       R, T, H, F,
       utteranceCount: round,  // 复用字段记录轮次（sync 路径无 utteranceCount）
       evalIndex: this.history.length,
@@ -282,7 +264,7 @@ export class TerminationDecider {
         shouldTerminate: false,
         reason: "continue",
         stateType: "active",
-        message: `${policy} 策略未启用热力学提前终止`,
+        message: `${policy} 策略未启用 macro-signal 提前终止`,
       };
     }
 
@@ -330,7 +312,7 @@ export class TerminationDecider {
    * v6 sync 路径状态分类（F 进分类条件）
    *
    * 与 async 路径 classifyState 的区别：
-   *   - crystallized 增加 F < crystallF 条件（低自由能确认结晶）
+   *   - rhtf_joint 增加 compatibility composite 阈值（仅实验性附加条件）
    *   - 其余状态分类保持一致（向后兼容）
    */
   private classifyStateSync(

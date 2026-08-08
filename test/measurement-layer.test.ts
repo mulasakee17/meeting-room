@@ -2,7 +2,7 @@
  * MeasurementLayer 单元测试
  *
  * 覆盖:
- * 1. computeThermoState — 各种信念分布的 R/T/H/F 计算
+ * 1. computeCognitiveMacroState — versioned macro signals and compatibility aliases
  * 2. initializeCognitiveStates — agent 认知状态初始化
  * 3. updateCognitiveStates (posthoc) — 从 opinions 反推认知状态
  * 4. updateCognitiveStates (native) — 使用 LLM 原生 cognitiveState
@@ -69,10 +69,10 @@ function mockOpinion(
 }
 
 // ============================================================================
-// computeThermoState (新版, 5 变量语义直译)
+// Versioned cognitive macro monitoring state
 // ============================================================================
 
-describe("MeasurementLayer.computeThermoState (5-variable)", () => {
+describe("MeasurementLayer.computeCognitiveMacroState", () => {
   let layer: MeasurementLayer;
 
   beforeEach(() => {
@@ -80,8 +80,15 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
   });
 
   it("空 cognitive states 返回全零", () => {
-    const state = layer.computeThermoState();
-    expect(state).toEqual({ R: 0, T: 0, H: 0, F: 0 });
+    const state = layer.computeCognitiveMacroState();
+    expect(state.signalSetId).toBe("swarmalpha.cognitive_macro");
+    expect(state.signalSetVersion).toBe("1.0.0");
+    expect(state.reportedUtilityAlignment).toBe(0);
+    expect(state.updateVolatility).toBe(0);
+    expect(state.evidenceSupportEntropy).toBe(0);
+    expect(state.reportedUtilityIntensity).toBe(0);
+    expect(state.utilityVolatilityEntropyComposite).toBe(0);
+    expect([state.R, state.T, state.H, state.F]).toEqual([0, 0, 0, 0]);
   });
 
   it("所有 agent utility 向量对齐 → R≈1", () => {
@@ -97,7 +104,7 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
     ];
 
     layer.updateCognitiveStates(opinions, agents, 1, { mode: "native" });
-    const state = layer.computeThermoState();
+    const state = layer.computeCognitiveMacroState();
     expect(state.R).toBeCloseTo(1.0, 1);
   });
 
@@ -114,7 +121,7 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
     ];
 
     layer.updateCognitiveStates(opinions, agents, 1, { mode: "native" });
-    const state = layer.computeThermoState();
+    const state = layer.computeCognitiveMacroState();
     // v3.2.1: R 基于 cosine 相似度。utility 向量分散时 R 不会是 0
     //（因为向量间仍有部分重叠），但显著低于对齐情况（R≈1）
     // 注：R 在 0.85 边界附近，放宽到 0.87 避免浮点精度偶发失败
@@ -129,11 +136,11 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
     ];
 
     layer.updateCognitiveStates(opinions, agents, 1, { mode: "native" });
-    const state = layer.computeThermoState();
+    const state = layer.computeCognitiveMacroState();
     expect(state.R).toBe(1);
   });
 
-  it("F = U - T·S 关系成立（v0.4.3 修正自由能，三变量解耦）", () => {
+  it("显式 composite = intensity - volatility·entropy，旧字段为精确别名", () => {
     const agents = [
       mockAgent("a1", "Alice", "analyst", 0.8, 0.8),
       mockAgent("a2", "Bob", "critic", -0.3, 0.6),
@@ -144,7 +151,7 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
     ];
 
     layer.updateCognitiveStates(opinions, agents, 1, { mode: "native" });
-    const state = layer.computeThermoState();
+    const state = layer.computeCognitiveMacroState();
 
     // v0.4.3: F = U - T·S（三变量解耦，替代旧 F=(1-R)+T·H）
     // U = mean(‖u_i‖/√K)，S = H（证据多样性熵）
@@ -157,12 +164,17 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
       const norm = Math.sqrt(scores.reduce((ss, v) => ss + v * v, 0));
       return sum + norm / sqrtK;
     }, 0) / states.length;
-    const expectedF = U - state.T * state.H;
+    const expectedF = U - state.updateVolatility * state.evidenceSupportEntropy;
 
-    expect(state.F).toBeCloseTo(expectedF, 10);
+    expect(state.reportedUtilityIntensity).toBeCloseTo(U, 10);
+    expect(state.utilityVolatilityEntropyComposite).toBeCloseTo(expectedF, 10);
+    expect(state.R).toBe(state.reportedUtilityAlignment);
+    expect(state.T).toBe(state.updateVolatility);
+    expect(state.H).toBe(state.evidenceSupportEntropy);
+    expect(state.F).toBe(state.utilityVolatilityEntropyComposite);
   });
 
-  it("R/T/H/F 均在 [0, 1] 范围内", () => {
+  it("基础信号在 [0,1]，未校准 composite 在 [-1,1]", () => {
     const agents = [
       mockAgent("a1", "Alice", "analyst", 0.5, 0.8),
       mockAgent("a2", "Bob", "critic", -0.3, 0.6),
@@ -173,13 +185,39 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
     ];
 
     layer.updateCognitiveStates(opinions, agents, 1, { mode: "native" });
-    const state = layer.computeThermoState();
+    const state = layer.computeCognitiveMacroState();
     expect(state.R).toBeGreaterThanOrEqual(0);
     expect(state.R).toBeLessThanOrEqual(1);
     expect(state.T).toBeGreaterThanOrEqual(0);
     expect(state.T).toBeLessThanOrEqual(1);
     expect(state.H).toBeGreaterThanOrEqual(0);
     expect(state.H).toBeLessThanOrEqual(1);
+    expect(state.utilityVolatilityEntropyComposite).toBeGreaterThanOrEqual(-1);
+    expect(state.utilityVolatilityEntropyComposite).toBeLessThanOrEqual(1);
+  });
+
+  it("异构 option 维数下 intensity 保持 [0,1] 且不依赖 agent 顺序", () => {
+    const agents = [
+      mockAgent("a1", "Alice", "analyst", 0.5, 0.8),
+      mockAgent("a2", "Bob", "critic", 0.5, 0.8),
+    ];
+    const a1 = mockOpinion("a1", 0.5, 80, {
+      cognitiveState: { utility: { A: 1 }, evidenceCoverage: 0.5, evidenceQuality: 0.5 },
+    });
+    const a2 = mockOpinion("a2", 0.5, 80, {
+      cognitiveState: { utility: { A: 1, B: 1, C: 1 }, evidenceCoverage: 0.5, evidenceQuality: 0.5 },
+    });
+
+    layer.updateCognitiveStates([a1, a2], agents, 1, { mode: "native" });
+    const forward = layer.computeCognitiveMacroState().reportedUtilityIntensity;
+
+    const reversedLayer = new MeasurementLayer();
+    reversedLayer.updateCognitiveStates([a2, a1], [...agents].reverse(), 1, { mode: "native" });
+    const reversed = reversedLayer.computeCognitiveMacroState().reportedUtilityIntensity;
+
+    expect(forward).toBeGreaterThanOrEqual(0);
+    expect(forward).toBeLessThanOrEqual(1);
+    expect(reversed).toBeCloseTo(forward, 12);
   });
 
   // ── v3.2.1: 多轮区分度测试 ──
@@ -222,7 +260,7 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
       }),
     ];
     layer.updateCognitiveStates(round1Opinions, agents, 1, { mode: "native" });
-    const state1 = layer.computeThermoState();
+    const state1 = layer.computeCognitiveMacroState();
 
     // Round 1: R 较低（utility 分散），H > 0（evidence 支持 A/B/C 三个选项）
     expect(state1.R).toBeLessThan(0.9);
@@ -259,7 +297,7 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
       }),
     ];
     layer.updateCognitiveStates(round2Opinions, agents, 2, { mode: "native" });
-    const state2 = layer.computeThermoState();
+    const state2 = layer.computeCognitiveMacroState();
 
     // Round 2: R 上升（utility 趋同），T > 0（utility 发生了变化）
     expect(state2.R).toBeGreaterThan(state1.R); // 共识度上升
@@ -296,13 +334,49 @@ describe("MeasurementLayer.computeThermoState (5-variable)", () => {
       }),
     ];
     layer.updateCognitiveStates(round3Opinions, agents, 3, { mode: "native" });
-    const state3 = layer.computeThermoState();
+    const state3 = layer.computeCognitiveMacroState();
 
     // Round 3: R 接近 1（完全共识）
     expect(state3.R).toBeGreaterThan(state2.R); // 共识度继续上升
     expect(state3.R).toBeGreaterThan(0.95); // 接近完全共识
     // H 降低（所有新 evidence 都支持 A，supports 分布趋向单一）
     expect(state3.H).toBeLessThanOrEqual(state2.H);
+  });
+
+  it("未校准 macro screening 默认不允许跳过 δ 诊断", () => {
+    const agents = [
+      mockAgent("a1", "Alice", "analyst", 0.5, 0.8),
+      mockAgent("a2", "Bob", "critic", -0.5, 0.8),
+    ];
+    const opinions: AgentOpinion[] = [
+      mockOpinion("a1", 0.5, 80, {
+        cognitiveState: { utility: { A: 1, B: 0 }, evidenceCoverage: 0.5, evidenceQuality: 0.5 },
+        evidence: ["A evidence"],
+        itemBeliefs: [
+          { item: "A", rank: 1, belief: 1, confidence: 80 },
+          { item: "B", rank: 2, belief: 0, confidence: 80 },
+        ],
+      }),
+      mockOpinion("a2", -0.5, 80, {
+        cognitiveState: { utility: { A: 0, B: 1 }, evidenceCoverage: 0.5, evidenceQuality: 0.5 },
+        evidence: ["B evidence"],
+        itemBeliefs: [
+          { item: "A", rank: 2, belief: 0, confidence: 80 },
+          { item: "B", rank: 1, belief: 1, confidence: 80 },
+        ],
+      }),
+    ];
+    layer.updateCognitiveStates(opinions, agents, 1, { mode: "native" });
+
+    const defaultResult = layer.diagnoseAndSuggestSync(1, { polarizationThreshold: 0.1 });
+    const compatibilityGated = layer.diagnoseAndSuggestSync(
+      1,
+      { polarizationThreshold: 0.1 },
+      { useLegacyUncalibratedScreening: true },
+    );
+
+    expect(defaultResult.delta.polarization.value).toBeGreaterThan(0);
+    expect(compatibilityGated.delta.polarization.value).toBe(0);
   });
 });
 
