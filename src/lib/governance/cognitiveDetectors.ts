@@ -282,7 +282,11 @@ export interface AuthorityBiasCognitiveResult {
   inertiaConcentration: number;
   /** 惯性最高的 agent */
   dominantAgentId: string;
-  /** 影响力不对称度：max(susceptibility) / min(susceptibility) */
+  /** 影响力不对称度：max(socialUpdateGain) / min(socialUpdateGain) */
+  socialUpdateGainAsymmetry: number;
+  /**
+   * @deprecated 兼容别名，等于 socialUpdateGainAsymmetry。
+   */
   susceptibilityAsymmetry: number;
 }
 
@@ -291,9 +295,12 @@ export interface AuthorityBiasCognitiveResult {
  *
  * 信号：
  *   - 惯性集中度：某个 agent 惯性远高于平均 → 该 agent 更"权威"（不易改变）
- *   - 易感性不对称度：max(λ)/min(λ) 高 → 影响力分布不均
+ *   - 社会更新增益不对称度：max(g)/min(g) 高 → 对他人影响的开放度分布不均
  *
- * 阈值：默认惯性集中度 > 1.3 或易感性不对称度 > 2.0
+ * 注意：此处消费 socialUpdateGain（模型系数，建模对更新的相对开放度），
+ * 而非行为易感性（暴露-响应观测）。两量语义分离，绝不可互换。
+ *
+ * 阈值：默认惯性集中度 > 1.3 或不对称度 > 2.0
  */
 export function detectAuthorityBiasCognitive(
   states: CognitiveGovernanceState[],
@@ -302,7 +309,8 @@ export function detectAuthorityBiasCognitive(
   if (states.length < 2) {
     return {
       detected: false, severity: "low", inertiaConcentration: 1,
-      dominantAgentId: states[0]?.agentId ?? "", susceptibilityAsymmetry: 1,
+      dominantAgentId: states[0]?.agentId ?? "",
+      socialUpdateGainAsymmetry: 1, susceptibilityAsymmetry: 1,
     };
   }
 
@@ -311,16 +319,18 @@ export function detectAuthorityBiasCognitive(
   const maxInertia = Math.max(...inertias);
   const maxInertiaIdx = inertias.indexOf(maxInertia);
 
-  const susceptibilities = states.map(s => s.susceptibility);
-  const maxSus = Math.max(...susceptibilities);
-  const minSus = Math.min(...susceptibilities);
+  // 兼容回退：外部构造者若未填充 socialUpdateGain，则退回 susceptibility
+  // （该字段的兼容语义即 socialUpdateGain）。
+  const gains = states.map(s => s.socialUpdateGain ?? s.susceptibility);
+  const maxGain = Math.max(...gains);
+  const minGain = Math.min(...gains);
 
   const inertiaConcentration = avgInertia > 0 ? maxInertia / avgInertia : 1;
-  const susceptibilityAsymmetry = minSus > 0 ? maxSus / minSus : 1;
+  const socialUpdateGainAsymmetry = minGain > 0 ? maxGain / minGain : 1;
 
-  // 综合信号：惯性集中度 + 易感性不对称度
+  // 综合信号：惯性集中度 + 社会更新增益不对称度
   // 注意：threshold 直接作为信号值阈值（不再使用 threshold*2 的间接映射）
-  const signal = (inertiaConcentration - 1) * 0.5 + (susceptibilityAsymmetry - 1) * 0.5;
+  const signal = (inertiaConcentration - 1) * 0.5 + (socialUpdateGainAsymmetry - 1) * 0.5;
   const threshold = config?.authorityBiasThreshold ?? COGNITIVE_AUTHORITY_BIAS_THRESHOLD;
   const detected = signal >= threshold;
 
@@ -329,7 +339,8 @@ export function detectAuthorityBiasCognitive(
     severity: signal >= 0.8 ? "high" : detected ? "medium" : "low",
     inertiaConcentration,
     dominantAgentId: states[maxInertiaIdx]?.agentId ?? "",
-    susceptibilityAsymmetry,
+    socialUpdateGainAsymmetry,
+    susceptibilityAsymmetry: socialUpdateGainAsymmetry,
   };
 }
 

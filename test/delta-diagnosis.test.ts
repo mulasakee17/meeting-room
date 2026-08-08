@@ -704,6 +704,7 @@ function makeGovState(agentId: string): CognitiveGovernanceState {
     inertia: { strength: 0.5 },
     confidence: { overall: 0.6 },
     susceptibility: 0.4,
+    socialUpdateGain: 0.4,
   };
 }
 

@@ -43,6 +43,7 @@ import { safeJsonParse } from "../utils/jsonUtils";
 import {
   type AgentCognitiveState,
   stanceFromItemBeliefs,
+  computeSocialUpdateGain,
 } from "../agent/cognitiveState";
 import type { OpinionParser } from "../observation";
 import { parseClaimReports } from "../observation";
@@ -968,8 +969,8 @@ Field explanations:
       const opinion = opinions.find(o => o.agentId === agentId);
       const rank1Item = opinion?.itemBeliefs?.find(ib => ib.rank === 1)?.item;
 
-      // 计算 susceptibility（MeasurementLayer 内部也计算，但这里需要暴露给 interventions）
-      const susceptibility = (1 - cs.inertia.strength) * (1 - cs.confidence.overall);
+      // 统一 helper（含 0.05 floor），消除此前的内联公式缺 floor 的不一致。
+      const socialUpdateGain = computeSocialUpdateGain(cs.inertia, cs.confidence);
 
       statesMap.set(agentId, {
         agentId,
@@ -990,7 +991,13 @@ Field explanations:
         confidence: {
           overall: cs.confidence.overall,
         },
-        susceptibility,
+        susceptibility: socialUpdateGain,
+        socialUpdateGain,
+        behavioralSusceptibility: {
+          estimate: cs.susceptibility.estimate,
+          confidence: cs.susceptibility.confidence,
+          usable: cs.susceptibility.usable,
+        },
         rankingTopChoice: rank1Item,
       });
     }

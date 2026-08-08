@@ -30,21 +30,35 @@ export interface DerivedEpistemicEstimate {
   value: BeliefValue;
 }
 
-/** Task-specific latent-state proxy such as utility, inertia or susceptibility. */
-export interface GovernanceEstimate<T = unknown> {
+/**
+ * Task-specific latent-state proxy such as utility, inertia or susceptibility.
+ *
+ * Since schema 2.0 the record persists its exact canonicalized input snapshot
+ * (`input`) in addition to the fingerprint, so a third party can replay the
+ * projection from the record alone. Records without `input` are legacy and
+ * unverifiable by design (see `src/lib/epistemic/replay.ts`).
+ */
+export interface GovernanceEstimate<
+  Output = unknown,
+  Input = unknown,
+  Config extends object = object,
+> {
   layer: "governance_estimate";
   name: string;
   estimatorId: string;
   estimatorVersion: string;
   sourceEventIds: string[];
+  /** Exact canonicalized estimator input used for execution. */
+  input: Input;
   inputFingerprint: string;
-  config: object;
+  /** Full configuration used for execution, not a partial merge. */
+  config: Config;
   configFingerprint: string;
   outputFingerprint: string;
   determinism:
     | { kind: "deterministic" }
     | { kind: "seeded"; seed: number; seedField: string };
-  value: T;
+  value: Output;
 }
 
 /** Directly observed runtime behavior; interpretation belongs to a collector. */

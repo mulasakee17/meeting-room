@@ -13,6 +13,7 @@ import type {
   AgentCognitiveState,
   BehaviorEvents,
 } from "../agent/cognitiveState";
+import { PROGRESSIVE_ICL_ROLE_INERTIA_POLICY } from "../agent/roleInertiaPrior";
 import {
   GovernanceEstimatorRegistry,
   type GovernanceEstimatorContract,
@@ -61,6 +62,12 @@ export interface ProgressiveEstimates {
 
 export interface ProgressiveEstimatorInput {
   round: number;
+  /**
+   * Agent identity is part of the estimator input so it is protected by the
+   * input fingerprint: a record can no longer be silently re-attributed to a
+   * different agent without breaking replay.
+   */
+  agentId: string;
   agentRole: string;
   statedOpenness?: number;
   behaviorEvents: BehaviorEvents;
@@ -101,14 +108,11 @@ export interface ProgressiveEstimatorConfig {
 // Constants
 // ============================================================================
 
-/** 角色关键词 → 惯性先验（冷启动用） */
-const ROLE_INERTIA_PRIOR: ReadonlyArray<{ keywords: readonly string[]; inertia: number }> = [
-  { keywords: ["expert", "专家", "资深", "senior"], inertia: 0.6 },
-  { keywords: ["analyst", "分析师", "分析"], inertia: 0.5 },
-  { keywords: ["critic", "批评", "质疑", "审查"], inertia: 0.4 },
-  { keywords: ["moderator", "主持人", "协调员", "facilitator"], inertia: 0.3 },
-  { keywords: ["novice", "新手", "初级", "junior"], inertia: 0.3 },
-];
+/**
+ * 角色关键词 → 惯性先验（冷启动用）。
+ * 规则已版本化到 roleInertiaPrior.ts 的 progressive-icl@1.0.0 策略；默认
+ * config 引用其 rules（数值逐字一致），保证序列化 config 与指纹不变。
+ */
 
 /** 行为权重上限（行为事件再多也不超过此值，为 LLM 自报保留最低权重） */
 const MAX_BEHAVIORAL_WEIGHT = 0.90;
@@ -132,7 +136,8 @@ const MIN_DELTA_FOR_STABILITY = 2;
 const MIN_EXPOSURE_FOR_USABLE = 2;
 
 export const DEFAULT_PROGRESSIVE_ESTIMATOR_CONFIG: ProgressiveEstimatorConfig = {
-  roleInertiaPrior: ROLE_INERTIA_PRIOR,
+  // 引用版本化 progressive-icl@1.0.0 的 rules（逐字一致），保持默认 config 指纹不变。
+  roleInertiaPrior: PROGRESSIVE_ICL_ROLE_INERTIA_POLICY.rules,
   defaultRoleInertia: 0.4,
   maxBehavioralWeight: MAX_BEHAVIORAL_WEIGHT,
   behavioralWeightPerEvent: BEHAVIORAL_WEIGHT_PER_EVENT,
@@ -554,6 +559,7 @@ export function buildProgressiveEstimatorInput(
 ): ProgressiveEstimatorInput {
   return {
     round,
+    agentId: state.agentId,
     agentRole: state.agentRole,
     ...(state.statedOpenness === undefined ? {} : { statedOpenness: state.statedOpenness }),
     behaviorEvents: { ...state.behaviorEvents },
@@ -578,6 +584,9 @@ function validateProgressiveInput(value: unknown): void {
   if (!value || typeof value !== "object") throw new Error("progressive estimator input must be an object");
   const input = value as ProgressiveEstimatorInput;
   if (!Number.isSafeInteger(input.round) || input.round < 0) throw new Error("input.round must be a non-negative safe integer");
+  if (typeof input.agentId !== "string" || input.agentId.trim().length === 0) {
+    throw new Error("input.agentId must be a non-empty string");
+  }
   if (typeof input.agentRole !== "string" || input.agentRole.trim().length === 0) {
     throw new Error("input.agentRole must be a non-empty string");
   }

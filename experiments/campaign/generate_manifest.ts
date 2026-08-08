@@ -23,6 +23,9 @@ import * as path from "path";
 import * as crypto from "crypto";
 import { execSync } from "child_process";
 import { safeJsonParse } from "../../src/lib/utils/jsonUtils";
+// 与 CLI 复用同一纯 run-level verifier 与状态派生（无 main、无副作用），
+// 禁止较弱的重复实现。
+import { verifyRawRunData, deriveReplayStatus } from "./replayVerifier";
 
 // 排除文件（派生统计/聚合文件，非原始实验结果）
 const EXCLUDE_FILES = new Set([
@@ -58,6 +61,10 @@ interface ManifestEntry {
   totalAppliedInterventions: number;
   hasGovernanceIssues: boolean;
   totalGovernanceIssues: number;
+  // 重放审计元数据（additive；由纯重放库计算）
+  rawSchemaVersion?: string;
+  governanceEstimateCount: number;
+  governanceReplayStatus: "verified" | "mixed" | "legacy_unverifiable" | "absent";
 }
 
 interface Manifest {
@@ -82,7 +89,13 @@ function getGitCommit(): string {
   }
 }
 
-/** 从 RawRunData JSON 中提取审计相关元数据 */
+/**
+ * 从 RawRunData JSON 中提取审计相关元数据。
+ *
+ * 重放状态复用 CLI 的 run-level verifier（verifyRawRunData），与 CLI 的
+ * 判定保持一致；绝不把 unsupported/mismatch/run-issue 标为 verified——
+ * 任一硬失败即 "mixed"。
+ */
 function extractMetadata(filePath: string): Partial<ManifestEntry> {
   try {
     const raw = fs.readFileSync(filePath, "utf8");
@@ -90,6 +103,7 @@ function extractMetadata(filePath: string): Partial<ManifestEntry> {
     if (!data) { console.warn(`[generate_manifest] 无法解析 JSON: ${filePath}`); return {}; }
     const interventions: any[] = data.interventions || [];
     const governanceIssues: any[] = data.governanceIssues || [];
+    const runResult = verifyRawRunData(filePath, data);
     return {
       runId: data.runId,
       experimentId: data.experimentId,
@@ -109,6 +123,9 @@ function extractMetadata(filePath: string): Partial<ManifestEntry> {
       totalAppliedInterventions: interventions.filter(i => i.applied).length,
       hasGovernanceIssues: governanceIssues.length > 0,
       totalGovernanceIssues: governanceIssues.length,
+      rawSchemaVersion: data.rawSchemaVersion,
+      governanceEstimateCount: runResult.recordCount,
+      governanceReplayStatus: deriveReplayStatus(runResult),
     };
   } catch {
     return {};
@@ -167,6 +184,8 @@ function main(): void {
       totalAppliedInterventions: meta.totalAppliedInterventions ?? 0,
       hasGovernanceIssues: meta.hasGovernanceIssues ?? false,
       totalGovernanceIssues: meta.totalGovernanceIssues ?? 0,
+      governanceEstimateCount: meta.governanceEstimateCount ?? 0,
+      governanceReplayStatus: meta.governanceReplayStatus ?? "absent",
     });
     totalSize += stat.size;
   }

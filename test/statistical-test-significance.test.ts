@@ -207,6 +207,12 @@ describe("E6: State Decoupling (Bootstrap CI 主推断)", () => {
       runtimeMode: "native_cognitive",
       sampleSize: 10,
       stateDecoupling: {
+        status: "computed",
+        usableObservationCount: 10,
+        legacyMixedExcludedCount: 0,
+        unusableObservationCount: 0,
+        malformedObservationCount: 0,
+        eligibleRunCount: 10,
         maxCorrCognitive: 0.3,
         maxCorrBelief: 0.8,
         vifMax: 2.5,
@@ -228,12 +234,18 @@ describe("E6: State Decoupling (Bootstrap CI 主推断)", () => {
     expect(test.details.inferenceMethod).toBe("per-run paired bootstrap");
   });
 
-  it("无 per-run 数据时回退到 Fisher z", () => {
+  it("无 per-run 数据时 fail closed，不回退到 snapshot-level Fisher z", () => {
     const metrics: ExperimentMetrics = {
       experimentId: "e6_decoupling",
       runtimeMode: "native_cognitive",
       sampleSize: 30,
       stateDecoupling: {
+        status: "computed",
+        usableObservationCount: 30,
+        legacyMixedExcludedCount: 0,
+        unusableObservationCount: 0,
+        malformedObservationCount: 0,
+        eligibleRunCount: 0,
         maxCorrCognitive: 0.3,
         maxCorrBelief: 0.8,
         vifMax: 2.5,
@@ -243,8 +255,9 @@ describe("E6: State Decoupling (Bootstrap CI 主推断)", () => {
 
     const results = runTests(metrics);
     const test = results[0];
-    expect(test.details.inferenceMethod).toBe("fisher-z fallback");
-    expect(test.pValue).toBeLessThan(0.05); // 0.8 vs 0.3 应显著
+    expect(test.analysisStatus).toBe("invalid_data");
+    expect(test.significant).toBe(false);
+    expect(test.pValue).toBe(1);
   });
 
   it("Bootstrap CI 跨 0 时不应显著", () => {
@@ -255,6 +268,12 @@ describe("E6: State Decoupling (Bootstrap CI 主推断)", () => {
       runtimeMode: "native_cognitive",
       sampleSize: 10,
       stateDecoupling: {
+        status: "computed",
+        usableObservationCount: 10,
+        legacyMixedExcludedCount: 0,
+        unusableObservationCount: 0,
+        malformedObservationCount: 0,
+        eligibleRunCount: 10,
         maxCorrCognitive: 0.5,
         maxCorrBelief: 0.52,
         vifMax: 2.0,
@@ -292,6 +311,11 @@ describe("E8: Susceptibility Mediation (显著性同号判定)", () => {
       runtimeMode: "native_cognitive",
       sampleSize: n,
       susceptibilityMediation: {
+        status: "computed",
+        usableObservationCount: 30,
+        legacyMixedExcludedCount: 0,
+        unusableObservationCount: 0,
+        malformedObservationCount: 0,
         indirectEffect: 0.32,
         indirectEffectCI: [0.15, 0.5],
         directEffect: 0.1,
@@ -321,6 +345,11 @@ describe("E8: Susceptibility Mediation (显著性同号判定)", () => {
       runtimeMode: "native_cognitive",
       sampleSize: n,
       susceptibilityMediation: {
+        status: "computed",
+        usableObservationCount: 30,
+        legacyMixedExcludedCount: 0,
+        unusableObservationCount: 0,
+        malformedObservationCount: 0,
         indirectEffect: 0.001,
         indirectEffectCI: [-0.05, 0.05],
         directEffect: 0.002,
@@ -349,6 +378,11 @@ describe("E8: Susceptibility Mediation (显著性同号判定)", () => {
       runtimeMode: "native_cognitive",
       sampleSize: n,
       susceptibilityMediation: {
+        status: "computed",
+        usableObservationCount: 30,
+        legacyMixedExcludedCount: 0,
+        unusableObservationCount: 0,
+        malformedObservationCount: 0,
         indirectEffect: -0.32,
         indirectEffectCI: [-0.5, -0.15],
         directEffect: -0.1,
@@ -372,6 +406,11 @@ describe("E8: Susceptibility Mediation (显著性同号判定)", () => {
       runtimeMode: "native_cognitive",
       sampleSize: 5,
       susceptibilityMediation: {
+        status: "computed",
+        usableObservationCount: 5,
+        legacyMixedExcludedCount: 0,
+        unusableObservationCount: 0,
+        malformedObservationCount: 0,
         indirectEffect: 0.2,
         indirectEffectCI: [0.1, 0.3],
         directEffect: 0.1,
@@ -382,6 +421,42 @@ describe("E8: Susceptibility Mediation (显著性同号判定)", () => {
 
     const results = runTests(metrics);
     expect(results[0].pValue).toBe(1);
+    expect(results[0].significant).toBe(false);
+  });
+
+  it("legacy_mixed_excluded E8 不产生显著性 claim", () => {
+    const metrics: ExperimentMetrics = {
+      experimentId: "e8_susceptibility",
+      runtimeMode: "native_cognitive",
+      sampleSize: 0,
+      susceptibilityMediation: {
+        status: "legacy_mixed_excluded",
+        usableObservationCount: 0,
+        legacyMixedExcludedCount: 4,
+        unusableObservationCount: 0,
+        malformedObservationCount: 0,
+      },
+    };
+    const results = runTests(metrics);
+    const test = results[0];
+    expect(test.significant).toBe(false);
+    expect(test.conclusion).toMatch(/Excluded|Insufficient/);
+  });
+
+  it("insufficient_data E8 不产生显著性 claim", () => {
+    const metrics: ExperimentMetrics = {
+      experimentId: "e8_susceptibility",
+      runtimeMode: "native_cognitive",
+      sampleSize: 1,
+      susceptibilityMediation: {
+        status: "insufficient_data",
+        usableObservationCount: 1,
+        legacyMixedExcludedCount: 0,
+        unusableObservationCount: 0,
+        malformedObservationCount: 0,
+      },
+    };
+    const results = runTests(metrics);
     expect(results[0].significant).toBe(false);
   });
 });

@@ -411,8 +411,10 @@ export function computeDeltaNoResponse(
     const events = s.behaviorEvents;
     // 至少暴露过 1 次 + 从未响应 → 候选无响应
     if (events.timesExposed >= 1 && events.timesRespondedAfterExposure === 0) {
-      // 门控：仅当 ProgressiveEstimator 的 susceptibility 估计可用时才标记
-      // 不可用（暴露事件 < 2）时无法区分"真不响应"和"数据不足"
+      // 门控：仅当 ProgressiveEstimator 的行为易感性估计可用时才标记。
+      // est.susceptibility 是暴露-响应行为估计（非 DeGroot 系数）；usable=false
+      //（暴露事件 < 2）时无法区分"真不响应"和"数据不足"。绝不 substitute
+      // socialUpdateGain 或任何公式值。
       const est = estimates.get(s.agentId);
       if (est?.susceptibility.usable) {
         unresponsiveAgents.push(s.agentName);

@@ -98,7 +98,11 @@ function pearsonR(x: number[], y: number[]): number {
     sx += (x[i] - mx) ** 2;
     sy += (y[i] - my) ** 2;
   }
-  return cov / (Math.sqrt(sx) * Math.sqrt(sy) || 1);
+  const raw = cov / (Math.sqrt(sx) * Math.sqrt(sy) || 1);
+  // Floating-point roundoff can otherwise yield values such as
+  // 1.0000000000000002, which are outside the mathematical range and poison
+  // downstream VIF/atanh calculations.
+  return Math.max(-1, Math.min(1, raw));
 }
 
 /** 逻辑回归（简化：Newton-Raphson 一步近似） */
@@ -703,29 +707,62 @@ export function computeE6Decoupling(data: RawRunData[]): ExperimentMetrics {
   // per-run 相关（用于 Bootstrap）
   const corrCognitivePerRun: number[] = [];
   const corrBeliefPerRun: number[] = [];
+  let legacyMixedExcludedCount = 0;
+  let unusableObservationCount = 0;
+  let malformedObservationCount = 0;
 
   for (const run of data) {
     if (!run.cognitiveTrajectory || run.cognitiveTrajectory.length === 0) continue;
 
-    // 全局聚合（保留原行为）
+    // 仅 schema-2 纳入 confirmatory 解耦分析：Λ 必须用干净的 usable 行为估计，
+    // schema-1 混合易感性不消费。为保持相关矩阵数组对齐，schema-1 run 整体排除。
+    if (run.rawSchemaVersion !== "2.0") {
+      legacyMixedExcludedCount += run.cognitiveTrajectory.length;
+      continue;
+    }
+
+    // Runtime validation is mandatory even for schema-2 labels: raw files are
+    // untrusted experiment artifacts and a version string is not proof that a
+    // writer respected the contract.
+    const usableSnaps: Array<CognitiveStateSnapshot & {
+      behavioralSusceptibilityUsable: true;
+      behavioralSusceptibilityEstimate: number;
+    }> = [];
     for (const snap of run.cognitiveTrajectory) {
+      if (!isValidSchema2CognitiveSnapshot(snap)) {
+        malformedObservationCount++;
+        continue;
+      }
+      if (!snap.behavioralSusceptibilityUsable) {
+        unusableObservationCount++;
+        continue;
+      }
+      usableSnaps.push(snap as CognitiveStateSnapshot & {
+        behavioralSusceptibilityUsable: true;
+        behavioralSusceptibilityEstimate: number;
+      });
+    }
+    if (usableSnaps.length === 0) continue;
+
+    // 全局聚合
+    for (const snap of usableSnaps) {
       uValues.push(snap.utilityIntensity);
       eValues.push(snap.evidenceCoverage);
       iValues.push(snap.inertiaStrength);
       cValues.push(snap.confidenceOverall);
-      sValues.push(snap.susceptibility);
+      sValues.push(snap.behavioralSusceptibilityEstimate);
       bValues.push(snap.belief);
       confValues.push(snap.oldConfidence / 100);
     }
 
     // per-run 计算（需足够样本量）
-    const runU = run.cognitiveTrajectory.map(s => s.utilityIntensity);
-    const runE = run.cognitiveTrajectory.map(s => s.evidenceCoverage);
-    const runI = run.cognitiveTrajectory.map(s => s.inertiaStrength);
-    const runC = run.cognitiveTrajectory.map(s => s.confidenceOverall);
-    const runS = run.cognitiveTrajectory.map(s => s.susceptibility);
-    const runB = run.cognitiveTrajectory.map(s => s.belief);
-    const runConf = run.cognitiveTrajectory.map(s => s.oldConfidence / 100);
+    const runU = usableSnaps.map(s => s.utilityIntensity);
+    const runE = usableSnaps.map(s => s.evidenceCoverage);
+    const runI = usableSnaps.map(s => s.inertiaStrength);
+    const runC = usableSnaps.map(s => s.confidenceOverall);
+    const runS = usableSnaps.map(s => s.behavioralSusceptibilityEstimate);
+    const runB = usableSnaps.map(s => s.belief);
+    const runConf = usableSnaps.map(s => s.oldConfidence / 100);
 
     if (runU.length >= 5) {
       const runCogVars = [runU, runE, runI, runC, runS];
@@ -739,6 +776,48 @@ export function computeE6Decoupling(data: RawRunData[]): ExperimentMetrics {
       corrCognitivePerRun.push(runMaxCog);
       corrBeliefPerRun.push(Math.abs(pearsonR(runB, runConf)));
     }
+  }
+
+  const diagnostics = {
+    usableObservationCount: uValues.length,
+    legacyMixedExcludedCount,
+    unusableObservationCount,
+    malformedObservationCount,
+    eligibleRunCount: corrCognitivePerRun.length,
+    legacyMixedExcluded: legacyMixedExcludedCount > 0,
+  };
+
+  const unavailable = (
+    status: "insufficient_data" | "legacy_mixed_excluded" | "invalid_data",
+    invalidReason: string,
+  ): ExperimentMetrics => ({
+    experimentId: "e6_decoupling",
+    runtimeMode: "cognitive",
+    sampleSize: uValues.length,
+    stateDecoupling: { status, ...diagnostics, invalidReason },
+  });
+
+  // A malformed schema-2 snapshot invalidates the whole confirmatory result.
+  // Silently selecting around corrupt observations would make the analyzed
+  // sample depend on data corruption and is therefore not fail-closed.
+  if (malformedObservationCount > 0) {
+    return unavailable("invalid_data", "malformed_schema2_snapshot");
+  }
+
+  if (uValues.length < 5) {
+    const status = uValues.length === 0
+      && legacyMixedExcludedCount > 0
+      && unusableObservationCount === 0
+      ? "legacy_mixed_excluded"
+      : "insufficient_data";
+    return unavailable(status, "fewer_than_five_usable_snapshots");
+  }
+
+  // E6's confirmatory inference is paired at run level. Two eligible runs are
+  // the minimum required to estimate uncertainty without falling back to a
+  // pseudo-replicated snapshot-level Fisher test.
+  if (corrCognitivePerRun.length < 2 || corrBeliefPerRun.length < 2) {
+    return unavailable("insufficient_data", "fewer_than_two_eligible_runs");
   }
 
   // Cognitive 相关矩阵（全局）
@@ -759,18 +838,26 @@ export function computeE6Decoupling(data: RawRunData[]): ExperimentMetrics {
   // Belief 相关（全局）
   const belR = Math.abs(pearsonR(bValues, confValues));
 
-  // VIF（简化：取最大成对相关的 VIF 近似）
-  const vifMax = maxCorrCognitive < 1 ? 1 / (1 - maxCorrCognitive * maxCorrCognitive) : Infinity;
+  const conditionNumber = computeConditionNumber(cogCorrMatrix);
+  // VIF（简化：取最大成对相关的 VIF 近似）。完全共线时显式封顶，
+  // 禁止 Infinity 在 JSON 中静默变成 null。
+  const vifMax = maxCorrCognitive < 1 ? 1 / (1 - maxCorrCognitive * maxCorrCognitive) : 100;
+  const derivedValues = [maxCorrCognitive, belR, vifMax, conditionNumber, ...cogCorrMatrix.flat()];
+  if (derivedValues.some(value => !Number.isFinite(value))) {
+    return unavailable("invalid_data", "non_finite_derived_metric");
+  }
 
   return {
     experimentId: "e6_decoupling",
     runtimeMode: "cognitive",
     sampleSize: uValues.length,
     stateDecoupling: {
+      status: "computed",
+      ...diagnostics,
       maxCorrCognitive,
       maxCorrBelief: belR,
       vifMax: Math.min(vifMax, 100),
-      conditionNumber: computeConditionNumber(cogCorrMatrix),
+      conditionNumber,
       correlationMatrix: cogCorrMatrix,
       variableNames: cogNames,
       _bootstrapData: {
@@ -975,27 +1062,85 @@ export function computeE8Susceptibility(data: RawRunData[]): ExperimentMetrics {
   const inertiaValues: number[] = [];
   const susceptibilityValues: number[] = [];
   const deltaUValues: number[] = [];
+  let legacyMixedExcludedCount = 0;
+  let unusableObservationCount = 0;
+  let malformedObservationCount = 0;
 
   for (const run of data) {
     if (!run.cognitiveTrajectory) continue;
 
-    const byAgent = new Map<string, CognitiveStateSnapshot[]>();
-    for (const snap of run.cognitiveTrajectory) {
-      if (!byAgent.has(snap.agentId)) byAgent.set(snap.agentId, []);
-      byAgent.get(snap.agentId)!.push(snap);
+    // schema-1 混合易感性：按 E8 的实际分析单位（transition）统计排除数，
+    // 不 substitute socialUpdateGain。
+    if (run.rawSchemaVersion !== "2.0") {
+      legacyMixedExcludedCount += countTransitions(run.cognitiveTrajectory);
+      continue;
     }
 
-    for (const [, snaps] of byAgent) {
-      snaps.sort((a, b) => a.round - b.round);
+    const byAgent = groupSnapsByAgent(run.cognitiveTrajectory);
+    for (const snaps of byAgent.values()) {
+      // Preserve persisted order. Sorting here would silently repair a corrupt
+      // trajectory and could change which observations form transitions.
+      // Confirmatory analysis must instead reject non-forward raw ordering.
       for (let i = 0; i < snaps.length - 1; i++) {
         const curr = snaps[i];
         const next = snaps[i + 1];
 
+        // A schema-2 label is not trusted. Both endpoints must satisfy the raw
+        // snapshot contract, and a transition must move strictly forward.
+        if (!isValidSchema2CognitiveSnapshot(curr)
+          || !isValidSchema2CognitiveSnapshot(next)
+          || next.round <= curr.round) {
+          malformedObservationCount++;
+          continue;
+        }
+        if (!curr.behavioralSusceptibilityUsable) {
+          unusableObservationCount++;
+          continue;
+        }
+        const est = curr.behavioralSusceptibilityEstimate as number;
+        susceptibilityValues.push(est);
         inertiaValues.push(curr.inertiaStrength);
-        susceptibilityValues.push(curr.susceptibility);
         deltaUValues.push(utilityL2(curr.utility, next.utility));
       }
     }
+  }
+
+  const unavailable = (
+    status: "insufficient_data" | "legacy_mixed_excluded" | "invalid_data",
+    invalidReason: string,
+  ): ExperimentMetrics => ({
+    experimentId: "e8_susceptibility",
+    runtimeMode: "cognitive",
+    sampleSize: inertiaValues.length,
+    susceptibilityMediation: {
+      status,
+      usableObservationCount: susceptibilityValues.length,
+      legacyMixedExcludedCount,
+      unusableObservationCount,
+      malformedObservationCount,
+      invalidReason,
+    },
+  });
+
+  // Any malformed schema-2 transition invalidates the entire confirmatory
+  // result. Continuing with a selected subset would make corruption part of
+  // the sample-selection mechanism.
+  if (malformedObservationCount > 0) {
+    return unavailable("invalid_data", "malformed_schema2_transition");
+  }
+
+  // 无 schema-2 有效 transition：fail-closed 返回状态，不产生确认性 claim。
+  if (susceptibilityValues.length === 0) {
+    const status = legacyMixedExcludedCount > 0 && unusableObservationCount === 0
+      ? "legacy_mixed_excluded"
+      : "insufficient_data";
+    return unavailable(status, "no_usable_schema2_transitions");
+  }
+
+  // 最小数学可识别性：transition 数足够且 inertia / residual susceptibility
+  // 有变化；不足时标 insufficient_data，绝不产生退化的 computed 结果。
+  if (!hasIdentifiableVariation(inertiaValues, susceptibilityValues)) {
+    return unavailable("insufficient_data", "unidentifiable_mediation_design");
   }
 
   // 中介分析：I → Λ → ΔU
@@ -1028,11 +1173,31 @@ export function computeE8Susceptibility(data: RawRunData[]): ExperimentMetrics {
   // Bootstrap CI for mediation effect
   const indirectCI = bootstrapMediation(inertiaValues, susceptibilityValues, deltaUValues);
 
+  const derivedValues = [
+    indirectEffect,
+    indirectCI[0],
+    indirectCI[1],
+    directEffect,
+    totalEffect,
+    mediationRatio,
+    ...inertiaValues,
+    ...susceptibilityValues,
+    ...deltaUValues,
+  ];
+  if (derivedValues.some(value => !Number.isFinite(value))) {
+    return unavailable("invalid_data", "non_finite_derived_metric");
+  }
+
   return {
     experimentId: "e8_susceptibility",
     runtimeMode: "cognitive",
     sampleSize: inertiaValues.length,
     susceptibilityMediation: {
+      status: "computed",
+      usableObservationCount: susceptibilityValues.length,
+      legacyMixedExcludedCount,
+      unusableObservationCount,
+      malformedObservationCount,
       indirectEffect,
       indirectEffectCI: indirectCI,
       directEffect,
@@ -1045,6 +1210,55 @@ export function computeE8Susceptibility(data: RawRunData[]): ExperimentMetrics {
       },
     },
   };
+}
+
+/** E8 最小可识别性所需的最小 transition 数（回归至少需若干点）。 */
+const MIN_TRANSITIONS_FOR_MEDIATION = 3;
+/** 视为"无变化"的方差阈值。 */
+const VARIANCE_EPSILON = 1e-9;
+
+/** 按 agent 分组的 transition 数：n 个有序 snapshot → 最多 n-1 个候选 transition。 */
+function countTransitions(snaps: CognitiveStateSnapshot[]): number {
+  let count = 0;
+  for (const agentSnaps of groupSnapsByAgent(snaps).values()) {
+    count += Math.max(0, agentSnaps.length - 1);
+  }
+  return count;
+}
+
+function groupSnapsByAgent(snaps: CognitiveStateSnapshot[]): Map<string, CognitiveStateSnapshot[]> {
+  const grouped = new Map<string, CognitiveStateSnapshot[]>();
+  for (const snap of snaps) {
+    if (!grouped.has(snap.agentId)) grouped.set(snap.agentId, []);
+    grouped.get(snap.agentId)!.push(snap);
+  }
+  return grouped;
+}
+
+/**
+ * 最小数学可识别性检查：
+ *   - transition 数 >= MIN_TRANSITIONS_FOR_MEDIATION；
+ *   - inertia 有变化（a 路径可辨）；
+ *   - 行为易感性有变化；
+ *   - 对 inertia 回归后的残差易感性有变化（b 路径可辨）。
+ * 任一不满足 → 不足以支撑可信的中介估计。
+ */
+function hasIdentifiableVariation(inertia: number[], susceptibility: number[]): boolean {
+  if (susceptibility.length < MIN_TRANSITIONS_FOR_MEDIATION) return false;
+  if (varianceOf(inertia) <= VARIANCE_EPSILON) return false;
+  if (varianceOf(susceptibility) <= VARIANCE_EPSILON) return false;
+  const aModel = simpleLinearRegression(inertia, susceptibility);
+  const a = aModel.beta;
+  const mx = mean(inertia);
+  const intercept = mean(susceptibility) - a * mx;
+  const residuals = susceptibility.map((s, i) => s - (a * inertia[i] + intercept));
+  return varianceOf(residuals) > VARIANCE_EPSILON;
+}
+
+function varianceOf(values: number[]): number {
+  if (values.length < 2) return 0;
+  const m = mean(values);
+  return values.reduce((sum, v) => sum + (v - m) ** 2, 0) / values.length;
 }
 
 // ============================================================================
@@ -1421,4 +1635,40 @@ export function computeMetrics(
 
   metrics.global = computeGlobalMetrics(data);
   return metrics;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isUnitInterval(value: unknown): value is number {
+  return isFiniteNumber(value) && value >= 0 && value <= 1;
+}
+
+function isFiniteScoreMap(value: unknown): value is Record<string, number> {
+  return value !== null
+    && typeof value === "object"
+    && !Array.isArray(value)
+    && Object.values(value as Record<string, unknown>).every(isFiniteNumber);
+}
+
+/** Runtime validation for the schema-2 cognitive fields consumed by E6/E8. */
+function isValidSchema2CognitiveSnapshot(snapshot: CognitiveStateSnapshot): boolean {
+  if (!Number.isSafeInteger(snapshot.round) || snapshot.round < 1) return false;
+  if (typeof snapshot.agentId !== "string" || snapshot.agentId.length === 0) return false;
+  if (typeof snapshot.behavioralSusceptibilityUsable !== "boolean") return false;
+  if (!isUnitInterval(snapshot.behavioralSusceptibilityEstimate)) return false;
+  if (!isUnitInterval(snapshot.behavioralSusceptibilityConfidence)) return false;
+  if (!isUnitInterval(snapshot.socialUpdateGain)) return false;
+  if (!isUnitInterval(snapshot.susceptibility)) return false;
+  if (snapshot.susceptibility !== snapshot.socialUpdateGain) return false;
+  if (!isFiniteScoreMap(snapshot.utility)) return false;
+  return [
+    snapshot.utilityIntensity,
+    snapshot.evidenceCoverage,
+    snapshot.inertiaStrength,
+    snapshot.confidenceOverall,
+    snapshot.belief,
+    snapshot.oldConfidence,
+  ].every(isFiniteNumber);
 }

@@ -59,6 +59,7 @@ import {
   updateEvidence,
   updateConfidence,
   updateInertia,
+  computeSocialUpdateGain,
   type AgentCognitiveState,
 } from "../lib/agent/cognitiveState";
 import { EvaluationEngine } from "../lib/evaluation";
@@ -961,10 +962,8 @@ export class GovernanceRuntime {
       const state = this.cognitiveStates.get(agentId);
       if (!state) continue;
 
-      const susceptibility = Math.max(
-        (1 - state.inertia.strength) * (1 - state.confidence.overall),
-        0.05,
-      );
+      // 统一 helper（含 0.05 floor），与 MeasurementLayer / native engine 一致。
+      const socialUpdateGain = computeSocialUpdateGain(state.inertia, state.confidence);
 
       result.set(agentId, {
         agentId,
@@ -985,7 +984,13 @@ export class GovernanceRuntime {
         confidence: {
           overall: state.confidence.overall,
         },
-        susceptibility,
+        susceptibility: socialUpdateGain,
+        socialUpdateGain,
+        behavioralSusceptibility: {
+          estimate: state.susceptibility.estimate,
+          confidence: state.susceptibility.confidence,
+          usable: state.susceptibility.usable,
+        },
       });
     }
 

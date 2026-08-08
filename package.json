@@ -12,7 +12,8 @@
     "demo": "npx tsx experiments/demo.ts",
     "experiment": "tsx experiments/v2/run.ts",
     "analyze": "tsx experiments/v2/analyze.ts",
-    "sensitivity": "tsx experiments/v2/sensitivity.ts"
+    "sensitivity": "tsx experiments/v2/sensitivity.ts",
+    "verify:replay": "tsx experiments/campaign/verify_replay.ts"
   },
   "dependencies": {
     "next": "14.2.5",

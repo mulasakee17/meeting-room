@@ -18,6 +18,12 @@
  * 标注 @deprecated 的字段为 v6 前旧路径，保留用于 E9_D_OLD 基线对照与冷启动。
  */
 
+import {
+  LEGACY_POSTHOC_ROLE_INERTIA_POLICY,
+  resolveRoleInertiaPrior,
+  type RoleInertiaPriorPolicy,
+} from "./roleInertiaPrior";
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -176,34 +182,12 @@ export interface AgentCognitiveState {
 // ============================================================================
 
 /**
- * 角色 → 基础惯性映射（关键词匹配）
+ * 角色 → 基础惯性映射（关键词匹配）。
  *
- * 使用关键词而非精确角色名匹配，支持中英文角色名。
- * 匹配顺序：按优先级从高到低，命中第一个即返回。
+ * 具体规则已版本化到 roleInertiaPrior.ts 的 legacy-posthoc@1.0.0 策略；
+ * 此处仅通过共享 resolver 消费，不再维护私有重复表。匹配顺序：按优先级
+ * 从高到低，命中第一个即返回。
  */
-const ROLE_INERTIA_RULES: Array<{ keywords: string[]; inertia: number }> = [
-  { keywords: ["expert", "专家", "资深", "senior"], inertia: 0.6 },
-  { keywords: ["director", "总监"], inertia: 0.55 },
-  { keywords: ["analyst", "分析师", "分析"], inertia: 0.5 },
-  { keywords: ["assessor", "evaluator", "评估师"], inertia: 0.5 },
-  { keywords: ["engineer", "工程师"], inertia: 0.5 },
-  { keywords: ["consultant", "advisor", "顾问"], inertia: 0.45 },
-  { keywords: ["manager", "经理"], inertia: 0.45 },
-  { keywords: ["critic", "批评", "质疑", "审查"], inertia: 0.4 },
-  { keywords: ["diplomat", "外交", "协调"], inertia: 0.35 },
-  { keywords: ["moderator", "主持人", "协调员", "facilitator"], inertia: 0.3 },
-  { keywords: ["novice", "新手", "初级", "junior"], inertia: 0.3 },
-];
-
-function getRoleInertia(role: string): number {
-  const lower = role.toLowerCase();
-  for (const rule of ROLE_INERTIA_RULES) {
-    if (rule.keywords.some(kw => lower.includes(kw))) {
-      return rule.inertia;
-    }
-  }
-  return 0.4; // default
-}
 
 /** 惯性衰减系数（每轮衰减 2%，降低衰减速度以保留角色差异） */
 const INERTIA_DECAY = 0.98;
@@ -302,7 +286,7 @@ export function beliefToCognitiveState(
     ? sortedScores[0] - sortedScores[1]
     : absBelief;
 
-  const roleBase = getRoleInertia(agentRole);
+  const roleBase = resolveRoleInertiaPrior(agentRole, LEGACY_POSTHOC_ROLE_INERTIA_POLICY);
 
   return {
     agentId,
@@ -587,8 +571,9 @@ export function updateInertia(
   spokeThisRound: boolean,
   evidence: Evidence,
   wasRefuted: boolean,
+  policy: RoleInertiaPriorPolicy = LEGACY_POSTHOC_ROLE_INERTIA_POLICY,
 ): Inertia {
-  const roleBase = getRoleInertia(agentRole);
+  const roleBase = resolveRoleInertiaPrior(agentRole, policy);
 
   let expressionBased = currentInertia.source.expressionBased;
   if (spokeThisRound) {
@@ -652,10 +637,8 @@ export function updateUtility(
   confidence: Confidence,
   options: OptionId[],
 ): Utility {
-  const susceptibility = Math.max(
-    (1 - inertia.strength) * (1 - confidence.overall),
-    MIN_SUSCEPTIBILITY,
-  );
+  // DeGroot 混合系数是 socialUpdateGain（公式系数），不是行为易感性。
+  const socialUpdateGain = computeSocialUpdateGain(inertia, confidence);
 
   // 如果没发言，不接受本轮影响（没听到别人说了什么）
   if (!spokeThisRound && otherAgentUtilities.length === 0) {
@@ -684,7 +667,7 @@ export function updateUtility(
         ) / otherAgentUtilities.length;
 
     newScores[opt] = Math.max(-1, Math.min(1,
-      (1 - susceptibility) * currentScore + susceptibility * otherWeightedAvg,
+      (1 - socialUpdateGain) * currentScore + socialUpdateGain * otherWeightedAvg,
     ));
   }
 
@@ -792,14 +775,27 @@ export function updateCognitiveState(input: CognitiveStateUpdateInput): AgentCog
 // ============================================================================
 
 /**
- * @deprecated 自 v6 起，Λ 不再从公式计算。使用 BehaviorEvents.timesExposed/timesRespondedAfterExposure
- *   通过 ProgressiveEstimator 估计。此函数保留用于向后兼容测试。
+ * DeGroot 社会更新增益（socialUpdateGain）——操作化混合系数：
+ *   max((1 - inertia) * (1 - confidence), 0.05)
+ *
+ * 这是策略/模型系数，控制另一个 agent 的表达效用进入本地更新的程度。
+ * 它不是经验观测的行为易感性：行为易感性（Λ）由 ProgressiveEstimator 从
+ * 暴露-响应事件估计（timesRespondedAfterExposure / timesExposed，含 usable
+ * 门控）。两者绝不回退互换——缺失/不可用的行为估计保持缺失。
  */
-export function computeSusceptibility(inertia: Inertia, confidence: Confidence): number {
+export function computeSocialUpdateGain(inertia: Inertia, confidence: Confidence): number {
   return Math.max(
     (1 - inertia.strength) * (1 - confidence.overall),
     MIN_SUSCEPTIBILITY,
   );
+}
+
+/**
+ * @deprecated 自语义分层起用 computeSocialUpdateGain。临时精确别名，
+ *   仅用于外部兼容；新内部代码不得调用。
+ */
+export function computeSusceptibility(inertia: Inertia, confidence: Confidence): number {
+  return computeSocialUpdateGain(inertia, confidence);
 }
 
 /** 计算两个 utility 之间的 L2 距离 */

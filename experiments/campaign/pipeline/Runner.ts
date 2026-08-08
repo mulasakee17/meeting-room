@@ -13,13 +13,14 @@ import { NativeCognitiveEngine } from "../../../src/lib/discussion/nativeCogniti
 import type { LLMConfig } from "../../../src/lib/llm/providers";
 import { detectLLMProvider } from "../../../src/lib/llm/providers";
 import type { ExperimentConfig, RawRunData, CognitiveStateSnapshot, RuntimeMode } from "../types";
+import { RAW_SCHEMA_VERSION } from "../types";
 import {
   extractRanking,
   kendallTau,
   mulberry32,
 } from "../../v2/statsShared";
 import {
-  computeSusceptibility,
+  computeSocialUpdateGain,
   cognitiveStateToBelief,
   cognitiveStateToConfidence,
   stanceFromItemBeliefs,
@@ -35,8 +36,25 @@ import { resolveCandidateOptions, runHiddenBenchProtocol } from "./hiddenbenchPr
 // Scenario Loading
 // ============================================================================
 
+export type ScenarioLoader = (
+  scenarioId: string,
+  taskIndex?: number,
+  promptStyle?: "hint" | "nohint",
+) => { task: any; dataDir: string };
+
+let scenarioLoader: ScenarioLoader | undefined;
+
+/**
+ * 测试注入点：替换场景加载器，避免测试依赖 vitest 无法解析的 CJS `require`
+ * 加载 `.ts` 场景模块。仅测试使用；生产路径保持原 require 行为。
+ */
+export function setScenarioLoaderForTesting(loader: ScenarioLoader | undefined): void {
+  scenarioLoader = loader;
+}
+
 /** 加载场景配置。taskIndex 仅 hiddenbench 使用（指定跑第几个 HiddenBench 任务） */
 function loadScenario(scenarioId: string, taskIndex?: number, promptStyle?: "hint" | "nohint"): { task: any; dataDir: string } {
+  if (scenarioLoader) return scenarioLoader(scenarioId, taskIndex, promptStyle);
   switch (scenarioId) {
     case "ma": {
       const { TASK_MA } = require("../../lunar_survival/config");
@@ -259,12 +277,10 @@ function extractCognitiveSnapshots(
   const roundOpinions = roundData?.opinions || [];
 
   for (const [agentId, state] of states) {
-    // v6: 优先使用 ProgressiveEstimator 渐进估计的 susceptibility（基于暴露事件），
-    // 与 MeasurementLayer.buildDetectorInput 保持一致。
-    // 仅在不可用（冷启动，暴露事件 < 2）时回退到旧公式 (1-I)(1-C)。
-    const susc = state.susceptibility.usable
-      ? state.susceptibility.estimate
-      : computeSusceptibility(state.inertia, state.confidence);
+    // schema-2：socialUpdateGain（DeGroot 混合系数）与行为易感性分离存储。
+    // susceptibility（deprecated 字段）恒等于 socialUpdateGain，绝不填入
+    // 行为估计/公式值的逐轮混合；行为易感性保存在独立字段。
+    const socialUpdateGain = computeSocialUpdateGain(state.inertia, state.confidence);
 
     // 提取该 agent 的 LLM 原生 ranking top（rank=1 的 item）
     const agentOpinion = roundOpinions.find(o => o.agentId === agentId);
@@ -284,7 +300,11 @@ function extractCognitiveSnapshots(
       evidenceRecentGain: state.evidence.recentGain,
       inertiaStrength: state.inertia.strength,
       confidenceOverall: state.confidence.overall,
-      susceptibility: susc,
+      susceptibility: socialUpdateGain,
+      socialUpdateGain,
+      behavioralSusceptibilityEstimate: state.susceptibility.estimate,
+      behavioralSusceptibilityConfidence: state.susceptibility.confidence,
+      behavioralSusceptibilityUsable: state.susceptibility.usable,
       statedStance: agentOpinion?.itemBeliefs
         ? stanceFromItemBeliefs(agentOpinion.itemBeliefs)
         : cognitiveStateToBelief(state),
@@ -341,6 +361,7 @@ async function runHiddenBenchSingle(
     runtimeMode: "native_cognitive", // 占位——HiddenBench 协议不区分 runtime
     seed,
     runIndex,
+    rawSchemaVersion: RAW_SCHEMA_VERSION,
     timestamp: new Date().toISOString(),
     scenario: config.scenario,
     agentCount: config.agentCount,
@@ -743,6 +764,7 @@ export async function runSingle(
     runtimeMode,
     seed,
     runIndex,
+    rawSchemaVersion: RAW_SCHEMA_VERSION,
     timestamp: new Date().toISOString(),
     scenario: config.scenario,
     agentCount: config.agentCount,

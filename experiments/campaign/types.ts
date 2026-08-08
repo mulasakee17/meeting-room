@@ -16,6 +16,18 @@ export type GovernanceMode = "none" | "detect-only" | "full" | "diversity_only" 
 export type ScenarioId = "ma" | "crisis" | "crisis_v2" | "supplier" | "invest" | "er_triage" | "fraud" | "university" | "hiddenbench";
 export type LLMProvider = "qwen" | "gpt4o" | "deepseek";
 
+/**
+ * Whether a confirmatory analysis is safe to consume.
+ *
+ * Only `computed` carries inferential quantities. Every other status is a
+ * fail-closed terminal state and MUST NOT be rendered as a zero-valued result.
+ */
+export type ConfirmatoryAnalysisStatus =
+  | "computed"
+  | "insufficient_data"
+  | "legacy_mixed_excluded"
+  | "invalid_data";
+
 export interface ExperimentConfig {
   /** 实验 ID，如 "e1_stability" */
   id: string;
@@ -99,7 +111,17 @@ export interface CognitiveStateSnapshot {
   evidenceRecentGain: number;
   inertiaStrength: number;
   confidenceOverall: number;
+  /**
+   * @deprecated schema-1 兼容。schema-2 下恒等于 socialUpdateGain；
+   *   绝不填入行为估计/公式值的逐轮混合。
+   */
   susceptibility: number;
+  /** DeGroot 社会更新增益 = max((1-I)(1-C), 0.05)。政策/模型系数。schema-2 必有。 */
+  socialUpdateGain?: number;
+  /** 行为易感性估计值（暴露-响应观测）；usable=false 时无 confirmatory 意义。schema-2 必有。 */
+  behavioralSusceptibilityEstimate?: number;
+  behavioralSusceptibilityConfidence?: number;
+  behavioralSusceptibilityUsable?: boolean;
   /** ROADMAP_V5: 从 itemBeliefs 派生的标量立场汇总（stated stance） */
   statedStance: number;
   belief: number;
@@ -108,6 +130,19 @@ export interface CognitiveStateSnapshot {
   /** LLM itemBeliefs 中 rank=1 的 item（用于 Utility-Ranking Consistency 验证） */
   rankingTopChoice?: string;
 }
+
+/**
+ * 原始数据 schema 版本（additive；旧文件无此字段，视为 1.0）。
+ *
+ * - "1.0"（缺省）：governanceEstimateHistory 记录无精确 input 快照，
+ *   无法从记录本身重放，视为 legacy_unverifiable。
+ * - "2.0"：governanceEstimateHistory 记录（若存在）含精确 input 快照，
+ *   可通过 verify_replay 逐条重放验证。
+ */
+export type RawSchemaVersion = "1.0" | "2.0";
+
+/** 当前 Runner 写出的 schema 版本。两条写路径必须一致使用此常量。 */
+export const RAW_SCHEMA_VERSION: RawSchemaVersion = "2.0";
 
 /** 单次运行原始数据 */
 export interface RawRunData {
@@ -142,6 +177,11 @@ export interface RawRunData {
     unmatchedLabels: string[];
     rankingError?: string;
   };
+  /**
+   * 原始数据 schema 版本（additive）。缺省视为 "1.0"（旧数据）。
+   * "2.0" 表示 governanceEstimateHistory 记录（若存在）含精确 input 快照。
+   */
+  rawSchemaVersion?: RawSchemaVersion;
   /** 每轮信念快照 */
   beliefTrajectory: Array<{
     round: number;
@@ -397,14 +437,30 @@ export interface ExperimentMetrics {
   };
   /** E6: 状态解耦 */
   stateDecoupling?: {
-    maxCorrCognitive: number;
-    maxCorrBelief: number;
-    vifMax: number;
-    conditionNumber: number;
+    status: ConfirmatoryAnalysisStatus;
+    /** 进入分析的 schema-2、usable、有限数 snapshot 数。 */
+    usableObservationCount: number;
+    /** 被排除的 schema-1 snapshot 数。 */
+    legacyMixedExcludedCount: number;
+    /** schema-2 中 behavioral susceptibility usable=false 的 snapshot 数。 */
+    unusableObservationCount: number;
+    /** schema-2 契约损坏的 snapshot 数；大于 0 时 status 必须为 invalid_data。 */
+    malformedObservationCount: number;
+    /** 进入 paired-bootstrap 的独立 run 数。 */
+    eligibleRunCount: number;
+    /** 非 computed 状态的机器可读原因。 */
+    invalidReason?: string;
+    /** 以下推断量仅在 status=computed 时存在。 */
+    maxCorrCognitive?: number;
+    maxCorrBelief?: number;
+    vifMax?: number;
+    conditionNumber?: number;
     /** 完整相关矩阵（用于 Fig 6 heatmap） */
     correlationMatrix?: number[][];
     /** 变量名 */
     variableNames?: string[];
+    /** 是否排除了 schema-1 混合易感性数据（Λ 维度只用 schema-2 usable 行为估计） */
+    legacyMixedExcluded?: boolean;
     /** Bootstrap 原始数据：per-run (cogCorr, belCorr) 配对 */
     _bootstrapData?: {
       corrCognitivePerRun: number[];
@@ -426,15 +482,34 @@ export interface ExperimentMetrics {
       groundTruths: boolean[];
     };
   };
-  /** E8: Susceptibility 中介 */
+  /**
+   * E8: Susceptibility 中介
+   *
+   * confirmatory 状态（fail-closed）：
+   * - "computed"：基于 schema-2 usable 行为易感性的确认性结果。
+   * - "legacy_mixed_excluded"：无 schema-2 usable 观测（全部是 schema-1
+   *   混合易感性），不产生确认性 claim。
+   * - "insufficient_data"：schema-2 但 usable 观测不足。
+   */
   susceptibilityMediation?: {
-    /** 直接效应：ΔE → ΔU 回归系数（非中介效应 a×b 路径） */
-    indirectEffect: number;
-    indirectEffectCI: [number, number];
-    directEffect: number;
-    totalEffect: number;
-    mediationRatio: number;
-    /** Bootstrap 原始数据：每个观测的 (I, Λ, ΔU) */
+    status: ConfirmatoryAnalysisStatus;
+    /** 进入 confirmatory 的 schema-2 有效 transition 数 */
+    usableObservationCount: number;
+    /** 被排除的 schema-1 混合 transition 数（n 个有序 snapshot → n-1 候选 transition） */
+    legacyMixedExcludedCount: number;
+    /** schema-2 中 usable=false（行为估计不足）而被排除的 transition 数 */
+    unusableObservationCount: number;
+    /** schema-2 中 usable=true 但 estimate 缺失/NaN/Infinity/越界而被排除的 transition 数 */
+    malformedObservationCount: number;
+    /** 非 computed 状态的机器可读原因。 */
+    invalidReason?: string;
+    /** 直接效应：ΔE → ΔU 回归系数（非中介效应 a×b 路径）；仅 status=computed 时有值 */
+    indirectEffect?: number;
+    indirectEffectCI?: [number, number];
+    directEffect?: number;
+    totalEffect?: number;
+    mediationRatio?: number;
+    /** Bootstrap 原始数据：每个观测的 (I, Λ, ΔU)；仅 status=computed 时有值 */
     _bootstrapData?: {
       inertiaValues: number[];
       susceptibilityValues: number[];
@@ -521,6 +596,8 @@ export interface TestResult {
   sampleSize: number;
   significant: boolean;            // p < 0.05 (adjusted)
   conclusion: string;              // 一句话结论
+  /** Confirmatory analyses expose this so reports can render N/A fail-closed. */
+  analysisStatus?: ConfirmatoryAnalysisStatus;
   details: Record<string, unknown>; // 额外统计细节
 }
 

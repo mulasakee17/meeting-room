@@ -38,7 +38,7 @@ function makeState(
   agentId: string,
   overrides: Partial<CognitiveGovernanceState> = {},
 ): CognitiveGovernanceState {
-  return {
+  const state: CognitiveGovernanceState = {
     agentId,
     utility: {
       scores: { A: 0.7, B: 0.3 },
@@ -62,9 +62,16 @@ function makeState(
       ...overrides.confidence,
     },
     susceptibility: 0.2,
+    socialUpdateGain: 0.2,
     rankingTopChoice: "A",
     ...overrides,
   };
+  // 旧式测试只覆盖 susceptibility：同步 socialUpdateGain（其兼容语义即
+  // susceptibility），保持 detector 输入一致。
+  if (!Object.prototype.hasOwnProperty.call(overrides, "socialUpdateGain")) {
+    state.socialUpdateGain = state.susceptibility;
+  }
+  return state;
 }
 
 /** 构造多个高度同质的 agent（echo chamber 场景） */
@@ -333,7 +340,9 @@ describe("detectAuthorityBiasCognitive", () => {
     // susceptibilityAsymmetry = 0.49/0.05 = 9.8
     // signal = (2.05-1)*0.5 + (9.8-1)*0.5 = 0.525 + 4.4 = 4.9 > 0.6
     expect(result.inertiaConcentration).toBeGreaterThan(1.3);
-    expect(result.susceptibilityAsymmetry).toBeGreaterThan(2.0);
+    // detector 消费 socialUpdateGain；susceptibilityAsymmetry 为等值兼容别名。
+    expect(result.socialUpdateGainAsymmetry).toBeGreaterThan(2.0);
+    expect(result.socialUpdateGainAsymmetry).toBe(result.susceptibilityAsymmetry);
     expect(result.detected).toBe(true);
     expect(result.dominantAgentId).toBe("a1");
   });

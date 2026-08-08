@@ -145,6 +145,11 @@ function generateFig2(metrics: ExperimentMetrics, test: TestResult): string {
 
 function generateFig6(metrics: ExperimentMetrics, test: TestResult): string {
   const sd = metrics.stateDecoupling!;
+  if (sd.status !== "computed"
+    || sd.maxCorrCognitive === undefined
+    || sd.maxCorrBelief === undefined) {
+    throw new Error("Fig 6 requires a computed E6 result");
+  }
   // 使用实际计算的相关矩阵，而非占位符
   const matrix = sd.correlationMatrix;
   const labels = sd.variableNames || ["U", "E", "I", "C", "Λ"];
@@ -246,7 +251,10 @@ export function generateFigures(
     }
     case "e6_decoupling": {
       const test = testMap.get("e6_decoupling");
-      if (test && metrics.stateDecoupling) {
+      // Non-computed confirmatory analyses intentionally produce no figure;
+      // rendering a zero/placeholder heatmap would look like a scientific
+      // result rather than an unavailable analysis.
+      if (test && metrics.stateDecoupling?.status === "computed") {
         const svg = generateFig6(metrics, test);
         const filePath = path.join(outputDir, "fig6_decoupling.svg");
         fs.writeFileSync(filePath, svg);

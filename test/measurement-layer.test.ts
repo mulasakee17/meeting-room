@@ -1050,6 +1050,11 @@ describe("MeasurementLayer.buildDetectorInput", () => {
     expect(input[0].inertia).toBeDefined();
     expect(input[0].confidence).toBeDefined();
     expect(input[0].susceptibility).toBeDefined();
+    // 两量分离：socialUpdateGain（公式系数）与 behavioralSusceptibility
+    // （暴露-响应估计对象）并存，provenance 不同。
+    expect(typeof input[0].socialUpdateGain).toBe("number");
+    expect(input[0].behavioralSusceptibility).toBeDefined();
+    expect(typeof input[0].behavioralSusceptibility!.usable).toBe("boolean");
   });
 });
 

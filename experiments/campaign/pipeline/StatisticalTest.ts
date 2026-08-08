@@ -681,60 +681,80 @@ function testE5(metrics: ExperimentMetrics): TestResult {
 // ============================================================================
 
 function testE6(metrics: ExperimentMetrics): TestResult {
-  const sd = metrics.stateDecoupling!;
-  const maxCorrCog = sd.maxCorrCognitive;
-  const maxCorrBel = sd.maxCorrBelief;
-
-  // v6.1 修复：Fisher z 检验的独立性违反
-  // 旧实现用全局聚合相关 + se=sqrt(2/(n-3))，n=sampleSize（snapshot 数，可能数百），
-  // 但相关系数本身聚合所有 run 所有轮，观测独立性被违反，se 严重低估，p 值偏小。
-  // 新实现：主推断用 per-run 配对 Bootstrap CI；Fisher z 仅作回退（小样本时）。
-  const bd = sd._bootstrapData;
-  const hasBootstrap = bd && bd.corrCognitivePerRun.length >= 2 && bd.corrBeliefPerRun.length >= 2;
-  let ciLower: number, ciUpper: number;
-  let pValue: number;
-  let zDiff: number | undefined;
+  const sd = metrics.stateDecoupling;
   const n = metrics.sampleSize;
-
-  if (hasBootstrap) {
-    // 主推断：per-run 配对 Bootstrap（尊重 run 间独立性）
-    const rng = mulberry32(BOOTSTRAP_SEED);
-    const nBoot = 5000;
-    const m = Math.min(bd!.corrCognitivePerRun.length, bd!.corrBeliefPerRun.length);
-    const bootDiffs: number[] = [];
-    for (let b = 0; b < nBoot; b++) {
-      let sumCog = 0, sumBel = 0;
-      for (let i = 0; i < m; i++) {
-        const idx = Math.floor(rng() * m);
-        sumCog += bd!.corrCognitivePerRun[idx];
-        sumBel += bd!.corrBeliefPerRun[idx];
-      }
-      bootDiffs.push(sumBel / m - sumCog / m);
-    }
-    bootDiffs.sort((a, b) => a - b);
-    ciLower = bootDiffs[Math.floor(nBoot * 0.025)];
-    ciUpper = bootDiffs[Math.floor(nBoot * 0.975)];
-    // Bootstrap p 值：Δ|r| <= 0 的比例 × 2（双侧）
-    // (count+1)/(n+1) 校正避免 p=0.000 假阳性（与项目硬约束一致）
-    const countLeq0 = bootDiffs.filter(d => d <= 0).length;
-    const countGt0 = nBoot - countLeq0;
-    const propLeq0 = (Math.min(countLeq0, countGt0) + 1) / (nBoot + 1);
-    pValue = Math.min(1, 2 * propLeq0);
-  } else {
-    // 回退：Fisher z（仅当 per-run 数据不足时）
-    const zCog = Math.atanh(Math.min(Math.abs(maxCorrCog), 0.999));
-    const zBel = Math.atanh(Math.min(Math.abs(maxCorrBel), 0.999));
-    const se = Math.sqrt(2 / Math.max(n - 3, 1));
-    zDiff = (zBel - zCog) / (se || 1);
-    pValue = 1 - normalCDF(Math.abs(zDiff));
-    ciLower = (maxCorrBel - maxCorrCog) - 1.96 * se;
-    ciUpper = (maxCorrBel - maxCorrCog) + 1.96 * se;
+  if (!sd || sd.status !== "computed") {
+    const status = sd?.status ?? "invalid_data";
+    return {
+      experimentId: "e6_decoupling",
+      testName: "State Decoupling (Bootstrap Δ|r|)",
+      pValue: 1,
+      effectSize: 0,
+      effectSizeName: "Δ|r|",
+      ciLower: 0,
+      ciUpper: 0,
+      ciLevel: 0.95,
+      sampleSize: n,
+      significant: false,
+      analysisStatus: status,
+      conclusion: `E6 unavailable (${status}); no confirmatory decoupling claim.`,
+      details: {
+        status,
+        invalidReason: sd?.invalidReason,
+        usableObservationCount: sd?.usableObservationCount ?? 0,
+        legacyMixedExcludedCount: sd?.legacyMixedExcludedCount ?? 0,
+        unusableObservationCount: sd?.unusableObservationCount ?? 0,
+        malformedObservationCount: sd?.malformedObservationCount ?? 0,
+        eligibleRunCount: sd?.eligibleRunCount ?? 0,
+      },
+    };
   }
 
-  // 显著性：Bootstrap CI 不跨 0，或 Fisher z p < 0.05（回退）
-  const significant = hasBootstrap
-    ? (ciLower > 0) === (ciUpper > 0) && ciLower !== 0 && ciUpper !== 0
-    : pValue < 0.05;
+  const maxCorrCog = sd.maxCorrCognitive;
+  const maxCorrBel = sd.maxCorrBelief;
+  const bd = sd._bootstrapData;
+  if (maxCorrCog === undefined || maxCorrBel === undefined
+    || !Number.isFinite(maxCorrCog) || !Number.isFinite(maxCorrBel)
+    || !bd || bd.corrCognitivePerRun.length < 2 || bd.corrBeliefPerRun.length < 2) {
+    return {
+      experimentId: "e6_decoupling",
+      testName: "State Decoupling (Bootstrap Δ|r|)",
+      pValue: 1,
+      effectSize: 0,
+      effectSizeName: "Δ|r|",
+      ciLower: 0,
+      ciUpper: 0,
+      ciLevel: 0.95,
+      sampleSize: n,
+      significant: false,
+      analysisStatus: "invalid_data",
+      conclusion: "E6 computed contract is incomplete; no confirmatory decoupling claim.",
+      details: { status: "invalid_data", invalidReason: "incomplete_computed_contract" },
+    };
+  }
+
+  // Confirmatory inference is exclusively per-run paired bootstrap. The old
+  // snapshot-level Fisher-z fallback was pseudo-replicated and is not used.
+  const rng = mulberry32(BOOTSTRAP_SEED);
+  const nBoot = 5000;
+  const m = Math.min(bd.corrCognitivePerRun.length, bd.corrBeliefPerRun.length);
+  const bootDiffs: number[] = [];
+  for (let b = 0; b < nBoot; b++) {
+    let sumCog = 0, sumBel = 0;
+    for (let i = 0; i < m; i++) {
+      const idx = Math.floor(rng() * m);
+      sumCog += bd.corrCognitivePerRun[idx];
+      sumBel += bd.corrBeliefPerRun[idx];
+    }
+    bootDiffs.push(sumBel / m - sumCog / m);
+  }
+  bootDiffs.sort((a, b) => a - b);
+  const ciLower = bootDiffs[Math.floor(nBoot * 0.025)];
+  const ciUpper = bootDiffs[Math.floor(nBoot * 0.975)];
+  const countLeq0 = bootDiffs.filter(d => d <= 0).length;
+  const countGt0 = nBoot - countLeq0;
+  const pValue = Math.min(1, 2 * ((Math.min(countLeq0, countGt0) + 1) / (nBoot + 1)));
+  const significant = (ciLower > 0) === (ciUpper > 0) && ciLower !== 0 && ciUpper !== 0;
 
   return {
     experimentId: "e6_decoupling",
@@ -747,6 +767,7 @@ function testE6(metrics: ExperimentMetrics): TestResult {
     ciLevel: 0.95,
     sampleSize: n,
     significant,
+    analysisStatus: "computed",
     conclusion: significant
       ? `Cognitive State 变量间最大相关性 (${maxCorrCog.toFixed(3)}) 显著低于 Belief 模型 (${maxCorrBel.toFixed(3)}, p=${pValue.toFixed(4)})`
       : `Cognitive State 解耦性未显著优于 Belief (p=${pValue.toFixed(4)})`,
@@ -754,8 +775,7 @@ function testE6(metrics: ExperimentMetrics): TestResult {
       maxCorrCognitive: maxCorrCog,
       maxCorrBelief: maxCorrBel,
       vifMax: sd.vifMax,
-      fisherZ: zDiff,
-      inferenceMethod: hasBootstrap ? "per-run paired bootstrap" : "fisher-z fallback",
+      inferenceMethod: "per-run paired bootstrap",
       ciLower,
       ciUpper,
     },
@@ -863,9 +883,40 @@ function computeF1FromBooleans(preds: boolean[], truths: boolean[]): number {
 // ============================================================================
 
 function testE8(metrics: ExperimentMetrics): TestResult {
-  const sm = metrics.susceptibilityMediation!;
-  const indirectEffect = sm.indirectEffect;
-  const mediationRatio = sm.mediationRatio;
+  const sm = metrics.susceptibilityMediation;
+  // fail-closed：legacy/insufficient/invalid 不产生确认性显著性 claim。
+  if (!sm || sm.status !== "computed") {
+    const status = sm?.status ?? "invalid_data";
+    return {
+      experimentId: "e8_susceptibility",
+      testName: "Susceptibility Mediation (a×b Bootstrap)",
+      pValue: 1,
+      effectSize: 0,
+      effectSizeName: "a×b",
+      ciLower: 0,
+      ciUpper: 0,
+      ciLevel: 0.95,
+      sampleSize: metrics.sampleSize,
+      significant: false,
+      analysisStatus: status,
+      conclusion: status === "legacy_mixed_excluded"
+        ? "Excluded: legacy/mixed susceptibility data cannot support a confirmatory mediation claim."
+        : status === "invalid_data"
+          ? "Invalid schema-2 susceptibility data; no confirmatory mediation claim."
+          : "Insufficient usable behavioral susceptibility observations; no confirmatory mediation claim.",
+      details: {
+        status,
+        invalidReason: sm?.invalidReason,
+        usableObservationCount: sm?.usableObservationCount ?? 0,
+        legacyMixedExcludedCount: sm?.legacyMixedExcludedCount ?? 0,
+        unusableObservationCount: sm?.unusableObservationCount ?? 0,
+        malformedObservationCount: sm?.malformedObservationCount ?? 0,
+      },
+    };
+  }
+  // status === "computed" 契约保证以下字段已填。
+  const indirectEffect = sm.indirectEffect!;
+  const mediationRatio = sm.mediationRatio!;
 
   // Bootstrap mediation test: 对 (I, Λ, ΔU) 三元组重采样，计算 a×b 的分布
   const bd = sm._bootstrapData;
@@ -945,6 +996,7 @@ function testE8(metrics: ExperimentMetrics): TestResult {
     ciUpper,
     ciLevel: 0.95,
     sampleSize: metrics.sampleSize,
+    analysisStatus: "computed",
     // 中介效应 a×b 显著：CI 两端同号（不跨越 0）
     // 修复：原 `ciLower > 0 !== ciUpper > 0` 因运算符优先级解析为 XOR，
     // 把"CI 跨 0（不显著）"误判为"显著"。改为同号判定。

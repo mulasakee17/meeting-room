@@ -101,8 +101,21 @@ export interface CognitiveGovernanceState {
     /** 总体确信度 */
     overall: number;
   };
-  /** 易感性 susceptibility = (1-ι)(1-c) */
+  /**
+   * @deprecated 兼容别名，等于 socialUpdateGain。绝不切换为行为易感性。
+   */
   susceptibility: number;
+  /** DeGroot 社会更新增益 = max((1-ι)(1-c), 0.05)。政策/模型系数。 */
+  socialUpdateGain: number;
+  /**
+   * 行为易感性（暴露-响应估计），与 socialUpdateGain 语义分离。
+   * 缺失/不可用（usable=false）时不得用 socialUpdateGain 顶替。
+   */
+  behavioralSusceptibility?: {
+    estimate: number;
+    confidence: number;
+    usable: boolean;
+  };
   /** LLM itemBeliefs 中 rank=1 的 item（用于 Utility-Ranking Consistency） */
   rankingTopChoice?: string;
 }

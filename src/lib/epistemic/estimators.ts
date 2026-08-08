@@ -198,7 +198,7 @@ export class GovernanceEstimatorRegistry {
     id: string,
     version: string,
     request: GovernanceProjectionRequest<Input, Config>,
-  ): GovernanceEstimate<Output> {
+  ): GovernanceEstimate<Output, Input, Config> {
     requireNonEmpty(request.name, "projection.name");
     const contract = this.get<Input, Output, Config>(id, version);
     contract.validateInput(request.input);
@@ -210,7 +210,7 @@ export class GovernanceEstimatorRegistry {
     const inputFingerprint = fingerprintEstimatorValue(input);
     const configFingerprint = fingerprintEstimatorValue(config);
 
-    let determinism: GovernanceEstimate<Output>["determinism"];
+    let determinism: GovernanceEstimate<Output, Input, Config>["determinism"];
     if (contract.determinism.kind === "deterministic") {
       determinism = { kind: "deterministic" };
     } else {
@@ -232,12 +232,16 @@ export class GovernanceEstimatorRegistry {
     for (const eventId of sourceEventIds) requireNonEmpty(eventId, "projection.sourceEventId");
     sourceEventIds.sort();
 
+    // Fresh canonical clones so caller mutation cannot alter registry internals.
+    // `input` is persisted alongside the fingerprint so the exact projection
+    // can be replayed from the record alone (schema 2.0).
     return {
       layer: "governance_estimate",
       name: request.name,
       estimatorId: contract.id,
       estimatorVersion: contract.version,
       sourceEventIds,
+      input: cloneCanonical(input),
       inputFingerprint,
       config: cloneCanonical(config),
       configFingerprint,

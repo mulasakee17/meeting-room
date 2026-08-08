@@ -29,7 +29,7 @@ import {
   updateInertia,
   updateUtility,
   extractEvidenceItems,
-  computeSusceptibility,
+  computeSocialUpdateGain,
   type AgentCognitiveState,
   type Utility,
   type Evidence,
@@ -1490,11 +1490,10 @@ export class MeasurementLayer {
     const states: CognitiveGovernanceState[] = [];
 
     for (const [agentId, cs] of this.cognitiveStates) {
-      // v6: 优先使用 ProgressiveEstimator 渐进估计的 susceptibility（基于暴露事件），
-      // 仅在不可用（暴露事件 < 2，短对话冷启动）时回退到旧公式 (1-I)(1-C)。
-      const susceptibility = cs.susceptibility.usable
-        ? cs.susceptibility.estimate
-        : computeSusceptibility(cs.inertia, cs.confidence);
+      // socialUpdateGain（DeGroot 混合系数）与行为易感性（暴露-响应观测）
+      // 语义分离：前者恒为公式值且含 0.05 floor；后者不可用（usable=false）
+      // 时保持缺失，绝不回退到公式值。
+      const socialUpdateGain = computeSocialUpdateGain(cs.inertia, cs.confidence);
 
       states.push({
         agentId,
@@ -1515,7 +1514,13 @@ export class MeasurementLayer {
         confidence: {
           overall: cs.confidence.overall,
         },
-        susceptibility,
+        susceptibility: socialUpdateGain,
+        socialUpdateGain,
+        behavioralSusceptibility: {
+          estimate: cs.susceptibility.estimate,
+          confidence: cs.susceptibility.confidence,
+          usable: cs.susceptibility.usable,
+        },
       });
     }
 

@@ -70,10 +70,23 @@ function generateMarkdown(metrics: ExperimentMetrics, tests: TestResult[], figur
       const sd = metrics.stateDecoupling!;
       lines.push("## State Decoupling (H6)");
       lines.push("");
-      lines.push("| Metric | Cognitive | Belief |");
-      lines.push("|--------|-----------|--------|");
-      lines.push(`| max \\|r\\| | ${sd.maxCorrCognitive.toFixed(3)} | ${sd.maxCorrBelief.toFixed(3)} |`);
-      lines.push(`| VIF max | ${sd.vifMax.toFixed(2)} | — |`);
+      if (sd.status !== "computed"
+        || sd.maxCorrCognitive === undefined
+        || sd.maxCorrBelief === undefined
+        || sd.vifMax === undefined) {
+        lines.push(`**Analysis status:** ${sd.status}`);
+        lines.push("");
+        lines.push(`No confirmatory H6 result was produced (${sd.invalidReason ?? "unavailable"}).`);
+        lines.push("");
+        lines.push(`Usable snapshots: ${sd.usableObservationCount}; legacy excluded: ${sd.legacyMixedExcludedCount}; `
+          + `unusable: ${sd.unusableObservationCount}; malformed: ${sd.malformedObservationCount}; `
+          + `eligible runs: ${sd.eligibleRunCount}.`);
+      } else {
+        lines.push("| Metric | Cognitive | Belief |");
+        lines.push("|--------|-----------|--------|");
+        lines.push(`| max \\|r\\| | ${sd.maxCorrCognitive.toFixed(3)} | ${sd.maxCorrBelief.toFixed(3)} |`);
+        lines.push(`| VIF max | ${sd.vifMax.toFixed(2)} | — |`);
+      }
       lines.push("");
       break;
     }
@@ -85,6 +98,13 @@ function generateMarkdown(metrics: ExperimentMetrics, tests: TestResult[], figur
   for (const test of tests) {
     lines.push(`### ${test.testName}`);
     lines.push("");
+    if (test.analysisStatus && test.analysisStatus !== "computed") {
+      lines.push(`**Analysis status:** ${test.analysisStatus}`);
+      lines.push("");
+      lines.push(`**Conclusion:** ${test.conclusion}`);
+      lines.push("");
+      continue;
+    }
     lines.push("| Metric | Value |");
     lines.push("|--------|-------|");
     lines.push(`| p-value | ${test.pValue.toFixed(4)} |`);
@@ -161,6 +181,12 @@ function generateLatex(metrics: ExperimentMetrics, tests: TestResult[]): string 
     case "e6_decoupling": {
       const sd = metrics.stateDecoupling!;
       const test = testMap.get("e6_decoupling");
+      if (sd.status !== "computed"
+        || sd.maxCorrCognitive === undefined
+        || sd.maxCorrBelief === undefined) {
+        lines.push(`% E6 unavailable: ${sd.status} (${sd.invalidReason ?? "unavailable"})`);
+        break;
+      }
       lines.push("\\begin{figure}[ht]");
       lines.push("  \\centering");
       lines.push("  \\includegraphics[width=\\columnwidth]{figures/fig6_decoupling.pdf}");
@@ -185,7 +211,11 @@ function generateLatex(metrics: ExperimentMetrics, tests: TestResult[]): string 
   lines.push("    Metric & Value & p-value \\\\");
   lines.push("    \\midrule");
   for (const test of tests) {
-    lines.push(`    ${test.testName} & ${test.effectSize.toFixed(3)} & ${test.pValue.toFixed(4)} \\\\`);
+    if (test.analysisStatus && test.analysisStatus !== "computed") {
+      lines.push(`    ${test.testName} & \\multicolumn{2}{c}{N/A (${test.analysisStatus})} \\\\`);
+    } else {
+      lines.push(`    ${test.testName} & ${test.effectSize.toFixed(3)} & ${test.pValue.toFixed(4)} \\\\`);
+    }
   }
   lines.push("    \\bottomrule");
   lines.push("  \\end{tabular}");
@@ -227,6 +257,13 @@ function generateResultSummary(metrics: ExperimentMetrics, tests: TestResult[]):
     }
     case "e6_decoupling": {
       const sd = metrics.stateDecoupling!;
+      if (sd.status !== "computed"
+        || sd.maxCorrCognitive === undefined
+        || sd.maxCorrBelief === undefined
+        || test.analysisStatus !== "computed") {
+        return `E6 was not computed (${sd.status}; ${sd.invalidReason ?? "unavailable"}). `
+          + `No confirmatory state-decoupling claim is available.`;
+      }
       return `The maximum pairwise correlation among Cognitive State variables ` +
         `($|r|_{\\text{max}} = ${sd.maxCorrCognitive.toFixed(3)}$) was significantly lower than ` +
         `the Belief-confidence correlation in the scalar model ` +

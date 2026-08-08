@@ -176,6 +176,7 @@ describe("GovernanceEstimatorRegistry", () => {
         name: "invalid_behavior_shape",
         input: {
           round: 1,
+          agentId: "agent",
           agentRole: "analyst",
           behaviorEvents: { a: 0, b: 0, c: 0, d: 0, e: 0 },
           confidence: { stated: 0.5 },
@@ -189,6 +190,7 @@ describe("GovernanceEstimatorRegistry", () => {
   it("normalizes score-map key order before fingerprinting and estimation", () => {
     const input = (reverse: boolean): ProgressiveEstimatorInput => ({
       round: 3,
+      agentId: "agent",
       agentRole: "analyst",
       behaviorEvents: {
         timesRefuted: 0,
