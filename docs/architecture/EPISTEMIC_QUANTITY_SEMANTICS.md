@@ -205,11 +205,78 @@ Derived 量 MUST 携带 `methodId`，标明来源方法。
 - model-reported `evidenceCoverage/evidenceQuality` 仍是带 source 的 telemetry；
 - `confidence` estimator 的 confidence 字段表示估计器自身的启发式可靠度，不是 agent 正确概率，也不是经过样本校准的 calibration score。
 
+已解决（2026-08-07 语义分层批次）：
+
+- susceptibility 的双重语义已显式拆分为 behavioral susceptibility（暴露-响应估计）与 social update gain（DeGroot 混合系数），见 §13；
+- progressive estimator 与 legacy `updateInertia` 的角色先验已版本化合并为命名策略，见 §14。
+
 仍未消除的 semantic debt：
 
-- susceptibility 同时存在 progressive exposure-response estimate 与旧式局部公式 `(1-I)(1-C)`，两者用途和命名仍需统一；
-- progressive estimator 与 legacy `updateInertia` 仍各自维护 role prior table；
 - estimator record 重复保存完整 config，优先保证单条记录可审计，尚未做 manifest-level 去重；
 - ranking、continuous、open-ended belief contract 与 verified evidence oracle 仍未实现。
 
 验证声明：截至 `96ba06b`，36 个测试文件中 767 项通过、3 项按既有设置跳过；TypeScript check 与 production build 均通过。
+
+## 13. Behavioral susceptibility 与 social update gain
+
+`socialUpdateGain` 与 `behavioralSusceptibility` 是两个语义互斥的量，MUST NOT 回退互换。
+
+- `socialUpdateGain` 是 DeGroot 混合系数：`max((1 - inertia) * (1 - confidence), 0.05)`。它控制另一个 agent 的表达效用进入本地更新的程度，是政策/模型系数，不是经验观测。
+- `behavioralSusceptibility` 是暴露-响应行为估计：`timesRespondedAfterExposure / timesExposed`。它是带估计器置信度与 `usable` 门控的观测；暴露事件不足（低于配置阈值）时 `usable = false`，该估计保持不可用。
+
+以下 MUST / MUST NOT 约束：
+
+- 一个缺失或不可用的行为估计 MUST 保持缺失/不可用；`socialUpdateGain` 仍可计算（用途不同），但 MUST NOT 被当作行为易感性的替代。
+- `updateUtility` 的 DeGroot 混合 MUST 使用 `computeSocialUpdateGain`。
+- authority/asymmetry 类检测器消费 `socialUpdateGain`（建模对更新的相对开放度）。
+- delta 无响应诊断 MUST 只消费 `behavioralSusceptibility` 且要求 `usable === true`，绝不 substitute `socialUpdateGain`。
+- `CognitiveGovernanceState` 同时暴露两量；`susceptibility` 字段保留为 `socialUpdateGain` 的等值兼容别名，MUST 不切换到行为估计。
+- campaign schema-2 快照以独立字段存储两量（`socialUpdateGain` 与 `behavioralSusceptibility*`）；deprecated `susceptibility` 字段在 schema-2 下恒等于 `socialUpdateGain`，MUST NOT 填入逐轮混合值。
+
+## 14. Role inertia prior policies
+
+角色 → 惯性先验已从两处私有重复表收敛为不可变、命名的版本化策略，见 `src/lib/agent/roleInertiaPrior.ts`。
+
+- `legacy-posthoc@1.0.0`：legacy 大表（11 规则，fallback 0.4）。`updateInertia` 与 legacy 初始化默认使用。
+- `progressive-icl@1.0.0`：progressive estimator v1 小表（5 规则，fallback 0.4）。`DEFAULT_PROGRESSIVE_ESTIMATOR_CONFIG.roleInertiaPrior` 逐字引用其 rules，使序列化 config 与指纹保持逐字一致。
+- `neutral@1.0.0`：无规则，fallback 0.5。未来实验显式 opt-in，MUST NOT 成为默认。
+
+解析通过 `resolveRoleInertiaPrior(role, policy)`：locale-independent 小写匹配、first-match 顺序、不排序或修改 caller rules。导出策略 deep-frozen。
+
+指纹约束：`DEFAULT_PROGRESSIVE_ESTIMATOR_CONFIG.defaultRoleInertia`（0.4）独立保留，MUST NOT 引用 policy 字段——因为这会改变 estimator v1 的 recorded default config fingerprint。由此产生的两处 0.4 需同步维护（改动任一处时必须同时改另一处）。
+
+## 15. Exact governance-estimate replay
+
+自 schema 2.0 起，每个新的 `GovernanceEstimate` 记录持久化其 canonical 化的精确 input snapshot（除指纹外），第三方可仅凭记录重放 projection。记录级 replay 校验见 `src/lib/epistemic/replay.ts`；run 级验证、CLI 与审计 manifest 集成见 `experiments/campaign/replayVerifier.ts` 与 `experiments/campaign/verify_replay.ts`。完整操作与能力边界见 [REPLAY_VERIFICATION.md](../experiments/REPLAY_VERIFICATION.md)。
+
+能力边界（MUST NOT 过度声明）：
+
+- 重放证明的是记录内部一致性与确定性重放；它不证明 `sourceEventIds` 对应的事件真实存在或属于该 agent/round。
+- 证据 telemetry（事件被记录）不是验证；行为响应（exposure 后改变）不是因果效应；确定性声明不是对任意第三方 estimator 代码的形式证明。
+
+## 16. Confirmatory analysis status machine
+
+E6（状态解耦）与 E8（行为易感性中介）暴露同一个四态 confirmatory 状态机：
+
+```ts
+type ConfirmatoryAnalysisStatus =
+  | "computed"               // 唯一的 inferential 状态
+  | "insufficient_data"      // schema-2 有效但不足（数量/可辨识性）
+  | "legacy_mixed_excluded"  // 全部为 schema-1 混合易感性，不产生 claim
+  | "invalid_data";          // 任一 schema-2 观测契约损坏 → 整个分析失效
+```
+
+只有 `computed` 携带或暴露推断量。MUST / MUST NOT 约束：
+
+- 任一 malformed schema-2 观测使整个对应分析为 `invalid_data`，MUST NOT 静默绕开
+  损坏观测继续 `computed`。
+- `behavioralSusceptibilityUsable === false` 是预期缺失，单独计数，MUST NOT 视为
+  malformed。
+- E6 只用 per-run paired bootstrap，且至少两个 eligible run；snapshot-level
+  Fisher-z 回退已被移除，MUST NOT 作为 confirmatory 引用。
+- 非 `computed` 的 E6/E8 结果不得产生科学图、p 值表、效应量 claim 或确认假设的
+  摘要；统计测试将其映射为 `significant=false`、`pValue=1`、`analysisStatus=<源状态>`。
+- 观测单位：E6 是 snapshot，E8 是 transition（n 个有序 snapshot → n-1 候选 transition）。
+- `sourceEventIds` 的 canonical 形式仍不是 provenance authenticity（见 §15）。
+
+具体触发条件与计数见 [REPLAY_VERIFICATION.md](../experiments/REPLAY_VERIFICATION.md) §6。
