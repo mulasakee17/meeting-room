@@ -9,6 +9,31 @@
 
 import type { EvaluationContract, EvaluationRecord, TaskKind } from "./contracts";
 
+/**
+ * Aggregation rule (WP3): `not_applicable` records are never averaged as 0.
+ * If no record is applicable, returns `null` (unavailable), not 0.
+ */
+export function aggregateApplicableAccuracy(records: readonly EvaluationRecord[]): number | null {
+  const applicable = records.filter(
+    r => r.applicability === "applicable" && r.accuracy !== undefined,
+  );
+  if (applicable.length === 0) return null;
+  return applicable.reduce((sum, r) => sum + (r.accuracy as number), 0) / applicable.length;
+}
+
+/**
+ * Kendall tau is only usable when a full-order truth truly exists. Single-choice
+ * tasks must not fabricate a tail ordering; this returns `null` unless the
+ * truth ranks every candidate.
+ */
+export function kendallTauApplicable(ranks: Record<string, number>): boolean {
+  const values = Object.values(ranks);
+  if (values.length === 0) return false;
+  // 完整顺序真值：rank 必须是 1..N 的排列。
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted.every((rank, i) => rank === i + 1);
+}
+
 export interface CategoricalDecision {
   /** 群体最终排名：从最优到最差的 canonical 候选。 */
   ranking: string[];

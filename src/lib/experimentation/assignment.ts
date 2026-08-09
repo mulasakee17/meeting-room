@@ -11,18 +11,12 @@
 
 import { createHash } from "node:crypto";
 import { mulberry32 } from "../utils/statsUtils";
+import { EXPERIMENTAL_ARMS, type ExperimentalArm } from "./baseline";
 
-/** 六个实验臂（masterplan WP2 primary run-level arms）。 */
-export const TREATMENT_ARMS = [
-  "independent_ensemble",
-  "vanilla_interaction",
-  "random_governance",
-  "diagnostic_governance",
-  "epistemic_governance",
-  "full_information_oracle",
-] as const;
+/** 实验臂（WP2 run 级 + WP3 完整 baseline ladder 共 8 个）。 */
+export const TREATMENT_ARMS: readonly ExperimentalArm[] = EXPERIMENTAL_ARMS;
 
-export type TreatmentArm = (typeof TREATMENT_ARMS)[number];
+export type TreatmentArm = ExperimentalArm;
 
 export interface TreatmentAssignment {
   id: string;
