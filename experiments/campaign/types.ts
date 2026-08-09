@@ -6,6 +6,11 @@
 
 import type { GovernanceEstimate } from "../../src/lib/epistemic/semantics";
 import type { ProgressiveEstimates } from "../../src/lib/thermodynamics/ProgressiveEstimator";
+import type { TreatmentAssignment } from "../../src/lib/experimentation/assignment";
+import type {
+  InterventionApplicationReceipt,
+  TaskOutcomeRecord,
+} from "../../src/lib/experimentation/lifecycle";
 
 // ============================================================================
 // Experiment Configuration
@@ -139,15 +144,18 @@ export interface CognitiveStateSnapshot {
  * - "2.0"：governanceEstimateHistory 记录（若存在）含精确 input 快照。
  * - "3.0"：继承 2.0 的 replay contract，并要求新写入的 native macro
  *   snapshots 带 signal-set identity 和 canonical signal fields。
+ * - "4.0"：继承 3.0，并要求 run 携带 pre-run treatment assignment identity
+ *   与 governance lifecycle 记录（assignment → application receipt →
+ *   task outcome）。2.0/3.0 仍可读，但不得进入 confirmatory governance ATE。
  */
-export type RawSchemaVersion = "1.0" | "2.0" | "3.0";
+export type RawSchemaVersion = "1.0" | "2.0" | "3.0" | "4.0";
 
 /** 当前 Runner 写出的 schema 版本。两条写路径必须一致使用此常量。 */
-export const RAW_SCHEMA_VERSION: RawSchemaVersion = "3.0";
+export const RAW_SCHEMA_VERSION: RawSchemaVersion = "4.0";
 
 /** Schema 2+ retain the exact estimator-input replay contract. */
 export function hasReplayableEstimatorSchema(version: unknown): boolean {
-  return version === "2.0" || version === "3.0";
+  return version === "2.0" || version === "3.0" || version === "4.0";
 }
 
 export interface LegacyThermoSnapshot {
@@ -206,6 +214,12 @@ export interface RawRunData {
    * "2.0" adds replayable estimator inputs; "3.0" adds versioned macro signals.
    */
   rawSchemaVersion?: RawSchemaVersion;
+  /** WP2: pre-run treatment assignment identity（schema 4.0 必有）。 */
+  treatmentAssignment?: TreatmentAssignment;
+  /** WP2: 治理生命周期——干预应用回执（assignment → applied action → window）。 */
+  applicationReceipts?: InterventionApplicationReceipt[];
+  /** WP2: 任务结果（讨论结束后由评分契约给出）。 */
+  taskOutcome?: TaskOutcomeRecord;
   /** 每轮信念快照 */
   beliefTrajectory: Array<{
     round: number;

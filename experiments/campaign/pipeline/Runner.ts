@@ -41,6 +41,14 @@ import {
   candidateAliases,
   type PromptTask,
 } from "../../../src/lib/experiment-contracts/contracts";
+import {
+  createRunAssignment,
+  type TreatmentArm,
+} from "../../../src/lib/experimentation/assignment";
+import type {
+  InterventionApplicationReceipt,
+  TaskOutcomeRecord,
+} from "../../../src/lib/experimentation/lifecycle";
 import { taskConfigToBundle, extractEvidenceIds } from "../tasks/legacyAdapter";
 import { runHiddenBenchProtocol } from "./hiddenbenchProtocol";
 
@@ -347,6 +355,18 @@ async function runHiddenBenchSingle(
   const task = scenario.task;
   const effectiveSeed = (seed + runIndex * 0x9E3779B1) >>> 0;
 
+  // WP2: pre-run treatment assignment for the reference-protocol path.
+  const treatmentAssignment = createRunAssignment({
+    id: `asn:${runId}`,
+    unitId: runId,
+    stratum: { taskId: task.id, model: config.llmModel, seed, runIndex },
+    arm: "vanilla_interaction", // 参考协议无治理干预
+    policyId: "swarmalpha.hiddenbench-reference",
+    policyVersion: "1.0.0",
+    masterSeed: effectiveSeed,
+    assignedAt: new Date().toISOString(),
+  });
+
   const llmConfig: LLMConfig = {
     provider: detectLLMProvider(config.llmModel),
     model: config.llmModel,
@@ -361,6 +381,18 @@ async function runHiddenBenchSingle(
   const finalAccuracy = hbResult.postAccuracy;
   const finalKendallTau = 0; // HiddenBench 协议不产生 ranking → τ 无定义
   const finalRanking: string[] = [];
+
+  const taskOutcome: TaskOutcomeRecord = {
+    runAssignmentId: treatmentAssignment.id,
+    evaluationContractRef: { id: "swarmalpha.categorical.ranking", version: "1.0.0" },
+    quality: finalAccuracy,
+    cost: {
+      promptTokens: hbResult.tokenUsage.promptTokens,
+      completionTokens: hbResult.tokenUsage.completionTokens,
+      totalTokens: hbResult.tokenUsage.totalTokens,
+    },
+    status: "scored",
+  };
 
   const rawData: RawRunData = {
     runId,
@@ -383,6 +415,9 @@ async function runHiddenBenchSingle(
     beliefTrajectory: [],
     interventions: [],
     governanceIssues: [],
+    treatmentAssignment,
+    applicationReceipts: [],
+    taskOutcome,
     tokenUsage: {
       promptTokens: hbResult.tokenUsage.promptTokens,
       completionTokens: hbResult.tokenUsage.completionTokens,
@@ -441,6 +476,25 @@ export async function runSingle(
   // the PromptTask; scoring consumes only the scoringTask (truth released
   // after discussion). candidate/truth completeness is validated in the loader.
   const bundle = taskConfigToBundle(scenario.task);
+
+  // WP2: pre-run treatment assignment. Current experiments are fixed-condition,
+  // so the eligible arm is the configuration-driven one at probability 1.0; the
+  // record still carries seed/draw/policy so a future randomized manifest can
+  // be audited the same way.
+  const unitId = `${config.id}_${runtimeMode}_seed${seed}_run${runIndex}`;
+  const arm: TreatmentArm = config.governanceMode === "none" || config.governanceMode === "detect-only"
+    ? "vanilla_interaction"
+    : "diagnostic_governance";
+  const treatmentAssignment = createRunAssignment({
+    id: `asn:${unitId}`,
+    unitId,
+    stratum: { taskId: bundle.promptTask.schema.id, model: config.llmModel, seed, runIndex },
+    arm,
+    policyId: "swarmalpha.diagnostic",
+    policyVersion: "1.0.0",
+    masterSeed: effectiveSeed,
+    assignedAt: new Date().toISOString(),
+  });
 
   const llmConfig: LLMConfig = {
     provider: detectLLMProvider(config.llmModel),
@@ -727,6 +781,21 @@ export async function runSingle(
     }
   }
 
+  // WP2: intervention → application receipt chain (assignment → applied action → window).
+  // no_action is expressed by the run-level assignment arm; a run with no
+  // interventions simply yields an empty receipts array, not a missing field.
+  const applicationReceipts: InterventionApplicationReceipt[] = interventions.map((intv, idx) => ({
+    id: `rcpt:${runId}:${intv.round}:${idx}`,
+    assignmentId: treatmentAssignment.id,
+    interventionId: `${runId}:intv:${intv.round}:${idx}`,
+    status: intv.applied === false ? "failed" : "applied",
+    appliedAtRound: intv.applied === false ? undefined : intv.round,
+    effectiveWindow: intv.applied === false ? null : { startRound: intv.round, endRound: result.totalRounds },
+    targetAgentIds: intv.targetAgents ?? (intv.targetAgentId ? [intv.targetAgentId] : []),
+    failureCode: intv.applied === false ? "intervention_not_applied" : undefined,
+    sourceEventIds: [],
+  }));
+
   // ROADMAP_V5: 提取 itemBeliefs 轨迹（K 维偏好向量，Hidden Anchors 锚点恢复核心数据）
   const itemBeliefsTrajectory: RawRunData["itemBeliefsTrajectory"] = [];
   const roundOpinions: RawRunData["roundOpinions"] = [];
@@ -771,6 +840,24 @@ export async function runSingle(
     roundOpinions.push(roundOpinionEntries as any);
   }
 
+  const tokenUsage = collectTokenUsage(agents);
+
+  // WP2: task outcome — the final link of the assignment → application →
+  // outcome chain. quality uses the ranking metric when applicable, else the
+  // single-choice accuracy; a non-applicable task reports unresolved, not 0.
+  const taskOutcome: TaskOutcomeRecord = {
+    runAssignmentId: treatmentAssignment.id,
+    evaluationContractRef: { id: "swarmalpha.categorical.ranking", version: "1.0.0" },
+    quality: rankingMetricApplicable ? finalKendallTau : (finalAccuracy ?? null),
+    cost: {
+      promptTokens: tokenUsage.promptTokens,
+      completionTokens: tokenUsage.completionTokens,
+      totalTokens: tokenUsage.totalTokens,
+      totalLatencyMs: tokenUsage.totalLatencyMs,
+    },
+    status: "scored",
+  };
+
   const rawData: RawRunData = {
     runId,
     experimentId: config.id,
@@ -798,7 +885,10 @@ export async function runSingle(
     deltaDiagnosis,
     interventions,
     governanceIssues,
-    tokenUsage: collectTokenUsage(agents),
+    treatmentAssignment,
+    applicationReceipts,
+    taskOutcome,
+    tokenUsage,
     itemBeliefsTrajectory,
     roundOpinions,
     semanticAuditLog,

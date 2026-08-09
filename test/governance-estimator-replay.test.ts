@@ -515,7 +515,7 @@ describe("manifest/CLI replay status consistency", () => {
 });
 
 describe("Runner current-schema write paths", () => {
-  it("emits rawSchemaVersion 3.0 on the swarmalpha protocol path", async () => {
+  it("emits rawSchemaVersion 4.0 on the swarmalpha protocol path", async () => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "replay-run-"));
     try {
       const config: ExperimentConfig = {
@@ -538,13 +538,13 @@ describe("Runner current-schema write paths", () => {
       const written = JSON.parse(
         fs.readFileSync(path.join(outDir, "t_replay_run_belief_seed7_run0.json"), "utf8"),
       );
-      expect(written.rawSchemaVersion).toBe("3.0");
+      expect(written.rawSchemaVersion).toBe("4.0");
     } finally {
       fs.rmSync(outDir, { recursive: true, force: true });
     }
   });
 
-  it("emits rawSchemaVersion 3.0 on the hiddenbench protocol path", async () => {
+  it("emits rawSchemaVersion 4.0 on the hiddenbench protocol path", async () => {
     const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "replay-hb-"));
     try {
       const config: ExperimentConfig = {
@@ -568,14 +568,14 @@ describe("Runner current-schema write paths", () => {
       const written = JSON.parse(
         fs.readFileSync(path.join(outDir, "t_replay_hb_native_cognitive_seed7_run0.json"), "utf8"),
       );
-      expect(written.rawSchemaVersion).toBe("3.0");
+      expect(written.rawSchemaVersion).toBe("4.0");
     } finally {
       fs.rmSync(outDir, { recursive: true, force: true });
     }
   });
 
-  it("defines the shared schema constant as 3.0", () => {
-    expect(RAW_SCHEMA_VERSION).toBe("3.0");
+  it("defines the shared schema constant as 4.0", () => {
+    expect(RAW_SCHEMA_VERSION).toBe("4.0");
   });
 });
 
@@ -752,5 +752,123 @@ describe("replayVerifier module contract", () => {
     // 顶层 import 已在本测试文件执行且未触发 process.exit；此处确认导出可用。
     expect(typeof verifyRawRunData).toBe("function");
     expect(typeof deriveReplayStatus).toBe("function");
+  });
+});
+
+describe("WP2 treatment lifecycle verification", () => {
+  const assignment = {
+    id: "asn:r1",
+    schemaVersion: "1.0.0",
+    unitId: "r1",
+    unitKind: "run",
+    stratum: { taskId: "t", model: "m", seed: 1, runIndex: 0 },
+    eligibleArms: ["diagnostic_governance"],
+    assignedArm: "diagnostic_governance",
+    assignmentProbability: 1,
+    policyId: "swarmalpha.diagnostic",
+    policyVersion: "1.0.0",
+    seed: 42,
+    randomDraw: 0.5,
+    assignedAt: "2026-08-09T00:00:00Z",
+    sourceDiagnosisIds: [],
+  };
+
+  function makeLifecycleRun(over: Record<string, unknown>): Record<string, unknown> {
+    return {
+      runId: "r1",
+      rawSchemaVersion: "4.0",
+      totalRounds: 5,
+      treatmentAssignment: assignment,
+      ...over,
+    };
+  }
+
+  it("schema 4.0 without a treatment assignment fails closed", () => {
+    const result = verifyRawRunData("x.json", makeLifecycleRun({ treatmentAssignment: undefined }));
+    expect(result.runIssues.some(i => i.code === "missing_treatment_assignment")).toBe(true);
+  });
+
+  it("flags a dangling assignmentId on an application receipt", () => {
+    const result = verifyRawRunData("x.json", makeLifecycleRun({
+      applicationReceipts: [{
+        id: "rcpt:1",
+        assignmentId: "asn:WRONG",
+        status: "applied",
+        appliedAtRound: 2,
+        effectiveWindow: { startRound: 2, endRound: 5 },
+        targetAgentIds: ["a1"],
+        sourceEventIds: [],
+      }],
+    }));
+    expect(result.runIssues.some(i => i.code === "dangling_assignment_id")).toBe(true);
+  });
+
+  it("flags duplicate receipt ids", () => {
+    const receipt = {
+      id: "rcpt:1",
+      assignmentId: "asn:r1",
+      status: "applied",
+      appliedAtRound: 2,
+      effectiveWindow: { startRound: 2, endRound: 5 },
+      targetAgentIds: ["a1"],
+      sourceEventIds: [],
+    };
+    const result = verifyRawRunData("x.json", makeLifecycleRun({
+      applicationReceipts: [receipt, { ...receipt }],
+    }));
+    expect(result.runIssues.some(i => i.code === "duplicate_receipt_id")).toBe(true);
+  });
+
+  it("flags an effectiveWindow that exceeds totalRounds", () => {
+    const result = verifyRawRunData("x.json", makeLifecycleRun({
+      applicationReceipts: [{
+        id: "rcpt:1",
+        assignmentId: "asn:r1",
+        status: "applied",
+        appliedAtRound: 2,
+        effectiveWindow: { startRound: 2, endRound: 9 }, // totalRounds=5
+        targetAgentIds: ["a1"],
+        sourceEventIds: [],
+      }],
+    }));
+    expect(result.runIssues.some(i => i.code === "window_out_of_range")).toBe(true);
+  });
+
+  it("flags a task outcome whose runAssignmentId does not match the assignment", () => {
+    const result = verifyRawRunData("x.json", makeLifecycleRun({
+      taskOutcome: {
+        runAssignmentId: "asn:WRONG",
+        evaluationContractRef: { id: "swarmalpha.categorical.ranking", version: "1.0.0" },
+        quality: 0.8,
+        cost: { totalTokens: 100 },
+        status: "scored",
+      },
+    }));
+    expect(result.runIssues.some(i => i.code === "task_outcome_assignment_mismatch")).toBe(true);
+  });
+
+  it("accepts a consistent schema-4.0 lifecycle chain", () => {
+    const result = verifyRawRunData("x.json", makeLifecycleRun({
+      applicationReceipts: [{
+        id: "rcpt:1",
+        assignmentId: "asn:r1",
+        status: "applied",
+        appliedAtRound: 2,
+        effectiveWindow: { startRound: 2, endRound: 5 },
+        targetAgentIds: ["a1"],
+        sourceEventIds: [],
+      }],
+      taskOutcome: {
+        runAssignmentId: "asn:r1",
+        evaluationContractRef: { id: "swarmalpha.categorical.ranking", version: "1.0.0" },
+        quality: 0.8,
+        cost: { totalTokens: 100 },
+        status: "scored",
+      },
+    }));
+    expect(result.runIssues.filter(i =>
+      ["missing_treatment_assignment", "dangling_assignment_id", "duplicate_receipt_id",
+        "window_out_of_range", "task_outcome_assignment_mismatch"].includes(i.code),
+    )).toEqual([]);
   });
 });

@@ -106,6 +106,8 @@ export function verifyRawRunData(file: string, data: unknown): ReplayFileResult 
     // 所有对 unknown 的访问都在 try 内，accessor/Proxy 抛错映射为 run issue。
     const container = data as Record<string, unknown> | null;
     result.schemaVersion = container?.rawSchemaVersion as string | undefined;
+    // WP2: treatment lifecycle integrity (assignment → receipts → outcome).
+    verifyGovernanceLifecycle(container, result);
     const history = container?.governanceEstimateHistory;
     if (!Array.isArray(history)) return result;
 
@@ -270,6 +272,109 @@ export function verifyRawRunData(file: string, data: unknown): ReplayFileResult 
   }
 
   return result;
+}
+
+/**
+ * WP2: verify the treatment lifecycle (assignment → application receipts →
+ * task outcome) recorded on a run. Fail-closed: schema 4.0 must carry a
+ * pre-run assignment; receipts must reference a known assignment id, be
+ * unique, and stay within the run's round window.
+ */
+function verifyGovernanceLifecycle(
+  container: Record<string, unknown> | null,
+  result: ReplayFileResult,
+): void {
+  const schema = result.schemaVersion;
+  const assignment = container?.treatmentAssignment;
+  const receipts = container?.applicationReceipts;
+  const outcome = container?.taskOutcome;
+  const totalRounds = container?.totalRounds;
+  const totalRoundsValid = typeof totalRounds === "number" && Number.isSafeInteger(totalRounds);
+
+  // Schema 4.0 requires a pre-run treatment assignment identity.
+  if (schema === "4.0" && (assignment === undefined || assignment === null)) {
+    result.runIssues.push({
+      round: -1,
+      agentId: "(run)",
+      code: "missing_treatment_assignment",
+      message: "schema 4.0 requires a pre-run treatmentAssignment",
+    });
+  }
+
+  if (Array.isArray(receipts)) {
+    const seenIds = new Set<string>();
+    for (const receipt of receipts) {
+      if (!receipt || typeof receipt !== "object") {
+        result.runIssues.push({
+          round: -1,
+          agentId: "(run)",
+          code: "malformed_receipt",
+          message: "applicationReceipts entry is not an object",
+        });
+        continue;
+      }
+      const r = receipt as Record<string, unknown>;
+      if (typeof r.id !== "string" || r.id.length === 0) {
+        result.runIssues.push({
+          round: -1,
+          agentId: "(run)",
+          code: "malformed_receipt",
+          message: "receipt id must be a non-empty string",
+        });
+        continue;
+      }
+      if (seenIds.has(r.id)) {
+        result.runIssues.push({
+          round: -1,
+          agentId: "(run)",
+          code: "duplicate_receipt_id",
+          message: `duplicate receipt id ${r.id}`,
+        });
+      }
+      seenIds.add(r.id);
+      if (typeof r.assignmentId !== "string" || r.assignmentId.length === 0) {
+        result.runIssues.push({
+          round: -1,
+          agentId: "(run)",
+          code: "malformed_receipt",
+          message: "receipt assignmentId must be a non-empty string",
+        });
+        continue;
+      }
+      if (assignment && r.assignmentId !== (assignment as Record<string, unknown>).id) {
+        result.runIssues.push({
+          round: -1,
+          agentId: "(run)",
+          code: "dangling_assignment_id",
+          message: `receipt ${r.id} references unknown assignment ${r.assignmentId}`,
+        });
+      }
+      const window = r.effectiveWindow as Record<string, unknown> | null | undefined;
+      if (window && typeof window.endRound === "number"
+        && totalRoundsValid
+        && (window.endRound as number) > (totalRounds as number)) {
+        result.runIssues.push({
+          round: -1,
+          agentId: "(run)",
+          code: "window_out_of_range",
+          message: `receipt ${r.id} effectiveWindow end ${String(window.endRound)} exceeds totalRounds ${String(totalRounds)}`,
+        });
+      }
+    }
+  }
+
+  if (outcome && assignment) {
+    const o = outcome as Record<string, unknown>;
+    const a = assignment as Record<string, unknown>;
+    if (o.runAssignmentId !== a.id) {
+      result.runIssues.push({
+        round: -1,
+        agentId: "(run)",
+        code: "task_outcome_assignment_mismatch",
+        message: "taskOutcome.runAssignmentId does not match treatmentAssignment.id",
+      });
+    }
+  }
 }
 
 /**
