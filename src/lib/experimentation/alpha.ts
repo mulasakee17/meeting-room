@@ -17,7 +17,12 @@
  * cost is missing, `netAlpha` is `null` (unavailable), never an imputed 0.
  */
 
-import { EXPERIMENTAL_ARMS, type BlockOutcome, type ExperimentalArm } from "./baseline";
+import {
+  EXPERIMENTAL_ARMS,
+  validateBlockOutcome,
+  type BlockOutcome,
+  type ExperimentalArm,
+} from "./baseline";
 
 export interface AlphaLambdas {
   token?: number;
@@ -59,15 +64,36 @@ export function computePairedAlpha(
   lambdas: AlphaLambdas = {},
 ): PairedAlpha {
   const unavailable: string[] = [];
+  for (const [name, value] of Object.entries(lambdas)) {
+    if (value !== undefined && (!Number.isFinite(value) || value < 0)) {
+      return {
+        swarmAlpha: null,
+        governanceAlpha: null,
+        specificityAlpha: null,
+        oracleGap: null,
+        netAlpha: null,
+        unavailable: [`lambda ${name} must be non-negative and finite`],
+      };
+    }
+  }
 
   const byArm = new Map<ExperimentalArm, BlockOutcome>();
+  let invalidBlock = false;
   for (const outcome of outcomes) {
+    try {
+      validateBlockOutcome(outcome);
+    } catch (error) {
+      unavailable.push(error instanceof Error ? error.message : String(error));
+      invalidBlock = true;
+      continue;
+    }
     if (!(EXPERIMENTAL_ARMS as readonly string[]).includes(outcome.arm)) {
       unavailable.push(`unknown arm ${outcome.arm}`);
       continue;
     }
     if (byArm.has(outcome.arm)) {
       unavailable.push(`duplicate outcome for arm ${outcome.arm}`);
+      invalidBlock = true;
       continue;
     }
     byArm.set(outcome.arm, outcome);
@@ -76,8 +102,17 @@ export function computePairedAlpha(
   // 同一 block 内所有 arm 必须共享 blockKey，否则不可配对（fail-closed：
   // 不跨 block 计算配对 alpha）。
   const keys = new Set(outcomes.map(o => o.blockKey));
-  const paired = keys.size <= 1;
-  if (!paired) unavailable.push(`mixed block keys: ${[...keys].join(", ")}`);
+  const identities = new Set(outcomes.map(o => JSON.stringify({
+    taskId: o.taskId,
+    modelId: o.modelId,
+    replicateSeed: o.replicateSeed,
+    evaluationContractRef: o.evaluationContractRef,
+    metricRef: o.metricRef,
+    budgetContractHash: o.budgetContractHash,
+  })));
+  const paired = keys.size <= 1 && identities.size <= 1 && !invalidBlock;
+  if (keys.size > 1) unavailable.push(`mixed block keys: ${[...keys].join(", ")}`);
+  if (identities.size > 1) unavailable.push("paired outcomes have mixed task/model/seed/metric/budget identity");
 
   const Q = (arm: ExperimentalArm): number | null => {
     if (!paired) {

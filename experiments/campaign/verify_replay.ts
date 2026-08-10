@@ -61,6 +61,7 @@ export function collectJsonFiles(rootOrFile: string): string[] {
   const stat = fs.statSync(rootOrFile);
   if (stat.isFile()) {
     if (!rootOrFile.endsWith(".json")
+      || rootOrFile.endsWith(".assignment.json")
       || rootOrFile.endsWith(".error.json")
       || EXCLUDE_FILES.has(path.basename(rootOrFile))) {
       return [];
@@ -81,6 +82,7 @@ export function collectJsonFiles(rootOrFile: string): string[] {
         walk(fullPath);
       } else if (entry.isFile()
         && entry.name.endsWith(".json")
+        && !entry.name.endsWith(".assignment.json")
         && !entry.name.endsWith(".error.json")
         && !EXCLUDE_FILES.has(entry.name)) {
         results.push(fullPath);

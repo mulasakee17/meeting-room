@@ -12,6 +12,9 @@
  */
 
 import { describe, expect, it } from "vitest";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import {
   validateBudgetContract,
   validateBlockOutcome,
@@ -19,6 +22,11 @@ import {
 } from "../src/lib/experimentation/baseline";
 import { computePairedAlpha } from "../src/lib/experimentation/alpha";
 import { createRunAssignment } from "../src/lib/experimentation/assignment";
+import {
+  createJsonDirectoryArtifactSink,
+  runSixArmBlock,
+  type BlockLlm,
+} from "../src/lib/experimentation/blockRunner";
 import {
   aggregateApplicableAccuracy,
   kendallTauApplicable,
@@ -32,6 +40,12 @@ function outcome(
   return {
     arm,
     blockKey: "task1|deepseek|seed1",
+    taskId: "task1",
+    modelId: "deepseek",
+    replicateSeed: 1,
+    evaluationContractRef: { id: "swarmalpha.categorical.ranking", version: "1.0.0" },
+    metricRef: { id: "swarmalpha.categorical.accuracy", version: "1.0.0", direction: "higher_is_better" },
+    budgetContractHash: "b".repeat(64),
     quality,
     cost: { totalTokens: 1000, totalLatencyMs: 500 },
     status: quality === null ? "invalid" : "scored",
@@ -100,6 +114,36 @@ describe("paired alpha computation", () => {
     expect(missing.netAlpha).toBeNull();
     expect(missing.unavailable).toContain("actual cost missing for net alpha");
   });
+
+  it("fails closed on non-finite quality, duplicate arms, mixed metric identity, and invalid lambdas", () => {
+    const nonFinite = computePairedAlpha([
+      outcome("vanilla_interaction", Number.NaN),
+      outcome("diagnostic_governance", 0.8),
+    ]);
+    expect(nonFinite.governanceAlpha).toBeNull();
+
+    const duplicate = computePairedAlpha([
+      outcome("vanilla_interaction", 0.7),
+      outcome("vanilla_interaction", 0.9),
+      outcome("diagnostic_governance", 0.8),
+    ]);
+    expect(duplicate.governanceAlpha).toBeNull();
+    expect(duplicate.unavailable.some(reason => reason.includes("duplicate"))).toBe(true);
+
+    const mixedMetric = computePairedAlpha([
+      outcome("vanilla_interaction", 0.7),
+      outcome("diagnostic_governance", 0.8, {
+        metricRef: { id: "swarmalpha.kendall_tau", version: "1.0.0", direction: "higher_is_better" },
+      }),
+    ]);
+    expect(mixedMetric.governanceAlpha).toBeNull();
+
+    const badLambda = computePairedAlpha([
+      outcome("vanilla_interaction", 0.7),
+      outcome("diagnostic_governance", 0.8),
+    ], { token: -1 });
+    expect(badLambda.netAlpha).toBeNull();
+  });
 });
 
 describe("evaluation aggregation rules", () => {
@@ -122,7 +166,7 @@ describe("evaluation aggregation rules", () => {
   });
 });
 
-describe("Gate G3 — mock 6-arm block", () => {
+describe("paired-alpha pure fixture", () => {
   it("produces manifest + paired alpha + cost table from mock arm results", () => {
     // 6-arm block：用 mock 质量与成本构造，模拟 mock LLM 输出。
     const blockKey = "hb_task7|deepseek|seed1";
@@ -174,5 +218,168 @@ describe("Gate G3 — mock 6-arm block", () => {
     }));
     expect(costTable.some(row => row.status === "scored")).toBe(true);
     expect(alpha.unavailable).toEqual([]);
+  });
+});
+
+describe("Gate G3 — executable mock-LLM 6-arm block", () => {
+  it("keeps scoring truth outside the arm execution function", () => {
+    const source = fs.readFileSync(path.join(process.cwd(), "src/lib/experimentation/blockRunner.ts"), "utf8");
+    const executeArmBody = source.slice(
+      source.indexOf("async function executeArm"),
+      source.indexOf("export async function runSixArmBlock"),
+    );
+    expect(executeArmBody).not.toContain("correctAnswer");
+  });
+
+  it("writes one pre-run manifest and six immutable arm raw artifacts", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "six-arm-artifacts-"));
+    try {
+      const llm: BlockLlm = {
+        modelId: "mock-file-sink",
+        async complete(request) {
+          return {
+            decision: "A", confidence: 0.5, evidenceIds: request.visibleEvidence,
+            promptTokens: 1, completionTokens: 1, latencyMs: 1,
+          };
+        },
+      };
+      await runSixArmBlock({
+        task: {
+          id: "file-task", publicContext: "Choose A", options: ["A"], correctAnswer: "A",
+          agents: [{ id: "a1", privateEvidence: ["e1"] }],
+        },
+        llm,
+        replicateSeed: 1,
+        budgetContract: { maxLlmCalls: 2, maxRounds: 2 },
+        artifactSink: createJsonDirectoryArtifactSink(dir),
+      });
+      const files = fs.readdirSync(dir).sort();
+      expect(files).toHaveLength(7);
+      expect(files).toContain("assignment-manifest.json");
+      expect(files.filter(file => file.endsWith(".arm-raw.json"))).toHaveLength(6);
+      expect(() => fs.writeFileSync(path.join(dir, "assignment-manifest.json"), "{}", { flag: "wx" })).toThrow();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("runs six protocol arms, preserves independent visibility, and emits immutable per-arm artifacts", async () => {
+    const requests: Parameters<BlockLlm["complete"]>[0][] = [];
+    const sinkEvents: string[] = [];
+    const mockLlm: BlockLlm = {
+      modelId: "mock-llm-v1",
+      async complete(request) {
+        expect(sinkEvents[0]).toBe("manifest");
+        requests.push(structuredClone(request));
+        const sawTruth = request.visibleEvidence.includes("truth:B")
+          || request.visibleReports.some(report => report.decision === "B");
+        return {
+          decision: sawTruth ? "B" : "A",
+          confidence: sawTruth ? 0.9 : 0.6,
+          evidenceIds: request.visibleEvidence,
+          promptTokens: 10,
+          completionTokens: 2,
+          latencyMs: 1,
+        };
+      },
+    };
+    const result = await runSixArmBlock({
+      task: {
+        id: "mock-task",
+        publicContext: "Choose A or B",
+        options: ["A", "B"],
+        correctAnswer: "B",
+        agents: [
+          { id: "a1", privateEvidence: ["decoy:A"] },
+          { id: "a2", privateEvidence: ["decoy:A"] },
+          { id: "a3", privateEvidence: ["truth:B"] },
+        ],
+      },
+      llm: mockLlm,
+      replicateSeed: 7,
+      assignedAt: "2026-08-09T00:00:00.000Z",
+      budgetContract: { maxLlmCalls: 6, maxRounds: 2 },
+      lambdas: { token: 0.0001 },
+      artifactSink: {
+        writeManifest() { sinkEvents.push("manifest"); },
+        writeArmArtifact(artifact) { sinkEvents.push(`arm:${artifact.arm}`); },
+      },
+    });
+
+    expect(result.manifest.assignments).toHaveLength(6);
+    expect(result.artifacts).toHaveLength(6);
+    expect(result.costTable).toHaveLength(6);
+    expect(Object.isFrozen(result.manifest)).toBe(true);
+    expect(Object.isFrozen(result.artifacts[0])).toBe(true);
+    const independent = result.artifacts.find(artifact => artifact.arm === "independent_ensemble")!;
+    expect(independent.calls).toHaveLength(3);
+    expect(independent.calls.every(call => call.observedAgentIds.length === 0)).toBe(true);
+    expect(result.artifacts.every(artifact => artifact.assignment.stratum.replicateSeed === 7)).toBe(true);
+    expect(result.manifest.assignments.every(
+      assignment => assignment.assignedAt === "2026-08-09T00:00:00.000Z",
+    )).toBe(true);
+    const randomActions = result.artifacts.find(artifact => artifact.arm === "random_governance")!
+      .calls.filter(call => call.governanceAction).length;
+    const diagnosticActions = result.artifacts.find(artifact => artifact.arm === "diagnostic_governance")!
+      .calls.filter(call => call.governanceAction).length;
+    expect(randomActions).toBe(1);
+    expect(diagnosticActions).toBe(randomActions);
+    expect(sinkEvents).toHaveLength(7);
+    expect(sinkEvents[0]).toBe("manifest");
+    expect(result.alpha.swarmAlpha).toBe(1);
+    expect(requests).toHaveLength(result.artifacts.reduce((sum, artifact) => sum + artifact.calls.length, 0));
+    expect(result.artifacts.every(artifact => artifact.calls.length <= 6)).toBe(true);
+  });
+
+  it("records per-arm failure artifacts when a hard call budget is exceeded", async () => {
+    const llm: BlockLlm = {
+      modelId: "mock-budget-failure",
+      async complete() {
+        return { decision: "A", confidence: 0.5, evidenceIds: [], promptTokens: 1, completionTokens: 1, latencyMs: 1 };
+      },
+    };
+    const result = await runSixArmBlock({
+      task: {
+        id: "budget-task",
+        publicContext: "Choose A",
+        options: ["A"],
+        correctAnswer: "A",
+        agents: [{ id: "a1", privateEvidence: [] }, { id: "a2", privateEvidence: [] }],
+      },
+      llm,
+      replicateSeed: 1,
+      budgetContract: { maxLlmCalls: 2, maxRounds: 2 },
+    });
+    expect(result.artifacts.some(artifact => artifact.outcome.status === "invalid")).toBe(true);
+    expect(result.costTable.some(row => row.failureCode === "llm_call_budget_exceeded")).toBe(true);
+  });
+
+  it("marks an arm invalid when the model cites evidence it could not observe", async () => {
+    const result = await runSixArmBlock({
+      task: {
+        id: "provenance-task",
+        publicContext: "Choose A",
+        options: ["A"],
+        correctAnswer: "A",
+        agents: [{ id: "a1", privateEvidence: ["visible:e1"] }],
+      },
+      llm: {
+        modelId: "mock-provenance-failure",
+        async complete() {
+          return {
+            decision: "A",
+            confidence: 0.9,
+            evidenceIds: ["hidden:e2"],
+            promptTokens: 1,
+            completionTokens: 1,
+            latencyMs: 1,
+          };
+        },
+      },
+      replicateSeed: 1,
+      budgetContract: { maxLlmCalls: 2, maxRounds: 2 },
+    });
+    expect(result.artifacts.every(artifact => artifact.outcome.status === "invalid")).toBe(true);
+    expect(result.costTable.every(row => row.failureCode === "unobserved_evidence_id")).toBe(true);
   });
 });

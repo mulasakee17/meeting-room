@@ -185,6 +185,16 @@ export class EpistemicLedger {
     return report ? structuredClone(report) : undefined;
   }
 
+  getClaim(claimId: string): EpistemicClaim | undefined {
+    const claim = this.claims.get(claimId);
+    return claim ? structuredClone(claim) : undefined;
+  }
+
+  getEvidence(evidenceId: string): EpistemicEvidence | undefined {
+    const item = this.evidence.get(evidenceId);
+    return item ? structuredClone(item) : undefined;
+  }
+
   getResolution(claimId: string): ClaimResolution | undefined {
     const resolution = this.resolutions.get(claimId);
     return resolution ? structuredClone(resolution) : undefined;

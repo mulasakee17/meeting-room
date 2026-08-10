@@ -47,10 +47,18 @@ import {
 } from "../../../src/lib/experimentation/assignment";
 import type {
   InterventionApplicationReceipt,
+  ProximalOutcomeRecord,
   TaskOutcomeRecord,
 } from "../../../src/lib/experimentation/lifecycle";
+import { PROXIMAL_BELIEF_SUMMARY_CONTRACT } from "../../../src/lib/experimentation/lifecycle";
+import {
+  loadOrCreateRunAssignmentManifest,
+  readRunAssignmentManifest,
+} from "../../../src/lib/experimentation/manifest";
 import { taskConfigToBundle, extractEvidenceIds } from "../tasks/legacyAdapter";
-import { runHiddenBenchProtocol } from "./hiddenbenchProtocol";
+import { runHiddenBenchProtocol, scoreHiddenBenchTranscript } from "./hiddenbenchProtocol";
+import { verifyRawRunData } from "../replayVerifier";
+import { assertValidStudyContract } from "../studyContractGuard";
 
 // ============================================================================
 // Scenario Loading
@@ -351,21 +359,30 @@ async function runHiddenBenchSingle(
   runIndex: number,
   outputDir: string,
 ): Promise<RawRunData> {
+  // CC-2: validate any explicit study declaration before the hiddenbench
+  // protocol can issue a single provider call.
+  const governanceStudy = assertValidStudyContract(config);
   const scenario = loadScenario(config.scenario, config.taskIndex, config.promptStyle);
   const task = scenario.task;
   const effectiveSeed = (seed + runIndex * 0x9E3779B1) >>> 0;
 
   // WP2: pre-run treatment assignment for the reference-protocol path.
-  const treatmentAssignment = createRunAssignment({
-    id: `asn:${runId}`,
-    unitId: runId,
-    stratum: { taskId: task.id, model: config.llmModel, seed, runIndex },
-    arm: "vanilla_interaction", // 参考协议无治理干预
-    policyId: "swarmalpha.hiddenbench-reference",
-    policyVersion: "1.0.0",
-    masterSeed: effectiveSeed,
-    assignedAt: new Date().toISOString(),
+  const persistedAssignment = loadOrCreateRunAssignmentManifest({
+    outputDir,
+    runId,
+    budgetContract: { maxRounds: config.maxRounds },
+    createAssignment: () => createRunAssignment({
+      id: `asn:${runId}`,
+      unitId: runId,
+      stratum: { taskId: task.id, model: config.llmModel, seed, runIndex, protocol: "hiddenbench" },
+      arm: "vanilla_interaction",
+      policyId: "swarmalpha.hiddenbench-reference",
+      policyVersion: "1.0.0",
+      masterSeed: effectiveSeed,
+      assignedAt: new Date().toISOString(),
+    }),
   });
+  const treatmentAssignment = persistedAssignment.manifest.assignment;
 
   const llmConfig: LLMConfig = {
     provider: detectLLMProvider(config.llmModel),
@@ -375,7 +392,9 @@ async function runHiddenBenchSingle(
     ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
   };
 
-  const hbResult = await runHiddenBenchProtocol(taskConfigToBundle(task), llmConfig, effectiveSeed, config.maxRounds);
+  const bundle = taskConfigToBundle(task);
+  const transcript = await runHiddenBenchProtocol(bundle.promptTask, llmConfig, effectiveSeed, config.maxRounds);
+  const hbResult = scoreHiddenBenchTranscript(transcript, bundle.scoringTask);
 
   // HiddenBench 协议无 ranking，用 postAccuracy 作为 finalAccuracy
   const finalAccuracy = hbResult.postAccuracy;
@@ -401,6 +420,7 @@ async function runHiddenBenchSingle(
     seed,
     runIndex,
     rawSchemaVersion: RAW_SCHEMA_VERSION,
+    ...(governanceStudy !== undefined ? { governanceStudy: structuredClone(governanceStudy) } : {}),
     timestamp: new Date().toISOString(),
     scenario: config.scenario,
     agentCount: config.agentCount,
@@ -416,7 +436,22 @@ async function runHiddenBenchSingle(
     interventions: [],
     governanceIssues: [],
     treatmentAssignment,
-    applicationReceipts: [],
+    assignmentManifest: {
+      path: path.basename(persistedAssignment.absolutePath),
+      sha256: persistedAssignment.sha256,
+      reused: persistedAssignment.reused,
+      assignmentId: treatmentAssignment.id,
+    },
+    applicationReceipts: [{
+      id: `rcpt:${runId}:no-action`,
+      assignmentId: treatmentAssignment.id,
+      actionType: "no_action",
+      status: "inapplicable",
+      effectiveWindow: null,
+      targetAgentIds: [],
+      sourceEventIds: [],
+    }],
+    proximalOutcomes: [],
     taskOutcome,
     tokenUsage: {
       promptTokens: hbResult.tokenUsage.promptTokens,
@@ -457,6 +492,9 @@ export async function runSingle(
   runIndex: number,
   outputDir: string,
 ): Promise<RawRunData> {
+  // CC-2: validate any explicit study declaration before either Runner path
+  // can invoke a provider. Missing declarations stay legacy/undeclared.
+  const governanceStudy = assertValidStudyContract(config);
   const runId = `${config.id}_${runtimeMode}_seed${seed}_run${runIndex}`;
   console.log(`  [${new Date().toISOString()}] Starting ${runId}...`);
 
@@ -481,20 +519,32 @@ export async function runSingle(
   // so the eligible arm is the configuration-driven one at probability 1.0; the
   // record still carries seed/draw/policy so a future randomized manifest can
   // be audited the same way.
-  const unitId = `${config.id}_${runtimeMode}_seed${seed}_run${runIndex}`;
   const arm: TreatmentArm = config.governanceMode === "none" || config.governanceMode === "detect-only"
     ? "vanilla_interaction"
     : "diagnostic_governance";
-  const treatmentAssignment = createRunAssignment({
-    id: `asn:${unitId}`,
-    unitId,
-    stratum: { taskId: bundle.promptTask.schema.id, model: config.llmModel, seed, runIndex },
-    arm,
-    policyId: "swarmalpha.diagnostic",
-    policyVersion: "1.0.0",
-    masterSeed: effectiveSeed,
-    assignedAt: new Date().toISOString(),
+  const persistedAssignment = loadOrCreateRunAssignmentManifest({
+    outputDir,
+    runId,
+    budgetContract: { maxRounds: config.maxRounds },
+    createAssignment: () => createRunAssignment({
+      id: `asn:${runId}`,
+      unitId: runId,
+      stratum: {
+        taskId: bundle.promptTask.schema.id,
+        model: config.llmModel,
+        seed,
+        runIndex,
+        runtimeMode,
+        governanceMode: config.governanceMode,
+      },
+      arm,
+      policyId: `swarmalpha.diagnostic.${config.governanceMode}`,
+      policyVersion: "1.0.0",
+      masterSeed: effectiveSeed,
+      assignedAt: new Date().toISOString(),
+    }),
   });
+  const treatmentAssignment = persistedAssignment.manifest.assignment;
 
   const llmConfig: LLMConfig = {
     provider: detectLLMProvider(config.llmModel),
@@ -744,6 +794,7 @@ export async function runSingle(
   // v6: 保存完整 Intervention 信息（targetAgents, effect, parameters, applied），
   // 用于论文中干预效果分析和降级率统计
   const interventions: Array<{
+    id: string;
     round: number;
     type: string;
     targetAgentId?: string;
@@ -757,6 +808,7 @@ export async function runSingle(
     if (rd.interventions) {
       for (const intv of rd.interventions as any[]) {
         interventions.push({
+          id: `${runId}:intv:${rd.roundNumber}:${interventions.length}`,
           round: rd.roundNumber,
           type: intv.type || "unknown",
           targetAgentId: intv.targetAgentId,
@@ -770,6 +822,7 @@ export async function runSingle(
     if (rd.governanceIssues && rd.governanceIssues.length > 0) {
       for (const issue of rd.governanceIssues) {
         governanceIssues.push({
+          id: `issue:${runId}:${rd.roundNumber}:${governanceIssues.length}`,
           round: rd.roundNumber,
           type: issue.type,
           severity: issue.severity,
@@ -782,19 +835,78 @@ export async function runSingle(
   }
 
   // WP2: intervention → application receipt chain (assignment → applied action → window).
-  // no_action is expressed by the run-level assignment arm; a run with no
-  // interventions simply yields an empty receipts array, not a missing field.
-  const applicationReceipts: InterventionApplicationReceipt[] = interventions.map((intv, idx) => ({
-    id: `rcpt:${runId}:${intv.round}:${idx}`,
-    assignmentId: treatmentAssignment.id,
-    interventionId: `${runId}:intv:${intv.round}:${idx}`,
-    status: intv.applied === false ? "failed" : "applied",
-    appliedAtRound: intv.applied === false ? undefined : intv.round,
-    effectiveWindow: intv.applied === false ? null : { startRound: intv.round, endRound: result.totalRounds },
-    targetAgentIds: intv.targetAgents ?? (intv.targetAgentId ? [intv.targetAgentId] : []),
-    failureCode: intv.applied === false ? "intervention_not_applied" : undefined,
-    sourceEventIds: [],
-  }));
+  // Every run emits an explicit receipt; a run with no interventions records
+  // an inapplicable no_action receipt instead of an ambiguous empty array.
+  const applicationReceipts: InterventionApplicationReceipt[] = interventions.map((intv, idx) => {
+    const noAction = intv.type === "none";
+    const applied = intv.applied === true && !noAction;
+    const plannedWindow = { startRound: intv.round + 1, endRound: intv.round + 1 };
+    const observable = applied && plannedWindow.startRound <= result.totalRounds;
+    return {
+      id: `rcpt:${runId}:${intv.round}:${idx}`,
+      assignmentId: treatmentAssignment.id,
+      actionType: intv.type,
+      interventionId: intv.id,
+      status: applied ? "applied" : (noAction ? "inapplicable" : "failed"),
+      appliedAtRound: applied ? intv.round : undefined,
+      plannedWindow: applied ? plannedWindow : undefined,
+      windowContractRef: applied
+        ? { id: "swarmalpha.intervention.next-round", version: "1.0.0" }
+        : undefined,
+      effectiveWindow: observable ? plannedWindow : null,
+      targetAgentIds: [...new Set(intv.targetAgents ?? (intv.targetAgentId ? [intv.targetAgentId] : []))],
+      failureCode: applied || noAction
+        ? undefined
+        : (intv.applied === undefined ? "missing_application_status" : "intervention_not_applied"),
+      sourceEventIds: governanceIssues
+        .filter(issue => issue.round === intv.round && issue.id)
+        .map(issue => issue.id as string),
+    };
+  });
+  if (applicationReceipts.length === 0) {
+    applicationReceipts.push({
+      id: `rcpt:${runId}:no-action`,
+      assignmentId: treatmentAssignment.id,
+      actionType: "no_action",
+      status: "inapplicable",
+      effectiveWindow: null,
+      targetAgentIds: [],
+      sourceEventIds: governanceIssues.filter(issue => issue.id).map(issue => issue.id as string),
+    });
+  }
+
+  const proximalOutcomes: ProximalOutcomeRecord[] = applicationReceipts
+    .filter(receipt => receipt.status === "applied" && receipt.plannedWindow)
+    .map(receipt => {
+      const planned = receipt.plannedWindow!;
+      const observed = receipt.effectiveWindow
+        ? beliefTrajectory.find(snapshot => snapshot.round === receipt.effectiveWindow!.endRound)
+        : undefined;
+      const confidences = observed ? Object.values(observed.confidences).filter(Number.isFinite) : [];
+      const beliefs = observed ? Object.values(observed.beliefs).filter(Number.isFinite) : [];
+      const missingMetrics = [
+        ...(confidences.length === 0 ? ["meanConfidence"] : []),
+        ...(beliefs.length === 0 ? ["beliefSpread"] : []),
+      ];
+      return {
+        id: `prox:${receipt.id}`,
+        applicationReceiptId: receipt.id,
+        window: planned,
+        metricContractRefs: [{
+          id: PROXIMAL_BELIEF_SUMMARY_CONTRACT.id,
+          version: PROXIMAL_BELIEF_SUMMARY_CONTRACT.version,
+        }],
+        values: {
+          meanConfidence: confidences.length > 0
+            ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length
+            : null,
+          beliefSpread: beliefs.length > 0 ? Math.max(...beliefs) - Math.min(...beliefs) : null,
+        },
+        ...(!observed || missingMetrics.length > 0
+          ? { missingnessReason: observed ? `no_finite_values:${missingMetrics.join(",")}` : "planned_window_not_observed" }
+          : {}),
+      };
+    });
 
   // ROADMAP_V5: 提取 itemBeliefs 轨迹（K 维偏好向量，Hidden Anchors 锚点恢复核心数据）
   const itemBeliefsTrajectory: RawRunData["itemBeliefsTrajectory"] = [];
@@ -841,6 +953,7 @@ export async function runSingle(
   }
 
   const tokenUsage = collectTokenUsage(agents);
+  const taskScored = finalRanking.length > 0 && optionParsing?.rankingError === undefined;
 
   // WP2: task outcome — the final link of the assignment → application →
   // outcome chain. quality uses the ranking metric when applicable, else the
@@ -848,14 +961,14 @@ export async function runSingle(
   const taskOutcome: TaskOutcomeRecord = {
     runAssignmentId: treatmentAssignment.id,
     evaluationContractRef: { id: "swarmalpha.categorical.ranking", version: "1.0.0" },
-    quality: rankingMetricApplicable ? finalKendallTau : (finalAccuracy ?? null),
+    quality: taskScored ? finalAccuracy : null,
     cost: {
       promptTokens: tokenUsage.promptTokens,
       completionTokens: tokenUsage.completionTokens,
       totalTokens: tokenUsage.totalTokens,
       totalLatencyMs: tokenUsage.totalLatencyMs,
     },
-    status: "scored",
+    status: taskScored ? "scored" : "invalid",
   };
 
   const rawData: RawRunData = {
@@ -865,6 +978,7 @@ export async function runSingle(
     seed,
     runIndex,
     rawSchemaVersion: RAW_SCHEMA_VERSION,
+    ...(governanceStudy !== undefined ? { governanceStudy: structuredClone(governanceStudy) } : {}),
     timestamp: new Date().toISOString(),
     scenario: config.scenario,
     agentCount: config.agentCount,
@@ -886,7 +1000,14 @@ export async function runSingle(
     interventions,
     governanceIssues,
     treatmentAssignment,
+    assignmentManifest: {
+      path: path.basename(persistedAssignment.absolutePath),
+      sha256: persistedAssignment.sha256,
+      reused: persistedAssignment.reused,
+      assignmentId: treatmentAssignment.id,
+    },
     applicationReceipts,
+    proximalOutcomes,
     taskOutcome,
     tokenUsage,
     itemBeliefsTrajectory,
@@ -933,7 +1054,19 @@ export async function runExperiment(
           try {
             const existing = safeJsonParse<RawRunData>(fs.readFileSync(outPath, "utf-8"));
             // 有效 RawRunData 必须有 experimentId 且无 error 字段
-            if (existing && existing.experimentId && !(existing as any).error) {
+            const persisted = existing ? readRunAssignmentManifest(experimentOutDir, runId) : null;
+            const lifecycle = existing ? verifyRawRunData(outPath, existing) : null;
+            if (existing
+              && existing.experimentId
+              && !(existing as any).error
+              && existing.rawSchemaVersion === RAW_SCHEMA_VERSION
+              && lifecycle?.runIssues.length === 0
+              && persisted
+              && existing.assignmentManifest?.sha256 === persisted.sha256
+              && existing.assignmentManifest.path === path.basename(persisted.absolutePath)
+              && JSON.stringify(existing.treatmentAssignment) === JSON.stringify(persisted.manifest.assignment)
+              && JSON.stringify(persisted.manifest.budgetContract ?? null)
+                === JSON.stringify({ maxRounds: config.maxRounds })) {
               allData.push(existing);
               valid = true;
               if (options.verbose) console.log(`  Skipping ${runId} (valid)`);
@@ -959,9 +1092,19 @@ export async function runExperiment(
           allData.push(data);
         } catch (err) {
           console.error(`  ERROR in ${runId}:`, err);
+          const failedAssignment = readRunAssignmentManifest(experimentOutDir, runId);
           // 错误 run 写入 .error.json 后缀，避免污染成功文件路径导致 --resume 跳过
           fs.writeFileSync(errPath, JSON.stringify({
-            runId, error: String(err), timestamp: new Date().toISOString(),
+            runId,
+            error: String(err),
+            timestamp: new Date().toISOString(),
+            treatmentAssignment: failedAssignment?.manifest.assignment,
+            assignmentManifest: failedAssignment ? {
+              path: path.basename(failedAssignment.absolutePath),
+              sha256: failedAssignment.sha256,
+              reused: failedAssignment.reused,
+              assignmentId: failedAssignment.manifest.assignment.id,
+            } : undefined,
           }, null, 2));
         }
       }

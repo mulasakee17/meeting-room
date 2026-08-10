@@ -6,6 +6,18 @@
 > 适用对象：Claude Code / DeepSeek 执行者、Codex 复核者、项目负责人
 > 核心目标：在不牺牲可复现性和科学有效性的前提下，把 v6 Research Candidate 推进到可运行的 confirmatory campaign 与 AAMAS 长文证据包
 
+> 2026-08-09 状态注：G1–G3 已关闭代码级 mock gate；当前问题与下一阶段权威 TODO 见 `docs/plans/SWARMALPHA_V6_FOUNDATION_GOVERNANCE_AUDIT_2026-08-09.md` 和 `docs/plans/SWARMALPHA_V6_EXECUTION_PROGRESS.md`。本文件 §1.1–§1.2 的数字与缺口列表保留为 2026-08-08 基线快照，不应再当作实时状态。
+
+> 2026-08-09 schema-5 状态注（权威）：governance audit core 已定义并可验证（见
+> `docs/architecture/GOVERNANCE_AUDIT_TRAIL_V1.md`）。schema 5 只是
+> reserved/validated carrier，production Runner 仍写 `RAW_SCHEMA_VERSION = "4.0"`；
+> 没有任何生产路径发出 schema 5。structural replay 与 executable decision
+> replay 是两种不同验证等级，exploratory schema 5 可停在
+> `sealed_structural_replay_verified`，confirmatory schema 5 必须先完成决策重放
+> 才能获得 `sealed_decision_replay_verified`。尚未运行付费 pilot 或
+> confirmatory experiment。本文件的 WP 数字均为历史快照，不得用于宣称“P0
+> complete”“production ready”或“causal effect established”。
+
 ---
 
 ## 0. 如何使用本计划
@@ -386,7 +398,7 @@ interface ExperimentTaskBundle {
 ```ts
 interface TreatmentAssignment {
   id: string;
-  schemaVersion: "1.0.0";
+  schemaVersion: "2.0.0";
   unitId: string;
   unitKind: "run" | "eligible_event";
   stratum: Record<string, string | number | boolean>;

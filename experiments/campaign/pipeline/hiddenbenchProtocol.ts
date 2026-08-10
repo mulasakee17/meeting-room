@@ -19,7 +19,11 @@
 import { callLLM, fetchWithTimeout, type LLMConfig, type LLMResponse, LLMError, LLMErrorType } from "../../../src/lib/llm/providers";
 import { safeJsonParse } from "../../../src/lib/utils/jsonUtils";
 import { mulberry32 } from "../../../src/lib/utils/statsUtils";
-import { candidateCanonicals, type ExperimentTaskBundle } from "../../../src/lib/experiment-contracts/contracts";
+import {
+  candidateCanonicals,
+  type ExperimentTaskBundle,
+  type PromptTask,
+} from "../../../src/lib/experiment-contracts/contracts";
 
 /**
  * Candidate labels are part of the task schema, not the answer key.
@@ -128,6 +132,39 @@ async function callLLMFreeText(
   return {
     content: result.rawContent,
     usage: result.usage,
+  };
+}
+
+/** Score a completed transcript after the prompt-side protocol has ended. */
+export function scoreHiddenBenchTranscript(
+  transcript: HiddenBenchProtocolTranscript,
+  scoringTask: ExperimentTaskBundle["scoringTask"],
+): HiddenBenchProtocolResult {
+  const truthRanks = scoringTask.groundTruth.value as Record<string, number>;
+  const correct = Object.entries(truthRanks).filter(([, rank]) => rank === 1);
+  if (correct.length !== 1) {
+    throw new Error("HiddenBench categorical truth must contain exactly one rank-1 answer");
+  }
+  const correctAnswer = correct[0][0];
+  const preVotes = transcript.preVotes.map(vote => ({ ...vote, isCorrect: vote.vote === correctAnswer }));
+  const postVotes = transcript.postVotes.map(vote => ({ ...vote, isCorrect: vote.vote === correctAnswer }));
+  const agentCount = postVotes.length;
+  if (agentCount === 0 || preVotes.length !== agentCount) {
+    throw new Error("HiddenBench transcript must contain equal non-empty pre/post vote sets");
+  }
+  const preCorrect = preVotes.filter(v => v.isCorrect).length;
+  const postCorrect = postVotes.filter(v => v.isCorrect).length;
+  const preAccuracy = preCorrect / agentCount;
+  const postAccuracy = postCorrect / agentCount;
+  return {
+    ...transcript,
+    preVotes,
+    postVotes,
+    preAccuracy,
+    postAccuracy,
+    preMajorityCorrect: preCorrect > agentCount / 2,
+    postMajorityCorrect: postCorrect > agentCount / 2,
+    collectiveGain: postAccuracy - preAccuracy,
   };
 }
 
@@ -244,12 +281,15 @@ Respond with your decision in JSON format:
 // Types
 // ============================================================================
 
-export interface HiddenBenchVote {
+export interface HiddenBenchObservedVote {
   agentId: string;
   agentLabel: string;
   vote: string;
   rationale: string;
   rawResponse: string;
+}
+
+export interface HiddenBenchVote extends HiddenBenchObservedVote {
   isCorrect: boolean;
 }
 
@@ -260,7 +300,17 @@ export interface HiddenBenchDiscussionMessage {
   content: string;
 }
 
-export interface HiddenBenchProtocolResult {
+export interface HiddenBenchProtocolTranscript {
+  preVotes: HiddenBenchObservedVote[];
+  postVotes: HiddenBenchObservedVote[];
+  discussionHistory: HiddenBenchDiscussionMessage[];
+  totalRounds: number;
+  tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  elapsedMs: number;
+  _agentPrompts?: Record<string, { scenarioPrompt: string; preVotePrompt: string; postVotePrompt: string }>;
+}
+
+export interface HiddenBenchProtocolResult extends Omit<HiddenBenchProtocolTranscript, "preVotes" | "postVotes"> {
   /** Pre-discussion 投票 */
   preVotes: HiddenBenchVote[];
   /** Post-discussion 投票 */
@@ -375,21 +425,16 @@ function parseVote(
  *   3. Post-discussion: 每个 agent 看到完整历史后再次投票
  */
 export async function runHiddenBenchProtocol(
-  bundle: ExperimentTaskBundle,
+  promptTask: PromptTask,
   llmConfig: LLMConfig,
   seed: number,
   maxRounds: number = 15,
-): Promise<HiddenBenchProtocolResult> {
+): Promise<HiddenBenchProtocolTranscript> {
   const t0 = Date.now();
   let totalPrompt = 0;
   let totalCompletion = 0;
 
-  // Prompt side reads only the PromptTask (no truth); truth comes from the
-  // scoringTask and is used exclusively for vote correctness scoring.
-  const promptTask = bundle.promptTask;
   const options = candidateCanonicals(promptTask);
-  const truthRanks = bundle.scoringTask.groundTruth.value as Record<string, number>;
-  const correctAnswer = Object.entries(truthRanks).find(([, rank]) => rank === 1)?.[0] ?? "";
   const agentDefs = promptTask.schema.agents || [];
 
   // --- 调试：保存 agent prompts 到结果中以验证信息隔离 ---
@@ -439,7 +484,7 @@ export async function runHiddenBenchProtocol(
   // ==========================================================================
   // Phase 1: Pre-discussion 独立投票
   // ==========================================================================
-  const preVotes: HiddenBenchVote[] = [];
+  const preVotes: HiddenBenchObservedVote[] = [];
   const scenarioPromptCache = new Map<string, string>();
 
   for (let i = 0; i < agentCount; i++) {
@@ -470,7 +515,6 @@ export async function runHiddenBenchProtocol(
       vote,
       rationale,
       rawResponse: response.rawContent,
-      isCorrect: vote === correctAnswer,
     });
   }
 
@@ -536,7 +580,7 @@ export async function runHiddenBenchProtocol(
   // ==========================================================================
   // Phase 3: Post-discussion 投票（复用 agent 完整历史 + 最终决策 prompt）
   // ==========================================================================
-  const postVotes: HiddenBenchVote[] = [];
+  const postVotes: HiddenBenchObservedVote[] = [];
   const formattedMessages = discussionHistory.map(m => ({
     round: m.round,
     agentLabel: m.agentLabel,
@@ -574,33 +618,19 @@ export async function runHiddenBenchProtocol(
       vote,
       rationale,
       rawResponse: response.content,
-      isCorrect: vote === correctAnswer,
     });
   }
 
   // ==========================================================================
   // 计算指标
   // ==========================================================================
-  const preCorrect = preVotes.filter(v => v.isCorrect).length;
-  const postCorrect = postVotes.filter(v => v.isCorrect).length;
-  const preAccuracy = preCorrect / agentCount;
-  const postAccuracy = postCorrect / agentCount;
 
   // Majority rule: >50% 的 agent 投票正确
-  const preMajorityCorrect = preCorrect > agentCount / 2;
-  const postMajorityCorrect = postCorrect > agentCount / 2;
-
-  const collectiveGain = postAccuracy - preAccuracy;
 
   return {
     preVotes,
     postVotes,
     discussionHistory,
-    preAccuracy,
-    postAccuracy,
-    preMajorityCorrect,
-    postMajorityCorrect,
-    collectiveGain,
     totalRounds: maxRounds,
     tokenUsage: {
       promptTokens: totalPrompt,

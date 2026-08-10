@@ -31,7 +31,11 @@ import {
   taskConfigToBundle,
   validateLegacyTruthCompleteness,
 } from "../experiments/campaign/tasks/legacyAdapter";
-import { resolveCandidateOptions } from "../experiments/campaign/pipeline/hiddenbenchProtocol";
+import {
+  resolveCandidateOptions,
+  runHiddenBenchProtocol,
+  scoreHiddenBenchTranscript,
+} from "../experiments/campaign/pipeline/hiddenbenchProtocol";
 
 function makeTask(overrides: Partial<TaskConfig> = {}): TaskConfig {
   return {
@@ -90,6 +94,26 @@ describe("TaskBundle validation and freezing", () => {
 });
 
 describe("candidate ordering and truth isolation", () => {
+  it("keeps the HiddenBench prompt runner physically truth-free", () => {
+    const source = runHiddenBenchProtocol.toString();
+    expect(source).not.toMatch(/scoringTask|groundTruth|correctAnswer|isCorrect/);
+  });
+
+  it("scores only a completed truth-free transcript", () => {
+    const bundle = taskConfigToBundle(makeTask());
+    const transcript = {
+      preVotes: [{ agentId: "a1", agentLabel: "Agent 1", vote: "Option A", rationale: "r", rawResponse: "{}" }],
+      postVotes: [{ agentId: "a1", agentLabel: "Agent 1", vote: "Option B", rationale: "r", rawResponse: "{}" }],
+      discussionHistory: [],
+      totalRounds: 1,
+      tokenUsage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      elapsedMs: 1,
+    };
+    const scored = scoreHiddenBenchTranscript(transcript, bundle.scoringTask);
+    expect(scored.preAccuracy).toBe(0);
+    expect(scored.postAccuracy).toBe(1);
+  });
+
   it("keeps candidate order from searchKeys regardless of correctAnswer insertion order", () => {
     // correctAnswer 的键序不同，候选顺序必须仍来自 searchKeys。
     const task = makeTask({ correctAnswer: { "Option A": 2, "Option C": 3, "Option B": 1 } });

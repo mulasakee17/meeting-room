@@ -36,6 +36,10 @@ export interface LLMConfig {
   model: string;
   apiKey?: string;
   baseUrl?: string;
+  /** Provider response envelope. Existing callers retain the JSON default. */
+  responseFormat?: "json" | "text";
+  /** Optional provider-side completion cap. */
+  maxTokens?: number;
   timeout?: number;   // 超时时间（毫秒）
   temperature?: number; // 温度参数 (0-2)
   seed?: number;       // 随机种子（DeepSeek/OpenAI 支持，用于可复现性）
@@ -62,10 +66,15 @@ export interface LLMResponse {
 export async function fetchWithTimeout(
   url: string,
   options: RequestInit,
-  timeout: number = DEFAULT_TIMEOUT
+  timeout: number = DEFAULT_TIMEOUT,
+  externalSignal?: AbortSignal,
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
+  const upstreamSignal = externalSignal ?? options.signal ?? undefined;
+  const abortFromUpstream = () => controller.abort(upstreamSignal?.reason);
+  if (upstreamSignal?.aborted) abortFromUpstream();
+  else upstreamSignal?.addEventListener("abort", abortFromUpstream, { once: true });
 
   try {
     const response = await fetch(url, {
@@ -75,7 +84,28 @@ export async function fetchWithTimeout(
     return response;
   } finally {
     clearTimeout(timeoutId);
+    upstreamSignal?.removeEventListener("abort", abortFromUpstream);
   }
+}
+
+/**
+ * One DeepSeek network attempt with no retry, backoff, response repair, or
+ * fallback. This is the provider primitive used by auditable v6 smoke runs.
+ */
+export async function callDeepSeekOnce(
+  systemPrompt: string,
+  userPrompt: string,
+  config?: LLMConfig,
+  signal?: AbortSignal,
+): Promise<LLMResponse> {
+  if (config?.provider !== undefined && config.provider !== "deepseek") {
+    throw new LLMError("callDeepSeekOnce only accepts provider=deepseek", LLMErrorType.UNKNOWN, undefined, false);
+  }
+  return callDeepSeek(systemPrompt, userPrompt, {
+    ...config,
+    provider: "deepseek",
+    model: config?.model || "deepseek-chat",
+  }, signal);
 }
 
 export async function callLLM(
@@ -421,7 +451,8 @@ async function callAnthropic(
 async function callDeepSeek(
   systemPrompt: string,
   userPrompt: string,
-  config?: LLMConfig
+  config?: LLMConfig,
+  signal?: AbortSignal,
 ): Promise<LLMResponse> {
   const apiKey = config?.apiKey || process.env.DEEPSEEK_API_KEY;
   const model = config?.model || "deepseek-chat";
@@ -453,12 +484,14 @@ async function callDeepSeek(
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          response_format: { type: "json_object" },
+          ...(config?.responseFormat === "text" ? {} : { response_format: { type: "json_object" } }),
           temperature,
+          ...(config?.maxTokens !== undefined ? { max_tokens: config.maxTokens } : {}),
           ...(config?.seed !== undefined ? { seed: config.seed } : {}),
         }),
       },
-      timeout
+      timeout,
+      signal,
     );
 
     if (!response.ok) {

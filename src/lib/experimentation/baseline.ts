@@ -61,6 +61,9 @@ export function validateBudgetContract(value: unknown): asserts value is BudgetC
     if (typeof v !== "number" || !Number.isFinite(v) || v < 0) {
       throw new Error(`BudgetContract.${field} must be a non-negative finite number`);
     }
+    if (field !== "maxWallClockMs" && !Number.isSafeInteger(v)) {
+      throw new Error(`BudgetContract.${field} must be a non-negative safe integer`);
+    }
   }
 }
 
@@ -73,6 +76,12 @@ export function validateBudgetContract(value: unknown): asserts value is BudgetC
 export interface BlockOutcome {
   arm: ExperimentalArm;
   blockKey: string;
+  taskId: string;
+  modelId: string;
+  replicateSeed: number;
+  evaluationContractRef: { id: string; version: string };
+  metricRef: { id: string; version: string; direction: "higher_is_better" };
+  budgetContractHash: string;
   quality: number | null;
   cost: CostRecord;
   status: "scored" | "unresolved" | "invalid";
@@ -89,10 +98,40 @@ export function validateBlockOutcome(value: unknown): asserts value is BlockOutc
   if (typeof o.blockKey !== "string" || o.blockKey.length === 0) {
     throw new Error("BlockOutcome.blockKey must be a non-empty string");
   }
-  if (o.quality !== null && typeof o.quality !== "number") {
-    throw new Error("BlockOutcome.quality must be a number or null");
+  for (const field of ["taskId", "modelId"] as const) {
+    if (typeof o[field] !== "string" || (o[field] as string).length === 0) {
+      throw new Error(`BlockOutcome.${field} must be a non-empty string`);
+    }
+  }
+  if (typeof o.budgetContractHash !== "string" || !/^[a-f0-9]{64}$/.test(o.budgetContractHash)) {
+    throw new Error("BlockOutcome.budgetContractHash must be a SHA-256 hex digest");
+  }
+  if (!Number.isSafeInteger(o.replicateSeed)) throw new Error("BlockOutcome.replicateSeed must be a safe integer");
+  for (const field of ["evaluationContractRef", "metricRef"] as const) {
+    const ref = o[field];
+    if (ref === null || typeof ref !== "object") throw new Error(`BlockOutcome.${field} must be an object`);
+    const record = ref as Record<string, unknown>;
+    if (typeof record.id !== "string" || record.id.length === 0
+      || typeof record.version !== "string" || record.version.length === 0) {
+      throw new Error(`BlockOutcome.${field} id/version must be non-empty`);
+    }
+  }
+  if ((o.metricRef as Record<string, unknown>).direction !== "higher_is_better") {
+    throw new Error("BlockOutcome.metricRef.direction must be higher_is_better");
+  }
+  if (o.quality !== null && (typeof o.quality !== "number" || !Number.isFinite(o.quality))) {
+    throw new Error("BlockOutcome.quality must be a finite number or null");
   }
   if (o.status !== "scored" && o.status !== "unresolved" && o.status !== "invalid") {
     throw new Error("BlockOutcome.status must be scored|unresolved|invalid");
+  }
+  if ((o.status === "scored") !== (o.quality !== null)) {
+    throw new Error("BlockOutcome scored status and quality presence must agree");
+  }
+  if (o.cost === null || typeof o.cost !== "object") throw new Error("BlockOutcome.cost must be an object");
+  for (const value of Object.values(o.cost as Record<string, unknown>)) {
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+      throw new Error("BlockOutcome costs must be non-negative finite numbers");
+    }
   }
 }

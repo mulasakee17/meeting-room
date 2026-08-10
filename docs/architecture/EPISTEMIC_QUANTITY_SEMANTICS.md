@@ -5,6 +5,33 @@
 
 本文使用 MUST / MUST NOT / SHOULD 表示规范要求。它定义量的语义，不声明任何经验结果。
 
+## 2026-08-10 F0–F3 implementation addendum
+
+- `EpistemicQuantityContractV1` 与 `EpistemicQuantityRegistry` 已实现，显式绑定
+  semantic layer、值域、时序、truth access、comparability、reliability、
+  construct validity、calibration 状态、missingness、allowed uses、禁止解释和
+  claim ceiling。`validateEpistemicRef` 只校验引用形状；是否已注册由 registry
+  lookup 在消费边界 fail closed。
+- `summarizeBeliefGeometry` 只从显式 report 计算：binary certainty 为
+  `max(p, 1-p)`；categorical 同时保留 certainty、top-two margin、normalized
+  entropy 和全部 tie outcomes，结果不依赖 canonical option 的排列顺序。
+- `EpistemicDomainRegistry` 将 `claim.domain` 绑定到允许的 claim kind、resolver、
+  scoring rule 和 quantity；未知 domain、未允许 resolver 或同一 domain 的多个
+  active contract 一律拒绝。
+- `CalibrationArtifactV1.status = held_out_evaluated` 只表示 artifact 在结构上绑定
+  了不同的 fit/evaluation split、hash、样本量与 metric；它不表示校准已经良好，
+  当前也没有真实 held-out artifact。
+- `ScalarThresholdPolicyV1` 只输出 eligibility，不输出 action；missing observation
+  固定为 ineligible。未校准阈值只允许作为固定、预注册的随机实验规则；不能在线
+  自适应。`GovernanceDiagnosisRecord` 现在必须声明 `quantityRef`，不再携带裸
+  `threshold`；versioned policy 位于 eligibility rule config。
+- high-certainty diagnosis/rule、verification action 与 minimal policy 已升级到
+  v2；旧 `minReportedProbability` 被对称 certainty 的 versioned threshold policy
+  取代。旧 `R/T/H/F` 仍为 C0/legacy，不能进入 confirmatory control。
+
+上述是 contract/kernel 状态，不是实证结果。production observation adapter、真实
+calibration artifact 与 F4 final private elicitation 尚未完成。
+
 ## 1. 六个互斥语义层
 
 | Layer | 含义 | 必需 provenance |

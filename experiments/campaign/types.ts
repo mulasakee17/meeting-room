@@ -7,8 +7,22 @@
 import type { GovernanceEstimate } from "../../src/lib/epistemic/semantics";
 import type { ProgressiveEstimates } from "../../src/lib/thermodynamics/ProgressiveEstimator";
 import type { TreatmentAssignment } from "../../src/lib/experimentation/assignment";
+import type { GovernanceStudyContract } from "../../src/lib/experimentation/governanceStudy";
+import type { GovernanceAuditTrail } from "../../src/lib/experimentation/governanceAuditTrail";
+import type { FinalOutcomeArtifactV1 } from "../../src/lib/experimentation/finalOutcome";
+import type { FinalElicitationCollectionArtifactV1 } from "../../src/lib/experimentation/finalElicitationAdapter";
+import type {
+  OperationalAnalysisUnitV1,
+  OperationalOutcomeArtifactV1,
+} from "../../src/lib/experimentation/operationalOutcome";
+import type { PrimaryAssignmentManifestV1 } from "../../src/lib/experimentation/primaryAssignment";
+import type {
+  PrimaryArmExecutionBindingV1,
+  PrimaryArmExecutionRegistryV1,
+} from "../../src/lib/experimentation/primaryAssignmentExecution";
 import type {
   InterventionApplicationReceipt,
+  ProximalOutcomeRecord,
   TaskOutcomeRecord,
 } from "../../src/lib/experimentation/lifecycle";
 
@@ -18,7 +32,7 @@ import type {
 
 export type RuntimeMode = "belief" | "cognitive" | "native_cognitive";
 export type GovernanceMode = "none" | "detect-only" | "full" | "diversity_only" | "cognitive";
-export type ScenarioId = "ma" | "crisis" | "crisis_v2" | "supplier" | "invest" | "er_triage" | "fraud" | "university" | "hiddenbench";
+export type ScenarioId = "ma" | "crisis" | "crisis_v2" | "supplier" | "invest" | "er_triage" | "fraud" | "university" | "hiddenbench" | "v6_binary";
 export type LLMProvider = "qwen" | "gpt4o" | "deepseek";
 
 /**
@@ -66,6 +80,13 @@ export interface ExperimentConfig {
   isMain: boolean;
   /** 额外说明 */
   description: string;
+  /**
+   * CC-2: 显式声明的治理研究契约。缺省 = legacy/undeclared，绝不从 isMain、
+   * governanceMode、arm 名、文件名或 description 推断。提供时必须在任何
+   * LLM/provider 调用前通过 validateGovernanceStudyContract，并以其 structured
+   * clone 原样写入 RawRunData。
+   */
+  governanceStudy?: GovernanceStudyContract;
   /** LLM 超时（毫秒），默认 30000。弱模型生成结构化 JSON 可能需要更长 */
   timeout?: number;
   /** Phase D: 每轮强制 devil's advocate（HiddenBench §6.4 静态协议） */
@@ -148,14 +169,17 @@ export interface CognitiveStateSnapshot {
  *   与 governance lifecycle 记录（assignment → application receipt →
  *   task outcome）。2.0/3.0 仍可读，但不得进入 confirmatory governance ATE。
  */
-export type RawSchemaVersion = "1.0" | "2.0" | "3.0" | "4.0";
+export type RawSchemaVersion = "1.0" | "2.0" | "3.0" | "4.0" | "5.0";
 
 /** 当前 Runner 写出的 schema 版本。两条写路径必须一致使用此常量。 */
 export const RAW_SCHEMA_VERSION: RawSchemaVersion = "4.0";
 
+/** Reserved for the explicit audit-trail bridge; current Runner must remain on 4.0. */
+export const AUDITABLE_RAW_SCHEMA_VERSION = "5.0" as const;
+
 /** Schema 2+ retain the exact estimator-input replay contract. */
 export function hasReplayableEstimatorSchema(version: unknown): boolean {
-  return version === "2.0" || version === "3.0" || version === "4.0";
+  return version === "2.0" || version === "3.0" || version === "4.0" || version === "5.0";
 }
 
 export interface LegacyThermoSnapshot {
@@ -214,12 +238,37 @@ export interface RawRunData {
    * "2.0" adds replayable estimator inputs; "3.0" adds versioned macro signals.
    */
   rawSchemaVersion?: RawSchemaVersion;
+  /**
+   * CC-2: 验证后的治理研究契约 structured clone（仅当 config 显式提供时写入）。
+   * 缺省 = legacy/undeclared；schema 1.0-4.0 无此字段仍可读，不得推断为 confirmatory。
+   */
+  governanceStudy?: GovernanceStudyContract;
+  /** Required by schema 5.0; absent on legacy/read-compatible schema 1.0-4.0. */
+  governanceAuditTrail?: GovernanceAuditTrail;
+  /** Schema-5 Stage-1 authority. The assignment record is nested in this manifest. */
+  primaryAssignmentManifest?: PrimaryAssignmentManifestV1;
+  /** Frozen exact-ref lookup from randomized arm to implementation/budget snapshots. */
+  primaryArmExecutionRegistry?: PrimaryArmExecutionRegistryV1;
+  /** Pre-provider resolution of the assigned arm to one frozen executable snapshot. */
+  primaryArmExecution?: PrimaryArmExecutionBindingV1;
   /** WP2: pre-run treatment assignment identity（schema 4.0 必有）。 */
   treatmentAssignment?: TreatmentAssignment;
+  /** Assignment artifact persisted before the first LLM call. */
+  assignmentManifest?: { path: string; sha256: string; reused: boolean; assignmentId: string };
   /** WP2: 治理生命周期——干预应用回执（assignment → applied action → window）。 */
   applicationReceipts?: InterventionApplicationReceipt[];
+  /** Receipt-linked observations over the predeclared post-action window. */
+  proximalOutcomes?: ProximalOutcomeRecord[];
   /** WP2: 任务结果（讨论结束后由评分契约给出）。 */
   taskOutcome?: TaskOutcomeRecord;
+  /** F4: arm-invariant private elicitation -> resolution -> proper-scoring artifact. */
+  finalOutcome?: FinalOutcomeArtifactV1;
+  /** Pre-assignment primary-claim and registered-agent ITT denominator commitment. */
+  operationalAnalysisUnit?: OperationalAnalysisUnitV1;
+  /** Schema-5 primary ITT metric; answered-only finalOutcome scores remain secondary. */
+  operationalOutcome?: OperationalOutcomeArtifactV1;
+  /** Provider/model provenance and prompt commitments for the private measurement phase. */
+  finalElicitationCollection?: FinalElicitationCollectionArtifactV1;
   /** 每轮信念快照 */
   beliefTrajectory: Array<{
     round: number;
@@ -260,6 +309,8 @@ export interface RawRunData {
   }>;
   /** 干预记录 */
   interventions: Array<{
+    /** Stable raw-artifact identity used by the application receipt. */
+    id: string;
     round: number;
     type: string;
     targetAgentId?: string;
@@ -274,6 +325,7 @@ export interface RawRunData {
   }>;
   /** 治理检测结果（每轮检测到的问题） */
   governanceIssues: Array<{
+    id: string;
     round: number;
     type: string;
     severity: "low" | "medium" | "high";
@@ -368,6 +420,42 @@ export interface RawRunData {
     elapsedMs: number;
   };
 }
+
+/** Compile-time carrier for successful auditable runs; legacy RawRunData stays readable. */
+export type AuditableRawRunDataV5 = Omit<
+  RawRunData,
+  | "rawSchemaVersion"
+  | "governanceStudy"
+  | "governanceAuditTrail"
+  | "primaryAssignmentManifest"
+  | "primaryArmExecutionRegistry"
+  | "primaryArmExecution"
+  | "finalOutcome"
+  | "operationalAnalysisUnit"
+  | "operationalOutcome"
+  | "taskOutcome"
+  | "treatmentAssignment"
+  | "assignmentManifest"
+  | "applicationReceipts"
+  | "proximalOutcomes"
+> & {
+  rawSchemaVersion: typeof AUDITABLE_RAW_SCHEMA_VERSION;
+  governanceStudy: GovernanceStudyContract;
+  governanceAuditTrail: GovernanceAuditTrail;
+  primaryAssignmentManifest: PrimaryAssignmentManifestV1;
+  primaryArmExecutionRegistry: PrimaryArmExecutionRegistryV1;
+  primaryArmExecution: PrimaryArmExecutionBindingV1;
+  finalOutcome: FinalOutcomeArtifactV1;
+  operationalAnalysisUnit: OperationalAnalysisUnitV1;
+  operationalOutcome: OperationalOutcomeArtifactV1;
+  /** Secondary pooled-decision accuracy projection; primary outcome is operationalOutcome. */
+  taskOutcome: TaskOutcomeRecord;
+  /** Schema 5 uses the audit trail and Stage-1 objects as its only authorities. */
+  treatmentAssignment?: never;
+  assignmentManifest?: never;
+  applicationReceipts?: never;
+  proximalOutcomes?: never;
+};
 
 // ============================================================================
 // Metrics

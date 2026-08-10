@@ -13,7 +13,8 @@
     "experiment": "tsx experiments/v2/run.ts",
     "analyze": "tsx experiments/v2/analyze.ts",
     "sensitivity": "tsx experiments/v2/sensitivity.ts",
-    "verify:replay": "tsx experiments/campaign/verify_replay.ts"
+    "verify:replay": "tsx experiments/campaign/verify_replay.ts",
+    "smoke:v6": "tsx experiments/campaign/v6/run_v6_smoke.ts"
   },
   "dependencies": {
     "next": "14.2.5",

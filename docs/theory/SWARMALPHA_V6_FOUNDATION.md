@@ -1,5 +1,7 @@
 # SwarmAlpha v6：受治理集体推理的理论基线
 
+> **2026-08-10 优先级说明：** 本文保留广义理论基线；首篇论文的研究对象、最小任务边界、研究问题、主终点、实验臂与主张上限，已由 [`SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md`](SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md) 收口。两者冲突时，以收口文档为准。
+
 > 状态：v6 Research Candidate 规范合同（Normative Contract）
 > 日期：2026-08-08
 > 依据：核心执行路径的代码审计与外部原始研究；不继承旧文档中的理论主张

@@ -113,6 +113,9 @@ type EpistemicRoundBatch = {
   evidence: EpistemicEvidence[];
   reports: BeliefReport[];
   exposures: BeliefExposure[];
+  /** Round-local indexes are published only after ledger commit succeeds. */
+  reportClaims: Map<string, string>;
+  latestReports: Map<string, string>;
 };
 
 export class DiscussionEngine {
@@ -1010,7 +1013,13 @@ Add this top-level field to your JSON response:
   private getEpistemicBatch(round: number): EpistemicRoundBatch {
     let batch = this.pendingEpistemicRounds.get(round);
     if (!batch) {
-      batch = { evidence: [], reports: [], exposures: [] };
+      batch = {
+        evidence: [],
+        reports: [],
+        exposures: [],
+        reportClaims: new Map(),
+        latestReports: new Map(),
+      };
       this.pendingEpistemicRounds.set(round, batch);
     }
     return batch;
@@ -1036,7 +1045,8 @@ Add this top-level field to your JSON response:
     const batch = this.getEpistemicBatch(round);
     for (const item of visible) {
       if (seen.has(item.reportId)) continue;
-      const claimId = this.epistemicReportClaims.get(item.reportId)
+      const claimId = batch.reportClaims.get(item.reportId)
+        ?? this.epistemicReportClaims.get(item.reportId)
         ?? this.epistemicLedger.getReport(item.reportId)?.claimId;
       if (!claimId) continue;
       seen.add(item.reportId);
@@ -1113,9 +1123,11 @@ Add this top-level field to your JSON response:
       });
 
       const agentClaimKey = `${opinion.agentId}\u0000${submission.claimId}`;
-      const supersedesReportId = this.latestEpistemicReport.get(agentClaimKey);
+      const supersedesReportId = batch.latestReports.get(agentClaimKey)
+        ?? this.latestEpistemicReport.get(agentClaimKey);
       const observedForClaim = observedReportIds.filter(reportIdValue =>
-        this.epistemicReportClaims.get(reportIdValue) === submission.claimId
+        batch.reportClaims.get(reportIdValue) === submission.claimId
+          || this.epistemicReportClaims.get(reportIdValue) === submission.claimId
           || this.epistemicLedger.getReport(reportIdValue)?.claimId === submission.claimId
       );
       const report: BeliefReport = {
@@ -1133,8 +1145,8 @@ Add this top-level field to your JSON response:
       };
       batch.reports.push(report);
       reportIds.push(reportId);
-      this.latestEpistemicReport.set(agentClaimKey, reportId);
-      this.epistemicReportClaims.set(reportId, submission.claimId);
+      batch.latestReports.set(agentClaimKey, reportId);
+      batch.reportClaims.set(reportId, submission.claimId);
     }
     opinion.epistemicReportIds = reportIds;
   }
@@ -1145,8 +1157,22 @@ Add this top-level field to your JSON response:
   ): RoundData["epistemicCommit"] | undefined {
     if (!task.epistemic) return undefined;
     const batch = this.pendingEpistemicRounds.get(round)
-      ?? { evidence: [], reports: [], exposures: [] };
+      ?? {
+        evidence: [],
+        reports: [],
+        exposures: [],
+        reportClaims: new Map<string, string>(),
+        latestReports: new Map<string, string>(),
+      };
     this.epistemicLedger.commitRound(batch);
+    // Publish indexes only after the append-only ledger accepts the full batch.
+    // A failed ledger commit therefore leaves no partially visible report state.
+    for (const [reportId, claimId] of batch.reportClaims) {
+      this.epistemicReportClaims.set(reportId, claimId);
+    }
+    for (const [agentClaimKey, reportId] of batch.latestReports) {
+      this.latestEpistemicReport.set(agentClaimKey, reportId);
+    }
     this.pendingEpistemicRounds.delete(round);
     return {
       evidenceCount: batch.evidence.length,

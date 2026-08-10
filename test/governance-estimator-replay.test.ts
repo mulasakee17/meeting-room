@@ -33,6 +33,7 @@ import {
   type ProgressiveEstimates,
 } from "@/lib/thermodynamics/ProgressiveEstimator";
 import type { GovernanceEstimate } from "@/lib/epistemic/semantics";
+import type { GovernanceStudyContract } from "@/lib/experimentation";
 
 import { runSingle, setScenarioLoaderForTesting } from "../experiments/campaign/pipeline/Runner";
 import { collectJsonFiles } from "../experiments/campaign/verify_replay";
@@ -43,10 +44,15 @@ import {
 } from "../experiments/campaign/replayVerifier";
 import { RAW_SCHEMA_VERSION } from "../experiments/campaign/types";
 import type { ExperimentConfig } from "../experiments/campaign/types";
+import { createRunAssignment } from "../src/lib/experimentation/assignment";
 
 const hoisted = vi.hoisted(() => {
   class FakeDiscussionEngine {
-    run = async () => ({ roundResults: [], totalRounds: 0, converged: true });
+    static runCallCount = 0;
+    run = async () => {
+      FakeDiscussionEngine.runCallCount++;
+      return { roundResults: [], totalRounds: 0, converged: true };
+    };
     getRoundDataArray = () => [] as unknown[];
     getCognitiveStates = () => new Map();
     setAgentKnowledge = () => {};
@@ -55,18 +61,14 @@ const hoisted = vi.hoisted(() => {
   return {
     FakeDiscussionEngine,
     hbResult: {
-      preVotes: [],
-      postVotes: [],
+      preVotes: [{ agentId: "a1", agentLabel: "Agent 1", vote: "Alpha", rationale: "r", rawResponse: "{}" }],
+      postVotes: [{ agentId: "a1", agentLabel: "Agent 1", vote: "Alpha", rationale: "r", rawResponse: "{}" }],
       discussionHistory: [],
-      preAccuracy: 0.5,
-      postAccuracy: 0.5,
-      preMajorityCorrect: false,
-      postMajorityCorrect: false,
-      collectiveGain: 0,
       elapsedMs: 1,
       totalRounds: 1,
       tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
     },
+    hbCallCount: 0,
   };
 });
 
@@ -75,7 +77,10 @@ vi.mock("../experiments/campaign/pipeline/hiddenbenchProtocol", async (importOri
   const actual = await importOriginal<typeof import("../experiments/campaign/pipeline/hiddenbenchProtocol")>();
   return {
     ...actual,
-    runHiddenBenchProtocol: async () => hoisted.hbResult,
+    runHiddenBenchProtocol: async () => {
+      hoisted.hbCallCount++;
+      return hoisted.hbResult;
+    },
   };
 });
 
@@ -160,6 +165,42 @@ function makeLegacyRecord(): ReplayableRecord {
   const legacy = asRaw(projectFixture());
   delete (legacy as Partial<ReplayableRecord>).input;
   return legacy;
+}
+
+/** A valid auditable-but-exploratory study declaration for CC-2 plumbing tests. */
+function validStudyContract(): GovernanceStudyContract {
+  return {
+    id: "swarmalpha.study.cc2-plumbing-test",
+    version: "1.0.0",
+    governanceArchitecture: "auditable_epistemic_v1",
+    inferenceIntent: "exploratory",
+    taskFamilyRef: { id: "swarmalpha.task.distributed-categorical", version: "1.0.0" },
+    evaluationContractRef: { id: "swarmalpha.eval.proper-score", version: "1.0.0" },
+    artifactSchemaRef: { id: "swarmalpha.raw-run", version: "4.0.0" },
+    governancePolicy: {
+      id: "swarmalpha.policy.cc2-plumbing-test",
+      version: "1.0.0",
+      controlMode: "randomized_experiment",
+      preregistrationRef: { id: "swarmalpha.prereg.cc2-plumbing-test", version: "1.0.0" },
+      eligibilityRuleRefs: [{ id: "swarmalpha.rule.cc2-plumbing-test", version: "1.0.0" }],
+      maxActionsPerDecision: 1,
+      arbitration: "priority_then_stable_id",
+      assignmentDesign: {
+        designRef: { id: "swarmalpha.assignment.cc2-plumbing-test", version: "1.0.0" },
+        seedNamespace: "test:cc2-plumbing",
+        allocations: [{
+          actionRef: { id: "swarmalpha.action.cc2-plumbing-test", version: "1.0.0" },
+          unit: "eligible_event",
+          arms: [
+            { id: "apply", probability: 0.5 },
+            { id: "holdout", probability: 0.5 },
+          ],
+        }],
+      },
+      onlineAdaptation: "forbidden",
+    },
+    eligibleEventEstimand: "exploratory_only",
+  };
 }
 
 describe("verifyGovernanceEstimateRecord (replay library)", () => {
@@ -455,6 +496,7 @@ describe("verify_replay traversal", () => {
       fs.writeFileSync(path.join(dir, "run2.json"), "{}");
       fs.writeFileSync(path.join(dir, "raw_summary.json"), "{}");
       fs.writeFileSync(path.join(dir, "err.error.json"), "{}");
+      fs.writeFileSync(path.join(dir, "run.assignment.json"), "{}");
       fs.writeFileSync(path.join(dir, "sub", "z.json"), "{}");
       fs.writeFileSync(path.join(dir, "sub", "a.json"), "{}");
 
@@ -576,6 +618,243 @@ describe("Runner current-schema write paths", () => {
 
   it("defines the shared schema constant as 4.0", () => {
     expect(RAW_SCHEMA_VERSION).toBe("4.0");
+  });
+});
+
+describe("CC-2 governance study contract plumbing", () => {
+  const badDeclaration = {
+    id: "swarmalpha.study.bad",
+    version: "not-semver",
+  } as unknown as GovernanceStudyContract;
+
+  it("emits malformed_governance_study_contract for a malformed declaration", () => {
+    const result = verifyRawRunData("bad-study.json", {
+      runId: "x",
+      rawSchemaVersion: "4.0",
+      governanceStudy: badDeclaration,
+    });
+    expect(result.runIssues.some(i => i.code === "malformed_governance_study_contract")).toBe(true);
+  });
+
+  it("treats an explicit null declaration as malformed rather than absent", () => {
+    const result = verifyRawRunData("null-study.json", {
+      runId: "x",
+      rawSchemaVersion: "4.0",
+      governanceStudy: null,
+    });
+    expect(result.runIssues.some(i => i.code === "malformed_governance_study_contract")).toBe(true);
+  });
+
+  it("accepts a valid declaration without a run issue", () => {
+    const result = verifyRawRunData("ok-study.json", {
+      runId: "x",
+      rawSchemaVersion: "4.0",
+      governanceStudy: validStudyContract(),
+    });
+    expect(result.runIssues.filter(i => i.code === "malformed_governance_study_contract")).toHaveLength(0);
+  });
+
+  it("keeps a schema-4.0 artifact without a declaration readable and undeclared", () => {
+    const result = verifyRawRunData("undeclared.json", { runId: "x", rawSchemaVersion: "4.0" });
+    expect(result.schemaVersion).toBe("4.0");
+    // No structural error and no confirmatory inference from explicit absence.
+    expect(result.runIssues.filter(i => i.code === "malformed_governance_study_contract")).toHaveLength(0);
+    expect(result.runIssues.filter(i => /confirmatory|governance_study/i.test(i.code))).toHaveLength(0);
+  });
+
+  it("rejects a malformed declaration before any mock LLM call on the standard path", async () => {
+    hoisted.FakeDiscussionEngine.runCallCount = 0;
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "replay-study-bad-"));
+    try {
+      const config: ExperimentConfig = {
+        id: "t_study_bad",
+        hypothesis: "H",
+        title: "T",
+        scenario: "ma",
+        runtimeModes: ["belief"],
+        governanceMode: "none",
+        agentCount: 2,
+        maxRounds: 1,
+        runsPerSeed: 1,
+        seeds: [7],
+        llmModel: "deepseek-chat",
+        temperature: 0.7,
+        isMain: false,
+        description: "malformed study",
+        governanceStudy: badDeclaration,
+      };
+      await expect(runSingle(config, "belief", 7, 0, outDir)).rejects.toThrow("governanceStudy.version");
+      expect(hoisted.FakeDiscussionEngine.runCallCount).toBe(0);
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a malformed declaration before the mock hiddenbench protocol is called", async () => {
+    hoisted.hbCallCount = 0;
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "replay-study-hb-bad-"));
+    try {
+      const config: ExperimentConfig = {
+        id: "t_study_hb_bad",
+        hypothesis: "H",
+        title: "T",
+        scenario: "ma",
+        runtimeModes: ["native_cognitive"],
+        governanceMode: "none",
+        agentCount: 2,
+        maxRounds: 1,
+        runsPerSeed: 1,
+        seeds: [7],
+        llmModel: "deepseek-chat",
+        temperature: 0.7,
+        isMain: false,
+        description: "malformed study hiddenbench",
+        protocol: "hiddenbench",
+        governanceStudy: badDeclaration,
+      };
+      await expect(runSingle(config, "native_cognitive", 7, 0, outDir)).rejects.toThrow("governanceStudy.version");
+      expect(hoisted.hbCallCount).toBe(0);
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an explicit malformed confirmatory study before any mock LLM on the standard path", async () => {
+    hoisted.FakeDiscussionEngine.runCallCount = 0;
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "replay-confirm-bad-"));
+    const malformedConfirmatory: GovernanceStudyContract = {
+      ...validStudyContract(),
+      inferenceIntent: "confirmatory",
+      preregistrationRef: { id: "swarmalpha.prereg.cc2-plumbing-test", version: "1.0.0" },
+      frozenAt: "2026-08-09T00:00:00.000Z",
+      primaryAssignmentUnit: "run",
+      // primaryAssignmentDesign deliberately omitted: confirmatory requires it.
+    };
+    try {
+      const config: ExperimentConfig = {
+        id: "t_confirm_bad",
+        hypothesis: "H",
+        title: "T",
+        scenario: "ma",
+        runtimeModes: ["belief"],
+        governanceMode: "none",
+        agentCount: 2,
+        maxRounds: 1,
+        runsPerSeed: 1,
+        seeds: [7],
+        llmModel: "deepseek-chat",
+        temperature: 0.7,
+        isMain: false,
+        description: "malformed confirmatory study",
+        governanceStudy: malformedConfirmatory,
+      };
+      await expect(runSingle(config, "belief", 7, 0, outDir))
+        .rejects.toThrow("frozen Stage-1 assignment design");
+      expect(hoisted.FakeDiscussionEngine.runCallCount).toBe(0);
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an explicit malformed confirmatory study before the mock hiddenbench protocol", async () => {
+    hoisted.hbCallCount = 0;
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "replay-confirm-hb-bad-"));
+    const malformedConfirmatory: GovernanceStudyContract = {
+      ...validStudyContract(),
+      inferenceIntent: "confirmatory",
+      preregistrationRef: { id: "swarmalpha.prereg.cc2-plumbing-test", version: "1.0.0" },
+      frozenAt: "2026-08-09T00:00:00.000Z",
+      primaryAssignmentUnit: "run",
+      // primaryAssignmentDesign deliberately omitted: confirmatory requires it.
+    };
+    try {
+      const config: ExperimentConfig = {
+        id: "t_confirm_hb_bad",
+        hypothesis: "H",
+        title: "T",
+        scenario: "ma",
+        runtimeModes: ["native_cognitive"],
+        governanceMode: "none",
+        agentCount: 2,
+        maxRounds: 1,
+        runsPerSeed: 1,
+        seeds: [7],
+        llmModel: "deepseek-chat",
+        temperature: 0.7,
+        isMain: false,
+        description: "malformed confirmatory study hiddenbench",
+        protocol: "hiddenbench",
+        governanceStudy: malformedConfirmatory,
+      };
+      await expect(runSingle(config, "native_cognitive", 7, 0, outDir))
+        .rejects.toThrow("frozen Stage-1 assignment design");
+      expect(hoisted.hbCallCount).toBe(0);
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("round-trips the validated declaration into raw data on the standard path", async () => {
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "replay-study-ok-"));
+    try {
+      const contract = validStudyContract();
+      const config: ExperimentConfig = {
+        id: "t_study_ok",
+        hypothesis: "H",
+        title: "T",
+        scenario: "ma",
+        runtimeModes: ["belief"],
+        governanceMode: "none",
+        agentCount: 2,
+        maxRounds: 1,
+        runsPerSeed: 1,
+        seeds: [7],
+        llmModel: "deepseek-chat",
+        temperature: 0.7,
+        isMain: false,
+        description: "study round-trip",
+        governanceStudy: contract,
+      };
+      await runSingle(config, "belief", 7, 0, outDir);
+      const written = JSON.parse(
+        fs.readFileSync(path.join(outDir, "t_study_ok_belief_seed7_run0.json"), "utf8"),
+      );
+      expect(written.governanceStudy).toEqual(contract);
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("round-trips the validated declaration into raw data on the hiddenbench path", async () => {
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "replay-study-hb-ok-"));
+    try {
+      const contract = validStudyContract();
+      const config: ExperimentConfig = {
+        id: "t_study_hb_ok",
+        hypothesis: "H",
+        title: "T",
+        scenario: "ma",
+        runtimeModes: ["native_cognitive"],
+        governanceMode: "none",
+        agentCount: 2,
+        maxRounds: 1,
+        runsPerSeed: 1,
+        seeds: [7],
+        llmModel: "deepseek-chat",
+        temperature: 0.7,
+        isMain: false,
+        description: "study round-trip hiddenbench",
+        protocol: "hiddenbench",
+        governanceStudy: contract,
+      };
+      await runSingle(config, "native_cognitive", 7, 0, outDir);
+      const written = JSON.parse(
+        fs.readFileSync(path.join(outDir, "t_study_hb_ok_native_cognitive_seed7_run0.json"), "utf8"),
+      );
+      expect(written.governanceStudy).toEqual(contract);
+    } finally {
+      fs.rmSync(outDir, { recursive: true, force: true });
+    }
   });
 });
 
@@ -756,22 +1035,41 @@ describe("replayVerifier module contract", () => {
 });
 
 describe("WP2 treatment lifecycle verification", () => {
-  const assignment = {
+  const assignment = createRunAssignment({
     id: "asn:r1",
-    schemaVersion: "1.0.0",
     unitId: "r1",
-    unitKind: "run",
     stratum: { taskId: "t", model: "m", seed: 1, runIndex: 0 },
-    eligibleArms: ["diagnostic_governance"],
-    assignedArm: "diagnostic_governance",
-    assignmentProbability: 1,
+    arm: "diagnostic_governance",
     policyId: "swarmalpha.diagnostic",
     policyVersion: "1.0.0",
-    seed: 42,
-    randomDraw: 0.5,
+    masterSeed: 42,
     assignedAt: "2026-08-09T00:00:00Z",
-    sourceDiagnosisIds: [],
+  });
+
+  const defaultOutcome = {
+    runAssignmentId: "asn:r1",
+    evaluationContractRef: { id: "swarmalpha.categorical.ranking", version: "1.0.0" },
+    quality: 0.8,
+    cost: { totalTokens: 100 },
+    status: "scored",
   };
+
+  function appliedReceipt(over: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "rcpt:1",
+      assignmentId: "asn:r1",
+      actionType: "force_reflection",
+      interventionId: "intv:1",
+      status: "applied",
+      appliedAtRound: 2,
+      plannedWindow: { startRound: 2, endRound: 5 },
+      windowContractRef: { id: "test.window", version: "1" },
+      effectiveWindow: { startRound: 2, endRound: 5 },
+      targetAgentIds: ["a1"],
+      sourceEventIds: [],
+      ...over,
+    };
+  }
 
   function makeLifecycleRun(over: Record<string, unknown>): Record<string, unknown> {
     return {
@@ -779,6 +1077,20 @@ describe("WP2 treatment lifecycle verification", () => {
       rawSchemaVersion: "4.0",
       totalRounds: 5,
       treatmentAssignment: assignment,
+      assignmentManifest: {
+        path: "r1.assignment.json",
+        sha256: "a".repeat(64),
+        reused: false,
+        assignmentId: "asn:r1",
+      },
+      interventions: [{ id: "intv:1", round: 2, type: "force_reflection", applied: true }],
+      governanceIssues: [],
+      applicationReceipts: [{
+        id: "rcpt:no-action", assignmentId: "asn:r1", actionType: "no_action",
+        status: "inapplicable", effectiveWindow: null, targetAgentIds: [], sourceEventIds: [],
+      }],
+      proximalOutcomes: [],
+      taskOutcome: defaultOutcome,
       ...over,
     };
   }
@@ -788,31 +1100,67 @@ describe("WP2 treatment lifecycle verification", () => {
     expect(result.runIssues.some(i => i.code === "missing_treatment_assignment")).toBe(true);
   });
 
+  it("schema 4.0 requires explicit receipts, proximal array, task outcome, and manifest reference", () => {
+    const result = verifyRawRunData("x.json", {
+      runId: "r1",
+      rawSchemaVersion: "4.0",
+      totalRounds: 5,
+      treatmentAssignment: assignment,
+      applicationReceipts: "garbage",
+    });
+    expect(result.runIssues.some(i => i.code === "missing_application_receipts")).toBe(true);
+    expect(result.runIssues.some(i => i.code === "missing_proximal_outcomes")).toBe(true);
+    expect(result.runIssues.some(i => i.code === "missing_task_outcome")).toBe(true);
+    expect(result.runIssues.some(i => i.code === "missing_assignment_manifest_ref")).toBe(true);
+  });
+
+  it("rejects malformed assignment probability provenance", () => {
+    const malformed = structuredClone(assignment);
+    malformed.assignmentProbability = 0.5;
+    const result = verifyRawRunData("x.json", makeLifecycleRun({ treatmentAssignment: malformed }));
+    expect(result.runIssues.some(i => i.code === "malformed_treatment_assignment")).toBe(true);
+  });
+
+  it("rejects a manifest reference linked to a different assignment", () => {
+    const result = verifyRawRunData("x.json", makeLifecycleRun({
+      assignmentManifest: {
+        path: "r1.assignment.json",
+        sha256: "a".repeat(64),
+        reused: false,
+        assignmentId: "asn:other",
+      },
+    }));
+    expect(result.runIssues.some(i => i.code === "manifest_assignment_mismatch")).toBe(true);
+  });
+
   it("flags a dangling assignmentId on an application receipt", () => {
     const result = verifyRawRunData("x.json", makeLifecycleRun({
-      applicationReceipts: [{
-        id: "rcpt:1",
-        assignmentId: "asn:WRONG",
-        status: "applied",
-        appliedAtRound: 2,
-        effectiveWindow: { startRound: 2, endRound: 5 },
-        targetAgentIds: ["a1"],
-        sourceEventIds: [],
-      }],
+      applicationReceipts: [appliedReceipt({ assignmentId: "asn:WRONG" })],
     }));
     expect(result.runIssues.some(i => i.code === "dangling_assignment_id")).toBe(true);
   });
 
+  it("flags dangling intervention and governance-event links", () => {
+    const result = verifyRawRunData("x.json", makeLifecycleRun({
+      applicationReceipts: [appliedReceipt({
+        interventionId: "intv:missing",
+        sourceEventIds: ["issue:missing"],
+      })],
+    }));
+    expect(result.runIssues.some(i => i.code === "dangling_intervention_id")).toBe(true);
+    expect(result.runIssues.some(i => i.code === "dangling_source_event_id")).toBe(true);
+  });
+
+  it("requires exactly one proximal record for every applied receipt", () => {
+    const result = verifyRawRunData("x.json", makeLifecycleRun({
+      applicationReceipts: [appliedReceipt()],
+      proximalOutcomes: [],
+    }));
+    expect(result.runIssues.some(i => i.code === "missing_proximal_outcome_for_applied_receipt")).toBe(true);
+  });
+
   it("flags duplicate receipt ids", () => {
-    const receipt = {
-      id: "rcpt:1",
-      assignmentId: "asn:r1",
-      status: "applied",
-      appliedAtRound: 2,
-      effectiveWindow: { startRound: 2, endRound: 5 },
-      targetAgentIds: ["a1"],
-      sourceEventIds: [],
-    };
+    const receipt = appliedReceipt();
     const result = verifyRawRunData("x.json", makeLifecycleRun({
       applicationReceipts: [receipt, { ...receipt }],
     }));
@@ -821,17 +1169,23 @@ describe("WP2 treatment lifecycle verification", () => {
 
   it("flags an effectiveWindow that exceeds totalRounds", () => {
     const result = verifyRawRunData("x.json", makeLifecycleRun({
-      applicationReceipts: [{
-        id: "rcpt:1",
-        assignmentId: "asn:r1",
-        status: "applied",
-        appliedAtRound: 2,
-        effectiveWindow: { startRound: 2, endRound: 9 }, // totalRounds=5
-        targetAgentIds: ["a1"],
-        sourceEventIds: [],
-      }],
+      applicationReceipts: [appliedReceipt({ effectiveWindow: { startRound: 2, endRound: 9 } })],
     }));
     expect(result.runIssues.some(i => i.code === "window_out_of_range")).toBe(true);
+  });
+
+  it("flags a proximal window that differs from its receipt contract", () => {
+    const result = verifyRawRunData("x.json", makeLifecycleRun({
+      applicationReceipts: [appliedReceipt()],
+      proximalOutcomes: [{
+        id: "prox:1",
+        applicationReceiptId: "rcpt:1",
+        window: { startRound: 3, endRound: 5 },
+        metricContractRefs: [{ id: "test.metric", version: "1" }],
+        values: { meanConfidence: 0.7 },
+      }],
+    }));
+    expect(result.runIssues.some(i => i.code === "proximal_window_mismatch")).toBe(true);
   });
 
   it("flags a task outcome whose runAssignmentId does not match the assignment", () => {
@@ -849,26 +1203,15 @@ describe("WP2 treatment lifecycle verification", () => {
 
   it("accepts a consistent schema-4.0 lifecycle chain", () => {
     const result = verifyRawRunData("x.json", makeLifecycleRun({
-      applicationReceipts: [{
-        id: "rcpt:1",
-        assignmentId: "asn:r1",
-        status: "applied",
-        appliedAtRound: 2,
-        effectiveWindow: { startRound: 2, endRound: 5 },
-        targetAgentIds: ["a1"],
-        sourceEventIds: [],
+      applicationReceipts: [appliedReceipt()],
+      proximalOutcomes: [{
+        id: "prox:1",
+        applicationReceiptId: "rcpt:1",
+        window: { startRound: 2, endRound: 5 },
+        metricContractRefs: [{ id: "test.metric", version: "1" }],
+        values: { meanConfidence: 0.7 },
       }],
-      taskOutcome: {
-        runAssignmentId: "asn:r1",
-        evaluationContractRef: { id: "swarmalpha.categorical.ranking", version: "1.0.0" },
-        quality: 0.8,
-        cost: { totalTokens: 100 },
-        status: "scored",
-      },
     }));
-    expect(result.runIssues.filter(i =>
-      ["missing_treatment_assignment", "dangling_assignment_id", "duplicate_receipt_id",
-        "window_out_of_range", "task_outcome_assignment_mismatch"].includes(i.code),
-    )).toEqual([]);
+    expect(result.runIssues).toEqual([]);
   });
 });

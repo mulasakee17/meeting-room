@@ -290,4 +290,23 @@ describe("epistemic runtime boundary", () => {
 
     expect(normalizations).toBeGreaterThanOrEqual(4);
   });
+
+  it("does not publish staged report indexes when ledger commit fails", async () => {
+    const engine = new DiscussionEngine({ maxRounds: 1, governanceMode: "none" });
+    const internals = engine as unknown as {
+      epistemicLedger: { commitRound(): void; getEvents(): unknown[] };
+      latestEpistemicReport: Map<string, string>;
+      epistemicReportClaims: Map<string, string>;
+    };
+    internals.epistemicLedger.commitRound = () => {
+      throw new Error("forced ledger commit failure");
+    };
+
+    await expect(engine.run([agent("a1", 0.8, [])], task()))
+      .rejects.toThrow("forced ledger commit failure");
+
+    expect(internals.latestEpistemicReport.size).toBe(0);
+    expect(internals.epistemicReportClaims.size).toBe(0);
+    expect(internals.epistemicLedger.getEvents()).toHaveLength(1); // claim registration only
+  });
 });
