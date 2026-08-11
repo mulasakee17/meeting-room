@@ -196,8 +196,9 @@ function validateV6CarrierForCalibration(
     throw new Error(`v6 calibration pre-assignment commitment order is invalid: ${artifact.runId}`);
   }
   const resolution = artifact.finalOutcome.resolutions[0];
-  if (!resolution || resolution.kind !== "binary" || typeof resolution.outcome !== "boolean") {
-    throw new Error(`v6 calibration requires exactly one binary resolution: ${artifact.runId}`);
+  if (artifact.finalOutcome.resolutions.length !== 1 || !resolution
+    || resolution.kind !== artifact.v6TaskManifest.primaryClaim.resolutionPolicy.kind) {
+    throw new Error(`v6 calibration requires exactly one resolution matching the committed claim: ${artifact.runId}`);
   }
   validateV6TaskManifestResolutionV1(artifact.v6TaskManifest, resolution);
   const traceReports = artifact.v6InteractionTrace.epistemicEvents

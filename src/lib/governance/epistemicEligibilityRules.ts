@@ -94,6 +94,16 @@ function ineligible(
 
 export interface VerificationEligibilityConfig {
   certaintyThresholdPolicy: ScalarThresholdPolicyV1;
+  /**
+   * Frozen comparability domain for the certainty threshold. Omission is the
+   * legacy binary/K=2 domain so historical v2 rule registries remain replayable.
+   * A categorical rule must declare its option count explicitly; thresholds
+   * must never migrate silently across belief kinds or values of K.
+   */
+  beliefDomain?: {
+    beliefKind: "binary" | "categorical";
+    claimOptionCount: number;
+  };
   maxVerifiedIndependentLineages: number;
   verifierId: string;
   matchedTokenBudget: number;
@@ -105,16 +115,26 @@ export function createVerificationRequestEligibilityRule(
   config: VerificationEligibilityConfig,
 ): GovernanceEligibilityRule {
   const threshold = config.certaintyThresholdPolicy;
+  const beliefDomain = config.beliefDomain ?? { beliefKind: "binary" as const, claimOptionCount: 2 };
+  if ((beliefDomain.beliefKind !== "binary" && beliefDomain.beliefKind !== "categorical")
+    || !Number.isSafeInteger(beliefDomain.claimOptionCount)
+    || beliefDomain.claimOptionCount < 2
+    || (beliefDomain.beliefKind === "binary" && beliefDomain.claimOptionCount !== 2)) {
+    throw new Error("verification beliefDomain must identify binary/K=2 or categorical/K>=2");
+  }
   if (epistemicRefKey(threshold.quantityRef) !== epistemicRefKey(REPORTED_BELIEF_CERTAINTY_V1)) {
     throw new Error("verification eligibility must use the registered reported-belief certainty quantity");
   }
   if (threshold.authority.kind !== "randomized_experiment_only") {
     throw new Error("v2 verification eligibility only permits preregistered randomized-experiment thresholds");
   }
+  const uninformativeCertainty = 1 / beliefDomain.claimOptionCount;
   if (threshold.operator !== "gte"
     || threshold.bounds.lower === undefined
-    || threshold.bounds.lower <= 0.5) {
-    throw new Error("verification certainty threshold must be a frozen gte bound within (0.5,1]");
+    || threshold.bounds.lower <= uninformativeCertainty) {
+    throw new Error(
+      `verification certainty threshold must be a frozen gte bound above the ${beliefDomain.beliefKind}/K=${beliefDomain.claimOptionCount} uniform baseline`,
+    );
   }
   // Full quantity-domain, cost, missingness and authority validation.
   evaluateScalarThresholdPolicy(
@@ -142,6 +162,7 @@ export function createVerificationRequestEligibilityRule(
   }
   if (!Number.isFinite(config.priority)) throw new Error("priority must be finite");
   const frozenConfig = Object.freeze(structuredClone(config));
+  const frozenBeliefDomain = Object.freeze(structuredClone(beliefDomain));
   return {
     ...HIGH_CERTAINTY_LOW_LINEAGE_RULE_V2,
     config: frozenConfig,
@@ -157,6 +178,14 @@ export function createVerificationRequestEligibilityRule(
       if (beliefKind !== "binary" && beliefKind !== "categorical") {
         throw new Error("Verification diagnosis attributes.beliefKind must be binary or categorical");
       }
+      const rawOptionCount = diagnosis.attributes.claimOptionCount;
+      const diagnosisOptionCount = rawOptionCount === undefined && beliefKind === "binary"
+        ? 2
+        : numberAttribute(diagnosis, "claimOptionCount");
+      if (!Number.isSafeInteger(diagnosisOptionCount) || diagnosisOptionCount < 2
+        || (beliefKind === "binary" && diagnosisOptionCount !== 2)) {
+        throw new Error("Verification diagnosis attributes.claimOptionCount is incompatible with beliefKind");
+      }
       const claimResolved = booleanAttribute(diagnosis, "claimResolved");
       const verifierAvailable = booleanAttribute(diagnosis, "verifierAvailable");
       const lineageCount = numberAttribute(diagnosis, "verifiedIndependentLineageCount");
@@ -165,6 +194,14 @@ export function createVerificationRequestEligibilityRule(
       }
       if (claimResolved) return ineligible(HIGH_CERTAINTY_LOW_LINEAGE_RULE_V2, "Claim is already resolved.", diagnosis);
       if (!verifierAvailable) return ineligible(HIGH_CERTAINTY_LOW_LINEAGE_RULE_V2, "Verifier is unavailable.", diagnosis);
+      if (beliefKind !== frozenBeliefDomain.beliefKind
+        || diagnosisOptionCount !== frozenBeliefDomain.claimOptionCount) {
+        return ineligible(
+          HIGH_CERTAINTY_LOW_LINEAGE_RULE_V2,
+          "Reported certainty is outside the rule's frozen belief calibration domain.",
+          diagnosis,
+        );
+      }
       const thresholdEvaluation = evaluateScalarThresholdPolicy(
         frozenConfig.certaintyThresholdPolicy,
         REPORTED_BELIEF_CERTAINTY_V1,

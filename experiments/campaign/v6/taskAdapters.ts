@@ -1,13 +1,13 @@
 /**
  * V6 task-family adapters: the single task-specific projection boundary between
- * the task-agnostic v6 kernel (production vertical slice) and concrete binary
+ * the task-agnostic v6 kernel (production vertical slice) and concrete
  * distributed-information tasks. The kernel never imports a concrete task
  * module; the runner/CLI resolves a family to its adapter and passes only the
- * projected binary task data into the slice.
+ * projected task data into the slice.
  */
 
 import type { VersionedGovernanceRef } from "../../../src/lib/governance";
-import type { V6BinaryTaskV1 } from "./productionVerticalSlice";
+import type { V6BinaryTaskV1, V6TaskV1 } from "./productionVerticalSlice";
 
 export type V6TaskFamilyKey = "distributed-binary" | "network-fault";
 
@@ -30,20 +30,20 @@ export const BINARY_TASK_SCHEMA_V1 = Object.freeze({
 /**
  * Narrow adapter contract. The adapter owns the family identity, the public
  * context, the frozen ordered roster and per-agent private views, one
- * preregistered binary claim, and the declarative resolution contract. It must
- * NOT compute governance diagnoses, choose interventions, provide π0 / primary
+ * preregistered claim, and the declarative resolution contract. It must
+ * NOT compute governance diagnoses, choose interventions, provide pi_0 / primary
  * metric / missingness policy, mutate task/roster/claim after assignment, or
  * write schema-5 authoritative fields.
  */
-export interface V6TaskAdapterV1 {
+export interface V6TaskAdapterV1<TTask extends V6TaskV1 = V6TaskV1> {
   /** Versioned adapter identity. */
   adapterRef: VersionedGovernanceRef;
   /** Task-family identity; must equal the study's taskFamilyRef. */
   taskFamilyRef: VersionedGovernanceRef;
-  /** Structural schema of the projected binary task. */
+  /** Structural schema of the projected task. */
   taskSchemaRef: VersionedGovernanceRef;
-  /** The frozen binary task the kernel executes (ordered roster + private views). */
-  task: V6BinaryTaskV1;
+  /** The frozen task the kernel executes (ordered roster + private views). */
+  task: TTask;
   /** Declarative resolution contract: truth is released from the task outcome at resolution time. */
   resolution: { kind: "from_task_outcome"; resolverId: string };
   /**
@@ -64,7 +64,7 @@ function deepFreeze<T>(value: T): T {
 }
 
 /** The frozen v1 distributed-binary task, wrapped byte-for-byte. */
-function distributedBinaryAdapter(): V6TaskAdapterV1 {
+function distributedBinaryAdapter(): V6TaskAdapterV1<V6BinaryTaskV1> {
   return deepFreeze({
     adapterRef: { id: "swarmalpha.task-adapter.distributed-binary", version: "1.0.0" },
     taskFamilyRef: DISTRIBUTED_BINARY_TASK_FAMILY,
@@ -94,7 +94,7 @@ function distributedBinaryAdapter(): V6TaskAdapterV1 {
  * A second-domain binary distributed-information task (network-fault
  * root-cause). Owner-provisional: swapping families only changes this block.
  */
-function networkFaultAdapter(): V6TaskAdapterV1 {
+function networkFaultAdapter(): V6TaskAdapterV1<V6BinaryTaskV1> {
   return deepFreeze({
     adapterRef: { id: "swarmalpha.task-adapter.network-fault", version: "1.0.0" },
     taskFamilyRef: NETWORK_FAULT_TASK_FAMILY,
@@ -120,7 +120,7 @@ function networkFaultAdapter(): V6TaskAdapterV1 {
   });
 }
 
-export function createV6TaskAdapter(family: V6TaskFamilyKey): V6TaskAdapterV1 {
+export function createV6TaskAdapter(family: V6TaskFamilyKey): V6TaskAdapterV1<V6BinaryTaskV1> {
   switch (family) {
     case "distributed-binary":
       return distributedBinaryAdapter();

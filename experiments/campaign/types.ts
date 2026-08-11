@@ -32,7 +32,7 @@ import type {
 
 export type RuntimeMode = "belief" | "cognitive" | "native_cognitive";
 export type GovernanceMode = "none" | "detect-only" | "full" | "diversity_only" | "cognitive";
-export type ScenarioId = "ma" | "crisis" | "crisis_v2" | "supplier" | "invest" | "er_triage" | "fraud" | "university" | "hiddenbench" | "v6_binary";
+export type ScenarioId = "ma" | "crisis" | "crisis_v2" | "supplier" | "invest" | "er_triage" | "fraud" | "university" | "hiddenbench" | "v6_binary" | "v6_categorical";
 export type LLMProvider = "qwen" | "gpt4o" | "deepseek";
 
 /**

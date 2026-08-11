@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import {
   defaultBeliefContractRegistry,
   validateEpistemicClaim,
+  type ClaimResolution,
   type EpistemicClaim,
 } from "../../../src/lib/epistemic";
 import {
@@ -22,6 +23,16 @@ export const V6_GROUND_TRUTH_COMMITMENT_V1 = Object.freeze({
   version: "1.0.0",
 });
 
+/**
+ * Kind-aware commitment used by non-binary task openings. Binary tasks retain
+ * the v1 commitment byte-for-byte so existing authoritative artifacts remain
+ * replayable; categorical tasks cannot masquerade under the binary identity.
+ */
+export const V6_GROUND_TRUTH_COMMITMENT_V2 = Object.freeze({
+  id: "swarmalpha.commitment.v6-claim-ground-truth",
+  version: "2.0.0",
+});
+
 export interface V6TaskAuthorityV1 {
   adapterRef: VersionedGovernanceRef;
   taskSchemaRef: VersionedGovernanceRef;
@@ -32,9 +43,9 @@ export interface V6TaskCommitmentInputV1 {
   id: string;
   taskFamilyRef: VersionedGovernanceRef;
   publicContext: string;
-  claim: EpistemicClaim & { resolutionPolicy: { kind: "binary"; resolverId: string } };
+  claim: EpistemicClaim;
   agents: Array<{ agentId: string; privateInformation: string }>;
-  outcome: boolean;
+  outcome: boolean | string;
 }
 
 export interface V6TaskManifestV1 {
@@ -140,10 +151,77 @@ export function computeV6GroundTruthCommitmentV1(input: {
   });
 }
 
+export function computeV6GroundTruthCommitmentV2(input: {
+  taskId: string;
+  claimId: string;
+  beliefKind: "binary" | "categorical";
+  resolverId: string;
+  outcome: boolean | string;
+}): string {
+  if (input.beliefKind === "binary" && typeof input.outcome !== "boolean") {
+    throw new Error("binary ground-truth commitment requires a boolean outcome");
+  }
+  if (input.beliefKind === "categorical"
+    && (typeof input.outcome !== "string" || input.outcome.trim().length === 0)) {
+    throw new Error("categorical ground-truth commitment requires a non-empty string outcome");
+  }
+  return hashCanonical({
+    commitmentRef: V6_GROUND_TRUTH_COMMITMENT_V2,
+    taskId: input.taskId,
+    claimId: input.claimId,
+    beliefKind: input.beliefKind,
+    resolverId: input.resolverId,
+    outcome: input.outcome,
+  });
+}
+
+function validateTaskOutcome(task: V6TaskCommitmentInputV1): void {
+  validateEpistemicClaim(task.claim, defaultBeliefContractRegistry);
+  if (task.claim.resolutionPolicy.kind === "binary") {
+    if (typeof task.outcome !== "boolean") {
+      throw new Error("binary v6 task outcome must be boolean");
+    }
+    return;
+  }
+  if (!("options" in task.claim)
+    || typeof task.outcome !== "string" || !task.claim.options.includes(task.outcome)) {
+    throw new Error("categorical v6 task outcome must be one canonical claim option");
+  }
+}
+
+function groundTruthCommitmentForTask(task: V6TaskCommitmentInputV1): {
+  commitmentRef: VersionedGovernanceRef;
+  valueHash: string;
+} {
+  validateTaskOutcome(task);
+  if (task.claim.resolutionPolicy.kind === "binary") {
+    return {
+      commitmentRef: structuredClone(V6_GROUND_TRUTH_COMMITMENT_V1),
+      valueHash: computeV6GroundTruthCommitmentV1({
+        taskId: task.id,
+        claimId: task.claim.id,
+        resolverId: task.claim.resolutionPolicy.resolverId,
+        outcome: task.outcome as boolean,
+      }),
+    };
+  }
+  return {
+    commitmentRef: structuredClone(V6_GROUND_TRUTH_COMMITMENT_V2),
+    valueHash: computeV6GroundTruthCommitmentV2({
+      taskId: task.id,
+      claimId: task.claim.id,
+      beliefKind: "categorical",
+      resolverId: task.claim.resolutionPolicy.resolverId,
+      outcome: task.outcome,
+    }),
+  };
+}
+
 export function computeV6TaskDefinitionHashV1(
   task: V6TaskCommitmentInputV1,
   authority: V6TaskAuthorityV1,
 ): string {
+  const groundTruthCommitment = groundTruthCommitmentForTask(task);
   return hashCanonical({
     taskId: task.id,
     taskFamilyRef: task.taskFamilyRef,
@@ -156,12 +234,7 @@ export function computeV6TaskDefinitionHashV1(
       privateInformationHash: hashText(agent.privateInformation),
     })),
     resolutionContract: authority.resolution,
-    groundTruthCommitment: computeV6GroundTruthCommitmentV1({
-      taskId: task.id,
-      claimId: task.claim.id,
-      resolverId: task.claim.resolutionPolicy.resolverId,
-      outcome: task.outcome,
-    }),
+    groundTruthCommitment: groundTruthCommitment.valueHash,
   });
 }
 
@@ -180,9 +253,11 @@ export function createV6TaskManifestV1(input: {
   monitoringDesignHash: string;
   committedAt: string;
 }): V6TaskManifestV1 {
+  validateTaskOutcome(input.task);
   if (input.authority.resolution.resolverId !== input.task.claim.resolutionPolicy.resolverId) {
     throw new Error("v6 task authority resolver must match the primary claim");
   }
+  const groundTruthCommitment = groundTruthCommitmentForTask(input.task);
   const body: Omit<V6TaskManifestV1, "contentHash"> = {
     artifactSchemaRef: structuredClone(V6_TASK_MANIFEST_V1),
     runId: input.runId,
@@ -199,13 +274,8 @@ export function createV6TaskManifestV1(input: {
     })),
     resolutionContract: structuredClone(input.authority.resolution),
     groundTruthCommitment: {
-      commitmentRef: structuredClone(V6_GROUND_TRUTH_COMMITMENT_V1),
-      valueHash: computeV6GroundTruthCommitmentV1({
-        taskId: input.task.id,
-        claimId: input.task.claim.id,
-        resolverId: input.task.claim.resolutionPolicy.resolverId,
-        outcome: input.task.outcome,
-      }),
+      commitmentRef: groundTruthCommitment.commitmentRef,
+      valueHash: groundTruthCommitment.valueHash,
       confidentiality: "integrity_only_not_hiding",
     },
     taskDefinitionHash: computeV6TaskDefinitionHashV1(input.task, input.authority),
@@ -258,7 +328,10 @@ export function validateV6TaskManifestV1(manifest: V6TaskManifestV1): void {
   if (manifest.resolutionContract.resolverId !== manifest.primaryClaim.resolutionPolicy.resolverId) {
     throw new Error("v6 task manifest resolver differs from the primary claim");
   }
-  if (!refsEqual(manifest.groundTruthCommitment.commitmentRef, V6_GROUND_TRUTH_COMMITMENT_V1)
+  const expectedCommitmentRef = manifest.primaryClaim.resolutionPolicy.kind === "binary"
+    ? V6_GROUND_TRUTH_COMMITMENT_V1
+    : V6_GROUND_TRUTH_COMMITMENT_V2;
+  if (!refsEqual(manifest.groundTruthCommitment.commitmentRef, expectedCommitmentRef)
     || manifest.groundTruthCommitment.confidentiality !== "integrity_only_not_hiding"
     || !SHA256_RE.test(manifest.groundTruthCommitment.valueHash)) {
     throw new Error("v6 task manifest ground-truth commitment is invalid");
@@ -303,27 +376,45 @@ export function validateV6TaskManifestOpeningV1(
   }
 }
 
+export type V6TaskResolutionOpeningV1 =
+  | { claimId: string; resolverId: string; resolvedAt?: string; kind: "binary"; outcome: boolean }
+  | { claimId: string; resolverId: string; resolvedAt?: string; kind: "categorical"; outcome: string };
+
 export function validateV6TaskManifestResolutionV1(
   manifest: V6TaskManifestV1,
-  resolution: { claimId: string; resolverId: string; kind: "binary"; outcome: boolean },
+  resolution: V6TaskResolutionOpeningV1,
 ): void {
   validateV6TaskManifestV1(manifest);
   if (resolution.claimId !== manifest.primaryClaim.id
     || resolution.resolverId !== manifest.resolutionContract.resolverId) {
     throw new Error("v6 task manifest resolution identity mismatch");
   }
-  const expected = computeV6GroundTruthCommitmentV1({
-    taskId: manifest.taskId,
-    claimId: resolution.claimId,
-    resolverId: resolution.resolverId,
-    outcome: resolution.outcome,
-  });
+  defaultBeliefContractRegistry.get(manifest.primaryClaim.resolutionPolicy.kind)
+    .validateResolution(manifest.primaryClaim, {
+      ...resolution,
+      resolvedAt: resolution.resolvedAt ?? manifest.committedAt,
+    } as ClaimResolution);
+  const expected = resolution.kind === "binary"
+    ? computeV6GroundTruthCommitmentV1({
+        taskId: manifest.taskId,
+        claimId: resolution.claimId,
+        resolverId: resolution.resolverId,
+        outcome: resolution.outcome,
+      })
+    : computeV6GroundTruthCommitmentV2({
+        taskId: manifest.taskId,
+        claimId: resolution.claimId,
+        beliefKind: "categorical",
+        resolverId: resolution.resolverId,
+        outcome: resolution.outcome,
+      });
   if (manifest.groundTruthCommitment.valueHash !== expected) {
     throw new Error("v6 task manifest ground-truth opening does not match its pre-assignment commitment");
   }
 }
 
 function createV6TaskManifestV1Unchecked(input: Parameters<typeof createV6TaskManifestV1>[0]): V6TaskManifestV1 {
+  const groundTruthCommitment = groundTruthCommitmentForTask(input.task);
   const body: Omit<V6TaskManifestV1, "contentHash"> = {
     artifactSchemaRef: structuredClone(V6_TASK_MANIFEST_V1),
     runId: input.runId,
@@ -337,13 +428,8 @@ function createV6TaskManifestV1Unchecked(input: Parameters<typeof createV6TaskMa
     orderedAgentCommitments: input.task.agents.map(agent => ({ agentId: agent.agentId, privateInformationHash: hashText(agent.privateInformation) })),
     resolutionContract: structuredClone(input.authority.resolution),
     groundTruthCommitment: {
-      commitmentRef: structuredClone(V6_GROUND_TRUTH_COMMITMENT_V1),
-      valueHash: computeV6GroundTruthCommitmentV1({
-        taskId: input.task.id,
-        claimId: input.task.claim.id,
-        resolverId: input.task.claim.resolutionPolicy.resolverId,
-        outcome: input.task.outcome,
-      }),
+      commitmentRef: groundTruthCommitment.commitmentRef,
+      valueHash: groundTruthCommitment.valueHash,
       confidentiality: "integrity_only_not_hiding",
     },
     taskDefinitionHash: computeV6TaskDefinitionHashV1(input.task, input.authority),

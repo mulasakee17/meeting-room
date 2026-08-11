@@ -24,6 +24,7 @@ import {
 import {
   runV6ProductionVerticalSlice,
   type V6BinaryTaskV1,
+  type V6CategoricalTaskV1,
   type V6DiscussionAdapterV1,
   type V6InteractionProtocol,
   type V6VerificationAdapterV1,
@@ -393,6 +394,167 @@ describe("v6 production vertical slice", () => {
       expect(retried.artifact).toEqual(result.artifact);
     });
   }
+
+  it("executes and replays one categorical governance run without changing the binary authority path", async () => {
+    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "swarmalpha-v6-categorical-"));
+    tempDirs.push(outputDir);
+    const runId = "run:v6:categorical-governance";
+    const base = fixture(runId);
+    const task: V6CategoricalTaskV1 = {
+      id: "task:v6-categorical-test",
+      taskFamilyRef: base.task.taskFamilyRef,
+      publicContext: "A team must select one of three evacuation routes.",
+      claim: {
+        id: "claim:v6-best-route",
+        proposition: "Which evacuation route is safest?",
+        domain: "distributed-categorical-test",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        options: ["Route A", "Route B", "Route C"],
+        resolutionPolicy: { kind: "categorical", resolverId: "resolver:v6-categorical-test" },
+      },
+      agents: [
+        { agentId: "agent:a", privateInformation: "Route A has an unreported bridge fault." },
+        { agentId: "agent:b", privateInformation: "Route B has an independently verified clear corridor." },
+      ],
+      outcome: "Route B",
+    };
+    const taskAuthority: V6TaskAuthorityV1 = {
+      adapterRef: { id: "swarmalpha.task-adapter.v6-categorical-test", version: "1.0.0" },
+      taskSchemaRef: { id: "swarmalpha.v6.categorical-task", version: "1.0.0" },
+      resolution: { kind: "from_task_outcome", resolverId: task.claim.resolutionPolicy.resolverId },
+    };
+    const categoricalRule = createVerificationRequestEligibilityRule({
+      ...(base.rule.config as unknown as Parameters<typeof createVerificationRequestEligibilityRule>[0]),
+      beliefDomain: { beliefKind: "categorical", claimOptionCount: task.claim.options.length },
+    });
+    const discussionAdapter: V6DiscussionAdapterV1 = {
+      contract: {
+        id: "swarmalpha.adapter.discussion-categorical-test",
+        version: "1.0.0",
+        adapterRef: { id: "swarmalpha.provider.mock", version: "1.0.0" },
+        agentBindings: task.agents.map(agent => ({
+          agentId: agent.agentId,
+          modelRef: { id: `model:${agent.agentId}`, version: "1.0.0" },
+          invocationConfig: { temperature: 0 },
+        })),
+        timeoutMs: 1_000,
+        retryPolicy: "none",
+        executionOrder: "round_then_precommitted_agent",
+      },
+      respond: vi.fn(async request => ({
+        status: "response" as const,
+        rawResponse: JSON.stringify({
+          message: `${request.agentId} categorical view r${request.round}`,
+          belief: {
+            kind: "categorical",
+            probabilities: request.round === 1
+              ? { "Route A": 0.95, "Route B": 0.03, "Route C": 0.02 }
+              : { "Route A": 0.2, "Route B": 0.7, "Route C": 0.1 },
+          },
+          evidence: [{
+            content: `public evidence from ${request.agentId}`,
+            relation: "supports",
+            lineageId: `declared:${request.agentId}`,
+          }],
+        }),
+      })),
+    };
+    const finalAdapter: FinalElicitationAdapterV1 = {
+      contract: {
+        id: "swarmalpha.adapter.final-categorical-test",
+        version: "1.0.0",
+        adapterRef: { id: "swarmalpha.provider.mock-final", version: "1.0.0" },
+        agentBindings: task.agents.map(agent => ({
+          agentId: agent.agentId,
+          modelRef: { id: `model:${agent.agentId}`, version: "1.0.0" },
+          invocationConfig: { temperature: 0 },
+        })),
+        timeoutMs: 1_000,
+        retryPolicy: "none",
+        executionOrder: "sequential_precommitted",
+      },
+      elicit: vi.fn(async request => ({
+        status: "response" as const,
+        rawResponse: JSON.stringify({
+          status: "answered",
+          reports: [{
+            claimId: task.claim.id,
+            value: {
+              kind: "categorical",
+              probabilities: request.agentId === "agent:a"
+                ? { "Route A": 0.1, "Route B": 0.8, "Route C": 0.1 }
+                : { "Route A": 0.2, "Route B": 0.7, "Route C": 0.1 },
+            },
+          }],
+        }),
+      })),
+    };
+    const verificationAdapter: V6VerificationAdapterV1 = {
+      contract: {
+        id: "swarmalpha.adapter.verification-categorical-test",
+        version: "1.0.0",
+        adapterRef: { id: "swarmalpha.provider.mock-verifier", version: "1.0.0" },
+        modelRef: { id: "model:verifier", version: "1.0.0" },
+        invocationConfig: { temperature: 0 },
+        timeoutMs: 1_000,
+        retryPolicy: "none",
+      },
+      verify: vi.fn(async () => ({
+        status: "response" as const,
+        publicContent: "Independent categorical verification requested comparison of all routes.",
+      })),
+    };
+    const primaryMasterSeed = primarySeedForProtocol(
+      runId,
+      base.study,
+      base.design,
+      "epistemic_governance_v1",
+    );
+    const result = await runV6ProductionVerticalSlice({
+      outputDir,
+      runId,
+      experimentId: "experiment:v6-categorical-test",
+      seed: 23,
+      runIndex: 0,
+      study: base.study,
+      registry: base.registry,
+      stratum: { taskFamily: "distributed-binary" },
+      primaryMasterSeed,
+      eligibleEventMasterSeed: 1,
+      monitoringMasterSeed: 0,
+      task,
+      taskAuthority,
+      monitoringDesign: base.monitoringDesign,
+      discussionAdapter,
+      finalElicitationAdapter: finalAdapter,
+      governanceRule: categoricalRule,
+      interventionContracts: [
+        structuredClone(VERIFICATION_REQUEST_V2),
+        structuredClone(VERIFICATION_ATTENTION_SHAM_V2),
+      ],
+      verificationAdapter,
+      clock: deterministicClock(),
+    });
+
+    expect(result.artifact.scenario).toBe("v6_categorical");
+    expect(result.artifact.v6TaskManifest.groundTruthCommitment.commitmentRef)
+      .toEqual({ id: "swarmalpha.commitment.v6-claim-ground-truth", version: "2.0.0" });
+    expect(result.artifact.finalOutcome.resolutions[0])
+      .toMatchObject({ kind: "categorical", outcome: "Route B" });
+    expect(result.artifact.operationalOutcome.primaryMetric.value).toBeCloseTo(0.095, 12);
+    expect(result.artifact.taskOutcome.quality).toBe(1);
+    expect(result.artifact.governanceAuditTrail.sourceEvents
+      .find(event => event.kind === "belief_report")?.payload)
+      .toMatchObject({
+        beliefValue: { kind: "categorical" },
+        reportedCertainty: 0.95,
+        claimOptionCount: 3,
+      });
+    expect(result.artifact.governanceAuditTrail.actionInstances).toHaveLength(1);
+    const replay = verifyRawRunData(result.absolutePath, result.artifact, { governanceRules: [categoricalRule] });
+    expect(replay.runIssues).toEqual([]);
+    expect(replay.governanceAuditStatus).toBe("sealed_decision_replay_verified");
+  });
 
   it("rejects a pre-existing assignment when the task commitment is absent", async () => {
     const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "swarmalpha-v6-slice-"));

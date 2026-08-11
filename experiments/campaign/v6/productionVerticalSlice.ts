@@ -20,12 +20,16 @@ import {
   type VersionedGovernanceRef,
 } from "../../../src/lib/governance";
 import {
+  defaultBeliefContractRegistry,
   EpistemicLedger,
   REPORTED_BELIEF_CERTAINTY_V1,
   computeEvidenceContentHash,
+  validateEpistemicClaim,
   type BeliefEvidenceReference,
   type BeliefExposure,
   type BeliefReport,
+  type BeliefValue,
+  type ClaimResolution,
   type EpistemicClaim,
   type EpistemicEvidence,
   type EpistemicEvent,
@@ -86,14 +90,25 @@ export type V6InteractionProtocol =
   | "explicit_belief_v1"
   | "epistemic_governance_v1";
 
-export interface V6BinaryTaskV1 {
+interface V6TaskBaseV1 {
   id: string;
   taskFamilyRef: VersionedGovernanceRef;
   publicContext: string;
-  claim: EpistemicClaim & { resolutionPolicy: { kind: "binary"; resolverId: string } };
   agents: Array<{ agentId: string; privateInformation: string }>;
+}
+
+export interface V6BinaryTaskV1 extends V6TaskBaseV1 {
+  claim: Extract<EpistemicClaim, { resolutionPolicy: { kind: "binary" } }>;
   outcome: boolean;
 }
+
+export interface V6CategoricalTaskV1 extends V6TaskBaseV1 {
+  claim: Extract<EpistemicClaim, { resolutionPolicy: { kind: "categorical" } }>;
+  outcome: string;
+}
+
+/** The V6 kernel is claim-kind generic; task-family adapters remain narrow. */
+export type V6TaskV1 = V6BinaryTaskV1 | V6CategoricalTaskV1;
 
 export interface V6DiscussionAdapterContractV1 {
   id: string;
@@ -232,7 +247,7 @@ export interface V6ProductionVerticalSliceInput {
   primaryMasterSeed: number;
   eligibleEventMasterSeed: number;
   monitoringMasterSeed: number;
-  task: V6BinaryTaskV1;
+  task: V6TaskV1;
   taskAuthority: V6TaskAuthorityV1;
   monitoringDesign: V6MonitoringDesignV1;
   discussionAdapter: V6DiscussionAdapterV1;
@@ -333,15 +348,12 @@ function validateUsage(usage: V6ProviderUsage | undefined, field: string): void 
   }
 }
 
-function validateTask(task: V6BinaryTaskV1): void {
+function validateTask(task: V6TaskV1): void {
   requireNonEmpty(task?.id, "v6 task.id");
   validateGovernanceRef(task.taskFamilyRef, "v6 task.taskFamilyRef");
   requireNonEmpty(task.publicContext, "v6 task.publicContext");
-  if (!task.claim || task.claim.resolutionPolicy.kind !== "binary") {
-    throw new Error("v6 vertical slice supports exactly one binary claim");
-  }
-  requireNonEmpty(task.claim.id, "v6 task.claim.id");
-  requireNonEmpty(task.claim.proposition, "v6 task.claim.proposition");
+  if (!task.claim) throw new Error("v6 vertical slice requires exactly one registered claim");
+  validateEpistemicClaim(task.claim, defaultBeliefContractRegistry);
   requireTimestamp(task.claim.createdAt, "v6 task.claim.createdAt");
   if (!Array.isArray(task.agents) || task.agents.length < 2) {
     throw new Error("v6 task requires at least two agents");
@@ -352,7 +364,11 @@ function validateTask(task: V6BinaryTaskV1): void {
     requireNonEmpty(agent.agentId, "v6 task agent id");
     requireNonEmpty(agent.privateInformation, `v6 task private information for ${agent.agentId}`);
   }
-  if (typeof task.outcome !== "boolean") throw new Error("v6 task outcome must be boolean");
+  if (task.claim.resolutionPolicy.kind === "binary") {
+    if (typeof task.outcome !== "boolean") throw new Error("binary v6 task outcome must be boolean");
+  } else if (typeof task.outcome !== "string" || !task.claim.options.includes(task.outcome)) {
+    throw new Error("categorical v6 task outcome must be one canonical claim option");
+  }
 }
 
 function validateDiscussionAdapterContract(
@@ -420,11 +436,11 @@ async function withTimeout<T>(timeoutMs: number, operation: (signal: AbortSignal
 
 interface ParsedBeliefResponse {
   message: string;
-  probability: number;
+  value: BeliefValue;
   evidence: Array<{ content: string; relation: "supports" | "attacks"; lineageId?: string }>;
 }
 
-function parseBeliefResponse(raw: string): ParsedBeliefResponse | null {
+function parseBeliefResponse(raw: string, claim: EpistemicClaim): ParsedBeliefResponse | null {
   let value: unknown;
   try {
     value = JSON.parse(raw);
@@ -438,9 +454,13 @@ function parseBeliefResponse(raw: string): ParsedBeliefResponse | null {
     || !record.belief || typeof record.belief !== "object" || Array.isArray(record.belief)
     || !Array.isArray(record.evidence)) return null;
   const belief = record.belief as Record<string, unknown>;
-  if (Object.keys(belief).some(key => !["kind", "probability"].includes(key))
-    || belief.kind !== "binary" || typeof belief.probability !== "number"
-    || !Number.isFinite(belief.probability) || belief.probability < 0 || belief.probability > 1) return null;
+  let normalizedBelief: BeliefValue;
+  try {
+    normalizedBelief = defaultBeliefContractRegistry.get(claim.resolutionPolicy.kind)
+      .normalizeValue(claim, belief as unknown as BeliefValue);
+  } catch {
+    return null;
+  }
   const evidence: ParsedBeliefResponse["evidence"] = [];
   for (const item of record.evidence) {
     if (!item || typeof item !== "object" || Array.isArray(item)) return null;
@@ -456,7 +476,52 @@ function parseBeliefResponse(raw: string): ParsedBeliefResponse | null {
       ...(typeof entry.lineageId === "string" ? { lineageId: entry.lineageId } : {}),
     });
   }
-  return { message: record.message, probability: belief.probability, evidence };
+  return { message: record.message, value: normalizedBelief, evidence };
+}
+
+/** Maximum mass of the explicit report; comparable only within kind and option count. */
+function deriveReportedCertainty(claim: EpistemicClaim, value: BeliefValue): number {
+  const normalized = defaultBeliefContractRegistry.get(claim.resolutionPolicy.kind)
+    .normalizeValue(claim, value);
+  if (normalized.kind === "binary") {
+    return Math.max(normalized.probability, 1 - normalized.probability);
+  }
+  if (!("options" in claim)) throw new Error("categorical report requires canonical claim options");
+  return Math.max(...claim.options.map(option => normalized.probabilities[option]));
+}
+
+function claimOptionCount(claim: EpistemicClaim): number {
+  if (claim.resolutionPolicy.kind === "binary") return 2;
+  if (!("options" in claim)) throw new Error("categorical claim requires canonical options");
+  return claim.options.length;
+}
+
+function createMonitoredBeliefPayload(
+  claim: EpistemicClaim,
+  report: BeliefReport,
+  monitoringSelectionHash: string,
+): Record<string, unknown> {
+  if (report.claimId !== claim.id) {
+    throw new Error("monitored belief report differs from its committed claim");
+  }
+  const value = defaultBeliefContractRegistry.get(claim.resolutionPolicy.kind)
+    .normalizeValue(claim, report.value);
+  const common = {
+    reportId: report.id,
+    claimId: report.claimId,
+    agentId: report.agentId,
+    evidenceReferenceCount: report.evidence.length,
+    monitoringSelectionHash,
+  };
+  // Preserve the frozen binary payload byte-for-byte for existing artifacts.
+  return value.kind === "binary"
+    ? { ...common, probability: value.probability }
+    : {
+        ...common,
+        beliefValue: value,
+        reportedCertainty: deriveReportedCertainty(claim, value),
+        claimOptionCount: claimOptionCount(claim),
+      };
 }
 
 function interactionTraceBody(trace: V6InteractionTraceV1): Omit<V6InteractionTraceV1, "contentHash"> {
@@ -483,7 +548,7 @@ function replayEpistemicEvents(events: readonly EpistemicEvent[]): EpistemicLedg
 }
 
 export function validateV6InteractionTraceV1(trace: V6InteractionTraceV1, input: {
-  task: V6BinaryTaskV1;
+  task: V6TaskV1;
   primaryAssignmentId: string;
   assignedArmRef: VersionedGovernanceRef;
   protocol: V6InteractionProtocol;
@@ -669,21 +734,18 @@ export function validateV6MonitoringAuditBindingV1(artifact: V6AuditableRawRunDa
     throw new Error("v6 non-empty monitoring selection must identify one selected report");
   }
   const selectedReport = reportById.get(selection.selectedReportId);
-  if (!selectedReport || selectedReport.value.kind !== "binary") {
-    throw new Error("v6 monitoring selection does not identify a recorded binary report");
+  if (!selectedReport || selectedReport.claimId !== artifact.v6TaskManifest.primaryClaim.id) {
+    throw new Error("v6 monitoring selection does not identify a report for the committed claim");
   }
   if (beliefSourceEvents.length !== 1) {
     throw new Error("v6 selected monitoring report must bind exactly one governance belief source event");
   }
   const sourceEvent = beliefSourceEvents[0];
-  const expectedPayload = {
-    reportId: selectedReport.id,
-    claimId: selectedReport.claimId,
-    agentId: selectedReport.agentId,
-    probability: selectedReport.value.probability,
-    evidenceReferenceCount: selectedReport.evidence.length,
-    monitoringSelectionHash: selection.contentHash,
-  };
+  const expectedPayload = createMonitoredBeliefPayload(
+    artifact.v6TaskManifest.primaryClaim,
+    selectedReport,
+    selection.contentHash,
+  );
   if (sourceEvent.id !== `governance-source:${selectedReport.id}`
     || sourceEvent.round !== selectedReport.round
     || stableJson(sourceEvent.payload) !== stableJson(expectedPayload)) {
@@ -703,7 +765,7 @@ export function validateV6MonitoringAuditBindingV1(artifact: V6AuditableRawRunDa
 }
 
 function validateCompletedArtifact(artifact: V6AuditableRawRunData, input: {
-  task: V6BinaryTaskV1;
+  task: V6TaskV1;
   taskAuthority: V6TaskAuthorityV1;
   monitoringDesign: V6MonitoringDesignV1;
   study: GovernanceStudyContract;
@@ -836,7 +898,7 @@ function validateCompletedArtifact(artifact: V6AuditableRawRunData, input: {
 function readCompletedArtifact(input: {
   outputDir: string;
   runId: string;
-  task: V6BinaryTaskV1;
+  task: V6TaskV1;
   taskAuthority: V6TaskAuthorityV1;
   monitoringDesign: V6MonitoringDesignV1;
   study: GovernanceStudyContract;
@@ -863,7 +925,7 @@ function readCompletedArtifact(input: {
 function publishCompletedArtifact(input: {
   outputDir: string;
   artifact: V6AuditableRawRunData;
-  task: V6BinaryTaskV1;
+  task: V6TaskV1;
   taskAuthority: V6TaskAuthorityV1;
   monitoringDesign: V6MonitoringDesignV1;
   study: GovernanceStudyContract;
@@ -925,6 +987,7 @@ function createEvidenceAndReferences(input: {
 }
 
 function buildGovernanceDiagnosis(input: {
+  claim: EpistemicClaim;
   report: BeliefReport;
   observationId: string;
   preregistrationRef: VersionedGovernanceRef;
@@ -932,8 +995,10 @@ function buildGovernanceDiagnosis(input: {
   verifiedIndependentLineageCount: number;
   createdAt: string;
 }): GovernanceDiagnosisRecord {
-  if (input.report.value.kind !== "binary") throw new Error("v6 verification diagnosis requires binary belief");
-  const certainty = Math.max(input.report.value.probability, 1 - input.report.value.probability);
+  if (input.report.claimId !== input.claim.id) {
+    throw new Error("v6 verification diagnosis report differs from its registered claim");
+  }
+  const certainty = deriveReportedCertainty(input.claim, input.report.value);
   const diagnosis: GovernanceDiagnosisRecord = {
     id: `diagnosis:${input.report.id}`,
     diagnosisRef: structuredClone(HIGH_CERTAINTY_LOW_LINEAGE_DIAGNOSIS_V2),
@@ -945,7 +1010,8 @@ function buildGovernanceDiagnosis(input: {
     attributes: {
       claimId: input.report.claimId,
       beliefReportId: input.report.id,
-      beliefKind: "binary",
+      beliefKind: input.claim.resolutionPolicy.kind,
+      claimOptionCount: claimOptionCount(input.claim),
       claimResolved: false,
       verifierAvailable: input.verifierAvailable,
       verifiedIndependentLineageCount: input.verifiedIndependentLineageCount,
@@ -1260,7 +1326,7 @@ export async function runV6ProductionVerticalSlice(
         });
         continue;
       }
-      const parsed = parseBeliefResponse(result.rawResponse);
+      const parsed = parseBeliefResponse(result.rawResponse, input.task.claim);
       if (!parsed) {
         discussionCalls.push({ ...callBase, status: "invalid", diagnosticCode: "invalid_response" });
         continue;
@@ -1277,7 +1343,7 @@ export async function runV6ProductionVerticalSlice(
         claimId: input.task.claim.id,
         agentId: agent.agentId,
         round,
-        value: { kind: "binary", probability: parsed.probability },
+        value: structuredClone(parsed.value),
         evidence: evidenceBundle.references,
         stake: 0,
         createdAt: recordedAt,
@@ -1312,7 +1378,6 @@ export async function runV6ProductionVerticalSlice(
       });
       const target = firstRoundReports.find(report => report.id === monitoringSelection!.selectedReportId);
       if (!target) throw new Error("v6 monitoring selection references an unknown first-round report");
-      if (target.value.kind !== "binary") throw new Error("v6 governance target must be binary");
       const referencedEvidence = target.evidence
         .map(reference => ledger.getEvidence(reference.evidenceId))
         .filter((evidence): evidence is EpistemicEvidence => evidence !== undefined);
@@ -1327,14 +1392,11 @@ export async function runV6ProductionVerticalSlice(
         eventRef: { id: "swarmalpha.event.architecture-belief-report", version: "1.0.0" },
         kind: "belief_report" as const,
         round: 1,
-        payload: {
-          reportId: target.id,
-          claimId: target.claimId,
-          agentId: target.agentId,
-          probability: target.value.probability,
-          evidenceReferenceCount: target.evidence.length,
-          monitoringSelectionHash: monitoringSelection.contentHash,
-        },
+        payload: createMonitoredBeliefPayload(
+          input.task.claim,
+          target,
+          monitoringSelection.contentHash,
+        ),
       };
       const sourceEvent: GovernanceSourceEvent = {
         id: `governance-source:${target.id}`,
@@ -1350,7 +1412,9 @@ export async function runV6ProductionVerticalSlice(
         completeness: "complete",
         missingFields: [],
         values: {
-          certainty: Math.max(target.value.probability, 1 - target.value.probability),
+          certainty: deriveReportedCertainty(input.task.claim, target.value),
+          beliefKind: input.task.claim.resolutionPolicy.kind,
+          claimOptionCount: claimOptionCount(input.task.claim),
           verifiedIndependentLineageCount,
           lineageMeasurementRef: structuredClone(V6_VERIFIED_LINEAGE_MEASUREMENT_V1),
         },
@@ -1358,6 +1422,7 @@ export async function runV6ProductionVerticalSlice(
         observedAt: clock.next("governance observation observedAt"),
       };
       const diagnosis = buildGovernanceDiagnosis({
+        claim: input.task.claim,
         report: target,
         observationId: observation.id,
         preregistrationRef: input.study.preregistrationRef!,
@@ -1580,13 +1645,24 @@ export async function runV6ProductionVerticalSlice(
     accountUsage(record.usage, `v6 final elicitation usage for ${record.agentId}`);
   }
   session.closeElicitation(clock.next("final elicitation closedAt"));
-  session.resolveClaims((claim, scoringTask, resolvedAt) => ({
-    claimId: claim.id,
-    resolverId: claim.resolutionPolicy.resolverId,
-    resolvedAt,
-    kind: "binary",
-    outcome: (scoringTask.groundTruth.value as Record<string, boolean>)[claim.id],
-  }), clock.next("final resolution recordedAt"));
+  session.resolveClaims((claim, scoringTask, resolvedAt): ClaimResolution => {
+    const outcome = (scoringTask.groundTruth.value as Record<string, boolean | string>)[claim.id];
+    return claim.resolutionPolicy.kind === "binary"
+      ? {
+          claimId: claim.id,
+          resolverId: claim.resolutionPolicy.resolverId,
+          resolvedAt,
+          kind: "binary",
+          outcome: outcome as boolean,
+        }
+      : {
+          claimId: claim.id,
+          resolverId: claim.resolutionPolicy.resolverId,
+          resolvedAt,
+          kind: "categorical",
+          outcome: outcome as string,
+        };
+  }, clock.next("final resolution recordedAt"));
   const finalOutcome = session.score(clock.next("final scoring completedAt"));
   validateFinalElicitationCollectionForOutcomeV1(finalElicitationCollection, finalOutcome);
   ledger.resolveClaim(finalOutcome.resolutions[0]);
@@ -1653,7 +1729,7 @@ export async function runV6ProductionVerticalSlice(
     seed: input.seed,
     runIndex: input.runIndex,
     timestamp: clock.next("raw run timestamp"),
-    scenario: "v6_binary",
+    scenario: input.task.claim.resolutionPolicy.kind === "binary" ? "v6_binary" : "v6_categorical",
     agentCount: expectedAgentIds.length,
     maxRounds: 2,
     totalRounds: 2,

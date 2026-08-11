@@ -97,6 +97,10 @@ function buildDiscussionPrompts(request: V6DiscussionRequestV1): { systemPrompt:
   const transcript = request.visibleTranscript
     .map(entry => `[round ${entry.round}] ${entry.agentId}${entry.source === "governance" ? " (governance)" : ""}: ${entry.content}`)
     .join("\n");
+  const categoricalOptions = "options" in request.claim ? request.claim.options : undefined;
+  const beliefInstruction = request.claim.resolutionPolicy.kind === "binary"
+    ? "Return exactly one strict JSON object with fields: message (string), belief ({kind:'binary', probability: 0..1}), evidence (array of {content, relation:'supports'|'attacks', lineageId?}). No other fields."
+    : `Return exactly one strict JSON object with fields: message (string), belief ({kind:'categorical', probabilities:{...}}), evidence (array of {content, relation:'supports'|'attacks', lineageId?}). The probabilities object must contain exactly these canonical options in this order and sum to 1: ${(categoricalOptions ?? []).join(" | ")}. No other fields.`;
   const userPrompt = [
     `Task public context:\n${request.publicContext}`,
     `Your private information:\n${request.ownPrivateInformation}`,
@@ -104,7 +108,7 @@ function buildDiscussionPrompts(request: V6DiscussionRequestV1): { systemPrompt:
     `Claim ${request.claim.id}: ${request.claim.proposition}`,
     request.responseContract === "plain_text"
       ? "Return your public view as plain text only."
-      : "Return exactly one strict JSON object with fields: message (string), belief ({kind:'binary', probability: 0..1}), evidence (array of {content, relation:'supports'|'attacks', lineageId?}). No other fields.",
+      : beliefInstruction,
   ].join("\n\n");
   return {
     systemPrompt: request.responseContract === "plain_text"
