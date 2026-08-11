@@ -1,7 +1,7 @@
 # Claude Code Handoff — F5 Edge Tests and Truth Synchronization
 
-Date: 2026-08-10  
-Budget ceiling: **USD 2.00 total**  
+Date: 2026-08-10
+Budget ceiling: **USD 2.00 total**
 Role boundary: Codex owns semantics and production code. Claude Code may add
 bounded adversarial tests and synchronize factual documentation only.
 

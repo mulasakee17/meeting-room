@@ -1,6 +1,6 @@
 # HiddenBench → V6 Integration Contract V1
 
-Status: normative design contract, 2026-08-11  
+Status: normative design contract, 2026-08-11
 Scope: external task authority, categorical belief semantics, evaluation ownership, and claim limits
 
 ## 1. Two paths that must not be conflated

@@ -1,7 +1,7 @@
 # Claude Code handoff: confirmatory guardrails close-out
 
-Status: ready for bounded low-risk implementation after Codex core changes  
-Owner of architecture/final acceptance: Codex  
+Status: ready for bounded low-risk implementation after Codex core changes
+Owner of architecture/final acceptance: Codex
 Implementer for this handoff: Claude Code / DeepSeek
 
 ## 1. Objective
