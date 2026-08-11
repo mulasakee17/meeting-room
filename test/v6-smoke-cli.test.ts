@@ -218,8 +218,8 @@ describe("v6 smoke CLI", () => {
     });
     expect(first.results).toHaveLength(3);
     expect(first.results.every(result => result.reused === false)).toBe(true);
-    expect(first.budget.callCount).toBe(19);
-    expect(first.budget.tokenCount).toBe(188);
+    expect(first.budget.callCount).toBe(18);
+    expect(first.budget.tokenCount).toBe(180);
     const textArtifact = JSON.parse(fs.readFileSync(first.results[0].absolutePath, "utf8")) as {
       tokenUsage: { totalTokens: number };
       finalElicitationCollection: { records: Array<{ usage?: { totalTokens?: number } }> };
@@ -228,15 +228,21 @@ describe("v6 smoke CLI", () => {
     expect(textArtifact.finalElicitationCollection.records.map(record => record.usage?.totalTokens))
       .toEqual([10, 10]);
     const governanceArtifact = JSON.parse(fs.readFileSync(first.results[2].absolutePath, "utf8")) as {
+      v6InteractionTrace: {
+        monitoringSelection: { candidateReportIds: string[]; selectedReportId: string | null };
+      };
       governanceAuditTrail: {
         eventAssignments: Array<{ assignedArm: string }>;
         actionTransitions: Array<{ to: string; observation?: { complied?: boolean } }>;
       };
     };
-    expect(governanceArtifact.governanceAuditTrail.eventAssignments[0].assignedArm).not.toBe("holdout");
-    expect(governanceArtifact.governanceAuditTrail.actionTransitions
-      .find(item => item.to === "compliance_observed")?.observation)
-      .toEqual({ complied: true });
+    expect(governanceArtifact.v6InteractionTrace.monitoringSelection.candidateReportIds).toHaveLength(2);
+    expect(governanceArtifact.v6InteractionTrace.monitoringSelection.candidateReportIds)
+      .toContain(governanceArtifact.v6InteractionTrace.monitoringSelection.selectedReportId);
+    expect(governanceArtifact.governanceAuditTrail.eventAssignments.length).toBeLessThanOrEqual(1);
+    const compliance = governanceArtifact.governanceAuditTrail.actionTransitions
+      .find(item => item.to === "compliance_observed");
+    if (compliance) expect(compliance.observation).toEqual({ complied: true });
     const callsAfterFirst = m.invoke.mock.calls.length;
 
     const m2 = defaultInvoker();

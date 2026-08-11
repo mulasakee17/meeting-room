@@ -29,6 +29,8 @@ import {
   type V6VerificationAdapterV1,
 } from "../experiments/campaign/v6/productionVerticalSlice";
 import { verifyRawRunData } from "../experiments/campaign/replayVerifier";
+import { createV6MonitoringDesignV1 } from "../experiments/campaign/v6/monitoringDesign";
+import type { V6TaskAuthorityV1 } from "../experiments/campaign/v6/v6TaskManifest";
 
 const tempDirs: string[] = [];
 afterEach(() => {
@@ -160,7 +162,18 @@ function fixture(runId: string) {
     ],
     outcome: false,
   };
-  return { rule, policy, design, study, registry, task };
+  const taskAuthority: V6TaskAuthorityV1 = {
+    adapterRef: { id: "swarmalpha.task-adapter.v6-vertical-test", version: "1.0.0" },
+    taskSchemaRef: { id: "swarmalpha.v6.binary-task", version: "1.0.0" },
+    resolution: { kind: "from_task_outcome", resolverId: task.claim.resolutionPolicy.resolverId },
+  };
+  const monitoringDesign = createV6MonitoringDesignV1({
+    designRef: { id: "swarmalpha.monitoring.v6-vertical-test", version: "1.0.0" },
+    preregistrationRef: PREREG,
+    seedNamespace: "swarmalpha:v6-vertical-test:monitoring:v1",
+    frozenAt: "2026-08-10T00:00:00.000Z",
+  });
+  return { rule, policy, design, study, registry, task, taskAuthority, monitoringDesign };
 }
 
 function primarySeedForProtocol(
@@ -195,7 +208,7 @@ describe("v6 production vertical slice", () => {
       const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "swarmalpha-v6-slice-"));
       tempDirs.push(outputDir);
       const runId = `run:v6:${protocol}`;
-      const { rule, design, study, registry, task } = fixture(runId);
+      const { rule, design, study, registry, task, taskAuthority, monitoringDesign } = fixture(runId);
       const discussionRequests: unknown[] = [];
       const discussionAdapter: V6DiscussionAdapterV1 = {
         contract: {
@@ -222,7 +235,7 @@ describe("v6 production vertical slice", () => {
               message: `${request.agentId} explicit view r${request.round}`,
               belief: {
                 kind: "binary",
-                probability: request.round === 1 && request.agentId === "agent:a" ? 0.95 : 0.6,
+                probability: request.round === 1 ? 0.95 : 0.6,
               },
               evidence: [{
                 content: `public evidence from ${request.agentId} r${request.round}`,
@@ -295,7 +308,10 @@ describe("v6 production vertical slice", () => {
         stratum: { taskFamily: "distributed-binary" },
         primaryMasterSeed,
         eligibleEventMasterSeed: 1,
+        monitoringMasterSeed: 0,
         task,
+        taskAuthority,
+        monitoringDesign,
         discussionAdapter,
         finalElicitationAdapter: finalAdapter,
         governanceRule: rule,
@@ -358,7 +374,10 @@ describe("v6 production vertical slice", () => {
         stratum: { taskFamily: "distributed-binary" },
         primaryMasterSeed,
         eligibleEventMasterSeed: 999,
+        monitoringMasterSeed: 0,
         task,
+        taskAuthority,
+        monitoringDesign,
         discussionAdapter,
         finalElicitationAdapter: finalAdapter,
         governanceRule: rule,
@@ -375,11 +394,11 @@ describe("v6 production vertical slice", () => {
     });
   }
 
-  it("rejects a pre-existing assignment when the analysis-unit commitment is absent", async () => {
+  it("rejects a pre-existing assignment when the task commitment is absent", async () => {
     const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "swarmalpha-v6-slice-"));
     tempDirs.push(outputDir);
     const runId = "run:v6:missing-analysis-unit";
-    const { rule, design, study, registry, task } = fixture(runId);
+    const { rule, design, study, registry, task, taskAuthority, monitoringDesign } = fixture(runId);
     const assignmentSeed = primarySeedForProtocol(runId, study, design, "text_communication_v1");
     const assignment = createPrimaryAssignmentV1({
       id: `primary-assignment:${runId}`,
@@ -422,11 +441,12 @@ describe("v6 production vertical slice", () => {
     await expect(runV6ProductionVerticalSlice({
       outputDir, runId, experimentId: "experiment:test", seed: 1, runIndex: 0,
       study, registry, stratum: { taskFamily: "distributed-binary" },
-      primaryMasterSeed: assignmentSeed, eligibleEventMasterSeed: 1, task,
+      primaryMasterSeed: assignmentSeed, eligibleEventMasterSeed: 1, monitoringMasterSeed: 0, task,
+      taskAuthority, monitoringDesign,
       discussionAdapter, finalElicitationAdapter: finalAdapter, governanceRule: rule,
       interventionContracts: [structuredClone(VERIFICATION_REQUEST_V2), structuredClone(VERIFICATION_ATTENTION_SHAM_V2)],
       clock: deterministicClock(),
-    })).rejects.toThrow("assignment but no pre-assignment operational analysis unit");
+    })).rejects.toThrow("assignment but no pre-assignment task manifest");
     expect(discussionAdapter.respond).not.toHaveBeenCalled();
     expect(finalAdapter.elicit).not.toHaveBeenCalled();
   });

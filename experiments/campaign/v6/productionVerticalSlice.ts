@@ -62,6 +62,24 @@ import { FinalOutcomeSession, createFinalElicitationContract } from "../../../sr
 import { preparePrimaryAssignedRunV1 } from "../primaryAssignedRun";
 import { verifyRawRunData } from "../replayVerifier";
 import type { AuditableRawRunDataV5 } from "../types";
+import {
+  V6_VERIFIED_LINEAGE_MEASUREMENT_V1,
+  createV6MonitoringSelectionV1,
+  deriveVerifiedIndependentLineageCountV1,
+  validateV6MonitoringDesignV1,
+  validateV6MonitoringSelectionV1,
+  type V6MonitoringDesignV1,
+  type V6MonitoringSelectionV1,
+} from "./monitoringDesign";
+import {
+  createV6TaskManifestV1,
+  loadOrCreateV6TaskManifestV1,
+  readV6TaskManifestV1,
+  validateV6TaskManifestOpeningV1,
+  validateV6TaskManifestV1,
+  type V6TaskAuthorityV1,
+  type V6TaskManifestV1,
+} from "./v6TaskManifest";
 
 export type V6InteractionProtocol =
   | "text_communication_v1"
@@ -192,10 +210,13 @@ export interface V6InteractionTraceV1 {
   discussionCalls: V6DiscussionCallRecordV1[];
   publicTranscript: V6PublicTranscriptEntry[];
   epistemicEvents: EpistemicEvent[];
+  monitoringSelection?: V6MonitoringSelectionV1;
   contentHash: string;
 }
 
 export type V6AuditableRawRunData = AuditableRawRunDataV5 & {
+  v6TaskManifest: V6TaskManifestV1;
+  v6MonitoringDesign: V6MonitoringDesignV1;
   v6InteractionTrace: V6InteractionTraceV1;
 };
 
@@ -210,7 +231,10 @@ export interface V6ProductionVerticalSliceInput {
   stratum: Record<string, string | number | boolean>;
   primaryMasterSeed: number;
   eligibleEventMasterSeed: number;
+  monitoringMasterSeed: number;
   task: V6BinaryTaskV1;
+  taskAuthority: V6TaskAuthorityV1;
+  monitoringDesign: V6MonitoringDesignV1;
   discussionAdapter: V6DiscussionAdapterV1;
   finalElicitationAdapter: FinalElicitationAdapterV1;
   governanceRule: GovernanceEligibilityRule;
@@ -463,6 +487,7 @@ export function validateV6InteractionTraceV1(trace: V6InteractionTraceV1, input:
   primaryAssignmentId: string;
   assignedArmRef: VersionedGovernanceRef;
   protocol: V6InteractionProtocol;
+  monitoringDesign: V6MonitoringDesignV1;
 }): void {
   if (!trace || stableJson(trace.artifactSchemaRef) !== stableJson(INTERACTION_TRACE_REF)) {
     throw new Error("v6 interaction trace artifact/schema mismatch");
@@ -553,6 +578,20 @@ export function validateV6InteractionTraceV1(trace: V6InteractionTraceV1, input:
     && reports.some(report => report.stake !== 0)) {
     throw new Error("v6 production slice records discussion reports with zero economic stake");
   }
+  if (trace.protocol === "epistemic_governance_v1") {
+    if (!trace.monitoringSelection) throw new Error("governance interaction trace requires a monitoring selection");
+    validateV6MonitoringSelectionV1(trace.monitoringSelection, input.monitoringDesign);
+    const firstRoundReportIds = reports
+      .filter(report => report.round === 1)
+      .map(report => report.id)
+      .sort();
+    if (trace.monitoringSelection.runId !== trace.runId
+      || stableJson(trace.monitoringSelection.candidateReportIds) !== stableJson(firstRoundReportIds)) {
+      throw new Error("v6 monitoring selection population differs from the recorded first-round reports");
+    }
+  } else if (trace.monitoringSelection !== undefined) {
+    throw new Error("non-governance interaction trace cannot claim a monitoring selection");
+  }
   let previousRound = 0;
   for (const entry of trace.publicTranscript) {
     if (!Number.isSafeInteger(entry.round) || entry.round < previousRound || entry.round < 1 || entry.round > 2) {
@@ -595,8 +634,78 @@ export function resolveV6AuditableRawRunPath(outputDir: string, runId: string): 
   return path.resolve(outputDir, `${safeRunStem(runId)}.raw-run.v5.json`);
 }
 
+/**
+ * Cross-carrier binding for the V6 monitoring decision. This proves only
+ * internal consistency among the interaction trace, epistemic report, and
+ * governance audit source event. It does not authenticate wall-clock time or
+ * prevent an attacker from reconstructing the entire artifact chain.
+ */
+export function validateV6MonitoringAuditBindingV1(artifact: V6AuditableRawRunData): void {
+  const selection = artifact.v6InteractionTrace.monitoringSelection;
+  const beliefSourceEvents = artifact.governanceAuditTrail.sourceEvents
+    .filter(event => event.kind === "belief_report");
+  if (!selection) {
+    if (beliefSourceEvents.length > 0) {
+      throw new Error("v6 governance belief source event requires a monitoring selection");
+    }
+    return;
+  }
+  validateV6MonitoringSelectionV1(selection, artifact.v6MonitoringDesign);
+  const reports = artifact.v6InteractionTrace.epistemicEvents
+    .filter(event => event.type === "belief_reported")
+    .map(event => event.report);
+  const reportById = new Map(reports.map(report => [report.id, report]));
+  const candidates = selection.candidateReportIds.map(reportId => reportById.get(reportId));
+  if (candidates.some(report => report === undefined)) {
+    throw new Error("v6 monitoring selection references a missing epistemic report");
+  }
+  if (selection.status === "empty_population") {
+    if (beliefSourceEvents.length > 0) {
+      throw new Error("v6 empty monitoring population cannot produce a governance belief source event");
+    }
+    return;
+  }
+  if (selection.status !== "selected" || typeof selection.selectedReportId !== "string") {
+    throw new Error("v6 non-empty monitoring selection must identify one selected report");
+  }
+  const selectedReport = reportById.get(selection.selectedReportId);
+  if (!selectedReport || selectedReport.value.kind !== "binary") {
+    throw new Error("v6 monitoring selection does not identify a recorded binary report");
+  }
+  if (beliefSourceEvents.length !== 1) {
+    throw new Error("v6 selected monitoring report must bind exactly one governance belief source event");
+  }
+  const sourceEvent = beliefSourceEvents[0];
+  const expectedPayload = {
+    reportId: selectedReport.id,
+    claimId: selectedReport.claimId,
+    agentId: selectedReport.agentId,
+    probability: selectedReport.value.probability,
+    evidenceReferenceCount: selectedReport.evidence.length,
+    monitoringSelectionHash: selection.contentHash,
+  };
+  if (sourceEvent.id !== `governance-source:${selectedReport.id}`
+    || sourceEvent.round !== selectedReport.round
+    || stableJson(sourceEvent.payload) !== stableJson(expectedPayload)) {
+    throw new Error("v6 monitoring selection differs from its governance belief source event");
+  }
+  const candidateCreatedTimes = candidates.map(report => Date.parse(report!.createdAt));
+  if (candidateCreatedTimes.some(timestamp => !Number.isFinite(timestamp))) {
+    throw new Error("v6 monitoring candidate report has an invalid createdAt timestamp");
+  }
+  const latestCandidateCreatedAt = Math.max(...candidateCreatedTimes);
+  if (Date.parse(selection.selectedAt) < latestCandidateCreatedAt) {
+    throw new Error("v6 monitoring selection cannot precede its frozen candidate population");
+  }
+  if (Date.parse(sourceEvent.recordedAt) < Date.parse(selection.selectedAt)) {
+    throw new Error("v6 governance belief source event cannot precede monitoring selection");
+  }
+}
+
 function validateCompletedArtifact(artifact: V6AuditableRawRunData, input: {
   task: V6BinaryTaskV1;
+  taskAuthority: V6TaskAuthorityV1;
+  monitoringDesign: V6MonitoringDesignV1;
   study: GovernanceStudyContract;
   registry: PrimaryArmExecutionRegistryV1;
   governanceRule: GovernanceEligibilityRule;
@@ -606,6 +715,15 @@ function validateCompletedArtifact(artifact: V6AuditableRawRunData, input: {
   });
   if (replay.runIssues.length > 0 || replay.governanceAuditStatus !== "sealed_decision_replay_verified") {
     throw new Error(`v6 raw run failed immediate replay: ${replay.runIssues.map(issue => issue.code).join(",")}`);
+  }
+  validateV6TaskManifestV1(artifact.v6TaskManifest);
+  validateV6MonitoringDesignV1(artifact.v6MonitoringDesign);
+  validateV6TaskManifestOpeningV1(artifact.v6TaskManifest, input.task, input.taskAuthority);
+  if (stableJson(artifact.v6MonitoringDesign) !== stableJson(input.monitoringDesign)
+    || artifact.v6TaskManifest.runId !== artifact.runId
+    || governanceRefKey(artifact.v6TaskManifest.studyRef) !== governanceRefKey(input.study)
+    || artifact.v6TaskManifest.monitoringDesignHash !== artifact.v6MonitoringDesign.contentHash) {
+    throw new Error("existing v6 raw run conflicts with the task/monitoring precommitment");
   }
   if (artifact.runId !== artifact.v6InteractionTrace.runId
     || stableJson(artifact.governanceStudy) !== stableJson(input.study)
@@ -625,7 +743,9 @@ function validateCompletedArtifact(artifact: V6AuditableRawRunData, input: {
     primaryAssignmentId: artifact.primaryAssignmentManifest.assignment.id,
     assignedArmRef: artifact.primaryAssignmentManifest.assignment.assignedArmRef,
     protocol: protocol as V6InteractionProtocol,
+    monitoringDesign: input.monitoringDesign,
   });
+  validateV6MonitoringAuditBindingV1(artifact);
   if (!artifact.finalElicitationCollection) throw new Error("v6 raw run requires finalElicitationCollection");
   validateFinalElicitationCollectionForOutcomeV1(
     artifact.finalElicitationCollection,
@@ -717,6 +837,8 @@ function readCompletedArtifact(input: {
   outputDir: string;
   runId: string;
   task: V6BinaryTaskV1;
+  taskAuthority: V6TaskAuthorityV1;
+  monitoringDesign: V6MonitoringDesignV1;
   study: GovernanceStudyContract;
   registry: PrimaryArmExecutionRegistryV1;
   governanceRule: GovernanceEligibilityRule;
@@ -729,6 +851,11 @@ function readCompletedArtifact(input: {
   } catch (error) {
     throw new Error(`v6 raw run is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
+  const persistedTaskManifest = readV6TaskManifestV1({ outputDir: input.outputDir, runId: input.runId });
+  if (!persistedTaskManifest
+    || persistedTaskManifest.manifest.contentHash !== artifact.v6TaskManifest?.contentHash) {
+    throw new Error("v6 raw run has no matching pre-assignment task manifest");
+  }
   validateCompletedArtifact(artifact, input);
   return { artifact: structuredClone(artifact), absolutePath, reused: true };
 }
@@ -737,6 +864,8 @@ function publishCompletedArtifact(input: {
   outputDir: string;
   artifact: V6AuditableRawRunData;
   task: V6BinaryTaskV1;
+  taskAuthority: V6TaskAuthorityV1;
+  monitoringDesign: V6MonitoringDesignV1;
   study: GovernanceStudyContract;
   registry: PrimaryArmExecutionRegistryV1;
   governanceRule: GovernanceEligibilityRule;
@@ -800,6 +929,7 @@ function buildGovernanceDiagnosis(input: {
   observationId: string;
   preregistrationRef: VersionedGovernanceRef;
   verifierAvailable: boolean;
+  verifiedIndependentLineageCount: number;
   createdAt: string;
 }): GovernanceDiagnosisRecord {
   if (input.report.value.kind !== "binary") throw new Error("v6 verification diagnosis requires binary belief");
@@ -818,7 +948,8 @@ function buildGovernanceDiagnosis(input: {
       beliefKind: "binary",
       claimResolved: false,
       verifierAvailable: input.verifierAvailable,
-      verifiedIndependentLineageCount: 0,
+      verifiedIndependentLineageCount: input.verifiedIndependentLineageCount,
+      lineageMeasurementRef: structuredClone(V6_VERIFIED_LINEAGE_MEASUREMENT_V1),
     },
     targetIds: [input.report.agentId],
     sourceObservationIds: [input.observationId],
@@ -875,6 +1006,15 @@ export async function runV6ProductionVerticalSlice(
 ): Promise<V6ProductionVerticalSliceResult> {
   validateTask(input.task);
   validateGovernanceStudyContract(input.study);
+  validateGovernanceRef(input.taskAuthority.adapterRef, "v6 task authority adapterRef");
+  validateGovernanceRef(input.taskAuthority.taskSchemaRef, "v6 task authority taskSchemaRef");
+  validateV6MonitoringDesignV1(input.monitoringDesign);
+  if (input.taskAuthority.resolution.kind !== "from_task_outcome"
+    || input.taskAuthority.resolution.resolverId !== input.task.claim.resolutionPolicy.resolverId
+    || governanceRefKey(input.monitoringDesign.preregistrationRef)
+      !== governanceRefKey(input.study.preregistrationRef!)) {
+    throw new Error("v6 task/monitoring authority differs from the frozen claim/study");
+  }
   if (!input.study.primaryAssignmentDesign
     || governanceRefKey(input.study.taskFamilyRef) !== governanceRefKey(input.task.taskFamilyRef)) {
     throw new Error("v6 vertical slice requires an auditable study with a primary assignment design matching the task family");
@@ -902,6 +1042,33 @@ export async function runV6ProductionVerticalSlice(
   if (existing) return existing;
 
   const clock = new MonotonicClock(input.clock ?? (() => new Date().toISOString()));
+  let persistedTaskManifest = readV6TaskManifestV1({ outputDir: input.outputDir, runId: input.runId });
+  if (!persistedTaskManifest) {
+    const existingAssignment = readPrimaryAssignmentManifestV1({
+      outputDir: input.outputDir,
+      runId: input.runId,
+      study: input.study,
+    });
+    if (existingAssignment) throw new Error("v6 run has an assignment but no pre-assignment task manifest");
+    persistedTaskManifest = loadOrCreateV6TaskManifestV1({
+      outputDir: input.outputDir,
+      runId: input.runId,
+      createManifest: () => createV6TaskManifestV1({
+        runId: input.runId,
+        studyRef: { id: input.study.id, version: input.study.version },
+        task: input.task,
+        authority: input.taskAuthority,
+        monitoringDesignRef: input.monitoringDesign.designRef,
+        monitoringDesignHash: input.monitoringDesign.contentHash,
+        committedAt: clock.next("v6 task manifest committedAt"),
+      }),
+    });
+  }
+  validateV6TaskManifestOpeningV1(persistedTaskManifest.manifest, input.task, input.taskAuthority);
+  if (governanceRefKey(persistedTaskManifest.manifest.studyRef) !== governanceRefKey(input.study)
+    || persistedTaskManifest.manifest.monitoringDesignHash !== input.monitoringDesign.contentHash) {
+    throw new Error("existing v6 task manifest conflicts with the requested study/monitoring design");
+  }
   let persistedUnit = readOperationalAnalysisUnitV1({ outputDir: input.outputDir, runId: input.runId });
   if (!persistedUnit) {
     const existingAssignment = readPrimaryAssignmentManifestV1({
@@ -938,6 +1105,9 @@ export async function runV6ProductionVerticalSlice(
     expectedAgentIds: persistedUnit.analysisUnit.expectedAgentIds,
   }) !== stableJson(expectedUnitIdentity)) {
     throw new Error("existing operational analysis unit conflicts with requested task/study/roster");
+  }
+  if (Date.parse(persistedTaskManifest.manifest.committedAt) > Date.parse(persistedUnit.analysisUnit.committedAt)) {
+    throw new Error("v6 task manifest must be committed no later than the operational analysis unit");
   }
 
   const prepared = preparePrimaryAssignedRunV1({
@@ -999,6 +1169,7 @@ export async function runV6ProductionVerticalSlice(
   const transcript: V6PublicTranscriptEntry[] = [];
   const discussionCalls: V6DiscussionCallRecordV1[] = [];
   const firstRoundReports: BeliefReport[] = [];
+  let monitoringSelection: V6MonitoringSelectionV1 | undefined;
   let providerFailures = 0;
   let promptTokens = 0;
   let completionTokens = 0;
@@ -1132,8 +1303,26 @@ export async function runV6ProductionVerticalSlice(
     }
 
     if (round === 1 && protocol === "epistemic_governance_v1" && firstRoundReports.length > 0) {
-      const target = firstRoundReports[0];
+      monitoringSelection = createV6MonitoringSelectionV1({
+        design: input.monitoringDesign,
+        runId: input.runId,
+        candidateReportIds: firstRoundReports.map(report => report.id),
+        masterSeed: input.monitoringMasterSeed,
+        selectedAt: clock.next("governance monitoring selectedAt"),
+      });
+      const target = firstRoundReports.find(report => report.id === monitoringSelection!.selectedReportId);
+      if (!target) throw new Error("v6 monitoring selection references an unknown first-round report");
       if (target.value.kind !== "binary") throw new Error("v6 governance target must be binary");
+      const referencedEvidence = target.evidence
+        .map(reference => ledger.getEvidence(reference.evidenceId))
+        .filter((evidence): evidence is EpistemicEvidence => evidence !== undefined);
+      const verifiedIndependentLineageCount = deriveVerifiedIndependentLineageCountV1({
+        report: target,
+        evidence: referencedEvidence,
+        // The v1 provider slice has no pre-action provenance-verification
+        // records. Therefore self-declared lineage ids correctly contribute 0.
+        verifiedEvidenceIds: [],
+      });
       const sourceBase = {
         eventRef: { id: "swarmalpha.event.architecture-belief-report", version: "1.0.0" },
         kind: "belief_report" as const,
@@ -1144,6 +1333,7 @@ export async function runV6ProductionVerticalSlice(
           agentId: target.agentId,
           probability: target.value.probability,
           evidenceReferenceCount: target.evidence.length,
+          monitoringSelectionHash: monitoringSelection.contentHash,
         },
       };
       const sourceEvent: GovernanceSourceEvent = {
@@ -1161,7 +1351,8 @@ export async function runV6ProductionVerticalSlice(
         missingFields: [],
         values: {
           certainty: Math.max(target.value.probability, 1 - target.value.probability),
-          verifiedIndependentLineageCount: 0,
+          verifiedIndependentLineageCount,
+          lineageMeasurementRef: structuredClone(V6_VERIFIED_LINEAGE_MEASUREMENT_V1),
         },
         sourceEventIds: [sourceEvent.id],
         observedAt: clock.next("governance observation observedAt"),
@@ -1171,6 +1362,7 @@ export async function runV6ProductionVerticalSlice(
         observationId: observation.id,
         preregistrationRef: input.study.preregistrationRef!,
         verifierAvailable: Boolean(input.verificationAdapter),
+        verifiedIndependentLineageCount,
         createdAt: clock.next("governance diagnosis createdAt"),
       });
       const decisionBase = {
@@ -1326,6 +1518,15 @@ export async function runV6ProductionVerticalSlice(
       }
       auditBuilder.commit(auditBatch);
     }
+    if (round === 1 && protocol === "epistemic_governance_v1" && firstRoundReports.length === 0) {
+      monitoringSelection = createV6MonitoringSelectionV1({
+        design: input.monitoringDesign,
+        runId: input.runId,
+        candidateReportIds: [],
+        masterSeed: input.monitoringMasterSeed,
+        selectedAt: clock.next("governance empty monitoring population recordedAt"),
+      });
+    }
   }
 
   const discussionCompletedAt = clock.next("discussion completedAt");
@@ -1431,6 +1632,7 @@ export async function runV6ProductionVerticalSlice(
     discussionCalls,
     publicTranscript: structuredClone(transcript),
     epistemicEvents: ledger.getEvents(),
+    ...(monitoringSelection ? { monitoringSelection: structuredClone(monitoringSelection) } : {}),
   };
   const v6InteractionTrace: V6InteractionTraceV1 = {
     ...traceBody,
@@ -1441,6 +1643,7 @@ export async function runV6ProductionVerticalSlice(
     primaryAssignmentId: prepared.assignment.manifest.assignment.id,
     assignedArmRef: prepared.assignment.manifest.assignment.assignedArmRef,
     protocol,
+    monitoringDesign: input.monitoringDesign,
   });
 
   const artifact: V6AuditableRawRunData = {
@@ -1479,12 +1682,16 @@ export async function runV6ProductionVerticalSlice(
       totalTokens: promptTokens + completionTokens,
       totalLatencyMs: latencyMs,
     },
+    v6TaskManifest: persistedTaskManifest.manifest,
+    v6MonitoringDesign: structuredClone(input.monitoringDesign),
     v6InteractionTrace,
   };
   return publishCompletedArtifact({
     outputDir: input.outputDir,
     artifact,
     task: input.task,
+    taskAuthority: input.taskAuthority,
+    monitoringDesign: input.monitoringDesign,
     study: input.study,
     registry: input.registry,
     governanceRule: input.governanceRule,

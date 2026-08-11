@@ -32,6 +32,16 @@ import type {
   V6VerificationAdapterContractV1,
 } from "./productionVerticalSlice";
 import type { FinalElicitationAdapterContractV1 } from "../../../src/lib/experimentation";
+import {
+  DISTRIBUTED_BINARY_TASK_FAMILY,
+  createV6TaskAdapter,
+  type V6TaskAdapterV1,
+  type V6TaskFamilyKey,
+} from "./taskAdapters";
+import {
+  createV6MonitoringDesignV1,
+  type V6MonitoringDesignV1,
+} from "./monitoringDesign";
 
 export const V6_SMOKE_PROTOCOLS: readonly V6InteractionProtocol[] = [
   "text_communication_v1",
@@ -39,10 +49,8 @@ export const V6_SMOKE_PROTOCOLS: readonly V6InteractionProtocol[] = [
   "epistemic_governance_v1",
 ];
 
-export const V6_SMOKE_TASK_FAMILY = Object.freeze({
-  id: "swarmalpha.task.distributed-binary",
-  version: "1.0.0",
-});
+/** The frozen v1 distributed-binary family ref (re-exported from taskAdapters). */
+export const V6_SMOKE_TASK_FAMILY = DISTRIBUTED_BINARY_TASK_FAMILY;
 
 export const V6_SMOKE_PREREG = Object.freeze({
   id: "swarmalpha.prereg.v6-smoke",
@@ -59,6 +67,10 @@ export interface V6SmokeFixtureV1 {
   design: PrimaryAssignmentDesignV1;
   study: GovernanceStudyContract;
   registry: PrimaryArmExecutionRegistryV1;
+  taskAdapter: V6TaskAdapterV1;
+  monitoringDesign: V6MonitoringDesignV1;
+  /** Stratification value supplied to primary assignment (field = "taskFamily"). */
+  stratum: { taskFamily: string };
   task: V6BinaryTaskV1;
   discussionContract: V6DiscussionAdapterContractV1;
   verificationContract: V6VerificationAdapterContractV1;
@@ -72,28 +84,65 @@ export interface V6SmokePlannedRun {
   protocol: V6InteractionProtocol;
   primaryMasterSeed: number;
   eligibleEventMasterSeed: number;
+  monitoringMasterSeed: number;
   /** Upper bound of single-attempt provider calls for one run. */
   plannedProviderCalls: number;
   /** Planning estimate only; actual provider-reported usage is authoritative. */
   estimatedTokens: number;
 }
 
-export function createV6BinarySmokeFixture(): V6SmokeFixtureV1 {
+/**
+ * Options for the v6 binary smoke fixture. The default reproduces the frozen
+ * v1 smoke identity set byte-for-byte. `calibration` re-versions the
+ * threshold/study/preregistration identities for a calibration split: a
+ * versioned threshold change, never a mutation of the frozen smoke contracts.
+ */
+export interface V6SmokeFixtureOptions {
+  /** Build the calibration-split variant with re-versioned identities. Default false. */
+  calibration?: boolean;
+  /** Task family whose adapter drives the projected task. Default "distributed-binary". */
+  taskFamily?: V6TaskFamilyKey;
+  /** Identity namespace; default "v6-smoke" (or "v6-smoke-cal" when calibration). */
+  namespace?: string;
+  /** Eligibility certainty lower bound; must be within (0.5,1]. Smoke default 0.9. */
+  certaintyLowerBound?: number;
+}
+
+export function createV6BinarySmokeFixture(options: V6SmokeFixtureOptions = {}): V6SmokeFixtureV1 {
+  const isCalibration = options.calibration === true;
+  const taskFamily = options.taskFamily ?? "distributed-binary";
+  const adapter = createV6TaskAdapter(taskFamily);
+  const defaultNs = taskFamily === "distributed-binary"
+    ? (isCalibration ? "v6-smoke-cal" : "v6-smoke")
+    : (isCalibration ? `v6-${taskFamily}-cal` : `v6-${taskFamily}`);
+  const ns = options.namespace ?? defaultNs;
+  const lowerBound = options.certaintyLowerBound ?? (isCalibration ? 0.65 : 0.9);
+  // The deterministic 08-10 clock (assignment/observation timestamps) fixes one
+  // frozenAt for both variants; identity versioning is carried by the
+  // re-versioned IDs and seed namespaces, not by the frozen timestamp.
+  const frozenAt = "2026-08-10T00:00:00.000Z";
+  const prereg = Object.freeze({ id: `swarmalpha.prereg.${ns}`, version: "1.0.0" });
+  const monitoringDesign = createV6MonitoringDesignV1({
+    designRef: { id: `swarmalpha.monitoring.${ns}`, version: "1.0.0" },
+    preregistrationRef: prereg,
+    seedNamespace: `swarmalpha:${ns}:monitoring:v1`,
+    frozenAt,
+  });
   const rule = createVerificationRequestEligibilityRule({
     certaintyThresholdPolicy: {
-      id: "swarmalpha.threshold.v6-smoke",
+      id: `swarmalpha.threshold.${ns}`,
       version: "1.0.0",
       quantityRef: REPORTED_BELIEF_CERTAINTY_V1,
       operator: "gte",
-      bounds: { lower: 0.9 },
-      authority: { kind: "randomized_experiment_only", preregistrationRef: V6_SMOKE_PREREG },
+      bounds: { lower: lowerBound },
+      authority: { kind: "randomized_experiment_only", preregistrationRef: prereg },
       selection: {
         kind: "fixed_preregistered",
         methodRef: { id: "swarmalpha.method.fixed-threshold", version: "1.0.0" },
       },
       costs: { falsePositive: 1, falseNegative: 1, abstention: 1, action: 1 },
       missingResult: "ineligible",
-      frozenAt: "2026-08-10T00:00:00.000Z",
+      frozenAt,
     },
     maxVerifiedIndependentLineages: 0,
     verifierId: "verifier:smoke",
@@ -102,16 +151,16 @@ export function createV6BinarySmokeFixture(): V6SmokeFixtureV1 {
     priority: 100,
   });
   const policy: GovernancePolicyContract = {
-    id: "swarmalpha.policy.v6-smoke",
+    id: `swarmalpha.policy.${ns}`,
     version: "1.0.0",
     controlMode: "randomized_experiment",
-    preregistrationRef: V6_SMOKE_PREREG,
+    preregistrationRef: prereg,
     eligibilityRuleRefs: [HIGH_CERTAINTY_LOW_LINEAGE_RULE_V2],
     maxActionsPerDecision: 1,
     arbitration: "priority_then_stable_id",
     assignmentDesign: {
-      designRef: { id: "swarmalpha.assignment.v6-smoke", version: "1.0.0" },
-      seedNamespace: "swarmalpha:v6-smoke:event:v1",
+      designRef: { id: `swarmalpha.assignment.${ns}`, version: "1.0.0" },
+      seedNamespace: `swarmalpha:${ns}:event:v1`,
       allocations: [{
         actionRef: { id: VERIFICATION_REQUEST_V2.id, version: VERIFICATION_REQUEST_V2.version },
         unit: "eligible_event",
@@ -135,13 +184,13 @@ export function createV6BinarySmokeFixture(): V6SmokeFixtureV1 {
     budgetContractHash: computePrimaryAssignmentExecutionPayloadHash(budget),
   }));
   const design: PrimaryAssignmentDesignV1 = {
-    id: "swarmalpha.primary-design.v6-smoke",
+    id: `swarmalpha.primary-design.${ns}`,
     version: "1.0.0",
     schemaVersion: "1.0.0",
-    preregistrationRef: V6_SMOKE_PREREG,
+    preregistrationRef: prereg,
     unit: "run",
     assignmentAlgorithmRef: PRIMARY_ASSIGNMENT_ALGORITHM_V1,
-    seedNamespace: "swarmalpha:v6-smoke:primary:v1",
+    seedNamespace: `swarmalpha:${ns}:primary:v1`,
     arms,
     stratification: {
       fields: ["taskFamily"],
@@ -153,16 +202,16 @@ export function createV6BinarySmokeFixture(): V6SmokeFixtureV1 {
     retryPolicy: "reuse_assignment",
   };
   const study: GovernanceStudyContract = {
-    id: "swarmalpha.study.v6-smoke",
+    id: `swarmalpha.study.${ns}`,
     version: "1.0.0",
     governanceArchitecture: "auditable_epistemic_v1",
     inferenceIntent: "engineering",
-    taskFamilyRef: V6_SMOKE_TASK_FAMILY,
+    taskFamilyRef: adapter.taskFamilyRef,
     evaluationContractRef: { id: "swarmalpha.eval.v6-binary", version: "1.0.0" },
     artifactSchemaRef: { id: "swarmalpha.raw-run", version: "5.0.0" },
     governancePolicy: policy,
-    preregistrationRef: V6_SMOKE_PREREG,
-    frozenAt: "2026-08-10T00:00:00.000Z",
+    preregistrationRef: prereg,
+    frozenAt,
     primaryAssignmentUnit: "run",
     primaryAssignmentDesign: design,
     eligibleEventEstimand: "exploratory_only",
@@ -178,23 +227,7 @@ export function createV6BinarySmokeFixture(): V6SmokeFixtureV1 {
       budgetContract: budget,
     })),
   });
-  const task: V6BinaryTaskV1 = {
-    id: "task:v6-smoke-route",
-    taskFamilyRef: V6_SMOKE_TASK_FAMILY,
-    publicContext: "A remote station must decide whether the emergency route is viable.",
-    claim: {
-      id: "claim:v6-smoke-route-viable",
-      proposition: "The emergency route is viable.",
-      domain: "distributed-binary-smoke",
-      createdAt: "2026-08-10T00:00:00.000Z",
-      resolutionPolicy: { kind: "binary", resolverId: "resolver:v6-smoke" },
-    },
-    agents: [
-      { agentId: "agent:a", privateInformation: "Sensor A reports a clear route." },
-      { agentId: "agent:b", privateInformation: "Sensor B reports unstable ice." },
-    ],
-    outcome: false,
-  };
+  const task: V6BinaryTaskV1 = adapter.task;
   const agentBindings = task.agents.map(agent => ({
     agentId: agent.agentId,
     modelRef: { id: "deepseek:deepseek-chat", version: "1.0.0" },
@@ -227,12 +260,16 @@ export function createV6BinarySmokeFixture(): V6SmokeFixtureV1 {
     retryPolicy: "none",
     executionOrder: "sequential_precommitted",
   };
+  const stratum = Object.freeze({ taskFamily });
   return {
     rule,
     policy,
     design,
     study,
     registry,
+    taskAdapter: adapter,
+    monitoringDesign,
+    stratum,
     task,
     discussionContract,
     verificationContract,
@@ -255,6 +292,7 @@ export function primarySeedForProtocol(
   study: GovernanceStudyContract,
   design: PrimaryAssignmentDesignV1,
   protocol: V6InteractionProtocol,
+  stratum: { taskFamily: string } = V6_SMOKE_STRATUM,
 ): number {
   for (let seed = 0; seed < 10_000; seed++) {
     const assignment = createPrimaryAssignmentV1({
@@ -262,7 +300,7 @@ export function primarySeedForProtocol(
       runId,
       studyRef: { id: study.id, version: study.version },
       design,
-      stratum: V6_SMOKE_STRATUM,
+      stratum,
       masterSeed: seed,
       assignedAt: "2026-08-10T00:00:01.000Z",
     });
@@ -281,17 +319,51 @@ function plannedBudgetFor(protocol: V6InteractionProtocol): { calls: number; tok
 }
 
 /** Plan one deterministic run per Stage-1 protocol with distinct run ids. */
-export function planV6SmokeRuns(fixture: V6SmokeFixtureV1): V6SmokePlannedRun[] {
+export function planV6SmokeRuns(
+  fixture: V6SmokeFixtureV1,
+  runIdPrefix = "run:v6-smoke",
+): V6SmokePlannedRun[] {
   return V6_SMOKE_PROTOCOLS.map(protocol => {
-    const runId = `run:v6-smoke:${protocol}`;
+    const runId = `${runIdPrefix}:${protocol}`;
     const budget = plannedBudgetFor(protocol);
     return {
       runId,
       protocol,
-      primaryMasterSeed: primarySeedForProtocol(runId, fixture.study, fixture.design, protocol),
+      primaryMasterSeed: primarySeedForProtocol(runId, fixture.study, fixture.design, protocol, fixture.stratum),
       eligibleEventMasterSeed: V6_SMOKE_ELIGIBLE_EVENT_MASTER_SEED,
+      monitoringMasterSeed: 0,
       plannedProviderCalls: budget.calls,
       estimatedTokens: budget.tokens,
     };
   });
+}
+
+/**
+ * Plan a small calibration batch for the re-versioned (calibration) fixture:
+ * `replicates` deterministic runs per protocol with distinct cal run ids.
+ * Like the smoke plan, seeds are engineering-targeted; outputs are calibration
+ * data only and are never confirmatory.
+ */
+export function planV6CalibrationRuns(
+  fixture: V6SmokeFixtureV1,
+  replicates = 2,
+  runIdPrefix = "run:v6-cal",
+): V6SmokePlannedRun[] {
+  const runs: V6SmokePlannedRun[] = [];
+  for (const protocol of V6_SMOKE_PROTOCOLS) {
+    for (let rep = 1; rep <= replicates; rep++) {
+      const runId = `${runIdPrefix}:${protocol}:${rep}`;
+      const budget = plannedBudgetFor(protocol);
+      runs.push({
+        runId,
+        protocol,
+        primaryMasterSeed: primarySeedForProtocol(runId, fixture.study, fixture.design, protocol, fixture.stratum),
+        eligibleEventMasterSeed: V6_SMOKE_ELIGIBLE_EVENT_MASTER_SEED,
+        monitoringMasterSeed: rep - 1,
+        plannedProviderCalls: budget.calls,
+        estimatedTokens: budget.tokens,
+      });
+    }
+  }
+  return runs;
 }

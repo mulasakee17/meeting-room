@@ -2,6 +2,7 @@
 
 日期：2026-08-11 至 2026-08-17
 状态：执行基线；与旧计划冲突时，本文件只覆盖未来七天的优先级，不改写理论权威定义。
+修订记录：2026-08-11 吸收 08-10 已完成的一次真实 DeepSeek T/B/G 工程 smoke 结果（3 runs / 18 calls / 4604 tokens / exit 0，replay 100%）；Day 1-2 由"首跑 + 事前审计"改为"对已有产物补做逐项审计"，Day 6 trigger go/no-go 提前生效。
 
 ## 1. 一周目标
 
@@ -30,15 +31,17 @@
 - dedicated binary v6 production vertical slice；
 - DeepSeek 单次调用、实际 usage 计量、执行级预算中止；
 - architecture-observed compliance；matched sham 不再执行伪装的主动 verification；
-- 全量测试 63 files / 1256 passed / 3 skipped，build 与 dry-run 通过。
+- 全量测试 63 files / 1256 passed / 3 skipped，build 与 dry-run 通过（2026-08-11 复核确认）；
+- 一次真实 DeepSeek T/B/G 工程 smoke（2026-08-10：3 runs / 18 calls / 4604 tokens，exit 0）：12 个 schema-5 artifact 全部通过 `sealed_decision_replay_verified`；产物位于 gitignored `pilot_output/v6-smoke/`，尚未提交。
+- 首轮真实观测：G 的 governanceTransitions = 0（无 report 达到确定性 ≥0.9）；trigger 稀疏已从理论风险变为当前事实，Day 6 的 go/no-go 提前生效。
 
 尚未成立：
 
-- 没有真实 v6 provider artifact；
-- 没有跨任务 production adapter 证据；
-- 没有正式 calibration、方差、触发率和 missingness 数据；
+- 没有对 08-10 真实 smoke artifact 的逐项人工尸检表（schema replay 已 100%，但 "已成立" 清单之外的语义核对尚未逐项产出，见 Day 2）；
+- 没有跨任务 production adapter 证据（尚无 `V6TaskAdapterV1`，fixture 硬编码在 monolith）；
+- 没有正式 calibration、方差和 missingness 数据（首轮触发率 0 是本轮基线）；
 - 没有冻结的 confirmatory task split 或公开预注册；
-- 没有外部真实性承诺；内部 hash/replay 不能证明 artifact 未被整体重造；
+- 没有外部真实性承诺；内部 hash/replay 不能证明 artifact 未被整体重造；产物未提交 git；
 - 没有治理有效性、机制特异性或 latent belief 的实证结论。
 
 ## 3. 本周研究主张上限
@@ -62,47 +65,48 @@
 
 ## 4. 七天安排
 
-### Day 1：提交基线与真实 smoke 前审计
+### Day 1：提交基线与对已有真实 smoke 产物的只读审计
 
-目标：确保付费调用前的边界没有隐含重试、泄漏或费用失控。
+目标：确认基线 commit 可追溯，且 08-10 已发生的真实 smoke 在进入校准前没有泄漏、重试或费用失控遗留。
 
 工作：
 
 1. 以本次 commit 为唯一代码基线，记录 commit hash、Node/npm 版本和 provider modelRef。
-2. 运行默认 dry-run，保存控制台计划；确认输出目录位于 ignored `pilot_output`。
-3. 人工检查三类最终 prompt：
+2. 解决产物可追溯性：08-10 的 12 个 schema-5 artifact 位于 gitignored `pilot_output`。二选一：(a) 提交 artifact；或 (b)（推荐，保持只读）生成 12 个 artifact 的 hash 清单写入提交的只读 audit 文件。
+3. 运行默认 dry-run，保存控制台计划；确认输出目录位于 ignored `pilot_output`。
+4. 对 08-10 已用 prompt 做 post-hoc 人工复核（三类最终 prompt）：
    - discussion 只见 public context、自己的 private information 和可见 transcript；
    - apply verification 只见公开 claim/message；
    - sham 不见 task/claim/target message，模型内容被丢弃；
    - final elicitation 不见 truth、resolver output 或其他 Agent 私有信息。
-4. 检查 `DEEPSEEK_API_KEY` 只存在于进程环境，不进入 invocationConfig、artifact、日志或命令文本。
-5. 为真实 smoke 单独设置保守上限：20 calls；token cap 以命令参数冻结。首次 smoke 的人民币预算上限建议不超过 ¥10，实际费用以 provider 账单为准，代码中的 token estimate 不视为费用承诺。
+5. 复核 `DEEPSEEK_API_KEY` 未进入 invocationConfig、artifact、日志或命令文本（08-10 运行已满足，抽查 artifact 与命令文本）。
+6. 冻结后续真实调用的上限：20 calls；token cap 以命令参数冻结（CLI 已有 `--max-provider-calls` / `--max-total-tokens`，确认而非重写）。08-10 实际成本约 ¥0.1；人民币预算上限建议不超过 ¥10，实际费用以 provider 账单为准（artifact 无费用字段），代码中的 token estimate 不视为费用承诺。
 
-Gate D1：dry-run、全量测试、build 全绿；任何 credential、truth 或 other-agent private-view 泄漏均停止付费执行。
+Gate D1：dry-run、全量测试、build 全绿；任何 credential、truth 或 other-agent private-view 泄漏均停止后续付费执行。
 
 分工：Codex 审查红区和最终放行；Claude Code 可复核 prompt 字段、命令、路径和文档，不改核心。
 
-### Day 2：一次真实工程 smoke 与逐 artifact 尸检
+### Day 2：对 08-10 真实 smoke 的逐 artifact 尸检（补做，不重新调用）
 
-目标：只验证现实 API 与内核能否相接，不估计治理效果。
+目标：验证现实 API 与内核已相接；不估计治理效果，不重复付费调用。
 
 工作：
 
-1. 经项目所有者明确授权后，只执行一次 T/B/G 工程 smoke。
-2. 立即记录：实际 calls、prompt/completion/total tokens、latency、provider/adapter failure、terminal status、总费用。
-3. 对三个 raw artifact 分别运行 verifier，并人工核对：
-   - analysis unit 时间早于 assignment；
-   - manifest arm 与 execution binding 一致；
-   - T 不产生中途 belief events；B/G 产生显式 reports；
-   - G 的 Stage-2 assignment、actionRef 和 delivery 内容一致；
-   - final elicitation 在 discussion 后、resolution 前；
-   - run-level tokenUsage 包含 final elicitation；
-   - exact retry 为零 provider calls。
-4. 生成一份只读 smoke audit 表，不修改 artifact。
+1. 项目所有者已于 08-10 授权本次执行，本轮不再重复授权，也无新 provider 调用。
+2. 从已有 artifact 整理：实际 calls、prompt/completion/total tokens、latency、provider/adapter failure、terminal status。总费用以 provider 账单为准（artifact 无费用字段）。
+3. 对三个 raw artifact 分别运行 verifier（08-10 已 100%），并人工逐项核对：
+   - analysis unit 时间早于 assignment（已核）；
+   - manifest arm 与 execution binding 一致（已核）；
+   - T 不产生中途 belief events；B/G 产生显式 reports（补核）；
+   - G 的 Stage-2 assignment、actionRef 与 delivery 内容一致——08-10 G 无 eligible action，只能核 no_eligible_action 路径；apply/sham/holdout 三支投递在 mock 层验证；
+   - final elicitation 在 discussion 后、resolution 前（已核）；
+   - run-level tokenUsage 包含 final elicitation（补核）；
+   - exact retry 为零 provider calls——mock 已验证；真实 run 仅执行一次，此路径真实未行使，标注”mock 验证、真实未行使”。
+4. 生成一份只读 smoke audit 表（含 12 artifact 的 hash 清单），不修改 artifact。
 
-Gate D2：schema replay 必须 100%；任何已完成 artifact 的 source/hash/arm 不一致为 P0；任何预算中止后仍发布完整 artifact 为 P0；任何内部 retry 为 P0。
+Gate D2：schema replay 必须 100%（08-10 已满足）；任何已完成 artifact 的 source/hash/arm 不一致为 P0；任何预算中止后仍发布完整 artifact 为 P0；任何内部 retry 为 P0。
 
-失败策略：修复后使用新 runId 和新 smoke 版本，旧失败目录保留用于审计；不得覆盖或“补写”旧 artifact。
+失败策略：修复后使用新 runId 和新 smoke 版本，旧失败目录保留用于审计；不得覆盖或”补写”旧 artifact。
 
 分工：Codex 判断语义缺陷和是否作废；Claude Code 负责机械汇总、issue-code 表和复现测试。
 
@@ -124,6 +128,8 @@ Gate D2：schema replay 必须 100%；任何已完成 artifact 的 source/hash/a
 - 新增治理动作、信誉、质押、在线学习或 Web3；
 - 看到 outcome 后改变 primary estimand、missingness 或 pooling；
 - 把 provider failure 静默重试或删掉。
+
+首轮 G trigger=0 必须在本日分诊：若根因是 belief-certainty 解析/适配缺陷（例如真实输出的 certainty 字段未被正确解析），只修 adapter，不动 threshold；若属真实稀疏，保留现状，留给 Day 6 在 calibration split 上重新版本化。禁止用 confirmatory outcome 调参（见 Day 6）。
 
 Gate D3：所有真实缺陷均有最小复现；修复后全量测试通过；若修改了 schema/estimand/assignment identity，必须 version bump，并宣布 Day 2 artifact 仅为旧版本工程记录。
 
@@ -179,11 +185,13 @@ Gate D4：同一 runner 能通过两个 adapter 执行；kernel 不 import 具�
 
 Gate D5：分析脚本能在纯 fixture artifact 上从零生成同一张表；不允许人工复制指标。
 
+Day 4-5 为可滑动瓶颈：若 Day 3 出现需 version bump 的 P0，顺延；GO/REVISE 判定只依赖本日冻结表，而非矩阵全量覆盖。
+
 ### Day 6：小规模 calibration/variance pilot
 
 目标：回答“正式实验是否可运行、需要多少样本”，不是回答“治理是否有效”。
 
-建议规模：每个 task family 的 T/B/G 各 2 个随机 run，合计 12 runs；若 Day 2 实际成本或失败率偏高，先减半。累计预算建议控制在 ¥30 内，本周所有真实调用总额不得超过项目所有者设定的 ¥500 总预算。
+建议规模：每个 task family 的 T/B/G 各 2 个随机 run，合计 12 runs；若首轮（08-10）实际成本或失败率偏高，先减半。累计预算建议控制在 ¥30 内，本周所有真实调用总额不得超过项目所有者设定的 ¥500 总预算。
 
 只观察以下 go/no-go 指标：
 
@@ -192,7 +200,7 @@ Gate D5：分析脚本能在纯 fixture artifact 上从零生成同一张表；�
 - provider request 无内部 retry；
 - final valid-answer rate 建议 ≥90%；低于该值停止并修 adapter，不改 outcome missingness；
 - run completion rate 建议 ≥90%；
-- G eligibility trigger rate 若接近 0% 或 100%，说明 threshold 无法支持比较；只能在 calibration split 上重新版本化，不能用 confirmatory outcome 调参；
+- G eligibility trigger rate 若接近 0% 或 100%，说明 threshold 无法支持比较；只能在 calibration split 上重新版本化，不能用 confirmatory outcome 调参（首轮 08-10 真实观测：无 report 达到 ≥0.9，trigger=0——此 go/no-go 已是当前事实，calibration 的首要目标之一是估出非零触发率）；
 - 平均/尾部 token 与 latency 足以估计下一阶段预算；
 - 两个 task family 均不能出现结构性 ceiling/floor。
 
@@ -225,7 +233,7 @@ Gate D5：分析脚本能在纯 fixture artifact 上从零生成同一张表；�
 
 ### P0：必须完成
 
-1. 真实单次 provider smoke 与逐 artifact replay；
+1. 08-10 真实 smoke 的逐 artifact 人工尸检、审计表与提交基线（smoke 已执行，本周补审计与可追溯性）；
 2. 真实失败必须可解释且不伪造成 completed；
 3. task-adapter authority boundary；
 4. 第二个 binary distributed-information task family；

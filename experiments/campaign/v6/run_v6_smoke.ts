@@ -21,28 +21,46 @@ import { resolveV6AuditableRawRunPath, runV6ProductionVerticalSlice } from "./pr
 import { resolveOperationalAnalysisUnitV1Path } from "../../../src/lib/experimentation/operationalAnalysisUnitStore";
 import { resolvePrimaryAssignmentManifestV1Path } from "../../../src/lib/experimentation/primaryAssignmentManifestStore";
 import { resolvePrimaryArmExecutionBindingV1Path } from "../../../src/lib/experimentation/primaryArmExecutionStore";
+import { resolveV6TaskManifestV1Path } from "./v6TaskManifest";
 import { createV6Adapters, type SingleAttemptTextInvoker } from "./providerAdapters";
 import { createDeepSeekSingleAttemptInvoker } from "./deepseekSingleAttemptInvoker";
 import {
-  V6_SMOKE_STRATUM,
   createV6BinarySmokeFixture,
+  planV6CalibrationRuns,
   planV6SmokeRuns,
   type V6SmokeFixtureV1,
   type V6SmokePlannedRun,
 } from "./v6BinarySmokeFixture";
+import type { V6TaskFamilyKey } from "./taskAdapters";
 
 export interface V6SmokeArgs {
   execute: boolean;
+  calibration: boolean;
+  taskFamily: V6TaskFamilyKey;
   outputDir: string;
+  outputDirSet: boolean;
   maxProviderCalls: number;
   maxTotalTokens: number;
 }
 
 const DEFAULT_OUTPUT_DIR = path.resolve(process.cwd(), "experiments/campaign/pilot_output/v6-smoke");
 
+function defaultOutputDirFor(taskFamily: V6TaskFamilyKey, calibration: boolean): string {
+  const base = taskFamily === "distributed-binary" ? "v6-smoke" : `v6-${taskFamily}`;
+  return path.resolve(process.cwd(), `experiments/campaign/pilot_output/${base}${calibration ? "-cal" : ""}`);
+}
+
+function runIdPrefixFor(taskFamily: V6TaskFamilyKey, calibration: boolean): string {
+  if (taskFamily === "distributed-binary") return calibration ? "run:v6-cal" : "run:v6-smoke";
+  return calibration ? `run:v6-${taskFamily}-cal` : `run:v6-${taskFamily}`;
+}
+
 export function parseSmokeArgs(argv: readonly string[]): V6SmokeArgs {
   let execute = false;
+  let calibration = false;
+  let taskFamily: V6TaskFamilyKey = "distributed-binary";
   let outputDir = DEFAULT_OUTPUT_DIR;
+  let outputDirSet = false;
   let maxProviderCalls = 20;
   let maxTotalTokens = 100_000;
   for (let index = 0; index < argv.length; index++) {
@@ -51,10 +69,19 @@ export function parseSmokeArgs(argv: readonly string[]): V6SmokeArgs {
       execute = false;
     } else if (arg === "--execute") {
       execute = true;
+    } else if (arg === "--calibration") {
+      calibration = true;
+    } else if (arg === "--task-family") {
+      const value = argv[++index];
+      if (value !== "distributed-binary" && value !== "network-fault") {
+        throw new Error("--task-family must be one of distributed-binary, network-fault");
+      }
+      taskFamily = value;
     } else if (arg === "--output-dir") {
       const value = argv[++index];
       if (!value || value.trim().length === 0) throw new Error("--output-dir requires a path");
       outputDir = path.resolve(value);
+      outputDirSet = true;
     } else if (arg === "--max-provider-calls") {
       const value = Number(argv[++index]);
       if (!Number.isSafeInteger(value) || value < 0) throw new Error("--max-provider-calls must be a non-negative safe integer");
@@ -67,7 +94,7 @@ export function parseSmokeArgs(argv: readonly string[]): V6SmokeArgs {
       throw new Error(`Unknown option: ${arg}`);
     }
   }
-  return { execute, outputDir, maxProviderCalls, maxTotalTokens };
+  return { execute, calibration, taskFamily, outputDir, outputDirSet, maxProviderCalls, maxTotalTokens };
 }
 
 /** Actual provider accounting; planned tokens are never treated as observed. */
@@ -189,6 +216,7 @@ export function preflightIncompleteRuns(
   for (const run of plannedRuns) {
     const rawExists = fs.existsSync(resolveV6AuditableRawRunPath(outputDir, run.runId));
     const partialExists = [
+      resolveV6TaskManifestV1Path(outputDir, run.runId),
       resolveOperationalAnalysisUnitV1Path(outputDir, run.runId),
       resolvePrimaryAssignmentManifestV1Path(outputDir, run.runId),
       resolvePrimaryArmExecutionBindingV1Path(outputDir, run.runId),
@@ -208,10 +236,10 @@ function deterministicV6Clock(): () => string {
 function dryRunPlan(
   fixture: V6SmokeFixtureV1,
   outputDir: string,
+  plannedRuns: V6SmokePlannedRun[],
 ): { plannedRuns: V6SmokePlannedRun[]; blockers: string[]; totalCalls: number; totalEstimatedTokens: number } {
   validateGovernanceStudyContract(fixture.study);
   validatePrimaryArmExecutionRegistryV1(fixture.registry, fixture.design);
-  const plannedRuns = planV6SmokeRuns(fixture);
   const blockers = preflightIncompleteRuns(outputDir, plannedRuns);
   return {
     plannedRuns,
@@ -232,10 +260,11 @@ export async function runV6SmokeExecute(input: {
   invoker: SingleAttemptTextInvoker;
   maxProviderCalls: number;
   maxTotalTokens: number;
+  plannedRuns?: V6SmokePlannedRun[];
   clock?: () => string;
 }) {
   const budget = new V6ProviderCallBudget(input.maxProviderCalls, input.maxTotalTokens);
-  const plannedRuns = planV6SmokeRuns(input.fixture);
+  const plannedRuns = input.plannedRuns ?? planV6SmokeRuns(input.fixture);
   const blockers = preflightIncompleteRuns(input.outputDir, plannedRuns);
   if (blockers.length > 0) throw new Error(blockers.join("; "));
 
@@ -259,10 +288,17 @@ export async function runV6SmokeExecute(input: {
       runIndex: 0,
       study: input.fixture.study,
       registry: input.fixture.registry,
-      stratum: V6_SMOKE_STRATUM,
+      stratum: input.fixture.stratum,
       primaryMasterSeed: run.primaryMasterSeed,
       eligibleEventMasterSeed: run.eligibleEventMasterSeed,
+      monitoringMasterSeed: run.monitoringMasterSeed,
       task: input.fixture.task,
+      taskAuthority: {
+        adapterRef: input.fixture.taskAdapter.adapterRef,
+        taskSchemaRef: input.fixture.taskAdapter.taskSchemaRef,
+        resolution: input.fixture.taskAdapter.resolution,
+      },
+      monitoringDesign: input.fixture.monitoringDesign,
       discussionAdapter: adapters.discussionAdapter,
       finalElicitationAdapter: adapters.finalElicitationAdapter,
       governanceRule: input.fixture.rule,
@@ -277,8 +313,15 @@ export async function runV6SmokeExecute(input: {
 
 export async function main(argv: readonly string[]): Promise<number> {
   const args = parseSmokeArgs(argv);
-  const fixture = createV6BinarySmokeFixture();
-  const plan = dryRunPlan(fixture, args.outputDir);
+  const fixture = createV6BinarySmokeFixture({
+    calibration: args.calibration,
+    taskFamily: args.taskFamily,
+  });
+  const outputDir = args.outputDirSet ? args.outputDir : defaultOutputDirFor(args.taskFamily, args.calibration);
+  const plannedRuns = args.calibration
+    ? planV6CalibrationRuns(fixture, 2, runIdPrefixFor(args.taskFamily, true))
+    : planV6SmokeRuns(fixture, runIdPrefixFor(args.taskFamily, false));
+  const plan = dryRunPlan(fixture, outputDir, plannedRuns);
   if (plan.totalCalls > args.maxProviderCalls || plan.totalEstimatedTokens > args.maxTotalTokens) {
     console.error(
       `smoke_plan_budget_exceeded: calls=${plan.totalCalls}/${args.maxProviderCalls} estimatedTokens=${plan.totalEstimatedTokens}/${args.maxTotalTokens}`,
@@ -290,17 +333,24 @@ export async function main(argv: readonly string[]): Promise<number> {
     return 2;
   }
   if (args.execute) {
+    if (args.taskFamily === "network-fault") {
+      console.error(
+        "task_family_not_admitted_for_execution: network-fault@1.0.0 has a known truth/evidence validity defect; retain it for audit/mock replay only and introduce a new version after redesign",
+      );
+      return 4;
+    }
     if (!process.env.DEEPSEEK_API_KEY) {
       console.error("deepseek_api_key_unavailable: set DEEPSEEK_API_KEY before --execute");
       return 3;
     }
     try {
       const executed = await runV6SmokeExecute({
-        outputDir: args.outputDir,
+        outputDir,
         fixture,
         invoker: createDeepSeekSingleAttemptInvoker(),
         maxProviderCalls: args.maxProviderCalls,
         maxTotalTokens: args.maxTotalTokens,
+        plannedRuns,
       });
       console.log(`v6 smoke execute complete: ${executed.results.length} runs, ${executed.budget.callCount} calls, ${executed.budget.tokenCount} tokens`);
       return 0;
@@ -319,7 +369,7 @@ export async function main(argv: readonly string[]): Promise<number> {
   console.log(
     `  total planned provider calls: ${plan.totalCalls} (cap ${args.maxProviderCalls}); estimated tokens: ${plan.totalEstimatedTokens} (cap ${args.maxTotalTokens})`,
   );
-  console.log(`  output dir: ${args.outputDir} (no artifacts created in dry-run)`);
+  console.log(`  output dir: ${outputDir} (no artifacts created in dry-run)`);
   if (plan.blockers.length > 0) {
     for (const blocker of plan.blockers) console.error(`  ✗ ${blocker}`);
     return 2;
