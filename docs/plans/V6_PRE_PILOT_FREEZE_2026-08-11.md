@@ -144,4 +144,8 @@
 
 ## 8. 下一项允许的工程工作
 
-只允许直接解除 Gate C2 的最小工作：建立经过人工语义审查的 versioned binary task bank 与冻结 split manifest，并补齐 empty-population/selection-coverage 分析。不得借此新增治理机制或新的通用框架。
+**FACT：**versioned task-bank/split authority 接口已经实现并通过对抗测试；它能够阻止未审查任务进入 scientific split、同源 scenario/template 跨 split 泄漏、calibration manifest 越权授予 confirmatory 权限，以及 task manifest 与 bank entry 的身份漂移。官方 CLI 在 task bank 未准入前拒绝真实 calibration execution。
+
+**LIMITATION：**当前仍没有经过人工语义审查的 calibration/held-out task-bank 内容，接口本身不解除 Gate C2。
+
+下一项只允许直接解除 Gate C2 的最小内容工作：建立经过人工语义审查的 versioned binary task entries 与冻结 split manifest，并补齐 empty-population/selection-coverage 分析。不得借此新增治理机制或新的通用框架。

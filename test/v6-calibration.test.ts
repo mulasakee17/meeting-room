@@ -184,6 +184,20 @@ describe("v6 calibration fixture versioning", () => {
     expect(errorSpy).not.toHaveBeenCalled();
     expect(fs.readdirSync(outputDir)).toHaveLength(0);
   });
+
+  it("refuses paid calibration before task-bank split admission and before credential use", async () => {
+    const outputDir = tmpDir();
+    vi.stubEnv("DEEPSEEK_API_KEY", "");
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const code = await main([
+      "--execute", "--calibration", "--output-dir", outputDir, "--max-provider-calls", "40",
+    ]);
+    expect(code).toBe(5);
+    const errors = errorSpy.mock.calls.flat().join(" ");
+    expect(errors).toContain("calibration_task_bank_not_admitted");
+    expect(errors).not.toContain("deepseek_api_key_unavailable");
+    expect(fs.readdirSync(outputDir)).toHaveLength(0);
+  });
 });
 
 describe("v6 calibration threshold exploration (0.7 knife-edge variant)", () => {

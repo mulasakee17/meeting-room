@@ -339,6 +339,12 @@ export async function main(argv: readonly string[]): Promise<number> {
       );
       return 4;
     }
+    if (args.calibration) {
+      console.error(
+        "calibration_task_bank_not_admitted: --calibration execution requires a frozen task-bank manifest with non-empty, disjoint threshold-calibration and held-out-detector splits",
+      );
+      return 5;
+    }
     if (!process.env.DEEPSEEK_API_KEY) {
       console.error("deepseek_api_key_unavailable: set DEEPSEEK_API_KEY before --execute");
       return 3;
