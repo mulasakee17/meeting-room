@@ -1602,7 +1602,9 @@ export async function runV6ProductionVerticalSlice(
   replayGovernanceAuditTrailDecisions(governanceAuditTrail, [input.governanceRule]);
 
   const finalContract = createFinalElicitationContract({
-    id: "swarmalpha.final-elicitation.v6-binary-production",
+    id: input.task.claim.resolutionPolicy.kind === "binary"
+      ? "swarmalpha.final-elicitation.v6-binary-production"
+      : "swarmalpha.final-elicitation.v6-categorical-production",
     version: "1.0.0",
     claimIds: [input.task.claim.id],
   });

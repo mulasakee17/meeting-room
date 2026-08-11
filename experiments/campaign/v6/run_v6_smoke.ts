@@ -21,7 +21,7 @@ import { resolveV6AuditableRawRunPath, runV6ProductionVerticalSlice } from "./pr
 import { resolveOperationalAnalysisUnitV1Path } from "../../../src/lib/experimentation/operationalAnalysisUnitStore";
 import { resolvePrimaryAssignmentManifestV1Path } from "../../../src/lib/experimentation/primaryAssignmentManifestStore";
 import { resolvePrimaryArmExecutionBindingV1Path } from "../../../src/lib/experimentation/primaryArmExecutionStore";
-import { resolveV6TaskManifestV1Path } from "./v6TaskManifest";
+import { createV6TaskManifestV1, resolveV6TaskManifestV1Path } from "./v6TaskManifest";
 import { createV6Adapters, type SingleAttemptTextInvoker } from "./providerAdapters";
 import { createDeepSeekSingleAttemptInvoker } from "./deepseekSingleAttemptInvoker";
 import {
@@ -32,25 +32,48 @@ import {
   type V6SmokePlannedRun,
 } from "./v6BinarySmokeFixture";
 import type { V6TaskFamilyKey } from "./taskAdapters";
+import { createV6HiddenBenchSmokeFixtureV1 } from "./v6HiddenBenchSmokeFixture";
+import { validateV6TaskBankAdmissionV1 } from "./taskBank";
+
+export type V6SmokeTaskFamily = V6TaskFamilyKey | "hiddenbench-categorical";
 
 export interface V6SmokeArgs {
   execute: boolean;
   calibration: boolean;
-  taskFamily: V6TaskFamilyKey;
+  taskFamily: V6SmokeTaskFamily;
+  hiddenBenchTaskId: number | null;
   outputDir: string;
   outputDirSet: boolean;
   maxProviderCalls: number;
+  maxProviderCallsSet: boolean;
   maxTotalTokens: number;
 }
 
 const DEFAULT_OUTPUT_DIR = path.resolve(process.cwd(), "experiments/campaign/pilot_output/v6-smoke");
 
-function defaultOutputDirFor(taskFamily: V6TaskFamilyKey, calibration: boolean): string {
+function defaultOutputDirFor(
+  taskFamily: V6SmokeTaskFamily,
+  calibration: boolean,
+  hiddenBenchTaskId: number | null,
+): string {
+  if (taskFamily === "hiddenbench-categorical") {
+    return path.resolve(
+      process.cwd(),
+      `experiments/campaign/pilot_output/v6-hiddenbench-${hiddenBenchTaskId}${calibration ? "-cal" : ""}`,
+    );
+  }
   const base = taskFamily === "distributed-binary" ? "v6-smoke" : `v6-${taskFamily}`;
   return path.resolve(process.cwd(), `experiments/campaign/pilot_output/${base}${calibration ? "-cal" : ""}`);
 }
 
-function runIdPrefixFor(taskFamily: V6TaskFamilyKey, calibration: boolean): string {
+function runIdPrefixFor(
+  taskFamily: V6SmokeTaskFamily,
+  calibration: boolean,
+  hiddenBenchTaskId: number | null,
+): string {
+  if (taskFamily === "hiddenbench-categorical") {
+    return `run:v6-hiddenbench:${hiddenBenchTaskId}${calibration ? ":cal" : ""}`;
+  }
   if (taskFamily === "distributed-binary") return calibration ? "run:v6-cal" : "run:v6-smoke";
   return calibration ? `run:v6-${taskFamily}-cal` : `run:v6-${taskFamily}`;
 }
@@ -58,10 +81,12 @@ function runIdPrefixFor(taskFamily: V6TaskFamilyKey, calibration: boolean): stri
 export function parseSmokeArgs(argv: readonly string[]): V6SmokeArgs {
   let execute = false;
   let calibration = false;
-  let taskFamily: V6TaskFamilyKey = "distributed-binary";
+  let taskFamily: V6SmokeTaskFamily = "distributed-binary";
+  let hiddenBenchTaskId: number | null = null;
   let outputDir = DEFAULT_OUTPUT_DIR;
   let outputDirSet = false;
   let maxProviderCalls = 20;
+  let maxProviderCallsSet = false;
   let maxTotalTokens = 100_000;
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index];
@@ -73,10 +98,18 @@ export function parseSmokeArgs(argv: readonly string[]): V6SmokeArgs {
       calibration = true;
     } else if (arg === "--task-family") {
       const value = argv[++index];
-      if (value !== "distributed-binary" && value !== "network-fault") {
-        throw new Error("--task-family must be one of distributed-binary, network-fault");
+      if (value !== "distributed-binary"
+        && value !== "network-fault"
+        && value !== "hiddenbench-categorical") {
+        throw new Error("--task-family must be one of distributed-binary, network-fault, hiddenbench-categorical");
       }
       taskFamily = value;
+    } else if (arg === "--hiddenbench-task-id") {
+      const value = Number(argv[++index]);
+      if (!Number.isSafeInteger(value) || value < 1 || value > 65) {
+        throw new Error("--hiddenbench-task-id must be an integer from 1 to 65");
+      }
+      hiddenBenchTaskId = value;
     } else if (arg === "--output-dir") {
       const value = argv[++index];
       if (!value || value.trim().length === 0) throw new Error("--output-dir requires a path");
@@ -86,6 +119,7 @@ export function parseSmokeArgs(argv: readonly string[]): V6SmokeArgs {
       const value = Number(argv[++index]);
       if (!Number.isSafeInteger(value) || value < 0) throw new Error("--max-provider-calls must be a non-negative safe integer");
       maxProviderCalls = value;
+      maxProviderCallsSet = true;
     } else if (arg === "--max-total-tokens") {
       const value = Number(argv[++index]);
       if (!Number.isSafeInteger(value) || value < 0) throw new Error("--max-total-tokens must be a non-negative safe integer");
@@ -94,7 +128,23 @@ export function parseSmokeArgs(argv: readonly string[]): V6SmokeArgs {
       throw new Error(`Unknown option: ${arg}`);
     }
   }
-  return { execute, calibration, taskFamily, outputDir, outputDirSet, maxProviderCalls, maxTotalTokens };
+  if (taskFamily === "hiddenbench-categorical" && hiddenBenchTaskId === null) {
+    throw new Error("--task-family hiddenbench-categorical requires --hiddenbench-task-id");
+  }
+  if (taskFamily !== "hiddenbench-categorical" && hiddenBenchTaskId !== null) {
+    throw new Error("--hiddenbench-task-id is valid only for --task-family hiddenbench-categorical");
+  }
+  return {
+    execute,
+    calibration,
+    taskFamily,
+    hiddenBenchTaskId,
+    outputDir,
+    outputDirSet,
+    maxProviderCalls,
+    maxProviderCallsSet,
+    maxTotalTokens,
+  };
 }
 
 /** Actual provider accounting; planned tokens are never treated as observed. */
@@ -228,9 +278,41 @@ export function preflightIncompleteRuns(
   return blockers;
 }
 
-function deterministicV6Clock(): () => string {
+function deterministicV6Clock(startAt: string): () => string {
+  const start = Date.parse(startAt);
+  if (!Number.isFinite(start) || new Date(start).toISOString() !== startAt) {
+    throw new Error("v6 fixture clockStartAt must be a canonical ISO timestamp");
+  }
   let tick = 0;
-  return () => new Date(Date.parse("2026-08-10T00:00:01.000Z") + tick++ * 1000).toISOString();
+  return () => new Date(start + tick++ * 1000).toISOString();
+}
+
+/** Pure pre-provider task-bank admission replay for fixtures that declare one. */
+function validateFixtureTaskBankAdmission(
+  fixture: V6SmokeFixtureV1,
+  plannedRuns: readonly V6SmokePlannedRun[],
+): void {
+  if (!fixture.taskBankAdmission) return;
+  for (const run of plannedRuns) {
+    const taskManifest = createV6TaskManifestV1({
+      runId: run.runId,
+      studyRef: { id: fixture.study.id, version: fixture.study.version },
+      task: fixture.task,
+      authority: {
+        adapterRef: fixture.taskAdapter.adapterRef,
+        taskSchemaRef: fixture.taskAdapter.taskSchemaRef,
+        resolution: fixture.taskAdapter.resolution,
+      },
+      monitoringDesignRef: fixture.monitoringDesign.designRef,
+      monitoringDesignHash: fixture.monitoringDesign.contentHash,
+      committedAt: fixture.clockStartAt,
+    });
+    validateV6TaskBankAdmissionV1({
+      bank: fixture.taskBankAdmission.bank,
+      taskManifest,
+      requiredSplit: fixture.taskBankAdmission.requiredSplit,
+    });
+  }
 }
 
 function dryRunPlan(
@@ -240,6 +322,7 @@ function dryRunPlan(
 ): { plannedRuns: V6SmokePlannedRun[]; blockers: string[]; totalCalls: number; totalEstimatedTokens: number } {
   validateGovernanceStudyContract(fixture.study);
   validatePrimaryArmExecutionRegistryV1(fixture.registry, fixture.design);
+  validateFixtureTaskBankAdmission(fixture, plannedRuns);
   const blockers = preflightIncompleteRuns(outputDir, plannedRuns);
   return {
     plannedRuns,
@@ -265,6 +348,7 @@ export async function runV6SmokeExecute(input: {
 }) {
   const budget = new V6ProviderCallBudget(input.maxProviderCalls, input.maxTotalTokens);
   const plannedRuns = input.plannedRuns ?? planV6SmokeRuns(input.fixture);
+  validateFixtureTaskBankAdmission(input.fixture, plannedRuns);
   const blockers = preflightIncompleteRuns(input.outputDir, plannedRuns);
   if (blockers.length > 0) throw new Error(blockers.join("; "));
 
@@ -274,7 +358,7 @@ export async function runV6SmokeExecute(input: {
     finalContract: input.fixture.finalContract,
     invoker: createMeteredSingleAttemptInvoker(input.invoker, budget),
   });
-  const clock = input.clock ?? deterministicV6Clock();
+  const clock = input.clock ?? deterministicV6Clock(input.fixture.clockStartAt);
   const results: Array<{ run: V6SmokePlannedRun; reused: boolean; absolutePath: string }> = [];
 
   for (const run of plannedRuns) {
@@ -313,18 +397,31 @@ export async function runV6SmokeExecute(input: {
 
 export async function main(argv: readonly string[]): Promise<number> {
   const args = parseSmokeArgs(argv);
-  const fixture = createV6BinarySmokeFixture({
-    calibration: args.calibration,
-    taskFamily: args.taskFamily,
-  });
-  const outputDir = args.outputDirSet ? args.outputDir : defaultOutputDirFor(args.taskFamily, args.calibration);
-  const plannedRuns = args.calibration
-    ? planV6CalibrationRuns(fixture, 2, runIdPrefixFor(args.taskFamily, true))
-    : planV6SmokeRuns(fixture, runIdPrefixFor(args.taskFamily, false));
-  const plan = dryRunPlan(fixture, outputDir, plannedRuns);
-  if (plan.totalCalls > args.maxProviderCalls || plan.totalEstimatedTokens > args.maxTotalTokens) {
+  if (args.taskFamily === "hiddenbench-categorical" && args.calibration) {
     console.error(
-      `smoke_plan_budget_exceeded: calls=${plan.totalCalls}/${args.maxProviderCalls} estimatedTokens=${plan.totalEstimatedTokens}/${args.maxTotalTokens}`,
+      "hiddenbench_scientific_task_bank_not_admitted: categorical calibration requires frozen semantic review and disjoint calibration/held-out splits",
+    );
+    return 5;
+  }
+  const fixture: V6SmokeFixtureV1 = args.taskFamily === "hiddenbench-categorical"
+    ? createV6HiddenBenchSmokeFixtureV1({ sourceTaskId: args.hiddenBenchTaskId! })
+    : createV6BinarySmokeFixture({
+        calibration: args.calibration,
+        taskFamily: args.taskFamily,
+      });
+  const maxProviderCalls = args.maxProviderCallsSet
+    ? args.maxProviderCalls
+    : (args.taskFamily === "hiddenbench-categorical" ? 40 : args.maxProviderCalls);
+  const outputDir = args.outputDirSet
+    ? args.outputDir
+    : defaultOutputDirFor(args.taskFamily, args.calibration, args.hiddenBenchTaskId);
+  const plannedRuns = args.calibration
+    ? planV6CalibrationRuns(fixture, 2, runIdPrefixFor(args.taskFamily, true, args.hiddenBenchTaskId))
+    : planV6SmokeRuns(fixture, runIdPrefixFor(args.taskFamily, false, args.hiddenBenchTaskId));
+  const plan = dryRunPlan(fixture, outputDir, plannedRuns);
+  if (plan.totalCalls > maxProviderCalls || plan.totalEstimatedTokens > args.maxTotalTokens) {
+    console.error(
+      `smoke_plan_budget_exceeded: calls=${plan.totalCalls}/${maxProviderCalls} estimatedTokens=${plan.totalEstimatedTokens}/${args.maxTotalTokens}`,
     );
     return 2;
   }
@@ -338,6 +435,12 @@ export async function main(argv: readonly string[]): Promise<number> {
         "task_family_not_admitted_for_execution: network-fault@1.0.0 has a known truth/evidence validity defect; retain it for audit/mock replay only and introduce a new version after redesign",
       );
       return 4;
+    }
+    if (args.taskFamily === "hiddenbench-categorical") {
+      console.error(
+        "hiddenbench_execution_not_admitted: engineering dry-run and mock execution must pass before enabling credential-backed execution",
+      );
+      return 6;
     }
     if (args.calibration) {
       console.error(
@@ -354,7 +457,7 @@ export async function main(argv: readonly string[]): Promise<number> {
         outputDir,
         fixture,
         invoker: createDeepSeekSingleAttemptInvoker(),
-        maxProviderCalls: args.maxProviderCalls,
+        maxProviderCalls,
         maxTotalTokens: args.maxTotalTokens,
         plannedRuns,
       });
@@ -373,7 +476,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     );
   }
   console.log(
-    `  total planned provider calls: ${plan.totalCalls} (cap ${args.maxProviderCalls}); estimated tokens: ${plan.totalEstimatedTokens} (cap ${args.maxTotalTokens})`,
+    `  total planned provider calls: ${plan.totalCalls} (cap ${maxProviderCalls}); estimated tokens: ${plan.totalEstimatedTokens} (cap ${args.maxTotalTokens})`,
   );
   console.log(`  output dir: ${outputDir} (no artifacts created in dry-run)`);
   if (plan.blockers.length > 0) {
