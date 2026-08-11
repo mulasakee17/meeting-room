@@ -1,0 +1,8 @@
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+ANTHROPIC_MODEL = "deepseek-v4-flash[1M]"
+ANTHROPIC_DEFAULT_HAIKU_MODEL = "deepseek-v4-flash[1M]"
+ANTHROPIC_DEFAULT_SONNET_MODEL = "deepseek-v4-flash[1M]"
+ANTHROPIC_DEFAULT_OPUS_MODEL = "deepseek-v4-flash[1M]"
