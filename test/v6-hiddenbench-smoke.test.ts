@@ -197,10 +197,9 @@ describe("HiddenBench categorical engineering smoke", () => {
     expect(mock.invoke).not.toHaveBeenCalled();
   });
 
-  it("executes one mock G run through the existing vertical slice and replays clean", async () => {
+  it("executes mock T/B/G runs through one categorical vertical slice and replays each clean", async () => {
     const fixture = createV6HiddenBenchSmokeFixtureV1({ sourceTaskId: 1 });
-    const plannedRuns = planV6SmokeRuns(fixture, "run:test:hb-g")
-      .filter(run => run.protocol === "epistemic_governance_v1");
+    const plannedRuns = planV6SmokeRuns(fixture, "run:test:hb-tbg");
     const outputDir = tmpDir();
     const mock = categoricalInvoker(fixture.task.claim.id, fixture.task.claim.options);
     const result = await runV6SmokeExecute({
@@ -208,19 +207,27 @@ describe("HiddenBench categorical engineering smoke", () => {
       fixture,
       invoker: mock.invoker,
       plannedRuns,
-      maxProviderCalls: 20,
+      maxProviderCalls: 40,
       maxTotalTokens: 100_000,
     });
-    expect(result.results).toHaveLength(1);
-    const artifact = JSON.parse(fs.readFileSync(
-      resolveV6AuditableRawRunPath(outputDir, plannedRuns[0].runId),
-      "utf8",
-    )) as Record<string, unknown>;
-    const replay = verifyRawRunData("(hiddenbench/mock-g)", artifact, {
-      governanceRules: [fixture.rule],
-    });
-    expect(replay.governanceAuditStatus).toBe("sealed_decision_replay_verified");
-    expect(replay.runIssues).toEqual([]);
+    expect(result.results).toHaveLength(3);
+    expect(new Set(plannedRuns.map(run => run.protocol))).toEqual(new Set([
+      "text_communication_v1",
+      "explicit_belief_v1",
+      "epistemic_governance_v1",
+    ]));
+    expect(mock.invoke).toHaveBeenCalledTimes(37);
+    for (const run of plannedRuns) {
+      const artifact = JSON.parse(fs.readFileSync(
+        resolveV6AuditableRawRunPath(outputDir, run.runId),
+        "utf8",
+      )) as Record<string, unknown>;
+      const replay = verifyRawRunData(`(hiddenbench/mock-${run.protocol})`, artifact, {
+        governanceRules: [fixture.rule],
+      });
+      expect(replay.governanceAuditStatus).toBe("sealed_decision_replay_verified");
+      expect(replay.runIssues).toEqual([]);
+    }
     const forbidden = new Set(["groundtruth", "correctanswer", "correct_answer", "resolveroutcome"]);
     for (const call of mock.invoke.mock.calls) {
       expect(containsForbiddenKey(call[0], forbidden)).toBe(false);

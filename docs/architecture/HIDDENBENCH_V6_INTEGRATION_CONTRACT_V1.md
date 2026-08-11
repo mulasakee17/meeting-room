@@ -218,3 +218,26 @@ not be interpreted as evidence that the report has no real independent source.
 Still not implemented or established: empirical K-specific threshold fitting,
 held-out real-model detector validity, official HiddenBench protocol
 reproduction, governance effectiveness, and confirmatory readiness.
+
+## 7C. Task-bank split ceiling after engineering smoke (2026-08-11)
+
+**FACT:** the pinned bank contains 59 K=3 tasks and 6 K=4 tasks. It contains
+58 four-agent tasks and 7 three-agent tasks. Tasks 1--3 have the same normalized
+description and differ in resolution. Tasks 9--65 contain a `rationale` field;
+their rationales repeatedly describe the same abstract construction recipe:
+shared information favors a decoy, private items undermine alternatives, and
+pooling the items identifies one option.
+
+**INFERENCE:** a task-ID-level random split would understate dependence between
+near-paraphrase scenario families. The repeated abstract hidden-profile recipe
+is part of the intended benchmark population, not by itself a train/test leak;
+however, it limits external validity. Near-duplicate scenario families must be
+kept within one split and the resulting evidence may only be described as
+within-HiddenBench generalization.
+
+**DECISION:** K=4 remains engineering/exploratory. Six tasks are insufficient
+to release a K-specific threshold as predictive authority. K=3 may proceed to
+a candidate calibration/held-out manifest only after the semantic-family
+review in `HIDDENBENCH_V6_SCIENTIFIC_SPLIT_GAP_AUDIT_2026-08-11.md` is accepted
+and frozen before any model output is inspected. Until then, the CLI's
+scientific calibration and credential-backed HiddenBench gates remain closed.
