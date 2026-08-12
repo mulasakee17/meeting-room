@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  fingerprintEstimatorValue,
   projectCollectiveEpistemicStateV1,
   replayCollectiveEpistemicStateV1,
   validateCollectiveEpistemicStateV1,
@@ -170,7 +171,7 @@ describe("CollectiveEpistemicStateV1", () => {
       pooledCertainty: number;
     } & Parameters<typeof validateCollectiveEpistemicStateV1>[0];
     tampered.pooledCertainty = 0.1;
-    expect(() => validateCollectiveEpistemicStateV1(tampered)).toThrow("content hash mismatch");
+    expect(() => validateCollectiveEpistemicStateV1(tampered)).toThrow("pooled belief geometry is inconsistent");
   });
 
   it("fails closed when an observed report lacks architecture-recorded exposure", () => {
@@ -183,5 +184,51 @@ describe("CollectiveEpistemicStateV1", () => {
       ],
       evidence: [], exposures: [], asOfRound: 2,
     })).toThrow("no matching exposure");
+  });
+
+  it("is invariant to source array order and excludes future/cross-claim reports", () => {
+    const r1 = binaryReport({ id: "r1", agentId: "a1", probability: 0.8, evidenceId: "e1" });
+    const r2 = binaryReport({ id: "r2", agentId: "a2", probability: 0.3, evidenceId: "e2" });
+    const future = binaryReport({ id: "future", agentId: "a1", probability: 0.1, round: 3, supersedesReportId: "r1" });
+    const crossClaim = { ...binaryReport({ id: "other", agentId: "z", probability: 0.9 }), claimId: "claim:other" };
+    const e1 = evidence("e1", "l1");
+    const e2 = evidence("e2", "l2");
+    const left = projectCollectiveEpistemicStateV1({
+      claim: binaryClaim, reports: [r1, r2, future, crossClaim], evidence: [e1, e2], exposures: [], asOfRound: 1,
+    });
+    const right = projectCollectiveEpistemicStateV1({
+      claim: binaryClaim, reports: [crossClaim, future, r2, r1],
+      evidence: [evidence("unreferenced", "irrelevant"), e2, e1], exposures: [], asOfRound: 1,
+    });
+    expect(right).toEqual(left);
+    expect(left.latestReportIds).toEqual(["r1", "r2"]);
+  });
+
+  it("rejects unknown carrier fields even when the content hash is self-consistent", () => {
+    const state = projectCollectiveEpistemicStateV1({
+      claim: binaryClaim,
+      reports: [binaryReport({ id: "r1", agentId: "a1", probability: 0.8 })],
+      evidence: [], exposures: [], asOfRound: 1,
+    });
+    const hostile = { ...structuredClone(state), unexpectedAuthority: "control" } as unknown as Parameters<
+      typeof validateCollectiveEpistemicStateV1
+    >[0];
+    const { contentHash: _oldHash, ...body } = hostile as typeof hostile & { contentHash: string };
+    hostile.contentHash = fingerprintEstimatorValue(body);
+    expect(() => validateCollectiveEpistemicStateV1(hostile)).toThrow("fields differ from the frozen schema");
+  });
+
+  it("rejects a self-consistent source-fingerprint forgery during deterministic replay", () => {
+    const input = {
+      claim: binaryClaim,
+      reports: [binaryReport({ id: "r1", agentId: "a1", probability: 0.8 })],
+      evidence: [] as EpistemicEvidence[], exposures: [] as BeliefExposure[], asOfRound: 1,
+    };
+    const state = projectCollectiveEpistemicStateV1(input);
+    const forged = structuredClone(state) as unknown as Parameters<typeof replayCollectiveEpistemicStateV1>[1];
+    forged.sourceFingerprints.claim = fingerprintEstimatorValue({ forged: true });
+    const { contentHash: _oldHash, ...body } = forged;
+    forged.contentHash = fingerprintEstimatorValue(body);
+    expect(() => replayCollectiveEpistemicStateV1(input, forged)).toThrow("deterministic replay mismatch");
   });
 });

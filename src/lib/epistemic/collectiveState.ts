@@ -107,6 +107,27 @@ function requireUniqueNonEmpty(values: readonly string[], field: string): void {
   if (new Set(values).size !== values.length) throw new Error(`${field} must not contain duplicates`);
 }
 
+function requireExactKeys(value: object, expected: readonly string[], field: string): void {
+  const actual = Object.keys(value).sort();
+  const canonicalExpected = [...expected].sort();
+  if (actual.length !== canonicalExpected.length
+    || actual.some((key, index) => key !== canonicalExpected[index])) {
+    throw new Error(`${field} fields differ from the frozen schema`);
+  }
+}
+
+function requireSorted(values: readonly string[], field: string): void {
+  if (values.some((value, index) => index > 0 && values[index - 1].localeCompare(value) > 0)) {
+    throw new Error(`${field} must use canonical lexical order`);
+  }
+}
+
+function requireUnitInterval(value: number, field: string): void {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(`${field} must be finite and within [0, 1]`);
+  }
+}
+
 function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
     Object.freeze(value);
@@ -121,6 +142,20 @@ function canonicalClone<T>(value: T): T {
 
 function optionCount(claim: EpistemicClaim): number {
   return "options" in claim ? claim.options.length : 2;
+}
+
+function uncertaintyOfBelief(value: BeliefValue): number {
+  if (value.kind === "binary") {
+    const probability = value.probability;
+    if (probability === 0 || probability === 1) return 0;
+    return -(probability * Math.log(probability)
+      + (1 - probability) * Math.log(1 - probability)) / Math.log(2);
+  }
+  const probabilities = Object.values(value.probabilities);
+  return probabilities.reduce(
+    (entropy, probability) => probability > 0 ? entropy - probability * Math.log(probability) : entropy,
+    0,
+  ) / Math.log(probabilities.length);
 }
 
 function validateInput(input: CollectiveEpistemicStateInputV1, registry: BeliefContractRegistry): void {
@@ -326,6 +361,13 @@ export function projectCollectiveEpistemicStateV1(
   const betweenAgentDisagreement = Math.max(0, pooledUncertainty - withinAgentUncertainty);
   const pooledGeometry = summarizeBeliefGeometry(input.claim, pool.value, registry);
   const evidenceById = new Map(input.evidence.map(item => [item.id, item]));
+  const referencedEvidenceIds = new Set(reports.flatMap(report => report.evidence.map(reference => {
+    if (!evidenceById.has(reference.evidenceId)) {
+      throw new Error(`Unknown evidence ${reference.evidenceId} in report ${report.id}`);
+    }
+    return reference.evidenceId;
+  })));
+  const relevantEvidence = input.evidence.filter(item => referencedEvidenceIds.has(item.id));
   const dynamics = deriveExposureConditionedDynamics({
     claim: input.claim,
     reports,
@@ -356,7 +398,7 @@ export function projectCollectiveEpistemicStateV1(
     sourceFingerprints: {
       claim: fingerprintEstimatorValue(input.claim),
       reports: fingerprintEstimatorValue([...reports].sort((a, b) => a.id.localeCompare(b.id))),
-      evidence: fingerprintEstimatorValue([...input.evidence].sort((a, b) => a.id.localeCompare(b.id))),
+      evidence: fingerprintEstimatorValue([...relevantEvidence].sort((a, b) => a.id.localeCompare(b.id))),
       exposures: fingerprintEstimatorValue([...input.exposures]
         .filter(exposure => exposure.claimId === input.claim.id && exposure.round <= input.asOfRound)
         .sort((a, b) => a.id.localeCompare(b.id))),
@@ -371,6 +413,29 @@ export function projectCollectiveEpistemicStateV1(
 }
 
 export function validateCollectiveEpistemicStateV1(state: CollectiveEpistemicStateV1): void {
+  requireExactKeys(state, [
+    "artifactSchemaRef", "inferenceStatus", "claimId", "asOfRound", "beliefKind",
+    "claimOptionCount", "populationBasis", "expectedAgentIds", "activeAgentIds",
+    "missingExpectedAgentIds", "latestReportIds", "withinAgentUncertainty",
+    "pooledBelief", "pooledUncertainty", "betweenAgentDisagreement", "pooledCertainty",
+    "pooledPredictedOutcomes", "declaredLineageDiversity", "exposureConditionedRevision",
+    "observedResponseConcentration", "sourceFingerprints", "contentHash",
+  ], "collective epistemic state");
+  requireExactKeys(state.artifactSchemaRef, ["id", "version"], "artifactSchemaRef");
+  requireExactKeys(state.declaredLineageDiversity, [
+    "completeness", "reportsWithDeclaredLineage", "reportsMissingDeclaredLineage",
+    "missingLineageReportIds", "distinctDeclaredLineageCount", "effectiveLineageCount",
+    "normalizedLineageEntropy",
+  ], "declaredLineageDiversity");
+  requireExactKeys(state.exposureConditionedRevision, [
+    "revisionCount", "targetAgentCount", "meanBeliefDistance", "totalBeliefDistance",
+  ], "exposureConditionedRevision");
+  requireExactKeys(state.observedResponseConcentration,
+    state.observedResponseConcentration.status === "available"
+      ? ["status", "sourceAgentCount", "responseMassBySourceAgent", "herfindahlIndex", "normalizedHerfindahl"]
+      : ["status", "sourceAgentCount", "responseMassBySourceAgent", "herfindahlIndex", "normalizedHerfindahl", "unavailableReason"],
+    "observedResponseConcentration");
+  requireExactKeys(state.sourceFingerprints, ["claim", "reports", "evidence", "exposures"], "sourceFingerprints");
   if (canonicalizeEstimatorValue(state.artifactSchemaRef) !== canonicalizeEstimatorValue(COLLECTIVE_EPISTEMIC_STATE_V1)) {
     throw new Error("collective epistemic state schema ref is invalid");
   }
@@ -380,37 +445,172 @@ export function validateCollectiveEpistemicStateV1(state: CollectiveEpistemicSta
   if (!Number.isSafeInteger(state.asOfRound) || state.asOfRound < 0) throw new Error("collective epistemic state round is invalid");
   if (!["binary", "categorical"].includes(state.beliefKind)) throw new Error("collective epistemic state belief kind is invalid");
   if (!Number.isSafeInteger(state.claimOptionCount) || state.claimOptionCount < 2) throw new Error("collective epistemic state option count is invalid");
+  if (state.beliefKind === "binary" && state.claimOptionCount !== 2) throw new Error("binary collective state must have two outcomes");
+  if (!["declared_roster", "active_reports_only"].includes(state.populationBasis)) {
+    throw new Error("collective epistemic state population basis is invalid");
+  }
   requireUniqueNonEmpty(state.expectedAgentIds, "state.expectedAgentIds");
   requireUniqueNonEmpty(state.activeAgentIds, "state.activeAgentIds");
+  requireUniqueNonEmpty(state.missingExpectedAgentIds, "state.missingExpectedAgentIds");
   requireUniqueNonEmpty(state.latestReportIds, "state.latestReportIds");
-  for (const value of [
-    state.withinAgentUncertainty,
-    state.pooledUncertainty,
-    state.betweenAgentDisagreement,
-    state.pooledCertainty,
-    state.exposureConditionedRevision.totalBeliefDistance,
-  ]) {
-    if (!Number.isFinite(value) || value < 0) throw new Error("collective epistemic state contains an invalid non-negative metric");
+  requireSorted(state.expectedAgentIds, "state.expectedAgentIds");
+  requireSorted(state.activeAgentIds, "state.activeAgentIds");
+  requireSorted(state.missingExpectedAgentIds, "state.missingExpectedAgentIds");
+  requireSorted(state.latestReportIds, "state.latestReportIds");
+  if (state.activeAgentIds.length !== state.latestReportIds.length) {
+    throw new Error("collective epistemic state requires one latest report per active agent");
   }
-  if (state.withinAgentUncertainty > 1 || state.pooledUncertainty > 1
-    || state.betweenAgentDisagreement > 1 || state.pooledCertainty > 1) {
-    throw new Error("collective epistemic state normalized metric exceeds one");
+  const activeSet = new Set(state.activeAgentIds);
+  const expectedSet = new Set(state.expectedAgentIds);
+  if (state.activeAgentIds.some(agentId => !expectedSet.has(agentId))) {
+    throw new Error("collective epistemic state active agents must belong to the population");
+  }
+  const derivedMissing = state.expectedAgentIds.filter(agentId => !activeSet.has(agentId));
+  if (canonicalizeEstimatorValue(derivedMissing) !== canonicalizeEstimatorValue(state.missingExpectedAgentIds)) {
+    throw new Error("collective epistemic state missing roster is inconsistent");
+  }
+  if (state.populationBasis === "active_reports_only" && state.missingExpectedAgentIds.length !== 0) {
+    throw new Error("active-report population cannot imply unobserved missing agents");
+  }
+  requireUnitInterval(state.withinAgentUncertainty, "withinAgentUncertainty");
+  requireUnitInterval(state.pooledUncertainty, "pooledUncertainty");
+  requireUnitInterval(state.betweenAgentDisagreement, "betweenAgentDisagreement");
+  requireUnitInterval(state.pooledCertainty, "pooledCertainty");
+  if (Math.abs(
+    state.betweenAgentDisagreement
+      - Math.max(0, state.pooledUncertainty - state.withinAgentUncertainty)
+  ) > 1e-12) {
+    throw new Error("between-agent disagreement differs from its entropy decomposition");
+  }
+  if (state.pooledBelief.kind !== state.beliefKind) throw new Error("pooled belief kind differs from state domain");
+  let pooledMaximum: number;
+  let validPredictedOutcomes: Array<boolean | string>;
+  if (state.pooledBelief.kind === "binary") {
+    requireExactKeys(state.pooledBelief, ["kind", "probability"], "pooledBelief");
+    requireUnitInterval(state.pooledBelief.probability, "pooledBelief.probability");
+    pooledMaximum = Math.max(state.pooledBelief.probability, 1 - state.pooledBelief.probability);
+    validPredictedOutcomes = state.pooledBelief.probability === 0.5
+      ? [false, true]
+      : [state.pooledBelief.probability > 0.5];
+  } else {
+    requireExactKeys(state.pooledBelief, ["kind", "probabilities"], "pooledBelief");
+    const entries = Object.entries(state.pooledBelief.probabilities);
+    if (entries.length !== state.claimOptionCount) throw new Error("pooled categorical belief has the wrong option count");
+    let total = 0;
+    for (const [option, probability] of entries) {
+      if (option.trim().length === 0) throw new Error("pooled categorical option must be non-empty");
+      requireUnitInterval(probability, `pooledBelief.probabilities.${option}`);
+      total += probability;
+    }
+    if (Math.abs(total - 1) > 1e-6) throw new Error("pooled categorical probabilities must sum to one");
+    pooledMaximum = Math.max(...entries.map(([, probability]) => probability));
+    validPredictedOutcomes = entries
+      .filter(([, probability]) => Math.abs(probability - pooledMaximum) <= Number.EPSILON)
+      .map(([option]) => option)
+      .sort();
+  }
+  if (Math.abs(pooledMaximum - state.pooledCertainty) > 1e-12
+    || canonicalizeEstimatorValue(validPredictedOutcomes) !== canonicalizeEstimatorValue(state.pooledPredictedOutcomes)) {
+    throw new Error("pooled belief geometry is inconsistent");
+  }
+  if (Math.abs(uncertaintyOfBelief(state.pooledBelief) - state.pooledUncertainty) > 1e-12) {
+    throw new Error("pooled uncertainty differs from the pooled belief geometry");
   }
   const lineage = state.declaredLineageDiversity;
+  if (!["complete", "partial", "missing"].includes(lineage.completeness)) throw new Error("lineage completeness is invalid");
+  for (const count of [lineage.reportsWithDeclaredLineage, lineage.reportsMissingDeclaredLineage, lineage.distinctDeclaredLineageCount]) {
+    if (!Number.isSafeInteger(count) || count < 0) throw new Error("lineage diversity contains an invalid count");
+  }
+  requireUniqueNonEmpty(lineage.missingLineageReportIds, "missingLineageReportIds");
+  requireSorted(lineage.missingLineageReportIds, "missingLineageReportIds");
+  if (lineage.reportsWithDeclaredLineage + lineage.reportsMissingDeclaredLineage !== state.latestReportIds.length
+    || lineage.missingLineageReportIds.length !== lineage.reportsMissingDeclaredLineage) {
+    throw new Error("lineage completeness counts differ from the active reports");
+  }
+  const expectedLineageCompleteness = lineage.reportsWithDeclaredLineage === 0
+    ? "missing"
+    : lineage.reportsMissingDeclaredLineage === 0 ? "complete" : "partial";
+  if (lineage.completeness !== expectedLineageCompleteness) {
+    throw new Error("lineage completeness label differs from its counts");
+  }
   if (lineage.completeness === "complete") {
     if (lineage.effectiveLineageCount === null || lineage.normalizedLineageEntropy === null) {
       throw new Error("complete lineage diversity requires finite metrics");
     }
+    if (lineage.reportsMissingDeclaredLineage !== 0 || lineage.distinctDeclaredLineageCount < 1
+      || !Number.isFinite(lineage.effectiveLineageCount)
+      || lineage.effectiveLineageCount < 1
+      || lineage.effectiveLineageCount > lineage.distinctDeclaredLineageCount + 1e-12) {
+      throw new Error("complete lineage diversity metrics are inconsistent");
+    }
+    requireUnitInterval(lineage.normalizedLineageEntropy, "normalizedLineageEntropy");
+    const expectedEffectiveCount = Math.exp(
+      lineage.normalizedLineageEntropy * Math.log(lineage.distinctDeclaredLineageCount),
+    );
+    if (Math.abs(lineage.effectiveLineageCount - expectedEffectiveCount) > 1e-12) {
+      throw new Error("effective lineage count differs from declared lineage entropy");
+    }
   } else if (lineage.effectiveLineageCount !== null || lineage.normalizedLineageEntropy !== null) {
     throw new Error("incomplete lineage diversity must not expose a numeric estimate");
+  } else if (lineage.completeness === "missing" && lineage.distinctDeclaredLineageCount !== 0) {
+    throw new Error("missing lineage state cannot contain declared lineages");
+  }
+  const revision = state.exposureConditionedRevision;
+  if (!Number.isSafeInteger(revision.revisionCount) || revision.revisionCount < 0
+    || !Number.isSafeInteger(revision.targetAgentCount) || revision.targetAgentCount < 0
+    || revision.targetAgentCount > revision.revisionCount
+    || !Number.isFinite(revision.totalBeliefDistance) || revision.totalBeliefDistance < 0) {
+    throw new Error("exposure-conditioned revision metrics are invalid");
+  }
+  if (revision.revisionCount === 0) {
+    if (revision.meanBeliefDistance !== null || revision.totalBeliefDistance !== 0) {
+      throw new Error("empty revision state must expose null mean and zero total distance");
+    }
+  } else if (revision.meanBeliefDistance === null || !Number.isFinite(revision.meanBeliefDistance)
+    || revision.meanBeliefDistance < 0
+    || Math.abs(revision.meanBeliefDistance - revision.totalBeliefDistance / revision.revisionCount) > 1e-12) {
+    throw new Error("mean exposure-conditioned revision is inconsistent");
   }
   const concentration = state.observedResponseConcentration;
+  requireExactKeys(concentration.responseMassBySourceAgent,
+    Object.keys(concentration.responseMassBySourceAgent), "responseMassBySourceAgent");
+  const responseEntries = Object.entries(concentration.responseMassBySourceAgent);
+  if (!Number.isSafeInteger(concentration.sourceAgentCount) || concentration.sourceAgentCount < 0
+    || concentration.sourceAgentCount !== responseEntries.length
+    || responseEntries.some(([agentId, mass]) => agentId.trim().length === 0 || !Number.isFinite(mass) || mass <= 0)) {
+    throw new Error("response concentration source mass is invalid");
+  }
   if (concentration.status === "available") {
     if (concentration.herfindahlIndex === null || concentration.normalizedHerfindahl === null) {
       throw new Error("available response concentration requires finite metrics");
     }
+    if (concentration.sourceAgentCount < 1 || revision.totalBeliefDistance <= 0) {
+      throw new Error("available response concentration requires positive response mass");
+    }
+    const totalResponseMass = responseEntries.reduce((sum, [, mass]) => sum + mass, 0);
+    if (Math.abs(totalResponseMass - revision.totalBeliefDistance) > 1e-12) {
+      throw new Error("response mass must equal exposure-conditioned revision mass");
+    }
+    const expectedHhi = responseEntries.reduce(
+      (sum, [, mass]) => sum + (mass / totalResponseMass) ** 2,
+      0,
+    );
+    const n = concentration.sourceAgentCount;
+    const expectedNormalized = n === 1 ? 1 : (expectedHhi - 1 / n) / (1 - 1 / n);
+    if (Math.abs(concentration.herfindahlIndex - expectedHhi) > 1e-12
+      || Math.abs(concentration.normalizedHerfindahl - expectedNormalized) > 1e-12) {
+      throw new Error("response concentration differs from its response-mass decomposition");
+    }
+    requireUnitInterval(concentration.herfindahlIndex, "herfindahlIndex");
+    requireUnitInterval(concentration.normalizedHerfindahl, "normalizedHerfindahl");
   } else if (concentration.herfindahlIndex !== null || concentration.normalizedHerfindahl !== null) {
     throw new Error("unavailable response concentration must not expose a numeric estimate");
+  } else if (concentration.unavailableReason !== "no_exposure_conditioned_response_mass"
+    || concentration.sourceAgentCount !== 0 || responseEntries.length !== 0) {
+    throw new Error("unavailable response concentration has inconsistent diagnostics");
+  }
+  for (const [name, fingerprint] of Object.entries(state.sourceFingerprints)) {
+    if (!/^sha256:[0-9a-f]{64}$/.test(fingerprint)) throw new Error(`source fingerprint ${name} is invalid`);
   }
   const expectedHash = fingerprintEstimatorValue(stateBody(state));
   if (state.contentHash !== expectedHash) throw new Error("collective epistemic state content hash mismatch");
