@@ -436,12 +436,6 @@ export async function main(argv: readonly string[]): Promise<number> {
       );
       return 4;
     }
-    if (args.taskFamily === "hiddenbench-categorical") {
-      console.error(
-        "hiddenbench_execution_not_admitted: engineering dry-run and mock execution must pass before enabling credential-backed execution",
-      );
-      return 6;
-    }
     if (args.calibration) {
       console.error(
         "calibration_task_bank_not_admitted: --calibration execution requires a frozen task-bank manifest with non-empty, disjoint threshold-calibration and held-out-detector splits",

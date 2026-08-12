@@ -159,7 +159,7 @@ describe("HiddenBench categorical engineering smoke", () => {
     expect(fs.readdirSync(outputDir)).toHaveLength(0);
   });
 
-  it("blocks credential-backed HiddenBench execution before credential lookup", async () => {
+  it("admits only engineering HiddenBench execution and still requires a credential", async () => {
     const outputDir = tmpDir();
     vi.stubEnv("DEEPSEEK_API_KEY", "");
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -170,9 +170,8 @@ describe("HiddenBench categorical engineering smoke", () => {
       "--output-dir", outputDir,
     ]);
     const errors = errorSpy.mock.calls.flat().join(" ");
-    expect(code).toBe(6);
-    expect(errors).toContain("hiddenbench_execution_not_admitted");
-    expect(errors).not.toContain("deepseek_api_key_unavailable");
+    expect(code).toBe(3);
+    expect(errors).toContain("deepseek_api_key_unavailable");
     expect(fs.readdirSync(outputDir)).toHaveLength(0);
   });
 
