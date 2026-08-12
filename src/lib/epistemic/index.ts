@@ -13,3 +13,4 @@ export * from "./quantityContracts";
 export * from "./beliefGeometry";
 export * from "./calibration";
 export * from "./domainContracts";
+export * from "./collectiveState";
