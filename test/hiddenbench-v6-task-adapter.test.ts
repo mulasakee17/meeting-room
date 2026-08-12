@@ -1,11 +1,9 @@
 /**
  * HiddenBench pinned-data → V6 categorical authority adversarial tests.
  *
- * RED-ZONE reproduction first: the projection places `options` inside
- * `resolutionPolicy` instead of on the categorical claim itself, so the claim
- * cannot be committed by createV6TaskManifestV1. Per the handoff stop
- * condition, production is NOT modified; this file records the minimal
- * reproduction and keeps the tests that exercise the unaffected boundaries.
+ * The first four tests preserve regression evidence for three P0 defects that
+ * were found during the original handoff and subsequently fixed: categorical
+ * options placement, pinned `rationale` acceptance, and the default data path.
  */
 
 import * as fs from "node:fs";
@@ -52,7 +50,7 @@ function mutate(original: Array<Record<string, unknown>>, fn: (t: Record<string,
   return clone;
 }
 
-describe("RED-ZONE reproduction: categorical claim options must live on the claim", () => {
+describe("closed P0 regressions: categorical claim and pinned loader remain usable", () => {
   it("places options on the claim, not inside resolutionPolicy", () => {
     const proj = createHiddenBenchTaskProjectionV1({ sourceTaskId: 1, dataPath: DATA_PATH });
     // V6CategoricalTaskV1 requires `options` on the categorical claim.
@@ -67,8 +65,8 @@ describe("RED-ZONE reproduction: categorical claim options must live on the clai
       taskSchemaRef: proj.adapter.taskSchemaRef,
       resolution: proj.adapter.resolution,
     };
-    // Committing the projected categorical task must succeed; currently it
-    // throws because the claim lacks top-level options.
+    // Committing the projected categorical task must keep succeeding; the
+    // original defect omitted top-level options.
     expect(() => createV6TaskManifestV1({
       runId: "run:hb:1",
       studyRef: { id: "swarmalpha.study.hiddenbench", version: "1.0.0" },
@@ -81,14 +79,14 @@ describe("RED-ZONE reproduction: categorical claim options must live on the clai
   });
 
   it("loader accepts the actual pinned 65 tasks (tasks 9-65 carry a rationale field)", () => {
-    // The pinned data has an 8th field `rationale` on tasks 9-65; the
-    // adapter's strict 7-key schema validation rejects them.
+    // The pinned data has an 8th field `rationale` on tasks 9-65; the loader
+    // must accept that pinned source shape without relaxing unrelated fields.
     expect(() => loadCanonicalHiddenBenchTasksV1(DATA_PATH)).not.toThrow();
   });
 
   it("default loader resolves the pinned data path without a URL-scheme error", () => {
-    // fileURLToPath(new URL(relative, import.meta.url)) throws in the tsx/vitest
-    // context; the default loader must work without a caller-supplied path.
+    // The original URL-relative implementation failed outside file: module
+    // contexts; the default workspace path must remain usable.
     expect(() => loadCanonicalHiddenBenchTasksV1()).not.toThrow();
   });
 });

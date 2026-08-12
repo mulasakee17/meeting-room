@@ -1,6 +1,8 @@
 # SwarmAlpha 单一真相源（Single Source of Truth）
 
-> **所有文档引用数字时，必须以本文件为准。**
+> **历史数值快照说明（2026-08-12）：** 本文最后系统更新于 2026-08-05，后续 V6 schema-5 纵切、真实工程 smoke、categorical/HiddenBench authority 与 collective epistemic state 等变化尚未被完整回填，因此不得再把本文中的测试数、V6 阶段状态或统一叙事当作当前事实。当前战略定位以 [`SWARMALPHA_WHITEPAPER_V1.md`](strategy/SWARMALPHA_WHITEPAPER_V1.md) 为准；近期理论和 claim ceiling 以 [`SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md`](theory/SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md) 为准；实现事实以代码、测试和对应 architecture 文档为准。本文保留为 2026-08-05 的可追溯历史数字账本，待单独进行全量数字重建。
+
+> **仅引用截至 2026-08-05 的 legacy 数字时，才以本文件为准。**
 >
 > 更新规则：当代码或实验数据变化时，先更新本文件，再更新引用文档。
 > 最后更新：2026-08-05（基于代码实跑 + 文件计数 + v6 Phase 2.5-2.8 完成 + Pilot A/B 对照 + SemanticTool 审计日志补齐 + P0 统计 bug 修复 + 低风险代码清理 + P0 I/Λ 统一修复 + P1 thermo @deprecated 标注 + 异步路径 rawStates 修复 + 文档对齐）
