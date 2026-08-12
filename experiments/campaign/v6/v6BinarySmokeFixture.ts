@@ -129,6 +129,8 @@ export interface V6SmokeFixtureFromAdapterOptionsV1<TTask extends V6TaskV1> {
   budgetContractRef?: { id: string; version: string };
   frozenAt?: string;
   clockStartAt?: string;
+  discussionMaxTokens?: number;
+  finalMaxTokens?: number;
 }
 
 /**
@@ -271,16 +273,21 @@ export function createV6SmokeFixtureFromAdapterV1<TTask extends V6TaskV1>(
     })),
   });
   const task: TTask = adapter.task;
-  const agentBindings = task.agents.map(agent => ({
+  const discussionBindings = task.agents.map(agent => ({
     agentId: agent.agentId,
     modelRef: { id: "deepseek:deepseek-chat", version: "1.0.0" },
-    invocationConfig: { temperature: 0, maxTokens: 256 },
+    invocationConfig: { temperature: 0, maxTokens: options.discussionMaxTokens ?? 256 },
+  }));
+  const finalBindings = task.agents.map(agent => ({
+    agentId: agent.agentId,
+    modelRef: { id: "deepseek:deepseek-chat", version: "1.0.0" },
+    invocationConfig: { temperature: 0, maxTokens: options.finalMaxTokens ?? 256 },
   }));
   const discussionContract: V6DiscussionAdapterContractV1 = {
     id: `swarmalpha.adapter.discussion-${adapterContractNamespace}`,
     version: "1.0.0",
     adapterRef: { id: "swarmalpha.provider.single-attempt", version: "1.0.0" },
-    agentBindings,
+    agentBindings: discussionBindings,
     timeoutMs: 120_000,
     retryPolicy: "none",
     executionOrder: "round_then_precommitted_agent",
@@ -298,7 +305,7 @@ export function createV6SmokeFixtureFromAdapterV1<TTask extends V6TaskV1>(
     id: `swarmalpha.adapter.final-${adapterContractNamespace}`,
     version: "1.0.0",
     adapterRef: { id: "swarmalpha.provider.single-attempt-final", version: "1.0.0" },
-    agentBindings,
+    agentBindings: finalBindings,
     timeoutMs: 120_000,
     retryPolicy: "none",
     executionOrder: "sequential_precommitted",

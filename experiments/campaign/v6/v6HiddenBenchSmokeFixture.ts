@@ -28,6 +28,7 @@ export function createV6HiddenBenchSmokeFixtureV1(input: {
   sourceTaskId: number;
   dataPath?: string;
   certaintyLowerBound?: number;
+  profile?: "legacy-256-v1" | "expanded-json-v2" | "mechanism-check-07-v1";
 }): V6HiddenBenchSmokeFixtureV1 {
   const projection = createHiddenBenchTaskProjectionV1({
     sourceTaskId: input.sourceTaskId,
@@ -35,11 +36,17 @@ export function createV6HiddenBenchSmokeFixtureV1(input: {
   });
   const optionCount = projection.adapter.task.claim.options.length;
   const agentCount = projection.adapter.task.agents.length;
-  const namespace = `v6-hiddenbench-${input.sourceTaskId}-engineering`;
+  const profile = input.profile ?? "legacy-256-v1";
+  const namespace = profile === "legacy-256-v1"
+    ? `v6-hiddenbench-${input.sourceTaskId}-engineering`
+    : profile === "expanded-json-v2"
+      ? `v6-hiddenbench-${input.sourceTaskId}-engineering-expanded-json-v2`
+      : `v6-hiddenbench-${input.sourceTaskId}-mechanism-check-07-v1`;
   const base = createV6SmokeFixtureFromAdapterV1({
     adapter: projection.adapter,
     namespace,
-    certaintyLowerBound: input.certaintyLowerBound ?? 0.9,
+    certaintyLowerBound: input.certaintyLowerBound
+      ?? (profile === "mechanism-check-07-v1" ? 0.7 : 0.9),
     stratum: {
       taskFamily: "hiddenbench-categorical",
       taskId: projection.adapter.task.id,
@@ -57,6 +64,7 @@ export function createV6HiddenBenchSmokeFixtureV1(input: {
     },
     frozenAt: "2026-08-11T00:00:00.000Z",
     clockStartAt: "2026-08-11T00:00:01.000Z",
+    ...(profile !== "legacy-256-v1" ? { discussionMaxTokens: 768 } : {}),
   });
   const bank = createV6TaskBankManifestV1({
     bankRef: {

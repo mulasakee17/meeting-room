@@ -63,6 +63,7 @@ import {
   type PrimaryArmExecutionRegistryV1,
 } from "../../../src/lib/experimentation";
 import { FinalOutcomeSession, createFinalElicitationContract } from "../../../src/lib/experimentation/finalOutcome";
+import { providerFailureCode, type V6ProviderFailureCode } from "./providerDiagnostics";
 import { preparePrimaryAssignedRunV1 } from "../primaryAssignedRun";
 import { verifyRawRunData } from "../replayVerifier";
 import type { AuditableRawRunDataV5 } from "../types";
@@ -150,7 +151,8 @@ export type V6ProviderUsage = {
 
 export type V6DiscussionAdapterResultV1 =
   | { status: "response"; rawResponse: string; usage?: V6ProviderUsage }
-  | { status: "unavailable"; diagnosticCode: "provider_error" | "adapter_unavailable"; usage?: V6ProviderUsage };
+  | { status: "unavailable"; diagnosticCode: "provider_error" | V6ProviderFailureCode
+      | "adapter_unavailable"; usage?: V6ProviderUsage };
 
 export interface V6DiscussionAdapterV1 {
   readonly contract: V6DiscussionAdapterContractV1;
@@ -184,7 +186,8 @@ export interface V6VerificationRequestV1 {
 
 export type V6VerificationAdapterResultV1 =
   | { status: "response"; publicContent: string; usage?: V6ProviderUsage }
-  | { status: "unavailable"; diagnosticCode: "provider_error" | "adapter_unavailable"; usage?: V6ProviderUsage };
+  | { status: "unavailable"; diagnosticCode: "provider_error" | V6ProviderFailureCode
+      | "adapter_unavailable"; usage?: V6ProviderUsage };
 
 export interface V6VerificationAdapterV1 {
   readonly contract: V6VerificationAdapterContractV1;
@@ -207,7 +210,14 @@ export interface V6DiscussionCallRecordV1 {
   recordedAt: string;
   requestHash: string;
   status: "answered" | "invalid" | "unavailable";
-  diagnosticCode: "none" | "invalid_response" | "provider_error" | "adapter_unavailable" | "timeout";
+  diagnosticCode: "none" | "invalid_response" | "provider_error" | V6ProviderFailureCode
+    | "adapter_unavailable" | "timeout";
+  usage?: V6ProviderUsage;
+  responseDiagnostics?: {
+    rawCharacterCount: number;
+    parseFailureCode: "malformed_json" | "top_level_shape" | "belief_shape" | "evidence_shape";
+    reachedMaxTokens: boolean | null;
+  };
   publicMessage?: string;
   beliefReportId?: string;
 }
@@ -440,43 +450,57 @@ interface ParsedBeliefResponse {
   evidence: Array<{ content: string; relation: "supports" | "attacks"; lineageId?: string }>;
 }
 
-function parseBeliefResponse(raw: string, claim: EpistemicClaim): ParsedBeliefResponse | null {
+type BeliefParseFailureCode = NonNullable<
+  V6DiscussionCallRecordV1["responseDiagnostics"]
+>["parseFailureCode"];
+
+type BeliefParseResult =
+  | { ok: true; parsed: ParsedBeliefResponse }
+  | { ok: false; code: BeliefParseFailureCode };
+
+function parseBeliefResponse(raw: string, claim: EpistemicClaim): BeliefParseResult {
   let value: unknown;
   try {
     value = JSON.parse(raw);
   } catch {
-    return null;
+    return { ok: false, code: "malformed_json" };
   }
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { ok: false, code: "top_level_shape" };
+  }
   const record = value as Record<string, unknown>;
   if (Object.keys(record).some(key => !["message", "belief", "evidence"].includes(key))
     || typeof record.message !== "string" || record.message.trim().length === 0
     || !record.belief || typeof record.belief !== "object" || Array.isArray(record.belief)
-    || !Array.isArray(record.evidence)) return null;
+    || !Array.isArray(record.evidence)) return { ok: false, code: "top_level_shape" };
   const belief = record.belief as Record<string, unknown>;
   let normalizedBelief: BeliefValue;
   try {
     normalizedBelief = defaultBeliefContractRegistry.get(claim.resolutionPolicy.kind)
       .normalizeValue(claim, belief as unknown as BeliefValue);
   } catch {
-    return null;
+    return { ok: false, code: "belief_shape" };
   }
   const evidence: ParsedBeliefResponse["evidence"] = [];
   for (const item of record.evidence) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return { ok: false, code: "evidence_shape" };
+    }
     const entry = item as Record<string, unknown>;
     if (Object.keys(entry).some(key => !["content", "relation", "lineageId"].includes(key))
       || typeof entry.content !== "string" || entry.content.trim().length === 0
       || (entry.relation !== "supports" && entry.relation !== "attacks")
       || (entry.lineageId !== undefined
-        && (typeof entry.lineageId !== "string" || entry.lineageId.trim().length === 0))) return null;
+        && (typeof entry.lineageId !== "string" || entry.lineageId.trim().length === 0))) {
+      return { ok: false, code: "evidence_shape" };
+    }
     evidence.push({
       content: entry.content,
       relation: entry.relation,
       ...(typeof entry.lineageId === "string" ? { lineageId: entry.lineageId } : {}),
     });
   }
-  return { message: record.message, value: normalizedBelief, evidence };
+  return { ok: true, parsed: { message: record.message, value: normalizedBelief, evidence } };
 }
 
 /** Maximum mass of the explicit report; comparable only within kind and option count. */
@@ -595,6 +619,19 @@ export function validateV6InteractionTraceV1(trace: V6InteractionTraceV1, input:
       throw new Error("v6 discussion response cannot precede its request");
     }
     if (!/^sha256:[0-9a-f]{64}$/.test(call.requestHash)) throw new Error("v6 discussion requestHash is malformed");
+    validateUsage(call.usage, `v6 discussion call ${index} usage`);
+    if (call.responseDiagnostics !== undefined) {
+      if (call.status !== "invalid" || call.diagnosticCode !== "invalid_response") {
+        throw new Error("v6 response diagnostics require an invalid discussion response");
+      }
+      const diagnostics = call.responseDiagnostics;
+      if (!Number.isSafeInteger(diagnostics.rawCharacterCount) || diagnostics.rawCharacterCount < 0
+        || !["malformed_json", "top_level_shape", "belief_shape", "evidence_shape"]
+          .includes(diagnostics.parseFailureCode)
+        || (diagnostics.reachedMaxTokens !== null && typeof diagnostics.reachedMaxTokens !== "boolean")) {
+        throw new Error("v6 discussion response diagnostics are malformed");
+      }
+    }
     const binding = trace.discussionAdapterContract.agentBindings[index % expectedAgentIds.length];
     const visibleTranscript = trace.publicTranscript.filter(entry =>
       entry.round < round || (entry.round === round && entry.source === "governance"));
@@ -1289,7 +1326,7 @@ export async function runV6ProductionVerticalSlice(
           input.discussionAdapter.respond(structuredClone(request), signal));
       } catch (error) {
         rethrowProviderExecutionHalt(error);
-        result = { status: "unavailable", diagnosticCode: "provider_error" };
+        result = { status: "unavailable", diagnosticCode: providerFailureCode(error) };
       }
       const recordedAt = clock.next("discussion recordedAt");
       const callBase = {
@@ -1309,7 +1346,12 @@ export async function runV6ProductionVerticalSlice(
       accountUsage(result.usage, "v6 discussion usage");
       if (result.status === "unavailable") {
         providerFailures += 1;
-        discussionCalls.push({ ...callBase, status: "unavailable", diagnosticCode: result.diagnosticCode });
+        discussionCalls.push({
+          ...callBase,
+          status: "unavailable",
+          diagnosticCode: result.diagnosticCode,
+          ...(result.usage ? { usage: structuredClone(result.usage) } : {}),
+        });
         continue;
       }
       if (protocol === "text_communication_v1") {
@@ -1326,11 +1368,25 @@ export async function runV6ProductionVerticalSlice(
         });
         continue;
       }
-      const parsed = parseBeliefResponse(result.rawResponse, input.task.claim);
-      if (!parsed) {
-        discussionCalls.push({ ...callBase, status: "invalid", diagnosticCode: "invalid_response" });
+      const parseResult = parseBeliefResponse(result.rawResponse, input.task.claim);
+      if (!parseResult.ok) {
+        const maxTokens = binding.invocationConfig.maxTokens;
+        discussionCalls.push({
+          ...callBase,
+          status: "invalid",
+          diagnosticCode: "invalid_response",
+          ...(result.usage ? { usage: structuredClone(result.usage) } : {}),
+          responseDiagnostics: {
+            rawCharacterCount: result.rawResponse.length,
+            parseFailureCode: parseResult.code,
+            reachedMaxTokens: typeof maxTokens === "number" && result.usage?.completionTokens !== undefined
+              ? result.usage.completionTokens >= maxTokens
+              : null,
+          },
+        });
         continue;
       }
+      const parsed = parseResult.parsed;
       const evidenceBundle = createEvidenceAndReferences({
         runId: input.runId, round, agentId: agent.agentId, parsed, createdAt: recordedAt,
       });
@@ -1532,7 +1588,7 @@ export async function runV6ProductionVerticalSlice(
               verificationAdapter.verify(structuredClone(verificationRequest), signal));
           } catch (error) {
             rethrowProviderExecutionHalt(error);
-            verificationResult = { status: "unavailable", diagnosticCode: "provider_error" };
+            verificationResult = { status: "unavailable", diagnosticCode: providerFailureCode(error) };
           }
           if (verificationResult.status === "timeout" || verificationResult.status === "unavailable") {
             providerFailures += 1;

@@ -3,6 +3,7 @@ import type {
   SingleAttemptTextInvokeRequest,
   SingleAttemptTextInvoker,
 } from "./providerAdapters";
+import { classifyLLMProviderError, V6ProviderInvocationError } from "./providerDiagnostics";
 
 const DEEPSEEK_CHAT_MODEL_REF = Object.freeze({
   id: "deepseek:deepseek-chat",
@@ -57,12 +58,17 @@ export function createDeepSeekSingleAttemptInvoker(): SingleAttemptTextInvoker {
     async invoke(request, signal) {
       assertSupportedRequest(request);
       const config = parseInvocationConfig(request.invocationConfig);
-      const response = await callDeepSeekOnce(request.systemPrompt, request.userPrompt, {
-        provider: "deepseek",
-        model: "deepseek-chat",
-        responseFormat: request.responseFormat,
-        ...config,
-      }, signal);
+      let response;
+      try {
+        response = await callDeepSeekOnce(request.systemPrompt, request.userPrompt, {
+          provider: "deepseek",
+          model: "deepseek-chat",
+          responseFormat: request.responseFormat,
+          ...config,
+        }, signal);
+      } catch (error) {
+        throw new V6ProviderInvocationError(classifyLLMProviderError(error));
+      }
       return {
         rawContent: response.rawContent,
         ...(response.usage || response.latencyMs !== undefined
