@@ -1,4 +1,4 @@
-import { loadAllConfigs } from './tasks/hiddenbench/adapter';
+import { loadAllConfigs } from '../tasks/hiddenbench/adapter';
 import * as path from 'path';
 
 async function main() {

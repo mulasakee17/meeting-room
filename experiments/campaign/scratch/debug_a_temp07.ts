@@ -1,9 +1,9 @@
-import { loadAllConfigs } from './tasks/hiddenbench/adapter';
-import { runHiddenBenchProtocol } from './pipeline/hiddenbenchProtocol';
-import { detectLLMProvider } from '../../src/lib/llm/providers';
+import { loadAllConfigs } from '../tasks/hiddenbench/adapter';
+import { runHiddenBenchProtocol } from '../pipeline/hiddenbenchProtocol';
+import { detectLLMProvider } from '../../../src/lib/llm/providers';
 import * as path from 'path';
 import dotenv from 'dotenv';
-dotenv.config({ path: path.resolve(__dirname, '..', '..', '.env.local') });
+dotenv.config({ path: path.resolve(__dirname, '..', '..', '..', '.env.local') });
 
 async function main() {
   const tasks = loadAllConfigs(undefined, 4, 'nohint');

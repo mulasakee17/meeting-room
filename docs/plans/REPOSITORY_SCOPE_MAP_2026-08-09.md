@@ -1,5 +1,12 @@
 # Repository Scope Map
 
+> Execution update (2026-08-13): after the current V6/Measurement baseline was
+> committed as `6eae9a3`, the 15 zero-reference `experiments/campaign/debug_*.ts`
+> scripts were moved to `experiments/campaign/scratch/` with relative imports
+> repaired. Other probe/explore/measure/check scripts remain in place because
+> several are cited by audit or protocol documents. The tables below preserve
+> the original 2026-08-09 audit snapshot.
+
 Date: 2026-08-09
 
 Purpose: reduce cognitive surface before the confirmatory campaign. No files are

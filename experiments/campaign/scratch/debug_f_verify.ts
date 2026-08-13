@@ -1,9 +1,9 @@
-import { loadAllConfigs } from './tasks/hiddenbench/adapter';
-import { detectLLMProvider, callLLM } from '../../src/lib/llm/providers';
-import { safeJsonParse } from '../../src/lib/utils/jsonUtils';
+import { loadAllConfigs } from '../tasks/hiddenbench/adapter';
+import { detectLLMProvider, callLLM } from '../../../src/lib/llm/providers';
+import { safeJsonParse } from '../../../src/lib/utils/jsonUtils';
 import * as path from 'path';
 import dotenv from 'dotenv';
-dotenv.config({ path: path.resolve(__dirname, '..', '..', '.env.local') });
+dotenv.config({ path: path.resolve(__dirname, '..', '..', '..', '.env.local') });
 
 async function main() {
   const tasks = loadAllConfigs(undefined, 4, 'nohint');

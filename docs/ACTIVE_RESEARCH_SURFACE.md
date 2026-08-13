@@ -78,8 +78,11 @@ One-off `debug_*`, `probe_*`, and obsolete inspection scripts under
 that every `analyze_*` or `verify_*` script is disposable: the current replay
 CLI and recorded V6 analyses remain authoritative consumers.
 
-Physical moves are deferred until the current V6/Measurement change set is
-committed and every candidate has a zero-importer and dynamic-reference audit.
+The current V6/Measurement change set was committed as `6eae9a3`. After a
+zero-reference audit, 15 `debug_*.ts` scripts were moved to
+`experiments/campaign/scratch/`; cited audit/protocol probes remain in place.
+Further physical moves still require the same importer and evidence-reference
+audit.
 
 ### DEMO_OR_PRODUCT_PROTOTYPE
 
