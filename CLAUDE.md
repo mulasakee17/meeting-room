@@ -1,5 +1,13 @@
 # SwarmAlpha
 
+## Current repository authority (normative)
+
+- Read `docs/ACTIVE_RESEARCH_SURFACE.md` before broad repository inspection.
+- Default work surface: `src/lib/{epistemic,governance,experimentation}`, `experiments/campaign/{v6,measurement}`, and their direct tests/docs.
+- `experiments/v2`, `experiments/lunar_survival`, legacy runtime/thermodynamics, and E12 scripts are `LEGACY_READ_ONLY` unless the task explicitly scopes work there.
+- Do not use legacy outputs as current V6 measurement-validity or governance-effect evidence.
+- Do not split V6, Measurement, kernel contracts, and replay across repositories before the split gates in `docs/ACTIVE_RESEARCH_SURFACE.md` pass.
+
 多 agent 集体决策 + 治理机制实验项目（论文导向）。核心科学问题：可测量的治理干预能否在独立评估标准下改善集体决策质量。
 
 ## 文档写作铁律（强制）

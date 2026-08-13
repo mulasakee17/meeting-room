@@ -1,5 +1,13 @@
 # SwarmAlpha
 
+> **Current research authority (2026-08-13):** Start with
+> [`docs/ACTIVE_RESEARCH_SURFACE.md`](docs/ACTIVE_RESEARCH_SURFACE.md). The
+> current paper path is the epistemic/governance/experimentation kernel -> V6
+> schema-5 vertical slice -> Measurement Validity. The v2, lunar-survival,
+> legacy runtime, and most material below are preserved historical context, not
+> the default experimental authority. Current measurement and governance
+> validity must not be inferred from historical headline results.
+
 > **A research platform for cognitive measurement of multi-agent deliberation — social thermodynamics as a runtime diagnostic layer, with governance intervention as future work.**
 
 [![Tests](https://img.shields.io/badge/tests-630-green)](./test/)
@@ -66,13 +74,17 @@ npm run dev           # Web UI at http://localhost:3000 (demo mode works offline
 npm test              # 633 tests (630 passed, 3 network-dependent skipped)
 ```
 
-### Run Experiments
+### Run Current Research Tooling
 
 ```bash
-npm run experiment    # Full ablation matrix (needs API key)
-npm run analyze       # Statistical analysis of results (no API key)
-npx tsx experiments/v2/verify_audit.ts   # Third-party audit verification (no API key)
+npm run measurement:plan   # Pure plan: no provider, no artifacts
+npm run measurement:mock   # Development wiring/replay only; not empirical evidence
+npm run v6:smoke -- --dry-run
+npm run test:measurement
 ```
+
+Historical v2 commands remain available only under the explicit `legacy:v2:*`
+namespace; see the active research surface before using them.
 
 ### Use as an SDK
 

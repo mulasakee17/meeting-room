@@ -1,6 +1,6 @@
-# SwarmAlpha 白皮书 v1：私人 Agent 社会的可审计认知治理层
+# SwarmAlpha 白皮书 v1.1：异构智能的可审计认知治理层
 
-日期：2026-08-12  
+日期：2026-08-13
 状态：战略权威（Strategic Source of Truth）  
 适用范围：项目定位、研究主线、长期架构、贡献边界、发展顺序  
 
@@ -9,21 +9,26 @@
 > [`SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md`](../theory/SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md)
 > 为权威；具体对象语义以代码、测试和对应 architecture 文档为权威。
 
+> v1.1 上位抽象：长期研究对象由“多 Agent”扩展为“异构认知资源”，但不改变第一篇论文已经冻结的支持域、estimand、Gate 或 claim ceiling。新增概念均为 `DESIGN INTENT` / `HYPOTHESIS`，除非另有实现和实验事实。
+
 ---
 
 ## 0. 执行摘要
 
 ### 0.1 一句话定位
 
-**SwarmAlpha 当前是一套面向多 Agent 集体推理的可审计认识测量与实验底座：它把自然语言互动转化为可评分、可追踪和可回放的认识事件，把“治理”作为待检验的实验处理，而不是预设有效的系统能力。中期目标是在测量效度和治理效果获得证据后，发展为异质、带委托关系和私有信息的 AI Agent 社会认知治理层。**
+**SwarmAlpha 当前是一套面向多 Agent 集体推理的可审计认识测量与实验底座；它的长期母问题是：在有限计算预算和不确定性下，系统应如何围绕尚未解决的 claim，在模型、Agent、工具、检索器、验证器与人类专家等异构认知资源之间，动态配置计算、验证、影响与停止决策。**
 
-这一定义同时包含三个时间尺度，但三者的证据权限不同：
+长期定位可简称为 **Heterogeneous Epistemic Governance**：治理的不是抽象的“智能高低”，而是异构资源对具体 claim 提交的报告、证据、来源依赖、成本和可执行认知行动。`Heterogeneous Intelligence Governance` 可作为外层愿景名称，但正式研究对象保持 claim-relative，避免退化为通用模型路由或资源编排。
+
+这一定义包含四个时间尺度，且证据权限严格不同：
 
 1. **当前研究工具（FACT，测量优先）**：claim-centric collective epistemics testbed；
-2. **中期平台方向（DESIGN INTENT）**：私人 Agent 社会的 cognitive-governance control plane；
-3. **长期科学计划（HYPOTHESIS）**：从微观认识事件建立可预测、可干预的“社会热力学”。
+2. **下一研究阶段（DESIGN INTENT）**：固定预算下的 heterogeneous epistemic-resource allocation；
+3. **中期平台方向（DESIGN INTENT）**：私人 Agent 社会的 cognitive-governance control plane；
+4. **长期科学计划（HYPOTHESIS）**：从微观认识事件建立可预测、可干预的“社会热力学”。
 
-三者不能互相冒充。当前代码已经支持第一层的主要内核和一条 V6 纵切；第二层还缺 principal/authority、跨组织身份和多 episode 制度状态；第三层目前只有描述性宏观态，没有规律、相变或控制定律证据。
+四者不能互相冒充。当前代码已经支持第一层的主要内核和一条 V6 纵切；第二层尚无 resource catalog、条件互补价值估计器或在线停止策略；第三层还缺 principal/authority、跨组织身份和多 episode 制度状态；第四层目前只有描述性宏观态，没有规律、相变或控制定律证据。
 
 近期论文的主角是**测量方法与实验识别**；治理只是使用这套方法被测量、被随机化、也允许被证伪的对象。只有到中期平台阶段，治理才成为产品和制度主角。
 
@@ -33,12 +38,32 @@ SwarmAlpha 当前不是：
 
 - 读取 Agent “内心真实信念”的系统；
 - 任意任务通吃的多 Agent 编排框架；
+- 已经实现的通用多模型 Router、MoE 或自动算力市场；
 - 模拟真实人类社会的通用社会模拟器；
 - 已经证明有效的在线治理产品；
 - Web3 信誉、质押或惩罚协议；
 - 由一个 `F` 值判断群体健康的物理理论。
 
 这些边界不是自我削弱，而是项目可信度的来源。
+
+### 0.2A 上位母问题
+
+**DESIGN INTENT：**SwarmAlpha 的统一母问题冻结为：
+
+> 在有限预算、部分信息、相关错误和异质权限下，系统应如何根据当前 claim-relative epistemic state，选择下一次认知行动，验证其新增信息，控制其影响，并在继续计算的期望价值不足时停止？
+
+这里的治理决策对象不是一个永久的 Agent 分数，而是一次条件化行动：
+
+```text
+current epistemic state S_t
+→ eligible epistemic actions A(S_t)
+→ select/query/verify/deliver/abstain/stop
+→ observed contribution and provenance
+→ updated state S_{t+1}
+→ independent outcome, cost and learning
+```
+
+“信任”“影响”“权限”“预算”不得混成一个权重：能力与校准是经验属性，互补性是条件价值，程序权限是制度约束，预算分配是策略决策。
 
 ### 0.3 核心判断
 
@@ -58,10 +83,12 @@ SwarmAlpha 当前不是：
 
 - V6 已有 T/B/G 的 provider-injectable production vertical slice；
 - 已有 binary/categorical belief、final private elicitation、operational pooled Brier、Stage-1/Stage-2 assignment、治理 action lifecycle、schema-5 replay；
-- 已完成真实 DeepSeek 工程 smoke 和探索性 canary，但没有 confirmatory campaign；
+- 已完成真实 DeepSeek 工程 smoke、探索性 canary 与一批 80-run Verification Verdict V2 探索实验，但没有 confirmatory campaign；
 - HiddenBench 的固定数据投影与 categorical authority 已实现，但 V6 路径不是官方 HiddenBench 协议复现；
 - 当前主风险谓词“高 reported certainty + 低合格 lineage”尚无 held-out predictive validity；
 - 当前真实样本暴露出 certainty 离散化、触发率刀锋和任务构造 floor/ceiling；
+- 最新 80-run 探索实验的 80/80 raw artifact 均通过 schema-5/decision replay，但 RQ-G 因 holdout 仅 2 个 run/2 个 task cluster 且 bootstrap 有效比例不足，被冻结规则判为 `DEFER_INSUFFICIENT`；
+- 同批 B-arm round-1 报告初步显示明显过度自信（K=3 mean Brier 0.9275，uniform baseline 0.6667；ECE 0.4046），而 apply verdict 的 12/17 为 `insufficient_evidence`；这些是测量与机制风险信号，不是治理无效或有效的因果证据；
 - 新 `CollectiveEpistemicStateV1` 是描述性宏观态，不具有控制权限。
 
 因此下一步的首要任务不是继续扩建平台，而是验证：**这些量是否真的携带与错误、传播和治理机会有关的信息。**
@@ -279,31 +306,80 @@ Agent 在同一讨论中互相影响，report 或 round 不是独立实验单位
 
 **INFERENCE：**竞争窗口存在，但已经不是空白市场。项目必须用实验质量而不是概念口号建立先发优势。
 
+### 3.9 模型路由、级联与测试时计算
+
+[FrugalGPT](https://arxiv.org/abs/2305.05176) 研究成本感知 cascade，
+[RouteLLM](https://arxiv.org/abs/2406.18665) 研究强弱模型动态 routing，
+[Mixture-of-Agents](https://arxiv.org/abs/2406.04692) 研究多模型分层 aggregation；近期
+[LLMRouterBench](https://arxiv.org/abs/2601.07206) 系统比较多类 routing 方法与成本—质量权衡。
+这些工作表明成本感知 cascade、routing 和 aggregation 已经构成成熟相邻赛道。因此，“同时调用多个异构模型”或“按成本选模型”本身不是 SwarmAlpha 的充分新颖性来源。
+
+[Adaptive Test-Time Compute Allocation](https://arxiv.org/abs/2602.03975) 进一步研究在 verification 预算有限时按不确定性选择验证状态，说明“把验证预算投向哪里”本身也不是空白。SwarmAlpha 必须把新增价值建立在 claim state、source dependence、authority、随机机会和独立 outcome 的联合识别上，而不是只增加一个不确定性分数。
+
+SwarmAlpha 若进入这一赛道，必须保持以下可防守差异：
+
+1. 决策条件是不断演化的 claim-relative epistemic state，而非只使用原始 query；
+2. 显式建模 source/model/runtime lineage 和相关错误，而非把多个响应默认视为独立票；
+3. 选择对象是一次 epistemic action，可以是模型、工具、证据检索、私有信息请求、人工复核或停止；
+4. 资源调用、信息暴露、影响权限与最终评分分离；
+5. 用随机机会、holdout/sham、独立 resolution 和 proper loss 评价增量价值；
+6. 保留失败、missingness、成本与 replay，而不只报告 router accuracy。
+
+因此下一阶段的竞争问题不是“SwarmAlpha 能否成为另一个 Router”，而是：**claim-state-aware、lineage-aware 的认知行动配置，能否在固定预算下超过静态 routing、uncertainty-only allocation 和成本匹配 ensemble。**
+
 ---
 
 ## 4. SwarmAlpha 的统一理论骨架
 
-### 4.1 七层对象
+### 4.1 九层对象
 
 ```text
 L0 Principal / Role / Authority
   ↓
 L1 Task / Claim / Outcome Space
   ↓
-L2 Report / Evidence / Lineage / Exposure / Revision
+L2 Epistemic Resource / Capability / Cost / Runtime Lineage
   ↓
-L3 Collective Epistemic State (descriptive projection)
+L3 Report / Evidence / Lineage / Exposure / Revision
   ↓
-L4 Validated Diagnosis / Eligibility
+L4 Collective Epistemic State (descriptive projection)
   ↓
-L5 Randomized Policy / Delivery / Compliance
+L5 Candidate Epistemic Actions / Validated Eligibility
   ↓
-L6 Private Final Outcome / Resolution / Proper Loss
+L6 Value Estimation / Randomized Policy / Delivery / Compliance
   ↓
-L7 Causal Learning / Institutional Memory
+L7 Private Final Outcome / Resolution / Proper Loss / Cost
+  ↓
+L8 Causal Learning / Institutional Memory
 ```
 
-当前内核覆盖 L1–L6 的主要 deterministic contracts；L0 只有 Agent ID 和任务 roster 的弱形式；L7 目前是离线分析而非持续制度学习。
+当前内核主要覆盖 L1、L3–L7 的多 Agent 特例；L0 只有 Agent ID 和任务 roster 的弱形式；L2 只有零散的 model/config/provider identity 与调用成本，还没有权威 resource catalog；L6 没有经验有效的边际价值估计器；L8 目前是离线分析而非持续制度学习。
+
+### 4.1A 认知资源与认知行动
+
+**DESIGN INTENT：**异构认知资源不是“某个模型名字”，而是至少包含以下身份的版本化对象：
+
+```text
+Resource = <kind,
+            provider/model/tool/version/config,
+            principal and authority scope,
+            data/runtime lineage,
+            capability domain,
+            expected cost/latency/risk>
+```
+
+`kind` 可以是 model、agent、retriever、deterministic tool、verifier、human expert 或 sensor。不同 kind 不必伪装成同一种 belief producer：模型可以提交 report，工具可以提交可验证 evidence，检索器可以返回 source，人工可以给出 review 或 resolution。
+
+```text
+EpistemicAction = <resourceRef,
+                   claimRef,
+                   query/evidence scope,
+                   target and delivery scope,
+                   expected observable,
+                   cost/latency/risk budget>
+```
+
+同一资源在不同 claim、已有证据和暴露状态下可具有不同价值；因此不得把全局 benchmark 或永久 reputation 直接当作行动优先级。
 
 ### 4.2 四种 authority 必须分离
 
@@ -379,6 +455,41 @@ SwarmAlpha 的普适性来自**语义接口和识别结构可迁移**：
 
 因此“需要 adapter”不是不普适；偷偷把任务特定量命名成通用量才是不普适。
 
+### 4.6 条件认知互补性与边际认知价值
+
+“Orthogonal Intelligence”保留为直观愿景词；正式构念使用 **Conditional Epistemic Complementarity（CEC，条件认知互补性）**。原因是“正交”要求先定义向量空间与内积，而低错误相关、不同措辞或不同模型厂商都不自动构成有效新增信息。
+
+设当前状态为 `S_t`，冻结聚合/更新规则为 `A`，候选资源行动为 `a`，独立 resolution 为 `Y`，proper loss 为 `ℓ`：
+
+```text
+CEC(a | S_t)
+  = E[ ℓ(p_t, Y) - ℓ(A(S_t, observation_a), Y) | S_t, a ]
+```
+
+它衡量尚未扣除成本的条件化 outcome-information gain；允许为负。低相关噪声、重复来源和会恶化判断的响应不应获得“正交智能”称号。
+
+**Marginal Cognitive Value（MCV，边际认知价值）**是净价值：
+
+```text
+MCV(a | S_t)
+  = CEC(a | S_t)
+    - λ · E[cost(a)]
+    - μ · E[latency(a)]
+    - ρ · E[risk(a)]
+```
+
+其中 `risk` 可以包括隐私暴露、错误传播、权限越界和不可逆业务损害。`λ/μ/ρ` 是预注册的研究或部署偏好，不是自然常数。固定预算问题也可直接写成约束优化，而不必把所有量货币化。
+
+停止规则的理论形式是：当所有获准行动的净 MCV 均不大于零，或预算/权限禁止继续时，选择 abstain/stop。当前系统尚不能在线可靠估计 CEC/MCV；这些定义是下一阶段待验证的 estimand，不具有现成控制权。
+
+必须区分三种“多样性”：
+
+1. **身份多样性**：模型、provider、principal 或工具不同；
+2. **统计多样性**：错误或输出不完全相关；
+3. **有效互补性**：条件于已有状态后，确实改善独立 proper loss。
+
+只有第三种直接进入 CEC。成对错误相关不足以识别高阶冗余，还必须控制任务难度、lineage、选择偏差和资源调用策略。
+
 ---
 
 ## 5. 当前系统的真实资产与真实缺口
@@ -433,7 +544,7 @@ SwarmAlpha 的普适性来自**语义接口和识别结构可迁移**：
 
 ---
 
-## 6. 三层研究计划
+## 6. 四层研究计划
 
 ### 6.1 近期论文：可审计的集体认识实验方法
 
@@ -455,7 +566,34 @@ SwarmAlpha 的普适性来自**语义接口和识别结构可迁移**：
 
 术语冻结：`protocol-arm assignment` 只指 run-level 的 I/T/B/G 分配；`governance-action assignment/delivery` 只指 G 内部某个 eligible event 的 apply/holdout/sham 与实际投递。本文不再用未限定的 “epistemic intervention” 同时指代两者。
 
-### 6.2 中期论文：principal-aware Agent society
+第一篇论文是异构智能治理母问题的**测量与识别地基**，不是其完整实证。它证明或证伪 reported state、source dependence、interaction 和 action evaluation 是否可用；不得因为上位定位改变而临时加入多模型 Router、工具市场或长期 reputation。
+
+### 6.2 下一论文：固定预算的异构认知资源配置
+
+P5 的对象、CEC/MCV、one-extra-action 实验、资源/信誉边界与 claim ceiling 以
+[`HETEROGENEOUS_EPISTEMIC_GOVERNANCE_RESEARCH_CONTRACT_V1.md`](../theory/HETEROGENEOUS_EPISTEMIC_GOVERNANCE_RESEARCH_CONTRACT_V1.md)
+为权威；本节只保留战略摘要。
+
+最小问题冻结为：
+
+> Can claim-state-aware allocation of one additional epistemic action, using conditional complementarity and source lineage, improve proper loss under a fixed budget relative to static routing and uncertainty-only allocation?
+
+第一阶段只研究“一次额外行动”，不直接实现开放式自主循环。最低对照包括：
+
+- 最强单模型与最便宜单模型；
+- 成本匹配 independent ensemble / majority；
+- 固定最优资源组合；
+- 静态或 query-only router；
+- uncertainty-only allocation；
+- error-diversity-only allocation；
+- claim-state + lineage-aware policy；
+- oracle allocation（只作不可达上界）。
+
+主结果是独立 proper loss 与固定预算下的 regret；accuracy、cost、latency、false consensus、correct-minority survival 与 calibration 为 secondary。资源价值必须在 development/calibration 上估计，并在任务/资源 held-out 上检验；不得用同一 outcome 同时选择行动和证明行动有效。
+
+该阶段的进入条件是：近期论文的 final report 至少达到 Q2，候选 state features 取得 held-out predictive information，且存在不会泄漏真值的资源调用和随机机会设计。
+
+### 6.3 中期论文：principal-aware Agent society
 
 研究对象从同一实验中的匿名 Agent 扩展到：
 
@@ -477,7 +615,7 @@ principal
 
 这才是 Web3/信誉/质押可能有意义的前置问题。
 
-### 6.3 长期计划：社会热力学
+### 6.4 长期计划：社会热力学
 
 社会热力学不再追求一个漂亮的 `F`，而研究以下可证伪问题：
 
@@ -502,9 +640,11 @@ Agent runtimes / A2A / MCP / enterprise workflows
                     ↓ events
           SwarmAlpha epistemic plane
     ├─ claim and evidence registry
+    ├─ epistemic resource / lineage catalog
     ├─ exposure and lineage ledger
     ├─ collective-state monitor
-    ├─ policy eligibility engine
+    ├─ candidate-action and value estimator
+    ├─ policy eligibility / stopping engine
     ├─ audit / replay / challenge
     └─ outcome and institutional learning
                     ↓ decisions
@@ -589,6 +729,12 @@ Measurement Gate 至少要求（权威定义见 [`MEASUREMENT_VALIDITY_PROTOCOL_
 
 这是 Agent 社会论文的核心假设，当前尚无实现或数据。
 
+### H7：条件互补性优于身份异构性
+
+**HYPOTHESIS：**在固定预算下，使用当前 claim state、source lineage 与 held-out 条件增益估计选择额外认知行动，比“换一个不同模型”、全局 benchmark 排名、query-only routing 或 uncertainty-only allocation 取得更低 proper loss/regret。
+
+证伪/收缩：若简单静态组合或 uncertainty-only baseline 在 held-out 上持平/更优，则 CEC/MCV 不获得在线控制权；保留资源矩阵和负结果，不以增加 estimator 复杂度挽救假设。
+
 ---
 
 ## 9. 战略优先级与停止规则
@@ -611,6 +757,7 @@ Measurement Gate 至少要求（权威定义见 [`MEASUREMENT_VALIDITY_PROTOCOL_
 - principal/model-lineage 最小设计文档；
 - detached experiment manifest；
 - legacy 结果的版本化 meta-analysis。
+- 只读的 task×resource outcome/cost/lineage 矩阵盘点，用于判断下一论文是否可识别；不得接入当前 G 或改变近期实验。
 
 ### 9.3 现在禁止继续扩张
 
@@ -620,6 +767,7 @@ Measurement Gate 至少要求（权威定义见 [`MEASUREMENT_VALIDITY_PROTOCOL_
 - reputation/stake/Web3 实现；
 - 真实社会人格模拟；
 - 通用 UI 或 marketplace；
+- 通用 resource registry、在线 MCV estimator 或自主多步 Router；
 - 以测试数、代码量或抽象层数衡量进展；
 - 把 social thermodynamics 直接接入控制。
 
@@ -653,6 +801,8 @@ Measurement Gate 至少要求（权威定义见 [`MEASUREMENT_VALIDITY_PROTOCOL_
 - **实验资产**：冻结任务、失败注入、强基线、真实 artifact；
 - **效度资产**：哪些量在何种域有效，哪些已经证伪；
 - **制度资产**：可审计 intervention 和责任链。
+
+在这些资产之上，下一阶段才可能形成第五类护城河：**资源互补性资产**——哪些模型、工具和信息源在什么 claim state 下提供可复现的边际增益。它必须来自 held-out 结果和随机机会，而不是模型品牌或主观能力表。
 
 这些资产随负结果也会增值；单纯代码功能不会。
 
@@ -717,7 +867,7 @@ SwarmAlpha 的最低成功不是“治理显著提升 accuracy”，而是让以
 - 干预真的被交付、采纳并改善终局结果了吗？
 - 哪些宏观状态能够跨任务预测级联与恢复？
 
-**DESIGN INTENT：**如果近期实验地基成立，SwarmAlpha 将从“多 Agent 讨论评估器”发展为私人 Agent 社会的认知治理控制平面。
+**DESIGN INTENT：**如果近期实验地基成立，SwarmAlpha 将先从“多 Agent 讨论评估器”发展为异构认知资源的 claim-centric 治理 runtime，再扩展为私人 Agent 社会的认知治理控制平面。
 
 **HYPOTHESIS：**如果微观事件到宏观结果的关系能跨规模、拓扑和制度复现，社会热力学可能成为它最具原创性的长期理论。
 

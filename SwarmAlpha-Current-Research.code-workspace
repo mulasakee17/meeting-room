@@ -1,0 +1,28 @@
+{
+  "folders": [
+    {
+      "name": "SwarmAlpha Current Research",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.next": true,
+      "**/node_modules": true,
+      "experiments/v2": true,
+      "experiments/lunar_survival": true,
+      "experiments/campaign/output": true,
+      "experiments/campaign/pilot_output": true,
+      "out": true
+    },
+    "search.exclude": {
+      "**/.next": true,
+      "**/node_modules": true,
+      "experiments/v2/**": true,
+      "experiments/lunar_survival/**": true,
+      "experiments/campaign/output/**": true,
+      "experiments/campaign/pilot_output/**": true,
+      "docs/archive/**": true
+    }
+  }
+}

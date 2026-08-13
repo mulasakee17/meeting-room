@@ -7,6 +7,8 @@
 若本文与 `SWARMALPHA_V6_FOUNDATION.md`、执行 masterplan、`future.md` 或历史实验命名冲突，
 以本文为准。架构文档仍是相应代码对象的权威接口说明；本文不改变已经冻结的代码语义。
 
+> 2026-08-13 scope note：项目战略母问题已上升为“异构智能的 claim-centric 认知治理”，权威定义见 [`SWARMALPHA_WHITEPAPER_V1.md`](../strategy/SWARMALPHA_WHITEPAPER_V1.md)。该上位抽象**不改变本文**：第一篇论文仍以多 Agent 分布式信息场景作为受控实例，冻结 RQ1–RQ3、I/T/B/G、operational pooled Brier、Gate 与 claim ceiling。模型/工具资源配置、CEC/MCV、在线 routing 与 principal-aware society 均不进入本论文的 confirmatory estimand。
+
 ---
 
 ## 0. 最终决定
@@ -44,6 +46,12 @@
 3. **干预贡献**：选择性治理是否在显式表示之上带来额外收益。
 
 第三层允许为零、异质或有害。若第一、二层得到充分证据，治理零效应不会使整篇论文失效。
+
+### 0.4 与上位母问题的关系
+
+本论文承担异构智能治理的第一项前置识别任务：在讨论“下一次应调用哪个资源”之前，先检验系统能否可靠观测 report、source dependence、exposure、revision 与独立 outcome。若 reported state 未通过测量效度，任何基于 confidence/uncertainty 的动态资源配置都会建立在不合格仪器上。
+
+因此，本论文可在 introduction/discussion 中把多 Agent episode 解释为 heterogeneous epistemic system 的一个受控特例，但贡献句必须保持为 experimental method + empirical characterization；不得把尚未实现的模型路由、工具治理或边际认知价值估计写成本文贡献。
 
 ---
 

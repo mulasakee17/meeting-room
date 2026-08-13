@@ -1,5 +1,23 @@
 # SwarmAlpha
 
+> **当前研究权威入口（2026-08-13）：** 请先阅读
+> [`docs/ACTIVE_RESEARCH_SURFACE.md`](docs/ACTIVE_RESEARCH_SURFACE.md)。当前论文路径是
+> 认知/治理/实验契约内核 -> V6 schema-5 纵切 -> Measurement Validity。
+> v2、lunar-survival、旧 runtime 及本文多数旧结果仅保留用于历史追溯，不是当前默认实验权威；
+> 不得用旧结果替代当前测量效度或治理效果证据。
+
+当前安全入口：
+
+```bash
+npm run measurement:plan   # 纯计划：零 provider、零产物
+npm run measurement:mock   # 仅验证开发接线与重放，不是实证结果
+npm run v6:smoke -- --dry-run
+npm run test:measurement
+```
+
+下文出现的 v2 命令与结果属于历史说明；旧命令现已改为显式
+`legacy:v2:*` 命名空间。
+
 > **多智能体认知治理研究平台——观测、偏差检测、干预、评估，作为 a2a 协议上层的独立治理层。**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)

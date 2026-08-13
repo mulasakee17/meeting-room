@@ -7,6 +7,8 @@
 
 > 本计划的目标不是列出更多功能，而是把科学不确定性按正确顺序消掉，并让大部分实现工作可以在很小的上下文中交给高性价比模型。
 
+> 2026-08-13 战略 addendum：项目长期母问题升级为 heterogeneous epistemic governance；当前执行主线和第一篇论文冻结项不变。异构资源配置只在测量与 outcome instrument 过 Gate 后进入，不得以此名义扩大当前工程范围。
+
 ---
 
 ## 0. 计划摘要
@@ -21,7 +23,7 @@
 4. T/B/G 的差异能否在冻结设计中被识别；
 5. 这些结论是否至少跨两个语义上不同的任务分层稳定。
 
-### 0.2 六个阶段
+### 0.2 七个阶段
 
 | 阶段 | 核心问题 | 输出 | 是否允许付费 |
 |---|---|---|---|
@@ -30,11 +32,25 @@
 | P2 诊断资格 | risk signal 是否预测 loss？ | held-out detector report | 是，受限 |
 | P3 机制资格 | action 是否提供真实信息增量？ | mechanism pilot | 是，受限 |
 | P4 论文实验 | 表示、交互、治理效应如何？ | preregistered campaign | 是，冻结预算 |
-| P5 Agent 社会扩展 | principal/lineage 如何改变集体认识？ | 第二篇研究纵切 | P4 后 |
+| P5 异构资源配置 | 下一次认知行动是否产生条件增量价值？ | one-extra-action 研究纵切 | P4 后 |
+| P6 Agent 社会扩展 | principal/lineage 如何改变集体认识？ | principal-aware 研究纵切 | P5 后 |
 
 社会热力学不是并行工程阶段。它作为 P1–P4 的 secondary predictive program 逐步升级；没有数据权限就不获得控制权限。
 
-### 0.3 未来四周的唯一主线
+### 0.3 上位抽象对执行的约束
+
+`Heterogeneous Intelligence Governance` 是愿景层名称；执行层使用更精确的 `heterogeneous epistemic governance`。它不授权现在实现通用 Router。未来 P5 的最小决策对象是：
+
+```text
+given claim-relative state S_t
+→ choose at most one additional authorized epistemic action
+→ observe contribution + lineage + cost
+→ rescore against independent outcome
+```
+
+候选行动可以调用模型、工具、检索器、验证器或人类，但不同资源 kind 保留不同输出契约。只有在 held-out 上改善 proper loss 的条件增量才叫有效互补性；模型身份不同、输出不一致或低成对相关都不是充分证据。
+
+### 0.4 未来四周的唯一主线
 
 ```text
 task semantic review
@@ -77,6 +93,8 @@ task semantic review
 | G4 | 部分工程通过、科学未知 | delivery lifecycle 有；action 信息增量弱/域依赖 |
 | G5 | 合同就绪、实验未冻结 | Stage-1 ITT 内核有；无正式 preregistration/campaign |
 | G6 | 未通过 | 真实证据仍弱且 task/model 覆盖不足 |
+
+**2026-08-13 evidence update（FACT）：**Verification Verdict V2 的 80-run 探索实验已全部完成并通过 replay（80/80），但 RQ-G 依冻结规则为 `DEFER_INSUFFICIENT`：holdout 只有 2 个 run/2 个 task cluster，不能解释 apply−holdout 效应。B-arm 初步报告显示 K=3 proper loss 差于 uniform baseline且 ECE 较高，apply 中 `insufficient_evidence` 占 12/17。它强化了 G1/G3/G4 仍未通过的判断，不授权直接扩大治理实验。权威结果见 [`V6_VERDICT_EXPLORATORY_RESULTS_2026-08-12.md`](../experiments/V6_VERDICT_EXPLORATORY_RESULTS_2026-08-12.md)。
 
 ---
 
@@ -482,9 +500,63 @@ Codex 负责宏观构念、复合量、理论命名、相变/势函数等任何�
 
 ---
 
-## 9. Workstream G：principal-aware Agent society（P4 后）
+## 9. Workstream G：异构认知资源配置（P5）
 
-### G0 最小扩展，不做完整身份平台
+本 Workstream 的完整理论对象、估计量、实验约束与 claim ceiling 见
+[`HETEROGENEOUS_EPISTEMIC_GOVERNANCE_RESEARCH_CONTRACT_V1.md`](../theory/HETEROGENEOUS_EPISTEMIC_GOVERNANCE_RESEARCH_CONTRACT_V1.md)。发生冲突时，以该合同的 P5 定义为准；近期 P1–P4 的优先级仍以本计划为准。
+
+### G0 进入条件
+
+本 Workstream 在近期论文的 measurement/outcome instrument 达到所需 Gate 前只允许只读设计，不允许扩建生产平台。至少需要：
+
+1. final report 达到 Q2；
+2. task×resource×outcome×cost 的 development 数据可用；
+3. model/config/provider/data lineage 可冻结；
+4. 资源调用不读取 resolution 或未授权 private information；
+5. task/resource held-out 与选择数据隔离；
+6. 固定预算和单次额外行动的 assignment/analysis 可识别。
+
+### G1 最小实验，而非通用 Router
+
+每个 episode 先获得一个冻结的初始 report/state，只随机或策略性分配**一次**额外 epistemic action。比较：
+
+- strong-only / cheap-only；
+- cost-matched independent ensemble / majority；
+- static best pair；
+- query-only router；
+- uncertainty-only allocation；
+- error-diversity-only allocation；
+- claim-state + lineage-aware allocation；
+- oracle（仅作上界）。
+
+主 estimand 为固定预算下 operational proper loss 与相对 oracle regret；secondary 包括 accuracy、cost、latency、false consensus、correct-minority survival 和 missingness。不得把 provider call、Agent report 或 option 当独立实验单位。
+
+### G2 构念冻结
+
+正式术语：
+
+- `Conditional Epistemic Complementarity (CEC)`：给定已有 state 后，一次行动对独立 proper loss 的期望毛改善；
+- `Marginal Cognitive Value (MCV)`：CEC 扣除冻结的 cost/latency/risk 偏好后的净值；
+- `Orthogonal Intelligence`：仅作直观名称，不作为未定义的数学量；
+- `resource diversity`：描述身份或统计差异，不自动等于 CEC。
+
+CEC/MCV 在取得 held-out validity 前只能作离线 estimand/candidate predictor，不得获得在线选择权。选择策略造成的内生性必须通过随机 exploration、propensity 记录或独立 holdout 处理，不能用被策略选择后的观测均值直接排名资源。
+
+### G3 最小工程边界
+
+P5 只允许新增当前实验所需的最小投影：resource identity/lineage、candidate action、observed contribution、cost/latency 和 assignment probability。不得提前建设通用 registry、marketplace、自主多步 loop、长期 reputation 或企业权限系统。
+
+### G4 GO / REVISE / STOP
+
+- **GO：**claim-state + lineage-aware 策略在 held-out 上优于静态、uncertainty-only 和 diversity-only 基线，且增益在成本约束下仍为正；
+- **REVISE：**只有特定 resource/task domain 有效，收缩支持域并重新版本化；
+- **STOP：**简单静态组合持平/更优，或互补性估计不稳定；保留资源矩阵与负结果，不以更复杂 estimator 挽救。
+
+---
+
+## 10. Workstream H：principal-aware Agent society（P6）
+
+### H0 最小扩展，不做完整身份平台
 
 只新增对外部身份事实的引用：
 
@@ -499,7 +571,7 @@ runtimeLineageRef
 
 SwarmAlpha 不签发身份、不管理 credential；它记录并消费已验证的 identity assertions。
 
-### G1 第一组实验
+### H1 第一组实验
 
 构造相同表面 Agent 数、不同真实独立性的群体：
 
@@ -511,7 +583,7 @@ SwarmAlpha 不签发身份、不管理 credential；它记录并消费已验证�
 
 测量 false consensus、proper loss、correct-minority survival 和 lineage-aware aggregation/verification 的效果。
 
-### G2 Normative owner decisions
+### H2 Normative owner decisions
 
 项目所有者必须决定：
 
@@ -526,7 +598,7 @@ SwarmAlpha 不签发身份、不管理 credential；它记录并消费已验证�
 
 ---
 
-## 10. 责任与审批矩阵
+## 11. 责任与审批矩阵
 
 | 工作 | 项目所有者 | Codex | 高性价比模型 |
 |---|---|---|---|
@@ -544,9 +616,9 @@ SwarmAlpha 不签发身份、不管理 credential；它记录并消费已验证�
 
 ---
 
-## 11. 低上下文委派协议
+## 12. 低上下文委派协议
 
-### 11.1 每个任务包只包含七样东西
+### 12.1 每个任务包只包含七样东西
 
 1. **Objective**：一句话可证伪目标；
 2. **Evidence baseline**：一个 commit + 3–6 个必读文件/符号；
@@ -558,7 +630,7 @@ SwarmAlpha 不签发身份、不管理 credential；它记录并消费已验证�
 
 禁止用“读完整个仓库并优化”作为委派任务。
 
-### 11.2 标准任务包模板
+### 12.2 标准任务包模板
 
 ```markdown
 # WP-<id>: <title>
@@ -603,7 +675,7 @@ Final report:
 6. real/paid calls, credentials, git actions
 ```
 
-### 11.3 上下文最小化规则
+### 12.3 上下文最小化规则
 
 - 只传 commit/diff，不传聊天历史；
 - 只传当前 SOT，不传多个互相冲突的旧计划；
@@ -615,7 +687,7 @@ Final report:
 
 ---
 
-## 12. 首批可直接委派的工作包
+## 13. 首批可直接委派的工作包
 
 ### WP-A1：HiddenBench semantic-family 只读复核
 
@@ -651,7 +723,7 @@ Final report:
 
 ---
 
-## 13. 必须由 Codex 完成的下一批高难工作
+## 14. 必须由 Codex 完成的下一批高难工作
 
 1. 冻结 measurement validity estimands 与 pass/fail gate；
 2. 审批 HiddenBench semantic split；
@@ -665,7 +737,7 @@ Final report:
 
 ---
 
-## 14. 项目所有者需要定夺的事项
+## 15. 项目所有者需要定夺的事项
 
 近期必须定夺：
 
@@ -686,7 +758,7 @@ Final report:
 
 ---
 
-## 15. 四周里程碑
+## 16. 四周里程碑
 
 ### Week 1：任务与测量
 
@@ -720,7 +792,7 @@ Final report:
 
 ---
 
-## 16. 完成判据
+## 17. 完成判据
 
 本执行计划成功，不以新增多少代码衡量，而以四个事实衡量：
 
