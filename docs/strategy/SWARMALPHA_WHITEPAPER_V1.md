@@ -540,11 +540,14 @@ Web3 只在同时满足以下条件时进入：
 
 ### H1：显式报告的测量增益
 
-**HYPOTHESIS：**在统一终局 elicitation 下，B 协议产生比 T 更高的可解析性、证据敏感性和结果预测信息。
+H1 必须拆成两个不循环的命题：
 
-证伪/收缩：判据采用预先冻结的配对扰动量，而不是事后形容词。开发阶段至少计算：解析覆盖率；同一语义 paraphrase 下的 Jensen–Shannon distance 与 argmax 一致率；有序证据强度下概率变化的 Spearman 相关与单调性违反率；证据方向翻转后的 signed response；canonical option 重排再映射后的等变误差；以及相对 uniform/constant-report baseline 的 held-out Brier 增量。具体阈值由独立 development pilot 的噪声、任务效应量和 bootstrap 区间在开 sealed held-out 前冻结；当前尚无数据支持写死通用数值。
+- **H1a（measurement qualification）：**在不利用 I/T/B/G 效果的独立配对扰动中，统一 final private report 达到 Q2；B 的 in-process explicit report 至少达到 Q1。G 只有在 pre-action report 完全复用已通过的 B elicitation contract/信息视图/config 时才能继承，否则单独验证。
+- **H1b（representation effect）：**在 final instrument 已独立达到 Q2 后，B 相对 T 改变 collective outcome proper loss。H1b 是 protocol-arm treatment effect，不是测量效度证据；允许为零或负。
 
-Measurement Gate 至少要求：
+证伪/收缩：判据采用预先冻结的配对扰动量，而不是事后形容词。开发阶段至少计算：解析覆盖率；同一语义 paraphrase 下的 Jensen–Shannon distance 与 argmax 一致率；有序证据强度下概率变化的 Spearman 相关与单调性违反率；证据方向翻转后的 signed response；canonical option 重排再映射后的等变误差；以及相对 uniform/constant-report baseline 的 held-out Brier 增量。v1 首轮候选阈值已作为事前 **DESIGN DECISION** 冻结于权威协议；它们不是由现有数据估出的自然常数。development 若证明设计不可执行，只能在 held-out 前 version bump 后重冻，不能事后调阈值。
+
+Measurement Gate 至少要求（权威定义见 [`MEASUREMENT_VALIDITY_PROTOCOL_V1.md`](../architecture/MEASUREMENT_VALIDITY_PROTOCOL_V1.md)）：
 
 1. 覆盖率达到预注册下界，且 invalid/unavailable 不集中于某一 arm/model/task；
 2. paraphrase 变异显著小于证据方向或强度操纵引起的变异；

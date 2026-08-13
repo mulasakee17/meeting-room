@@ -197,6 +197,10 @@ integrity
 
 ## 4. Workstream B：显式报告的测量效度（P0）
 
+权威统计与 Gate 定义已冻结于
+[`MEASUREMENT_VALIDITY_PROTOCOL_V1.md`](../architecture/MEASUREMENT_VALIDITY_PROTOCOL_V1.md)。
+本节保留研究路线摘要；发生冲突时，以该协议的 instrument 拆分、paired unit、missingness、阈值与分级资格为准。
+
 ### B0 研究问题
 
 reported probability 是否是一个足以支持实验的 operational instrument，而不是真实心智代理？
@@ -235,7 +239,7 @@ reported probability 是否是一个足以支持实验的 operational instrument
 - option equivariance：重排选项后映回 canonical coordinates 的 L1/Jensen–Shannon error；
 - predictive increment：相对 uniform/constant-report baseline 的 held-out Brier 差，或嵌套预测模型的增量 proper loss。
 
-阈值冻结程序：先在 development pilot 估计重复测量噪声与 bootstrap 区间；Codex 在查看 sealed held-out 前冻结 coverage 下界、最大稳定性误差、最小 evidence-response 和 option-order 容忍度。由于当前没有足够 development 数据，本计划不发明跨任务通用常数。
+阈值冻结程序：v1 首轮 scientific-candidate 阈值已由 Codex 作为事前 **DESIGN DECISION** 写入权威协议。development pilot 用于检查可执行性、估计噪声和形成真实 Freeze artifact，不得根据预期 held-out 表现优化阈值；若设计不可执行，只能在开 sealed held-out 前 version bump。所有阈值均绑定 domain/version，不是跨任务通用常数。
 
 ### B3 Gate
 
@@ -251,6 +255,11 @@ STOP：概率主要是模板常数、与证据无关或跨轻微 paraphrase 任�
 
 高性价比模型可实现扰动生成器、analysis table、plots、bootstrap/cluster 脚本和测试。  
 Codex 必须冻结 measurement estimand、paired unit、missingness 和 pass/fail 规则。
+
+**2026-08-12 状态（FACT）：**上述高风险定义已完成；carrier 审计与 36 项对抗测试规格已完成并经 Codex 复核。结论为 `EXPERIMENT_LEVEL_AUTHORITY_REQUIRED`、不升级 raw schema-5。
+
+**2026-08-12 实现进度（Claude Code）：**`MeasurementValidityDesignV1` / `FreezeV1` / `ResultIndexV1`、确定性分析内核与 45 项对抗测试已实现（`experiments/campaign/measurement/` + `test/measurement-validity.test.ts`），全部确定性通过。**NOT RUN：**development pilot、sealed held-out、真实 `FreezeV1` 产出与经验效度判定均尚未进行。可复现交接包见
+[`CLAUDE_CODE_MEASUREMENT_VALIDITY_HANDOFF_V1.md`](CLAUDE_CODE_MEASUREMENT_VALIDITY_HANDOFF_V1.md)。
 
 ---
 

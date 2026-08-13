@@ -167,6 +167,8 @@ export interface V6VerificationAdapterContractV1 {
   invocationConfig: Record<string, unknown>;
   timeoutMs: number;
   retryPolicy: "none";
+  /** Absent on legacy artifacts and interpreted only as public_text_v1. */
+  responseContract?: "public_text_v1" | "verdict_json_v2";
 }
 
 export interface V6VerificationRequestV1 {
@@ -184,14 +186,53 @@ export interface V6VerificationRequestV1 {
   invocationConfig: Record<string, unknown>;
 }
 
+export type VerificationVerdictV2 =
+  | "supported"
+  | "contradicted"
+  | "insufficient_evidence";
+
+export interface V6VerificationRequestV2 {
+  requestSchemaRef: { id: "swarmalpha.v6.verification-request"; version: "2.0.0" };
+  requestId: string;
+  runId: string;
+  taskId: string;
+  actionRef: VersionedGovernanceRef;
+  targetAgentId: string;
+  claim: EpistemicClaim;
+  publicContext: string;
+  targetPublicMessage: string;
+  matchedTokenBudget: number;
+  evidenceScope: "public_only";
+  responseContract: "verdict_json_v2";
+  modelRef: VersionedGovernanceRef;
+  invocationConfig: Record<string, unknown>;
+}
+
+export type V6VerificationRequest = V6VerificationRequestV1 | V6VerificationRequestV2;
+
 export type V6VerificationAdapterResultV1 =
   | { status: "response"; publicContent: string; usage?: V6ProviderUsage }
+  | { status: "response"; verdict: VerificationVerdictV2; explanation: string;
+      evidenceScope: "public_only"; usage?: V6ProviderUsage }
   | { status: "unavailable"; diagnosticCode: "provider_error" | V6ProviderFailureCode
       | "adapter_unavailable"; usage?: V6ProviderUsage };
 
+function createVerificationRequest(input: Omit<V6VerificationRequestV1, "requestSchemaRef">
+  & { responseContract?: V6VerificationAdapterContractV1["responseContract"] }): V6VerificationRequest {
+  const { responseContract, ...common } = input;
+  return responseContract === "verdict_json_v2"
+    ? {
+        ...common,
+        requestSchemaRef: VERIFICATION_REQUEST_REF_V2,
+        evidenceScope: "public_only",
+        responseContract: "verdict_json_v2",
+      }
+    : { ...common, requestSchemaRef: VERIFICATION_REQUEST_REF };
+}
+
 export interface V6VerificationAdapterV1 {
   readonly contract: V6VerificationAdapterContractV1;
-  verify(request: Readonly<V6VerificationRequestV1>, signal: AbortSignal): Promise<V6VerificationAdapterResultV1>;
+  verify(request: Readonly<V6VerificationRequest>, signal: AbortSignal): Promise<V6VerificationAdapterResultV1>;
 }
 
 export interface V6PublicTranscriptEntry {
@@ -281,6 +322,18 @@ const DISCUSSION_REQUEST_REF = Object.freeze({
 const VERIFICATION_REQUEST_REF = Object.freeze({
   id: "swarmalpha.v6.verification-request" as const,
   version: "1.0.0" as const,
+});
+const VERIFICATION_REQUEST_REF_V2 = Object.freeze({
+  id: "swarmalpha.v6.verification-request" as const,
+  version: "2.0.0" as const,
+});
+const VERIFICATION_RESULT_EVENT_REF_V1 = Object.freeze({
+  id: "swarmalpha.event.verification-result" as const,
+  version: "1.0.0" as const,
+});
+const VERIFICATION_RESULT_EVENT_REF_V2 = Object.freeze({
+  id: "swarmalpha.event.verification-result" as const,
+  version: "2.0.0" as const,
 });
 const INTERACTION_TRACE_REF = Object.freeze({
   id: "swarmalpha.v6.interaction-trace" as const,
@@ -410,6 +463,11 @@ function validateVerificationAdapterContract(contract: V6VerificationAdapterCont
   validateReplayableGovernanceValue(contract.invocationConfig, "v6 verification invocationConfig");
   rejectCredentialKeys(contract.invocationConfig, "v6 verification invocationConfig");
   if (contract.retryPolicy !== "none") throw new Error("v6 verification adapter forbids retries");
+  if (contract.responseContract !== undefined
+    && contract.responseContract !== "public_text_v1"
+    && contract.responseContract !== "verdict_json_v2") {
+    throw new Error("v6 verification adapter responseContract is unsupported");
+  }
   if (!Number.isSafeInteger(contract.timeoutMs) || contract.timeoutMs <= 0) {
     throw new Error("v6 verification adapter timeoutMs must be a positive safe integer");
   }
@@ -884,8 +942,8 @@ function validateCompletedArtifact(artifact: V6AuditableRawRunData, input: {
     const requestHash = payload.requestHash;
     const publicContent = payload.publicContent;
     if (typeof actionInstanceId !== "string" || typeof requestId !== "string"
-      || typeof requestHash !== "string" || typeof publicContent !== "string") {
-      throw new Error("v6 verification result event is missing its request/content commitment");
+      || typeof requestHash !== "string") {
+      throw new Error("v6 verification result event is missing its request commitment");
     }
     const instance = artifact.governanceAuditTrail.actionInstances
       .find(candidate => candidate.id === actionInstanceId);
@@ -906,8 +964,10 @@ function validateCompletedArtifact(artifact: V6AuditableRawRunData, input: {
     if (!Number.isSafeInteger(matchedTokenBudget) || (matchedTokenBudget as number) < 0) {
       throw new Error("v6 verification action has invalid matchedTokenBudget");
     }
-    const expectedRequest: V6VerificationRequestV1 = {
-      requestSchemaRef: VERIFICATION_REQUEST_REF,
+    const requestIsV2 = contract.responseContract === "verdict_json_v2";
+    const isV2 = requestIsV2
+      && instance.actionRef.id !== "swarmalpha.action.verification-attention-sham";
+    const expectedRequest = createVerificationRequest({
       requestId,
       runId: artifact.runId,
       taskId: input.task.id,
@@ -917,16 +977,44 @@ function validateCompletedArtifact(artifact: V6AuditableRawRunData, input: {
       publicContext: input.task.publicContext,
       targetPublicMessage,
       matchedTokenBudget: matchedTokenBudget as number,
+      responseContract: contract.responseContract,
       modelRef: structuredClone(contract.modelRef),
       invocationConfig: structuredClone(contract.invocationConfig),
-    };
+    });
     if (requestHash !== hashValue(expectedRequest)) {
       throw new Error("v6 verification requestHash does not replay from frozen sources");
+    }
+    let deliveredContent: string;
+    if (isV2) {
+      if (stableJson(event.eventRef) !== stableJson(VERIFICATION_RESULT_EVENT_REF_V2)
+        || payload.evidenceScope !== "public_only"
+        || !["supported", "contradicted", "insufficient_evidence"].includes(payload.verdict as string)
+        || typeof payload.explanation !== "string" || payload.explanation.trim().length === 0
+        || Object.keys(payload).some(key => ![
+          "requestId", "requestHash", "actionInstanceId", "actionRef", "complied",
+          "evidenceScope", "verdict", "explanation",
+        ].includes(key))) {
+        throw new Error("v6 verification verdict v2 payload is malformed");
+      }
+      deliveredContent = stableJson({
+        evidenceScope: payload.evidenceScope,
+        verdict: payload.verdict,
+        explanation: payload.explanation,
+      });
+    } else {
+      if (stableJson(event.eventRef) !== stableJson(VERIFICATION_RESULT_EVENT_REF_V1)
+        || typeof publicContent !== "string"
+        || Object.keys(payload).some(key => ![
+          "requestId", "requestHash", "actionInstanceId", "actionRef", "complied", "publicContent",
+        ].includes(key))) {
+        throw new Error("v6 verification result v1 payload is malformed");
+      }
+      deliveredContent = publicContent;
     }
     const expectedAgentId = `governance:${governanceRefKey(instance.actionRef)}`;
     if (!governanceMessages.some(message =>
       message.round === event.round && message.agentId === expectedAgentId
-      && message.content === publicContent)) {
+      && message.content === deliveredContent)) {
       throw new Error("v6 verification result differs from the public governance transcript");
     }
   }
@@ -1567,8 +1655,9 @@ export async function runV6ProductionVerticalSlice(
           if (!Number.isSafeInteger(matchedTokenBudget) || (matchedTokenBudget as number) < 0) {
             throw new Error("selected governance action has invalid matchedTokenBudget");
           }
-          const verificationRequest: V6VerificationRequestV1 = {
-            requestSchemaRef: VERIFICATION_REQUEST_REF,
+          const requestIsV2 = verificationAdapter.contract.responseContract === "verdict_json_v2";
+          const isSham = instance.actionRef.id === "swarmalpha.action.verification-attention-sham";
+          const verificationRequest = createVerificationRequest({
             requestId: `verification:${input.runId}:${instance.id}`,
             runId: input.runId,
             taskId: input.task.id,
@@ -1578,9 +1667,10 @@ export async function runV6ProductionVerticalSlice(
             publicContext: input.task.publicContext,
             targetPublicMessage: discussionCalls.find(call => call.beliefReportId === target.id)?.publicMessage ?? "",
             matchedTokenBudget: matchedTokenBudget as number,
+            responseContract: verificationAdapter.contract.responseContract,
             modelRef: structuredClone(verificationAdapter.contract.modelRef),
             invocationConfig: structuredClone(verificationAdapter.contract.invocationConfig),
-          };
+          });
           const verificationRequestHash = hashValue(verificationRequest);
           let verificationResult: V6VerificationAdapterResultV1 | { status: "timeout" };
           try {
@@ -1600,9 +1690,28 @@ export async function runV6ProductionVerticalSlice(
             });
           } else {
             accountUsage(verificationResult.usage, "v6 verification usage");
-            requireNonEmpty(verificationResult.publicContent, "v6 verification publicContent");
+            const hasVerdict = "verdict" in verificationResult;
+            if (requestIsV2 && !isSham && !hasVerdict) {
+              throw new Error("v6 verdict-json-v2 apply response lacks verdict authority");
+            }
+            if ((!requestIsV2 || isSham) && hasVerdict) {
+              throw new Error("v6 verification verdict authority is forbidden for this response contract/action");
+            }
+            const verdictResult = hasVerdict
+              ? verificationResult as Extract<V6VerificationAdapterResultV1, { verdict: VerificationVerdictV2 }>
+              : null;
+            const deliveredContent = hasVerdict
+              ? stableJson({
+                  evidenceScope: verdictResult!.evidenceScope,
+                  verdict: verdictResult!.verdict,
+                  explanation: verdictResult!.explanation,
+                })
+              : (verificationResult as Extract<V6VerificationAdapterResultV1, { publicContent: string }>).publicContent;
+            requireNonEmpty(deliveredContent, "v6 verification delivered content");
             const resultBase = {
-              eventRef: { id: "swarmalpha.event.verification-result", version: "1.0.0" },
+              eventRef: hasVerdict
+                ? VERIFICATION_RESULT_EVENT_REF_V2
+                : VERIFICATION_RESULT_EVENT_REF_V1,
               kind: "tool_result" as const,
               round: 2,
               payload: {
@@ -1611,7 +1720,15 @@ export async function runV6ProductionVerticalSlice(
                 actionInstanceId: instance.id,
                 actionRef: instance.actionRef,
                 complied: true,
-                publicContent: verificationResult.publicContent,
+                ...(hasVerdict ? {
+                  evidenceScope: verdictResult!.evidenceScope,
+                  verdict: verdictResult!.verdict,
+                  explanation: verdictResult!.explanation,
+                } : {
+                  publicContent: (verificationResult as Extract<
+                    V6VerificationAdapterResultV1, { publicContent: string }
+                  >).publicContent,
+                }),
               },
             };
             const resultEvent: GovernanceSourceEvent = {
@@ -1629,7 +1746,7 @@ export async function runV6ProductionVerticalSlice(
             transcript.push({
               round: 2,
               agentId: `governance:${governanceRefKey(instance.actionRef)}`,
-              content: verificationResult.publicContent,
+              content: deliveredContent,
               source: "governance",
             });
           }

@@ -404,7 +404,12 @@ export async function main(argv: readonly string[]): Promise<number> {
     return 5;
   }
   const fixture: V6SmokeFixtureV1 = args.taskFamily === "hiddenbench-categorical"
-    ? createV6HiddenBenchSmokeFixtureV1({ sourceTaskId: args.hiddenBenchTaskId! })
+    ? createV6HiddenBenchSmokeFixtureV1({
+        sourceTaskId: args.hiddenBenchTaskId!,
+        // Real smoke uses the already-versioned larger JSON completion cap.
+        // The legacy 256-token profile remains readable for historical replay.
+        profile: "expanded-json-v2",
+      })
     : createV6BinarySmokeFixture({
         calibration: args.calibration,
         taskFamily: args.taskFamily,

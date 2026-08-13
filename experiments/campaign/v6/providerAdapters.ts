@@ -30,7 +30,8 @@ import type {
   V6ProviderUsage,
   V6VerificationAdapterContractV1,
   V6VerificationAdapterV1,
-  V6VerificationRequestV1,
+  V6VerificationRequest,
+  VerificationVerdictV2,
 } from "./productionVerticalSlice";
 
 /** A single, non-retrying text completion request. */
@@ -91,6 +92,24 @@ function withUsage(result: SingleAttemptTextInvokeResult): { usage?: V6ProviderU
       ...(result.usage.latencyMs !== undefined ? { latencyMs: result.usage.latencyMs } : {}),
     },
   };
+}
+
+function explanationClaimsOutcomeAuthority(
+  request: Readonly<V6VerificationRequest>,
+  explanation: string,
+): boolean {
+  const normalized = explanation.toLocaleLowerCase();
+  if (/\b(correct|alternative|recommended)\s+(answer|outcome|option|perpetrator)\b/i.test(explanation)) {
+    return true;
+  }
+  if ("options" in request.claim) {
+    const target = request.targetPublicMessage.toLocaleLowerCase();
+    const targetOptions = new Set(request.claim.options
+      .filter(option => target.includes(option.toLocaleLowerCase())));
+    return request.claim.options.some(option =>
+      !targetOptions.has(option) && normalized.includes(option.toLocaleLowerCase()));
+  }
+  return false;
 }
 
 function buildDiscussionPrompts(request: V6DiscussionRequestV1): { systemPrompt: string; userPrompt: string } {
@@ -158,15 +177,33 @@ export function createV6VerificationAdapter(input: {
 }): V6VerificationAdapterV1 {
   return {
     contract: input.contract,
-    async verify(request: Readonly<V6VerificationRequestV1>, signal: AbortSignal) {
+    async verify(request: Readonly<V6VerificationRequest>, signal: AbortSignal) {
       const isSham = governanceRefKey(request.actionRef) === governanceRefKey(VERIFICATION_SHAM_ACTION_REF_V2);
+      const isV2 = input.contract.responseContract === "verdict_json_v2";
+      if (isV2 && (!("responseContract" in request) || request.responseContract !== "verdict_json_v2"
+        || !("evidenceScope" in request) || request.evidenceScope !== "public_only"
+        || request.requestSchemaRef.version !== "2.0.0")) {
+        throw new Error("v6 verification verdict-json-v2 request contract mismatch");
+      }
+      if (!isV2 && ("responseContract" in request || "evidenceScope" in request
+        || request.requestSchemaRef.version !== "1.0.0")) {
+        throw new Error("v6 legacy verification request contract mismatch");
+      }
       const userPrompt = isSham
         ? [
             "This is a matched process-control request.",
             "Do not assess any claim, message, evidence, or likely answer.",
             "Return exactly one strict JSON object with one field: acknowledgment (string). No other fields.",
           ].join("\n\n")
-        : [
+        : isV2 ? [
+            `Task public context:\n${request.publicContext}`,
+            `Claim ${request.claim.id}: ${request.claim.proposition}`,
+            `Public message to verify:\n${request.targetPublicMessage}`,
+            "Judge only whether the public context supports or contradicts the public message.",
+            "If the public context is underdetermined, use insufficient_evidence.",
+            "Do not identify, recommend, or guess an alternative or correct answer.",
+            'Return exactly one strict JSON object with fields: evidenceScope (exactly "public_only"), verdict (exactly "supported", "contradicted", or "insufficient_evidence"), and explanation (non-empty string). No other fields.',
+          ].join("\n\n") : [
             `Task public context:\n${request.publicContext}`,
             `Claim ${request.claim.id}: ${request.claim.proposition}`,
             `Public message to verify:\n${request.targetPublicMessage}`,
@@ -198,6 +235,32 @@ export function createV6VerificationAdapter(input: {
         return {
           status: "response",
           publicContent: "Matched control completed; no new evidence was introduced.",
+          ...withUsage(result),
+        };
+      }
+      if (isV2) {
+        let parsed: Record<string, unknown> | null = null;
+        try {
+          parsed = JSON.parse(result.rawContent) as Record<string, unknown>;
+        } catch {
+          parsed = null;
+        }
+        const verdicts = new Set<VerificationVerdictV2>([
+          "supported", "contradicted", "insufficient_evidence",
+        ]);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)
+          || parsed.evidenceScope !== "public_only"
+          || typeof parsed.verdict !== "string" || !verdicts.has(parsed.verdict as VerificationVerdictV2)
+          || typeof parsed.explanation !== "string" || parsed.explanation.trim().length === 0
+          || explanationClaimsOutcomeAuthority(request, parsed.explanation)
+          || Object.keys(parsed).some(key => !["evidenceScope", "verdict", "explanation"].includes(key))) {
+          return { status: "unavailable", diagnosticCode: "adapter_unavailable", ...withUsage(result) };
+        }
+        return {
+          status: "response",
+          evidenceScope: "public_only",
+          verdict: parsed.verdict as VerificationVerdictV2,
+          explanation: parsed.explanation,
           ...withUsage(result),
         };
       }

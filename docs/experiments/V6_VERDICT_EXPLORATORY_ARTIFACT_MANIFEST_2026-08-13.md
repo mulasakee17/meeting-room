@@ -1,0 +1,115 @@
+# V6 Verdict Exploratory Artifact Manifest
+
+日期：2026-08-13
+状态：FACT；仓库内完整性清单，不提供外部时间戳、签名或真实性证明。
+
+## 1. 范围
+
+- 实验：`swarmalpha.experiment.v6-verdict-exploratory-v1@1.0.0`
+- 冻结计划 contentHash：`sha256:9cdc494f55eda29bb1c6594ad3d3c8de5a151e6af15ffbb326ec392f84251e93`
+- 输出目录：`experiments/campaign/pilot_output/v6-verdict-exploratory-v1-20260812`
+- 目录中共有 400 个 JSON：80 个 `raw-run.v5.json` 与 320 个配套 authority artifact。
+- 本清单只提交 80 个 raw-run 的文件 SHA-256；生成 artifact 本身不进入 Git。
+- 该实验任务在 [`TASK_CONTAMINATION_REGISTRY_V1.md`](../plans/TASK_CONTAMINATION_REGISTRY_V1.md) 中登记为已观察的 development/calibration 数据，不再拥有 held-out 或 confirmatory 权限。
+
+## 2. 权威文件 SHA-256
+
+```text
+810e906c6309c6a086c879fbd5783d29ee44fc3637c1d747816660a6eadb8ccf  experiments/campaign/v6/v6_verdict_exploratory_plan_v1.json
+0e7b2f0b7b70c27ff27b73c9c03e069fb214dcef6af04816c82325cd976dfbf7  experiments/campaign/v6/analyze_v6_verdict_exploratory.ts
+c21b1dfde883ac72eed1d1cb242a3d757c7007f215459886f6b1b29acee5b0ad  docs/experiments/V6_VERDICT_EXPLORATORY_RESULTS_2026-08-12.md
+```
+
+注意：分析器和报告若因审查修正而更新，其文件 SHA-256 会变化；冻结计划 contentHash 与 raw-run hashes 不应变化。提交后的 Git tree 是源码/报告版本权威，本段保留的是生成本清单时的本地快照。
+
+## 3. Raw-run SHA-256（80/80）
+
+```text
+4f368dccc66fd417e7a026aa1ae74740311d1b7c25e71993e95137bb0cdfd065  run_v6-verdict-exploratory-v1_task-10_B_r1.b317d1aa58e7.raw-run.v5.json
+c682dc0e62e2e22a591af0f61c79e08fc4006bf9c33b11aabc571e393a0d59c7  run_v6-verdict-exploratory-v1_task-10_B_r2.b8b23230b459.raw-run.v5.json
+5a4605b15f70e7da3e45fb9f11e0ee66dada75391d34dd83eb43f434e04ca380  run_v6-verdict-exploratory-v1_task-10_G_r1.bfc91476e8fa.raw-run.v5.json
+7dd60f6f8e09fef05992dc52b16938d884a9dce1fa6ccce5a19cf99941725f3d  run_v6-verdict-exploratory-v1_task-10_G_r2.f40c8ab0bf04.raw-run.v5.json
+b036bfb3997f9bad2f8cf57a10fb0a848212c4701d0a5ace9be1cef3c6817470  run_v6-verdict-exploratory-v1_task-2_B_r1.485178e428f9.raw-run.v5.json
+55054a1b7ddd28d7ecd959ac77a201f39b6ab9caa5d71b1e916a67df4c3cc661  run_v6-verdict-exploratory-v1_task-2_B_r2.0a234b19e8ef.raw-run.v5.json
+816896c8611a487460097a05cf639e4b2eaca3bad9de262a3cf24ffc079249d9  run_v6-verdict-exploratory-v1_task-2_G_r1.3756f476aa94.raw-run.v5.json
+7926228f04817d146401c6e11d57f9d98f2c854963e7f7433abef65bff87e32f  run_v6-verdict-exploratory-v1_task-2_G_r2.418f04f73d9c.raw-run.v5.json
+546ae06171224d41dfe5bd85636e8a3f761b4fb2a19cebcdda87f0e82087c149  run_v6-verdict-exploratory-v1_task-25_B_r1.2473d6c531a5.raw-run.v5.json
+889abb50dbf178a470f6c9fdbc4eccda4d131c026e61b6a7a6de29075c9db2f2  run_v6-verdict-exploratory-v1_task-25_B_r2.af6582baf79a.raw-run.v5.json
+dc86626f9b066f9a155676547ddf5c2be01a55b3cb4a8625bf5ced8d6d98f940  run_v6-verdict-exploratory-v1_task-25_G_r1.487cdb1420b4.raw-run.v5.json
+cf9ad8f229362c386bd460bab5bc5dd17a74724e1330f81c373ebd5bd62304f3  run_v6-verdict-exploratory-v1_task-25_G_r2.9987386da08a.raw-run.v5.json
+3246daf8edb68bdb305b671fe9b8559f4f7ce1db3b626c8c2f5b450f4c5b95ae  run_v6-verdict-exploratory-v1_task-26_B_r1.ce75e333c22f.raw-run.v5.json
+adffed0ff476dfbb125c2fbc542b35030f11b75be0bdc18dc3249e4e7eaa2ba6  run_v6-verdict-exploratory-v1_task-26_B_r2.5002165a4de8.raw-run.v5.json
+43b624e62a4f56f7680f2e9f6da067333229eac8c211d2cecb86767c09cea89a  run_v6-verdict-exploratory-v1_task-26_G_r1.413020aa96db.raw-run.v5.json
+e13a903bf63450cdcddc06503e88964455860f9f7eb66beea9e2fff227a8fe5f  run_v6-verdict-exploratory-v1_task-26_G_r2.46f3ce59d6a6.raw-run.v5.json
+5b2276e2f76d33821944fafd7c6c1feb25bb257a70fd94915d1a3e292745c7ff  run_v6-verdict-exploratory-v1_task-30_B_r1.5a78a35c6a06.raw-run.v5.json
+7d4c9c57fa0519547fd0269e6f662f05c915557cfbcae24aa9a379e77a6ad46e  run_v6-verdict-exploratory-v1_task-30_B_r2.d230f6c3f029.raw-run.v5.json
+073335f2f29136495e5942bb2472abc84cb28e068d2862abd4f7fe0a24bb67b0  run_v6-verdict-exploratory-v1_task-30_G_r1.5a1649b8862f.raw-run.v5.json
+a1b39649346fd74d448249e0c306624b2640d951e71077169ff69768c6b63932  run_v6-verdict-exploratory-v1_task-30_G_r2.da904bb8dbb1.raw-run.v5.json
+9c18117b627b27b6c993cc64f3cee34472b7f8f0e71484ec67ae4c6ce9bf74f8  run_v6-verdict-exploratory-v1_task-34_B_r1.9eb233f0119c.raw-run.v5.json
+6cab0e9ba1bbafcadbb5cc6b8a08dce46cba5f9950e7dda9f22c297a3d1be9c1  run_v6-verdict-exploratory-v1_task-34_B_r2.2d2727a9e4c0.raw-run.v5.json
+7d9bf3a9696515593d4e4552b7e79c0056f766af3d058e452fff94ab701703de  run_v6-verdict-exploratory-v1_task-34_G_r1.032886c0cfc6.raw-run.v5.json
+9ea902dff7411f2a92f80632b921d09d9b633a8f7ee73dda72f363997a5008be  run_v6-verdict-exploratory-v1_task-34_G_r2.b43bf692e647.raw-run.v5.json
+36efde491a6d41642cd99c111d05676fe2bdd4cc72638a7f5fea4b30e1d65217  run_v6-verdict-exploratory-v1_task-36_B_r1.6233aff6c9e5.raw-run.v5.json
+9d8925f54a2345631aeec3afe8884674896d53fd9f6070cfcf37e5193dba1db9  run_v6-verdict-exploratory-v1_task-36_B_r2.5db96110b6c1.raw-run.v5.json
+4e6fa1961716608a4baf51061215006a64c9eb26f3d0c1827b2e7b99efe09560  run_v6-verdict-exploratory-v1_task-36_G_r1.a0c74e50dd7a.raw-run.v5.json
+9f65ace9088c69f698b2d5a2805387e53f6703104750691c7c5b021c1b35b9e7  run_v6-verdict-exploratory-v1_task-36_G_r2.0ad6b6c0ade4.raw-run.v5.json
+ba139bda15cc9f3053379075f0317b3eab6f8526e91e30db56c54ad758e89a14  run_v6-verdict-exploratory-v1_task-41_B_r1.82ab7ab83dee.raw-run.v5.json
+3c906d59f1cf73a0a0cb3ed89f2a06fd6874bdcda247fda67b1a2d57bbb953fd  run_v6-verdict-exploratory-v1_task-41_B_r2.883324a209e1.raw-run.v5.json
+b49313909d62fbb7a37bcc05878177b5dc06d0e02647af7f19f4c45ea6a77870  run_v6-verdict-exploratory-v1_task-41_G_r1.c9201bbf91a9.raw-run.v5.json
+f26d97225fdd2967acaa9990aa5b091b169230fe650d1807c5062b7f705bee62  run_v6-verdict-exploratory-v1_task-41_G_r2.70fe036b0eb5.raw-run.v5.json
+a5ac758fa330d1b449ab90f660a16d3b3689041ad327a42a60b55f42b1d358ef  run_v6-verdict-exploratory-v1_task-42_B_r1.0c271ac86290.raw-run.v5.json
+fd3faa0faaa3f34ab8e9aebf8d888a6e8835cf81cc4bd831629fa303b1e94c01  run_v6-verdict-exploratory-v1_task-42_B_r2.740a969873b9.raw-run.v5.json
+457c11d811264107d4616600a9a4cd1da8edc875fe9d8fe7f8a0595b608f3d01  run_v6-verdict-exploratory-v1_task-42_G_r1.4ada0eb02a06.raw-run.v5.json
+025e67b54055776f01e1c53fb4e3fb4c995bac3fc8529169c160e3663178bcb4  run_v6-verdict-exploratory-v1_task-42_G_r2.a36c0980afd2.raw-run.v5.json
+7e794b2349b3d92bbbd88dfcfa4f26c01c42c130192b777997b174f11785c969  run_v6-verdict-exploratory-v1_task-43_B_r1.03920d4cb1dc.raw-run.v5.json
+b294546f09ec37eb7a25f541aa7fa4a463b08edd44ae55a7302851b890f25565  run_v6-verdict-exploratory-v1_task-43_B_r2.d94bda5775da.raw-run.v5.json
+c834187668d9d746e43d37c66168b7c925aa27ef99ce38fb668b4b247000ced1  run_v6-verdict-exploratory-v1_task-43_G_r1.3d87bfa42f39.raw-run.v5.json
+d6f4825bfc24b9b9c04325568aa2a5d7b4586776dc608a857ed395ceb660af43  run_v6-verdict-exploratory-v1_task-43_G_r2.99eec63d3d11.raw-run.v5.json
+7f0922ba9eaf643c3c45e83b24b70037d428f8deb2d512fb9a00c0fec5c7cf19  run_v6-verdict-exploratory-v1_task-44_B_r1.ef51ec84a3f6.raw-run.v5.json
+df2c713c97633db21d461a6ed2a88ab99a459db1e93394ae33a79f1b758978d3  run_v6-verdict-exploratory-v1_task-44_B_r2.5b83144781c2.raw-run.v5.json
+9bd03223bfbcd5336653e95a405c6821a343a1c3486f36dea76bdd677e4fdb4e  run_v6-verdict-exploratory-v1_task-44_G_r1.1dae931380b9.raw-run.v5.json
+75449ca0ce5e87b2c57b60d1cdfde336eea89e6c02c5346d495a8ac9832687d0  run_v6-verdict-exploratory-v1_task-44_G_r2.e553447b88eb.raw-run.v5.json
+ede6964bce1484dc032898dcce9f0f14a1f1e376af13c4d4d679dd05e48b671a  run_v6-verdict-exploratory-v1_task-46_B_r1.8358a6d2a7f5.raw-run.v5.json
+85221a9c96b29656d3860bcd47d2b5cb5123d1aa0b51fc36fac5b19acbb9b05f  run_v6-verdict-exploratory-v1_task-46_B_r2.402f78442273.raw-run.v5.json
+3399fc0665a0b531c4a04d753be1bdaca5d658c5db6efd62a6d30a8433a0b4aa  run_v6-verdict-exploratory-v1_task-46_G_r1.060ad8929d94.raw-run.v5.json
+f49c0dba70f307dca28f8980c815bc637624b59f1707290833d6410da065326c  run_v6-verdict-exploratory-v1_task-46_G_r2.ff960b286aac.raw-run.v5.json
+59b889c80e519e41f37a82b20cb48fc93242898ed4ac87fb9461af939c38917e  run_v6-verdict-exploratory-v1_task-48_B_r1.5276ca8fa504.raw-run.v5.json
+ab332f62b3ad6033a38f84eab539acdfb8d00561b7bebe34755312b32b83313f  run_v6-verdict-exploratory-v1_task-48_B_r2.911d3e7f8d25.raw-run.v5.json
+a82dc78626f340f69b6537a73da0e702752a6f612dfa6d84dee2e9956d644687  run_v6-verdict-exploratory-v1_task-48_G_r1.b17402bc6850.raw-run.v5.json
+ddf74de756e3b5c9d2c8f80fd10eee7c01fbed5d4fb6a62423c77b74cb94ab3c  run_v6-verdict-exploratory-v1_task-48_G_r2.1e08e4becb61.raw-run.v5.json
+f90bc6aec4d07bcfea43c04464bbed6c8dcd07cd5c718f727ec313948e15f954  run_v6-verdict-exploratory-v1_task-53_B_r1.b4750c93e618.raw-run.v5.json
+c6ef85db4c2d68b23885420f7a4c39426f75494cad7ea76885528033a782ec80  run_v6-verdict-exploratory-v1_task-53_B_r2.ac77d1c0f078.raw-run.v5.json
+3ed201126d837c5445f0ad19338149a89b40d227542037da721c490377b2935c  run_v6-verdict-exploratory-v1_task-53_G_r1.661ea981e89e.raw-run.v5.json
+ef1bb197f11e5a8c1fb454aae12a90e2a1aecf863d74015cd89062b169ecb74e  run_v6-verdict-exploratory-v1_task-53_G_r2.41d48e350656.raw-run.v5.json
+41cadd495ef2b15bb0f495310f97216255be28da6ab698eb8ed272a5f0d859c7  run_v6-verdict-exploratory-v1_task-56_B_r1.8846edcfe25a.raw-run.v5.json
+76942582993598296d1a4daf44c1ce1f7d40a80e18db261be6a2201311c643fd  run_v6-verdict-exploratory-v1_task-56_B_r2.eb64a9ecfc2f.raw-run.v5.json
+438af28bb9c5f3fde749bf899fd92fd1a5632607a00b3a84b42d0e2bade06588  run_v6-verdict-exploratory-v1_task-56_G_r1.0620e4572a45.raw-run.v5.json
+c8cbe8f014a358b6afdc698f4e58c9148ebb0bf860df565db0cd7ad6de047a76  run_v6-verdict-exploratory-v1_task-56_G_r2.0824a874c17b.raw-run.v5.json
+75c5d6204dd9311600cd87bc28fa559f62d6667e6a392a6ab02672567abfcbca  run_v6-verdict-exploratory-v1_task-58_B_r1.0b13f61e6558.raw-run.v5.json
+7e2dd37e46d256aa654ae70109cc44695f8e62e6a2867a35f4e6088216baab67  run_v6-verdict-exploratory-v1_task-58_B_r2.c365ac63bb16.raw-run.v5.json
+2d73dd562d8953a1f8645387413b68ddb403ebb6414135257c2afb0d9af8a318  run_v6-verdict-exploratory-v1_task-58_G_r1.349802261393.raw-run.v5.json
+0c38637974e50c0435f091d6f319cd8c159bf96a3326cb45f5213558a3840d4f  run_v6-verdict-exploratory-v1_task-58_G_r2.ea2829a29968.raw-run.v5.json
+424d9cbc71d125780ebe156fbe6a5b3b661b54d9ab95cbd2cdff21ea3afdea80  run_v6-verdict-exploratory-v1_task-59_B_r1.348c40ffe116.raw-run.v5.json
+d8c2c33da05569e714c6855ef50bbd1150ca07d55a188039b63a3ff493df4580  run_v6-verdict-exploratory-v1_task-59_B_r2.046dc8b199d4.raw-run.v5.json
+ef1deef6e7f38495a1708d1745fcee40322e88a5d5840f2d89a0f8f65eb425f4  run_v6-verdict-exploratory-v1_task-59_G_r1.6e43287fee03.raw-run.v5.json
+499ca9455e6b74f360fb907e6d953db1d4a990ec505fe000dd8eb78dddae64c8  run_v6-verdict-exploratory-v1_task-59_G_r2.f79606738726.raw-run.v5.json
+811d8693408e4a67a7bac1bcdad45dd7548d548d6997958013f5058d6740cb6e  run_v6-verdict-exploratory-v1_task-6_B_r1.a4346283d17b.raw-run.v5.json
+9fb09fed50728fac72e8e2c6d8b394b45563097ff459e300e5a444bdeaeaa825  run_v6-verdict-exploratory-v1_task-6_B_r2.7d02562dc40e.raw-run.v5.json
+25dfb55c77b84150458f7418aad33c8e18ab9cbcdb88f291def009a49da9dce4  run_v6-verdict-exploratory-v1_task-6_G_r1.8e7ce8b4cbe8.raw-run.v5.json
+e44c6534ca8fc9253be962f87e930dfc8dc978e29c11e70c63fb346cc0f020d0  run_v6-verdict-exploratory-v1_task-6_G_r2.0d63fe1bc8df.raw-run.v5.json
+06ca955fafc7afe5a2da64dfa1834e4bf748240f53c606c2026d752de0481b2e  run_v6-verdict-exploratory-v1_task-60_B_r1.807e7b712225.raw-run.v5.json
+d356e44ba563840bc76628be5f551faf2926f523957f3616c8ea16fa526542a8  run_v6-verdict-exploratory-v1_task-60_B_r2.802bfa484426.raw-run.v5.json
+1395f644a6aeceab4711fccc1a9e17ad18ac8f2f06b5a1670237cb4169d17265  run_v6-verdict-exploratory-v1_task-60_G_r1.1b7c00f3efc0.raw-run.v5.json
+8dfa79ef83f92dee3db7e40669b17f6c07242233f84b148847a278725558f102  run_v6-verdict-exploratory-v1_task-60_G_r2.67e83f355581.raw-run.v5.json
+fc6200d334ddb18abb95f5aa5bc244af5ef5939a2079a4ed80ec5083c815efdf  run_v6-verdict-exploratory-v1_task-62_B_r1.d32d7ff02cf9.raw-run.v5.json
+580462c994f60a218d5cd7eeacb102eac2c7a4ee65364b4878def554a11d0aa2  run_v6-verdict-exploratory-v1_task-62_B_r2.ec95ac1205e3.raw-run.v5.json
+bbed76c95edf73e4739019a775c18ff2e3e17740d318b045e2236236f204ee9e  run_v6-verdict-exploratory-v1_task-62_G_r1.afe3cfdcde55.raw-run.v5.json
+f38c0dd64215510552129c5e68201403f6a143147d24e5653ca0c6145bc6ef62  run_v6-verdict-exploratory-v1_task-62_G_r2.6bc085188475.raw-run.v5.json
+```
+
+## 4. 验证边界
+
+- FACT：生成清单时目录中 80 个 raw-run 全部存在；实验报告记录 `verifyRawRunData` 零 issue 且 80/80 为 `sealed_decision_replay_verified`。
+- FACT：清单没有包含 provider 凭据或 `.env` 内容。
+- LIMITATION：Git 中的哈希清单只能检测清单生成后文件字节是否变化；它不证明文件最初由哪个真实 provider 产生，也不提供第三方可信时间。
+- LIMITATION：若未来有理由保存全部 320 个配套 artifact 的外部承诺，应生成新版本 manifest；不得改写本文件后仍称同一冻结承诺。

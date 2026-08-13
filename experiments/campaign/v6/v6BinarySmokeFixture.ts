@@ -131,6 +131,7 @@ export interface V6SmokeFixtureFromAdapterOptionsV1<TTask extends V6TaskV1> {
   clockStartAt?: string;
   discussionMaxTokens?: number;
   finalMaxTokens?: number;
+  verificationResponseContract?: "public_text_v1" | "verdict_json_v2";
 }
 
 /**
@@ -300,6 +301,9 @@ export function createV6SmokeFixtureFromAdapterV1<TTask extends V6TaskV1>(
     invocationConfig: { temperature: 0, maxTokens: 256 },
     timeoutMs: 120_000,
     retryPolicy: "none",
+    ...(options.verificationResponseContract === undefined
+      ? {}
+      : { responseContract: options.verificationResponseContract }),
   };
   const finalContract: FinalElicitationAdapterContractV1 = {
     id: `swarmalpha.adapter.final-${adapterContractNamespace}`,

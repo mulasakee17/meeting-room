@@ -135,6 +135,14 @@ describe("HiddenBench categorical engineering smoke", () => {
     expect(expanded.registry.contentHash).not.toBe(legacy.registry.contentHash);
   });
 
+  it("uses the existing expanded JSON profile on the HiddenBench CLI path", async () => {
+    const source = fs.readFileSync(
+      path.resolve(process.cwd(), "experiments/campaign/v6/run_v6_smoke.ts"),
+      "utf8",
+    );
+    expect(source).toContain('profile: "expanded-json-v2"');
+  });
+
   it("isolates the 0.7 mechanism check from detector-validity identities", () => {
     const expanded = createV6HiddenBenchSmokeFixtureV1({
       sourceTaskId: 9,
