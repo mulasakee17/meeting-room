@@ -1,6 +1,6 @@
 # Agent Society Vision: SwarmAlpha as Governance Substrate
 
-> **历史愿景说明（2026-08-12）：** 本文保留私人 Agent 社会、认知治理层和开放治理接口的原始构想，但其中“数学不可欺骗”“架构已经正确”“两周形成可部署底座”等强判断超过了当前证据，不能作为实现或对外 claim。当前战略定位、相关工作边界与发展顺序以 [`SWARMALPHA_WHITEPAPER_V1.md`](../strategy/SWARMALPHA_WHITEPAPER_V1.md) 为准；近期实验和 claim ceiling 以 [`SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md`](../theory/SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md) 为准。
+> **历史愿景说明（2026-08-12）：** 本文保留私人 Agent 社会、认知治理层和开放治理接口的原始构想，但其中“数学不可欺骗”“架构已经正确”“两周形成可部署底座”等强判断超过了当前证据，不能作为实现或对外 claim。当前战略定位、相关工作边界与发展顺序以 [`SWARMALPHA_WHITEPAPER_V1.md`](../strategy/SWARMALPHA_WHITEPAPER_V1.md) 为准；近期实验和 claim ceiling 以 [`SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md`](../archive/theory/SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md) 为准。
 
 > **不是多智能体框架，是智能体社会的治理底座。**
 >

@@ -3,7 +3,7 @@
 日期：2026-08-12
 状态：Work Package B — 测试规格（specification only，不写测试代码）；**已实现为确定性测试（IMPLEMENTED_BUT_NOT_CODEX_ACCEPTED，尚未经 Codex 审核验收）**
 权威协议：[`MEASUREMENT_VALIDITY_PROTOCOL_V1.md`](../architecture/MEASUREMENT_VALIDITY_PROTOCOL_V1.md)
-配套审计：[`MEASUREMENT_VALIDITY_WIRING_GAP_AUDIT_2026-08-12.md`](MEASUREMENT_VALIDITY_WIRING_GAP_AUDIT_2026-08-12.md)
+配套审计：[`MEASUREMENT_VALIDITY_WIRING_GAP_AUDIT_2026-08-12.md`](../archive/plans/MEASUREMENT_VALIDITY_WIRING_GAP_AUDIT_2026-08-12.md)
 
 > **实现状态（2026-08-12 晚，FACT）**：本矩阵已实现为 `test/measurement-validity.test.ts` 中的确定性对抗测试，共 **65 项**（36 项矩阵 + 9 项必需额外 + 20 项 Codex P0 红灯），全部通过（`npx.cmd vitest run test/measurement-validity.test.ts --maxWorkers=1`，65/65）。矩阵本身仍是规格；实现事实与逐项覆盖见 [`MEASUREMENT_VALIDITY_V1_IMPLEMENTATION_2026-08-12.md`](MEASUREMENT_VALIDITY_V1_IMPLEMENTATION_2026-08-12.md)。
 

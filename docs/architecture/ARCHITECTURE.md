@@ -1,7 +1,7 @@
 # SwarmAlpha 架构文档
 
 > **本文件是项目的核心架构文档。**
-> 所有数字以 [`docs/SOT.md`](../SOT.md) 为单一真相源。
+> 所有数字以 [`docs/SOT.md`](../archive/SOT.md) 为单一真相源。
 > 最后更新：2026-07-30（v6 Phase 2.5-2.8 完成 + 混合范式架构落地 + Pilot A/B 对照）
 
 ---
@@ -495,12 +495,12 @@ class GovernanceRuntime {
 
 | 文档 | 用途 |
 |------|------|
-| [`docs/SOT.md`](../SOT.md) | 单一真相源（所有数字以此为准） |
-| [`docs/INTEGRATION.md`](../INTEGRATION.md) | 集成指南 |
-| [`docs/GOVERNANCE_DESIGN.md`](../GOVERNANCE_DESIGN.md) | 治理引擎设计 |
+| [`docs/SOT.md`](../archive/SOT.md) | 单一真相源（所有数字以此为准） |
+| [`docs/INTEGRATION.md`](../archive/INTEGRATION.md) | 集成指南 |
+| [`docs/GOVERNANCE_DESIGN.md`](../archive/GOVERNANCE_DESIGN.md) | 治理引擎设计 |
 | [`docs/architecture/AGENT_SOCIETY_VISION.md`](AGENT_SOCIETY_VISION.md) | 长期愿景（A2A 治理层） |
-| [`docs/research/THEORY.md`](../research/THEORY.md) | 理论分析（含数学框架） |
-| [`docs/research/EXPERIMENT_DESIGN.md`](../research/EXPERIMENT_DESIGN.md) | 实验设计 |
+| [`docs/research/THEORY.md`](../archive/research/THEORY.md) | 理论分析（含数学框架） |
+| [`docs/research/EXPERIMENT_DESIGN.md`](../archive/research/EXPERIMENT_DESIGN.md) | 实验设计 |
 | [`docs/paper/PAPER_DRAFT.md`](../paper/PAPER_DRAFT.md) | 英文论文稿 |
 | [`docs/paper/PAPER_PROFESSOR_VERSION.md`](../paper/PAPER_PROFESSOR_VERSION.md) | 中文论文稿 |
 | [`docs/paper/LIMITATIONS.md`](../paper/LIMITATIONS.md) | 局限性（含历史修复记录与学术诚信审计 §26） |

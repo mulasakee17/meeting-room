@@ -53,7 +53,7 @@
 
 ## 4. 框架适配器（已降级：项目定位为 a2a 治理层，非多框架适配器）
 
-> **2026-07-23 定位修正**：SwarmAlpha 的真正愿景是 **a2a 协议上层的治理框架**（详见 [AGENT_SOCIETY_VISION.md](AGENT_SOCIETY_VISION.md)），不是多智能体框架的适配器集合。所有 573 个 JSON 文件（169 闭环）均基于内置 `CustomAgent`，AutoGenAdapter 从未参与任何实验，其 `applyIntervention` 抛错是诚实的设计而非缺陷。
+> **2026-07-23 定位修正**：SwarmAlpha 的真正愿景是 **a2a 协议上层的治理框架**（详见 [AGENT_SOCIETY_VISION.md](../architecture/AGENT_SOCIETY_VISION.md)），不是多智能体框架的适配器集合。所有 573 个 JSON 文件（169 闭环）均基于内置 `CustomAgent`，AutoGenAdapter 从未参与任何实验，其 `applyIntervention` 抛错是诚实的设计而非缺陷。
 >
 > 当前保留 `AutoGenAdapter` 仅作为 StateInferenceBridge 的集成示例（消息转换 + LLM 推断层），不作为项目核心能力宣传。未来若实现 a2a 协议适配，将替换此适配器。
 
@@ -793,7 +793,7 @@ F    -0.977***     0.966***     0.779***     1.000***
 
 **转化叙事**：R/T/H 强耦合本身是有价值的负面发现——揭示了 MAS 小群体与物理系统的本质差异。物理系统中 R/T/H 是独立热力学变量，但 MAS 中 DeGroot/FJ 信念更新机制让承诺对齐和承诺收敛同步发生。
 
-**v0.4 承诺度重解释**（2026-07-28）：在 FJ + 承诺度框架下（[THEORY.md v0.4](../research/THEORY.md)），R/T/H 不再声称"热力学状态空间"，而是"承诺失序度的 3 个同源投影"。F 从"社会自由能"降级为"承诺失序度加权和"。这承认了耦合是定义后果（同源标量派生），而非待修复的 bug。
+**v0.4 承诺度重解释**（2026-07-28）：在 FJ + 承诺度框架下（[THEORY.md v0.4](../archive/research/THEORY.md)），R/T/H 不再声称"热力学状态空间"，而是"承诺失序度的 3 个同源投影"。F 从"社会自由能"降级为"承诺失序度加权和"。这承认了耦合是定义后果（同源标量派生），而非待修复的 bug。
 
 **分析脚本**：`experiments/v2/analyze_thermo_correlation.ts`
 
@@ -850,7 +850,7 @@ F    -0.977***     0.966***     0.779***     1.000***
 **保留的贡献**：
 1. 5 维认知状态设计（比 scalar belief 清晰，承认 Evidence 场景依赖）
 2. TerminationDecider 的淬火态检测（热力学唯一真正驱动决策的部分）
-3. 非破坏性干预原则（inject_evidence + rebalance_attention，~~Δτ=+0.533~~ **Δτ=0.000**，2026-07-25 重跑后实测，详见 [SOT.md §3.3](../SOT.md)；原则正确但 3 轮 evidence 积累不足，待阶段 2 验证）
+3. 非破坏性干预原则（inject_evidence + rebalance_attention，~~Δτ=+0.533~~ **Δτ=0.000**，2026-07-25 重跑后实测，详见 [SOT.md §3.3](../archive/SOT.md)；原则正确但 3 轮 evidence 积累不足，待阶段 2 验证）
 4. content_driven 5 因子发言意愿
 5. FC1/FC3 检测器覆盖（MAST 覆盖率 21%→53.6%）
 
@@ -880,7 +880,7 @@ F    -0.977***     0.966***     0.779***     1.000***
 - **保留 asyncEngine**：承认 R/T/H 强耦合，但保留 169 runs 数据和所有已 claim 结论（包括"虚假共识"发现）。代码注释与实际计算已对齐（2026-07-28 修订），但"3 维热力学"叙事站不住脚
 - **迁移到 MeasurementLayer**：理论更优雅，但 169 runs 数据无法迁移（V1 数据无 utility 向量），需要放弃所有基于 asyncEngine 的已 claim 结论，且 MeasurementLayer 的 R/T/H 独立性**从未验证**（只是理论推断）
 - **~~折中方案（原 v0.3 选择，已证伪）~~**：~~保留 asyncEngine，用 posthoc 模式从 169 runs 的 itemBeliefs 反推 5 维认知状态~~。**2026-07-28 子代理审计证伪**：169 runs（data_crisis 80 + data_supplier 89）**根本不存在 itemBeliefs 字段**（grep 全目录 0 匹配），只有 scalar `beliefs` dict。itemBeliefs 仅存在于 data_fraud 系列（异步引擎，不同任务/代码路径）。因此"posthoc 从 itemBeliefs 反推 5 维"路径**不成立**。
-- **v0.4 新选择（承诺度 + FJ 框架）**：保留 asyncEngine 标量层，但将 belief 本体重定义为"承诺度"（Commitment Strength），更新规则升级为 Friedkin-Johnsen（FJ）。新变量 δ=|b-ι|（主客观承诺偏差）是 169 runs 可算的。详见 [THEORY.md v0.4](../research/THEORY.md)。
+- **v0.4 新选择（承诺度 + FJ 框架）**：保留 asyncEngine 标量层，但将 belief 本体重定义为"承诺度"（Commitment Strength），更新规则升级为 Friedkin-Johnsen（FJ）。新变量 δ=|b-ι|（主客观承诺偏差）是 169 runs 可算的。详见 [THEORY.md v0.4](../archive/research/THEORY.md)。
 
 **未解决的核心问题**：
 1. ~~MeasurementLayer 的 R/T/H 是否更独立？~~ → 已放弃验证（169 runs 无 itemBeliefs，向量层为未来工作）

@@ -3,7 +3,7 @@
 日期：2026-08-12  
 状态：未来工作的权威执行基线  
 战略依据：[`SWARMALPHA_WHITEPAPER_V1.md`](../strategy/SWARMALPHA_WHITEPAPER_V1.md)  
-理论依据：[`SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md`](../theory/SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md)  
+理论依据：[`SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md`](../archive/theory/SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md)  
 
 > 本计划的目标不是列出更多功能，而是把科学不确定性按正确顺序消掉，并让大部分实现工作可以在很小的上下文中交给高性价比模型。
 
@@ -277,7 +277,7 @@ Codex 必须冻结 measurement estimand、paired unit、missingness 和 pass/fai
 **2026-08-12 状态（FACT）：**上述高风险定义已完成；carrier 审计与 36 项对抗测试规格已完成并经 Codex 复核。结论为 `EXPERIMENT_LEVEL_AUTHORITY_REQUIRED`、不升级 raw schema-5。
 
 **2026-08-12 实现进度（Claude Code）：**`MeasurementValidityDesignV1` / `FreezeV1` / `ResultIndexV1`、确定性分析内核与 45 项对抗测试已实现（`experiments/campaign/measurement/` + `test/measurement-validity.test.ts`），全部确定性通过。**NOT RUN：**development pilot、sealed held-out、真实 `FreezeV1` 产出与经验效度判定均尚未进行。可复现交接包见
-[`CLAUDE_CODE_MEASUREMENT_VALIDITY_HANDOFF_V1.md`](CLAUDE_CODE_MEASUREMENT_VALIDITY_HANDOFF_V1.md)。
+[`CLAUDE_CODE_MEASUREMENT_VALIDITY_HANDOFF_V1.md`](../archive/plans/CLAUDE_CODE_MEASUREMENT_VALIDITY_HANDOFF_V1.md)。
 
 ---
 

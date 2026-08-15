@@ -372,17 +372,17 @@
 
 | 文件 | 主题 |
 |------|------|
-| [SOT.md](../SOT.md) | 单一真相源：所有文档引用数字的基准 |
-| [COLLABORATION_GUIDE.md](../COLLABORATION_GUIDE.md) | 协作者指南（面向本科生/研究生） |
-| [INTEGRATION.md](../INTEGRATION.md) | 集成指南（面向嵌入治理运行时的开发者） |
-| [GOVERNANCE_DESIGN.md](../GOVERNANCE_DESIGN.md) | 治理引擎架构设计（ADR） |
+| [SOT.md](../archive/SOT.md) | 单一真相源：所有文档引用数字的基准 |
+| [COLLABORATION_GUIDE.md](../archive/COLLABORATION_GUIDE.md) | 协作者指南（面向本科生/研究生） |
+| [INTEGRATION.md](../archive/INTEGRATION.md) | 集成指南（面向嵌入治理运行时的开发者） |
+| [GOVERNANCE_DESIGN.md](../archive/GOVERNANCE_DESIGN.md) | 治理引擎架构设计（ADR） |
 
 ### 10.2 研究文档
 
 | 文件 | 主题 |
 |------|------|
-| [research/THEORY.md](../research/THEORY.md) | 理论分析 v0.4（FJ 信念动力学 + 承诺度本体） |
-| [research/EXPERIMENT_DESIGN.md](../research/EXPERIMENT_DESIGN.md) | 实验设计文档（H1-H9 假设、统计方法） |
+| [research/THEORY.md](../archive/research/THEORY.md) | 理论分析 v0.4（FJ 信念动力学 + 承诺度本体） |
+| [research/EXPERIMENT_DESIGN.md](../archive/research/EXPERIMENT_DESIGN.md) | 实验设计文档（H1-H9 假设、统计方法） |
 
 ### 10.3 论文文档
 
@@ -396,10 +396,10 @@
 
 | 文件 | 主题 |
 |------|------|
-| [roadmap/ROADMAP_V5.md](../roadmap/ROADMAP_V5.md) | v5 路线规划（belief 本体论分析） |
+| [roadmap/ROADMAP_V5.md](../archive/roadmap/ROADMAP_V5.md) | v5 路线规划（belief 本体论分析） |
 | [roadmap/ROADMAP_V6.md](../roadmap/ROADMAP_V6.md) | v6 路线（确定性治理 + 语义传感器混合范式） |
-| [roadmap/ROADMAP_V6_OPTIMIZED.md](../roadmap/ROADMAP_V6_OPTIMIZED.md) | v6 验收报告与优化方案 |
-| [roadmap/PIPELINE_AUDIT.md](../roadmap/PIPELINE_AUDIT.md) | 检测-诊断-干预管线审计 |
+| [roadmap/ROADMAP_V6_OPTIMIZED.md](../archive/roadmap/ROADMAP_V6_OPTIMIZED.md) | v6 验收报告与优化方案 |
+| [roadmap/PIPELINE_AUDIT.md](../archive/roadmap/PIPELINE_AUDIT.md) | 检测-诊断-干预管线审计 |
 | [roadmap/future.md](../roadmap/future.md) | 未来战略路线图 |
 
 ### 10.5 架构文档
@@ -462,7 +462,7 @@
 
 ### 我想看理论框架
 
-→ [research/THEORY.md](../research/THEORY.md) + [src/lib/thermodynamics/](../../src/lib/thermodynamics/)
+→ [research/THEORY.md](../archive/research/THEORY.md) + [src/lib/thermodynamics/](../../src/lib/thermodynamics/)
 
 ### 我想看 v6 核心创新
 
