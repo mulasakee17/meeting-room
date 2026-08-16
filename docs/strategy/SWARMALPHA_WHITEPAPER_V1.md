@@ -1,15 +1,19 @@
-# SwarmAlpha 白皮书 v1.1：异构智能的可审计认知治理层
+# SwarmAlpha 白皮书 v1.2：异构智能的可审计认知治理层
 
-日期：2026-08-13
-状态：战略权威（Strategic Source of Truth）  
+日期：2026-08-14
+状态：长期战略权威（Long-term Strategic Source of Truth；不是当前实验状态权威）
 适用范围：项目定位、研究主线、长期架构、贡献边界、发展顺序  
 
-> 本文回答“SwarmAlpha 为什么存在、当前是什么、未来要成为什么”。
-> 论文的近期 estimand、实验臂与 claim ceiling 仍以
-> [`SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md`](../theory/SWARMALPHA_V6_THEORY_CLOSURE_2026-08-10.md)
-> 为权威；具体对象语义以代码、测试和对应 architecture 文档为权威。
+> 本文主要回答“SwarmAlpha 为什么存在、长期要成为什么”。当前研究问题、
+> 方法论、证据状态与下一步以
+> [`CURRENT_ROUTE_AND_METHODOLOGY.md`](../research/CURRENT_ROUTE_AND_METHODOLOGY.md)
+> 为权威；当前社会热力学响应假设以
+> [`SOCIAL_THERMODYNAMIC_RESPONSE_RESEARCH_CONTRACT_V1.md`](../theory/SOCIAL_THERMODYNAMIC_RESPONSE_RESEARCH_CONTRACT_V1.md)
+> 为权威。具体对象语义仍以代码、测试和对应 architecture 文档为权威。
 
 > v1.1 上位抽象：长期研究对象由“多 Agent”扩展为“异构认知资源”，但不改变第一篇论文已经冻结的支持域、estimand、Gate 或 claim ceiling。新增概念均为 `DESIGN INTENT` / `HYPOTHESIS`，除非另有实现和实验事实。
+
+> v1.2 事实同步：96-run task-heldout verification replication 未复现开发批次的有利方向，当前状态为 `DEFER`。近期主线恢复社会热力学，但采用“可观测微观状态 → 宏观投影 → 随机信息外场 → 状态条件响应”的可证伪形式；不恢复旧自由能控制、物理定律或未经验证的选择性路由主张。本文后续章节中的旧近期状态若与上述当前入口冲突，以当前入口和实验事实报告为准。
 
 ---
 

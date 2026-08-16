@@ -1,0 +1,1243 @@
+{
+  "experimentRef": {
+    "id": "swarmalpha.experiment.v6-verdict-randomized-continuation-v1",
+    "version": "1.0.0"
+  },
+  "profile": "mechanism-verdict-v2-v1",
+  "taskIds": [
+    43,
+    41,
+    10,
+    36,
+    46,
+    62,
+    59,
+    56,
+    2,
+    42,
+    44,
+    48,
+    60,
+    26,
+    58,
+    6,
+    30,
+    34,
+    25,
+    53
+  ],
+  "bReplicateCount": 0,
+  "gReplicateCount": 4,
+  "certaintyThreshold": 0.7,
+  "stage2Allocation": {
+    "apply": 0.5,
+    "sham": 0.25,
+    "holdout": 0.25
+  },
+  "verificationResponseContract": "verdict_json_v2",
+  "providerModelRef": {
+    "id": "deepseek:deepseek-chat",
+    "version": "1.0.0"
+  },
+  "providerInvocationConfigHash": "sha256:6d3ec32956724caa8f4cabd4c3d0fc0ed8aa36f8f9b2ac58a7f61074fc6d2733",
+  "maxProviderCalls": 1100,
+  "maxTotalTokens": 1400000,
+  "eligibleEventMasterSeed": 0,
+  "tasks": [
+    {
+      "taskId": 43,
+      "taskDefinitionHash": "sha256:bebe1be1156c902194f6b4ee7cfea0da44edf5a9d7b36d5bacf7810fc840c192",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-43-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-43-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:648b4b8e887331955e6649b29864a843551d1d137c641aef54c1d608ba028bcd"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-43:G:r3",
+          "taskId": 43,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-43:G:r4",
+          "taskId": 43,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-43:G:r5",
+          "taskId": 43,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-43:G:r6",
+          "taskId": 43,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 41,
+      "taskDefinitionHash": "sha256:392535e6ebb2a4d23d5a644637b67831e3c07fd190d4ab8b8feda6f2017424fe",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-41-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-41-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:9a3713d7eb97863f8c6b7dfaecba8de65d4259b8d38faa0106722023cf2e4ca2"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-41:G:r3",
+          "taskId": 41,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 2,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-41:G:r4",
+          "taskId": 41,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-41:G:r5",
+          "taskId": 41,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-41:G:r6",
+          "taskId": 41,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 3,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 10,
+      "taskDefinitionHash": "sha256:b52be8b1296828e50e88470393cf14e20186573564ffe1ad814d3be2e7e916e4",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-10-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-10-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:d53c5dc466d964119bed4817d71a2fcda7c1b54234d47f2cdbe97b8dd9e34440"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-10:G:r3",
+          "taskId": 10,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 4,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-10:G:r4",
+          "taskId": 10,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-10:G:r5",
+          "taskId": 10,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-10:G:r6",
+          "taskId": 10,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 36,
+      "taskDefinitionHash": "sha256:c74eeb69c6550da200e28d35749d022181e473ad19f7d71b5f6c5f59d6cc9a73",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-36-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-36-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:78ebb3d7ae35971dbc0e3cf8ba6d3ba8c6c3f07bd6325efd004c20b98ce39d05"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-36:G:r3",
+          "taskId": 36,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-36:G:r4",
+          "taskId": 36,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 5,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-36:G:r5",
+          "taskId": 36,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-36:G:r6",
+          "taskId": 36,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 7,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 46,
+      "taskDefinitionHash": "sha256:c26ed0d6ebcceda3c61af4d01753eb24513f7a6a7654f9ea8152ae996e12636c",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-46-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-46-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:c9bda5c47b6c4a725a8ea3336148c9ec57222507c986090500f52eeafabe8fc1"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-46:G:r3",
+          "taskId": 46,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-46:G:r4",
+          "taskId": 46,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 3,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-46:G:r5",
+          "taskId": 46,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-46:G:r6",
+          "taskId": 46,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 62,
+      "taskDefinitionHash": "sha256:eb80f91feb8dc18209eb7932a2742738eeeee92114e202e9c635a29c59ebb5cb",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-62-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-62-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:bd9df20ec799ec1cb69235716795af849d234f495f5c1dc3364180a211e7fe4a"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-62:G:r3",
+          "taskId": 62,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-62:G:r4",
+          "taskId": 62,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 3,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-62:G:r5",
+          "taskId": 62,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 4,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-62:G:r6",
+          "taskId": 62,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 59,
+      "taskDefinitionHash": "sha256:0662436fdbce77bac2d0459ed73212d8610446a12be6afb0baf220e2688adf87",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-59-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-59-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:8441b32523e729f00cd8ac3819b0ec27b1c9c9703b1197fb85196e3ffe02e641"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-59:G:r3",
+          "taskId": 59,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 3,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-59:G:r4",
+          "taskId": 59,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-59:G:r5",
+          "taskId": 59,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 3,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-59:G:r6",
+          "taskId": 59,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 2,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 56,
+      "taskDefinitionHash": "sha256:b3501251c38ca2160847971e9cbac1cde4cd4e39200b7107aa52c012471326a8",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-56-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-56-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:8e08ee16757561618da3441f47a8295c40f6756f6801815089cdc4997864bb5d"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-56:G:r3",
+          "taskId": 56,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 5,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-56:G:r4",
+          "taskId": 56,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-56:G:r5",
+          "taskId": 56,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-56:G:r6",
+          "taskId": 56,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 2,
+      "taskDefinitionHash": "sha256:7d1effd5b2fb8e7b62ae6dac7851b9e423524665d5f8b16a6af99d6b0b0f0807",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-2-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-2-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:644f0ca81ef6e80794d5fb56d998c5d23aac6addf675496e4b529969dd9c8b70"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-2:G:r3",
+          "taskId": 2,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-2:G:r4",
+          "taskId": 2,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-2:G:r5",
+          "taskId": 2,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 14,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-2:G:r6",
+          "taskId": 2,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 6,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 42,
+      "taskDefinitionHash": "sha256:69cb3d101adc809fd1ba134c0fe261db91b856e0e99ea2ef3d7ffe177a3bf1d6",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-42-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-42-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:0f6a1cb73f966e851e3e105c61b30c86c9c7fe72880246c19da3a678b16b3bb2"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-42:G:r3",
+          "taskId": 42,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 6,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-42:G:r4",
+          "taskId": 42,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 2,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-42:G:r5",
+          "taskId": 42,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 3,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-42:G:r6",
+          "taskId": 42,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 3,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 44,
+      "taskDefinitionHash": "sha256:8ee2e5ddd5e4848b5a0ab4f3efb1d48770e6f4f7edce1df8c76593d5ba23f083",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-44-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-44-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:d869686fbad6868eaabb2f1f3e78ae5d6bff1c7354df17d3fcd45c774a57eda6"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-44:G:r3",
+          "taskId": 44,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-44:G:r4",
+          "taskId": 44,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 2,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-44:G:r5",
+          "taskId": 44,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-44:G:r6",
+          "taskId": 44,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 2,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 48,
+      "taskDefinitionHash": "sha256:a9954b97cc51d80ca54d4ef9153e039de68478ca187856930b711f5e2d1d536b",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-48-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-48-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:07fb40ae4fb9b601c385dc028f93024fcd62071218b01ab0e2fbdacdf8f653e6"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-48:G:r3",
+          "taskId": 48,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 13,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-48:G:r4",
+          "taskId": 48,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 2,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-48:G:r5",
+          "taskId": 48,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-48:G:r6",
+          "taskId": 48,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 60,
+      "taskDefinitionHash": "sha256:a16c6da3e9474d55e1b1ea67f69107b61ac940714b568dc3b89be04facbe13b1",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-60-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-60-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:ef2992623d4d9072555f667e4709eada97f2f5475c1ca99ce105cce21e6113b7"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-60:G:r3",
+          "taskId": 60,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 2,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-60:G:r4",
+          "taskId": 60,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-60:G:r5",
+          "taskId": 60,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-60:G:r6",
+          "taskId": 60,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 6,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 26,
+      "taskDefinitionHash": "sha256:fd3261a421c019ace8097450b8b739b09e04e0e88f8bfe98bdb3a3459de16350",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-26-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-26-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:9f5f37335e69d407f80749cb64742a4abf639f9665ee919e16ea89cb0a285530"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-26:G:r3",
+          "taskId": 26,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 2,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-26:G:r4",
+          "taskId": 26,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-26:G:r5",
+          "taskId": 26,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-26:G:r6",
+          "taskId": 26,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 58,
+      "taskDefinitionHash": "sha256:a3b52610f11a6e0c4acb0fcaa729a3a2b205aeab61bcdce2c37b55b5d1bf7c41",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-58-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-58-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:e809d9d3010b12f86eb8581dfbfe09dfe4f248077e38542a2232fe6804a7a05e"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-58:G:r3",
+          "taskId": 58,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-58:G:r4",
+          "taskId": 58,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-58:G:r5",
+          "taskId": 58,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-58:G:r6",
+          "taskId": 58,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 6,
+      "taskDefinitionHash": "sha256:f19ddf87b215ccd87597b26bdffbd243e019482d8b425f05d43e817316378be4",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-6-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-6-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:ef757c0c5e43ec74c4b6771cade23fc39a427142fb5a8836228007c44e6842a3"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-6:G:r3",
+          "taskId": 6,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 4,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-6:G:r4",
+          "taskId": 6,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-6:G:r5",
+          "taskId": 6,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-6:G:r6",
+          "taskId": 6,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 3,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        }
+      ]
+    },
+    {
+      "taskId": 30,
+      "taskDefinitionHash": "sha256:7f3c677976a2254fab4caa920605e400114009a0eeec4cb4f8137c4f9d2c461e",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-30-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-30-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:acd8f1ec34c47c2d828379261bb303aedc58673d383761e611e41e51ea6b9fe0"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-30:G:r3",
+          "taskId": 30,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-30:G:r4",
+          "taskId": 30,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 5,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-30:G:r5",
+          "taskId": 30,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-30:G:r6",
+          "taskId": 30,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        }
+      ]
+    },
+    {
+      "taskId": 34,
+      "taskDefinitionHash": "sha256:b379ad88270b56d08aae3a75f0378febd91179a6f19b7a30cab701bfbea7dc4a",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-34-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-34-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:8ead70221ba768eb5a506e30c680d1be1147e8d92df5a00097c47f9baf51ca1b"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-34:G:r3",
+          "taskId": 34,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-34:G:r4",
+          "taskId": 34,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 6,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-34:G:r5",
+          "taskId": 34,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 4,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-34:G:r6",
+          "taskId": 34,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 3,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 10,
+          "estimatedTokens": 147
+        }
+      ]
+    },
+    {
+      "taskId": 25,
+      "taskDefinitionHash": "sha256:d7d48c31f2386696fec9812d33047b364650cda03637e0a8bccfdeee3e718b2b",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-25-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-25-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:ee11dd5b59086483eae4005ca2a7cf07d74ed08e0e721bbb0bc8f8e5193f59e4"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-25:G:r3",
+          "taskId": 25,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 6,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-25:G:r4",
+          "taskId": 25,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-25:G:r5",
+          "taskId": 25,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-25:G:r6",
+          "taskId": 25,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 2,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    },
+    {
+      "taskId": 53,
+      "taskDefinitionHash": "sha256:efec096ae82b24a2acced3b4dbb91c5cca2ab29312a56535e434df31bdd6fea5",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-53-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "thresholdContract": {
+        "id": "swarmalpha.threshold.v6-hiddenbench-53-mechanism-verdict-v2-v1",
+        "version": "1.0.0",
+        "hash": "sha256:861500946a6587a39204aeeba64a94d0fbce242ebc9e7fccf36d11931d4ea710"
+      },
+      "runs": [
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-53:G:r3",
+          "taskId": 53,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 3,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 2,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-53:G:r4",
+          "taskId": 53,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 4,
+          "primaryMasterSeed": 0,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 3,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-53:G:r5",
+          "taskId": 53,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 5,
+          "primaryMasterSeed": 1,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 4,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        },
+        {
+          "runId": "run:v6-verdict-randomized-continuation-v1:task-53:G:r6",
+          "taskId": 53,
+          "protocol": "epistemic_governance_v1",
+          "replicate": 6,
+          "primaryMasterSeed": 2,
+          "eligibleEventMasterSeed": 0,
+          "monitoringMasterSeed": 5,
+          "plannedProviderCalls": 13,
+          "estimatedTokens": 192
+        }
+      ]
+    }
+  ],
+  "totalRuns": 80,
+  "totalPlannedProviderCalls": 1004,
+  "totalEstimatedTokens": 14820,
+  "analysisContract": {
+    "id": "swarmalpha.analysis.v6-verdict-exploratory-v1",
+    "version": "1.0.0",
+    "rqM": "B-arm round-1 explicit belief reports only: coverage, exact-repeat stability (base-2 JSD / argmax / tie-aware agreement), categorical-K calibration & predictive characterization (multiclass Brier, certainty>=0.7 flag, P(error|flag), Brier gap, precision/recall/specificity, reliability/ECE secondary)",
+    "rqG": "eligible randomized G events only: primary mean(final pooled Brier | apply) - mean(final pooled Brier | holdout); secondary apply-sham, sham-holdout, accuracy, token cost, invalid/unavailable rate, verdict distribution; 10,000 task-cluster percentile bootstrap 95% interval; DEFER_INSUFFICIENT if any arm n<5 or task clusters<5 or bootstrap valid fraction<0.95",
+    "bootstrapCount": 10000,
+    "bootstrapUnit": "task_cluster",
+    "ci": 0.95,
+    "ittMissingness": "reference_distribution_for_non_answered"
+  },
+  "createdAt": "2026-08-13T12:00:00.000Z",
+  "contentHash": "sha256:eb8520a085fbe892b175bc56818f63a208450e9b0500fde995c2e3eb11e00dac"
+}

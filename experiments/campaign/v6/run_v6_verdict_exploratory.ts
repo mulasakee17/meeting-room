@@ -142,7 +142,8 @@ export interface VerdictExploratoryRunPlan {
   runId: string;
   taskId: number;
   protocol: V6InteractionProtocol;
-  replicate: 1 | 2;
+  /** Replicate index is frozen by each plan; v1 used 1..2, continuations may extend it. */
+  replicate: number;
   primaryMasterSeed: number;
   eligibleEventMasterSeed: number;
   monitoringMasterSeed: number;

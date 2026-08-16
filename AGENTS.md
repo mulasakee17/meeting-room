@@ -1,5 +1,19 @@
 # SwarmAlpha
 
+## Persistent research-direction lesson (normative, 2026-08-13)
+
+- Measurement qualification, replay, hashes, and schemas are safeguards, not the project's scientific endpoint. Do not let integrity engineering replace the operational decision problem.
+- The default mother problem is governance without immediate ground truth: under correlated sources and bounded compute, decide which new evidence, source, tool, private report, or human review to acquire next, and when to abstain or escalate.
+- Online governance code and policies must not read `groundTruth`, `correctAnswer`, resolver outcomes, or later evaluation artifacts. Revealed outcomes belong to offline calibration and effect evaluation only.
+- A prompt-conditioned probability report is an optional sensor, not latent belief. Prompt sensitivity is itself a risk observation; missing sensitivity must not be encoded as zero.
+- A public-only second opinion is a consistency check, not independent verification. Call an action verification only when it can acquire a new observation or a separately governed source.
+- Distinct source or lineage identity is not statistical independence. Never rename declared/verified identity diversity as independent evidence without an empirical error-correlation argument.
+- Prefer the smallest experiment that distinguishes policies before adding schemas or bridges. Every proposed quantity must name the operational decision it changes, its admissible online inputs, its falsification test, and its independent outcome.
+- Do not pursue engineering complexity as a proxy for progress. Prefer the smallest sufficient implementation that solves a real user or research need; reuse existing paths before adding abstractions, modules, schemas, adapters, engines, or comparison arms.
+- Every material increase in complexity must identify a concrete practical benefit, the evidence needed to verify that benefit, and the simpler alternative it displaces. If that benefit is absent, uncertain, or not required for the current claim, defer the complexity.
+- Optimize for usable outcomes and real decision quality first. Theoretical rigor and auditability should constrain and clarify the solution, not turn safeguards into the product or make the application scenario artificially narrow.
+- A governance intervention is a **targeted rescue, not a universal booster**. An effect concentrated on catastrophic (would-have-failed, confidently-wrong) tasks is the signal, not a dilution: moving already-correct tasks is wasted intervention, and "generality" means the rescue reproduces on every identifiable failure task, not a positive average sign across all tasks. The truth-blind detector's job is to identify those failure tasks *pre-action*; never judge an intervention by pooled mean over all tasks, and never label "effect concentrated on disaster tasks" as a weakness.
+
 ## Current repository authority (normative)
 
 - Read `docs/ACTIVE_RESEARCH_SURFACE.md` before broad repository inspection.

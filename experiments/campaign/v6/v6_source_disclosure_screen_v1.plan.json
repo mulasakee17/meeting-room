@@ -1,0 +1,1180 @@
+{
+  "experimentRef": {
+    "id": "swarmalpha.experiment.v6-source-disclosure-screen-v1",
+    "version": "1.0.0"
+  },
+  "reviewProtocolRef": {
+    "id": "swarmalpha.review.v6-source-disclosure-screen",
+    "version": "1.0.0"
+  },
+  "profile": "source-disclosure-screen-v1",
+  "taskIds": [
+    13,
+    18,
+    28,
+    33,
+    38,
+    39,
+    45,
+    47,
+    50,
+    55
+  ],
+  "leakageGroups": [
+    {
+      "groupId": "investigation",
+      "taskIds": [
+        13,
+        47
+      ]
+    },
+    {
+      "groupId": "urgent-transfer",
+      "taskIds": [
+        33,
+        55
+      ]
+    },
+    {
+      "groupId": "expedition-basecamp",
+      "taskIds": [
+        18
+      ]
+    },
+    {
+      "groupId": "rescue-route",
+      "taskIds": [
+        28
+      ]
+    },
+    {
+      "groupId": "relief-clinic",
+      "taskIds": [
+        38
+      ]
+    },
+    {
+      "groupId": "aircraft-landing",
+      "taskIds": [
+        39
+      ]
+    },
+    {
+      "groupId": "post-earthquake-lab",
+      "taskIds": [
+        45
+      ]
+    },
+    {
+      "groupId": "secure-meeting-room",
+      "taskIds": [
+        50
+      ]
+    }
+  ],
+  "blockCount": 2,
+  "protocol": "epistemic_governance_v1",
+  "providerModelRef": {
+    "id": "deepseek:deepseek-chat",
+    "version": "1.0.0"
+  },
+  "providerInvocationConfigHash": "sha256:6d3ec32956724caa8f4cabd4c3d0fc0ed8aa36f8f9b2ac58a7f61074fc6d2733",
+  "maxProviderCalls": 600,
+  "maxTotalTokens": 1600000,
+  "eligibleEventMasterSeed": 0,
+  "tasks": [
+    {
+      "taskId": 13,
+      "leakageGroup": "investigation",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-13-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:13:block:1",
+          "sourceSelectionSeed": 10000,
+          "sourceSelectionKeyHash": "sha256:bb00fe40657808dae63c00a57000cdcf6d0235886ff8387f3a45a9acd2feaa64",
+          "sourceAgentId": "agent:hiddenbench:13:1",
+          "sourcePrivateInformationHash": "sha256:7ae23fef9c936addd2de3a0b58ce7697cc3c692e47bf8f3699f3f052fd25605a",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-13:block-1:H",
+              "taskId": 13,
+              "leakageGroup": "investigation",
+              "blockId": "task:13:block:1",
+              "arm": "holdout",
+              "order": 26,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10000,
+              "sourceSelectionKeyHash": "sha256:bb00fe40657808dae63c00a57000cdcf6d0235886ff8387f3a45a9acd2feaa64",
+              "sourceAgentId": "agent:hiddenbench:13:1",
+              "sourcePrivateInformationHash": "sha256:7ae23fef9c936addd2de3a0b58ce7697cc3c692e47bf8f3699f3f052fd25605a",
+              "taskDefinitionHash": "sha256:7795efc0eede69287c20670682581002cadfd7459bffe6b17c91bcca0c9053e9",
+              "publicContextHash": "sha256:bae29e42fd80b01050f533bce53e5e24b7a783dbde420cfbec488f60103af226",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-13:block-1:D",
+              "taskId": 13,
+              "leakageGroup": "investigation",
+              "blockId": "task:13:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 39,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10000,
+              "sourceSelectionKeyHash": "sha256:bb00fe40657808dae63c00a57000cdcf6d0235886ff8387f3a45a9acd2feaa64",
+              "sourceAgentId": "agent:hiddenbench:13:1",
+              "sourcePrivateInformationHash": "sha256:7ae23fef9c936addd2de3a0b58ce7697cc3c692e47bf8f3699f3f052fd25605a",
+              "taskDefinitionHash": "sha256:586ac082b3d591d4d5b62dfb4b82e1f40738be8f1992b22c7cd87cb641715bc8",
+              "publicContextHash": "sha256:cfaa22f19b65b36056a5fdb0ebdba6c6921b767bb1674b5720adda84ddf724de",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:13:block:2",
+          "sourceSelectionSeed": 10001,
+          "sourceSelectionKeyHash": "sha256:bc267df8ce7a286a9d6d335cd37e0ed2c02fd794b254b94c41dccab4353f0512",
+          "sourceAgentId": "agent:hiddenbench:13:1",
+          "sourcePrivateInformationHash": "sha256:7ae23fef9c936addd2de3a0b58ce7697cc3c692e47bf8f3699f3f052fd25605a",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-13:block-2:H",
+              "taskId": 13,
+              "leakageGroup": "investigation",
+              "blockId": "task:13:block:2",
+              "arm": "holdout",
+              "order": 9,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10001,
+              "sourceSelectionKeyHash": "sha256:bc267df8ce7a286a9d6d335cd37e0ed2c02fd794b254b94c41dccab4353f0512",
+              "sourceAgentId": "agent:hiddenbench:13:1",
+              "sourcePrivateInformationHash": "sha256:7ae23fef9c936addd2de3a0b58ce7697cc3c692e47bf8f3699f3f052fd25605a",
+              "taskDefinitionHash": "sha256:7795efc0eede69287c20670682581002cadfd7459bffe6b17c91bcca0c9053e9",
+              "publicContextHash": "sha256:bae29e42fd80b01050f533bce53e5e24b7a783dbde420cfbec488f60103af226",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-13:block-2:D",
+              "taskId": 13,
+              "leakageGroup": "investigation",
+              "blockId": "task:13:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 23,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10001,
+              "sourceSelectionKeyHash": "sha256:bc267df8ce7a286a9d6d335cd37e0ed2c02fd794b254b94c41dccab4353f0512",
+              "sourceAgentId": "agent:hiddenbench:13:1",
+              "sourcePrivateInformationHash": "sha256:7ae23fef9c936addd2de3a0b58ce7697cc3c692e47bf8f3699f3f052fd25605a",
+              "taskDefinitionHash": "sha256:586ac082b3d591d4d5b62dfb4b82e1f40738be8f1992b22c7cd87cb641715bc8",
+              "publicContextHash": "sha256:cfaa22f19b65b36056a5fdb0ebdba6c6921b767bb1674b5720adda84ddf724de",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 18,
+      "leakageGroup": "expedition-basecamp",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-18-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:18:block:1",
+          "sourceSelectionSeed": 10100,
+          "sourceSelectionKeyHash": "sha256:90945860ca3a695cfea10ac1e085b32d856467a68428c006263a330ef66387c7",
+          "sourceAgentId": "agent:hiddenbench:18:1",
+          "sourcePrivateInformationHash": "sha256:ab430fa4fad439f197aca5dc38fe0925bec4d860fef433e76deb8a0dd4428b15",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-18:block-1:H",
+              "taskId": 18,
+              "leakageGroup": "expedition-basecamp",
+              "blockId": "task:18:block:1",
+              "arm": "holdout",
+              "order": 40,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 4,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10100,
+              "sourceSelectionKeyHash": "sha256:90945860ca3a695cfea10ac1e085b32d856467a68428c006263a330ef66387c7",
+              "sourceAgentId": "agent:hiddenbench:18:1",
+              "sourcePrivateInformationHash": "sha256:ab430fa4fad439f197aca5dc38fe0925bec4d860fef433e76deb8a0dd4428b15",
+              "taskDefinitionHash": "sha256:b5ed3b004ec98ac61092a5aecf7212ce2ce99f7e80aa02ada71daee0eddb9457",
+              "publicContextHash": "sha256:b153fcec7152f71a1c9e065daa7147fb96fbc3b250f506a801fb56474326b911",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-18:block-1:D",
+              "taskId": 18,
+              "leakageGroup": "expedition-basecamp",
+              "blockId": "task:18:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 32,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10100,
+              "sourceSelectionKeyHash": "sha256:90945860ca3a695cfea10ac1e085b32d856467a68428c006263a330ef66387c7",
+              "sourceAgentId": "agent:hiddenbench:18:1",
+              "sourcePrivateInformationHash": "sha256:ab430fa4fad439f197aca5dc38fe0925bec4d860fef433e76deb8a0dd4428b15",
+              "taskDefinitionHash": "sha256:5717fe8d6b2de09303ecebc0e4a9de44a3110273b4df8caff7104f96735335e8",
+              "publicContextHash": "sha256:16b287a6672b2e9143e73f853a5ebe2f3d6c4db8c0983f7056a226fcb080a832",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:18:block:2",
+          "sourceSelectionSeed": 10101,
+          "sourceSelectionKeyHash": "sha256:99d2a0fba0baf3da47769b51a297da1454feaf6eb306c44a90529948c43384b2",
+          "sourceAgentId": "agent:hiddenbench:18:4",
+          "sourcePrivateInformationHash": "sha256:9208fd7e4fc2516b40169c56ee347a86f68c0654abf43157e8d39fee8cf88dde",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-18:block-2:H",
+              "taskId": 18,
+              "leakageGroup": "expedition-basecamp",
+              "blockId": "task:18:block:2",
+              "arm": "holdout",
+              "order": 18,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10101,
+              "sourceSelectionKeyHash": "sha256:99d2a0fba0baf3da47769b51a297da1454feaf6eb306c44a90529948c43384b2",
+              "sourceAgentId": "agent:hiddenbench:18:4",
+              "sourcePrivateInformationHash": "sha256:9208fd7e4fc2516b40169c56ee347a86f68c0654abf43157e8d39fee8cf88dde",
+              "taskDefinitionHash": "sha256:b5ed3b004ec98ac61092a5aecf7212ce2ce99f7e80aa02ada71daee0eddb9457",
+              "publicContextHash": "sha256:b153fcec7152f71a1c9e065daa7147fb96fbc3b250f506a801fb56474326b911",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-18:block-2:D",
+              "taskId": 18,
+              "leakageGroup": "expedition-basecamp",
+              "blockId": "task:18:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 2,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10101,
+              "sourceSelectionKeyHash": "sha256:99d2a0fba0baf3da47769b51a297da1454feaf6eb306c44a90529948c43384b2",
+              "sourceAgentId": "agent:hiddenbench:18:4",
+              "sourcePrivateInformationHash": "sha256:9208fd7e4fc2516b40169c56ee347a86f68c0654abf43157e8d39fee8cf88dde",
+              "taskDefinitionHash": "sha256:9e17b8fb0392b0932ff3ad93458bfafa48137bc71251012908e85aeb7fef85ea",
+              "publicContextHash": "sha256:c3c7192a9585581fd6a38b5b3bae724ffbd2b077acb40db0a2f1b210d19b20c8",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 28,
+      "leakageGroup": "rescue-route",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-28-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:28:block:1",
+          "sourceSelectionSeed": 10200,
+          "sourceSelectionKeyHash": "sha256:2365d723131230f48f01677a4d6e1c9f9dd08d5da3714ae98b90d74aca092824",
+          "sourceAgentId": "agent:hiddenbench:28:4",
+          "sourcePrivateInformationHash": "sha256:87035971880e8d6159fa95c52bd1f502f9ae89baf6c233c7c429a8e918c8fb04",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-28:block-1:H",
+              "taskId": 28,
+              "leakageGroup": "rescue-route",
+              "blockId": "task:28:block:1",
+              "arm": "holdout",
+              "order": 29,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10200,
+              "sourceSelectionKeyHash": "sha256:2365d723131230f48f01677a4d6e1c9f9dd08d5da3714ae98b90d74aca092824",
+              "sourceAgentId": "agent:hiddenbench:28:4",
+              "sourcePrivateInformationHash": "sha256:87035971880e8d6159fa95c52bd1f502f9ae89baf6c233c7c429a8e918c8fb04",
+              "taskDefinitionHash": "sha256:cd53811a072591af4122f28eb7cf07472c5050d17ac93c78e92e902b624bc503",
+              "publicContextHash": "sha256:af041ef81a7ea40b104ce6d6b22b5ac8d00a2055463e12456f8d7d3db316b517",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-28:block-1:D",
+              "taskId": 28,
+              "leakageGroup": "rescue-route",
+              "blockId": "task:28:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 6,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 6,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10200,
+              "sourceSelectionKeyHash": "sha256:2365d723131230f48f01677a4d6e1c9f9dd08d5da3714ae98b90d74aca092824",
+              "sourceAgentId": "agent:hiddenbench:28:4",
+              "sourcePrivateInformationHash": "sha256:87035971880e8d6159fa95c52bd1f502f9ae89baf6c233c7c429a8e918c8fb04",
+              "taskDefinitionHash": "sha256:16ef39e523247951b6b94a1c0b2a4a5932691c4f4974179160b632533e7364b1",
+              "publicContextHash": "sha256:ec1a01fb6197d76516d5b47ca77c77ee138ea0bd5e319117ba56ce5c1fd4caec",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:28:block:2",
+          "sourceSelectionSeed": 10201,
+          "sourceSelectionKeyHash": "sha256:3ed856fedacf03f70eb8a7e7099d5c812040a3b6990e089ce2bac727eedb6987",
+          "sourceAgentId": "agent:hiddenbench:28:3",
+          "sourcePrivateInformationHash": "sha256:6b9c19b46bf8c934fa3a7e3232293ad7b381591d4a4f5719efa894e06624c2f0",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-28:block-2:H",
+              "taskId": 28,
+              "leakageGroup": "rescue-route",
+              "blockId": "task:28:block:2",
+              "arm": "holdout",
+              "order": 12,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10201,
+              "sourceSelectionKeyHash": "sha256:3ed856fedacf03f70eb8a7e7099d5c812040a3b6990e089ce2bac727eedb6987",
+              "sourceAgentId": "agent:hiddenbench:28:3",
+              "sourcePrivateInformationHash": "sha256:6b9c19b46bf8c934fa3a7e3232293ad7b381591d4a4f5719efa894e06624c2f0",
+              "taskDefinitionHash": "sha256:cd53811a072591af4122f28eb7cf07472c5050d17ac93c78e92e902b624bc503",
+              "publicContextHash": "sha256:af041ef81a7ea40b104ce6d6b22b5ac8d00a2055463e12456f8d7d3db316b517",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-28:block-2:D",
+              "taskId": 28,
+              "leakageGroup": "rescue-route",
+              "blockId": "task:28:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 1,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10201,
+              "sourceSelectionKeyHash": "sha256:3ed856fedacf03f70eb8a7e7099d5c812040a3b6990e089ce2bac727eedb6987",
+              "sourceAgentId": "agent:hiddenbench:28:3",
+              "sourcePrivateInformationHash": "sha256:6b9c19b46bf8c934fa3a7e3232293ad7b381591d4a4f5719efa894e06624c2f0",
+              "taskDefinitionHash": "sha256:c62eabf3bc19061fef303afe1ed2ba7df4904b8acaf81849f4fb7aa52388c07e",
+              "publicContextHash": "sha256:7cfca9fefeb2f0c0ee9552e6c624cee18ee61fe86afb5dd2bd8439af59d59185",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 33,
+      "leakageGroup": "urgent-transfer",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-33-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:33:block:1",
+          "sourceSelectionSeed": 10300,
+          "sourceSelectionKeyHash": "sha256:d9cec500b3609f25b5947f56225ba40ce94d4d3a4cc7db533a51404d631401a5",
+          "sourceAgentId": "agent:hiddenbench:33:3",
+          "sourcePrivateInformationHash": "sha256:c60a21227cad96fa036a1f3d9375d0066a4d806206bcacb7c9869ebf28023b45",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-33:block-1:H",
+              "taskId": 33,
+              "leakageGroup": "urgent-transfer",
+              "blockId": "task:33:block:1",
+              "arm": "holdout",
+              "order": 21,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 4,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10300,
+              "sourceSelectionKeyHash": "sha256:d9cec500b3609f25b5947f56225ba40ce94d4d3a4cc7db533a51404d631401a5",
+              "sourceAgentId": "agent:hiddenbench:33:3",
+              "sourcePrivateInformationHash": "sha256:c60a21227cad96fa036a1f3d9375d0066a4d806206bcacb7c9869ebf28023b45",
+              "taskDefinitionHash": "sha256:c00e9cd8d6982113704987f9624540d472e248d4825474c1823858f3c2b13fc1",
+              "publicContextHash": "sha256:6d6a9994197cb84ef0195a20c715a32ef30a8c43b850f00e60bf59a7d5d52357",
+              "plannedProviderCalls": 9,
+              "estimatedTokens": 18000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-33:block-1:D",
+              "taskId": 33,
+              "leakageGroup": "urgent-transfer",
+              "blockId": "task:33:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 25,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10300,
+              "sourceSelectionKeyHash": "sha256:d9cec500b3609f25b5947f56225ba40ce94d4d3a4cc7db533a51404d631401a5",
+              "sourceAgentId": "agent:hiddenbench:33:3",
+              "sourcePrivateInformationHash": "sha256:c60a21227cad96fa036a1f3d9375d0066a4d806206bcacb7c9869ebf28023b45",
+              "taskDefinitionHash": "sha256:7fa44296b99bcc0f26b9f002864d7eb35c57f4976a1f60ef4d75a4e4f0e5e768",
+              "publicContextHash": "sha256:cb025b09a3d560aa9e334ac8dd151b6893ccfe496194ca2a9ac12839354a9c71",
+              "plannedProviderCalls": 9,
+              "estimatedTokens": 18000
+            }
+          ]
+        },
+        {
+          "blockId": "task:33:block:2",
+          "sourceSelectionSeed": 10301,
+          "sourceSelectionKeyHash": "sha256:d7f10de0a832d569f103150f29873398e971fb23217efe96db4e7ce78c01208b",
+          "sourceAgentId": "agent:hiddenbench:33:1",
+          "sourcePrivateInformationHash": "sha256:a85606471ff02d3849a5615b22906b13564c7cc69841ba41e8a426fdf1535caa",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-33:block-2:H",
+              "taskId": 33,
+              "leakageGroup": "urgent-transfer",
+              "blockId": "task:33:block:2",
+              "arm": "holdout",
+              "order": 11,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10301,
+              "sourceSelectionKeyHash": "sha256:d7f10de0a832d569f103150f29873398e971fb23217efe96db4e7ce78c01208b",
+              "sourceAgentId": "agent:hiddenbench:33:1",
+              "sourcePrivateInformationHash": "sha256:a85606471ff02d3849a5615b22906b13564c7cc69841ba41e8a426fdf1535caa",
+              "taskDefinitionHash": "sha256:c00e9cd8d6982113704987f9624540d472e248d4825474c1823858f3c2b13fc1",
+              "publicContextHash": "sha256:6d6a9994197cb84ef0195a20c715a32ef30a8c43b850f00e60bf59a7d5d52357",
+              "plannedProviderCalls": 9,
+              "estimatedTokens": 18000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-33:block-2:D",
+              "taskId": 33,
+              "leakageGroup": "urgent-transfer",
+              "blockId": "task:33:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 38,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10301,
+              "sourceSelectionKeyHash": "sha256:d7f10de0a832d569f103150f29873398e971fb23217efe96db4e7ce78c01208b",
+              "sourceAgentId": "agent:hiddenbench:33:1",
+              "sourcePrivateInformationHash": "sha256:a85606471ff02d3849a5615b22906b13564c7cc69841ba41e8a426fdf1535caa",
+              "taskDefinitionHash": "sha256:160feaf13f5d9c0b5c8c1e165127c2e8e488aeda93c119d3e35b5d79b3fbed9b",
+              "publicContextHash": "sha256:4d9fd4315f78b266e8377b8ecb729bfc89b61c62fc6211ca529e245282589507",
+              "plannedProviderCalls": 9,
+              "estimatedTokens": 18000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 38,
+      "leakageGroup": "relief-clinic",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-38-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:38:block:1",
+          "sourceSelectionSeed": 10400,
+          "sourceSelectionKeyHash": "sha256:ae4be687cfab734b9a43198a14b4ba0eae1b4acbf43929ad69851718489081dc",
+          "sourceAgentId": "agent:hiddenbench:38:4",
+          "sourcePrivateInformationHash": "sha256:489d02038815a38a10d32bab45d70520e45e2ad26d8c7b8a0b7d1a6301cb4079",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-38:block-1:H",
+              "taskId": 38,
+              "leakageGroup": "relief-clinic",
+              "blockId": "task:38:block:1",
+              "arm": "holdout",
+              "order": 4,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10400,
+              "sourceSelectionKeyHash": "sha256:ae4be687cfab734b9a43198a14b4ba0eae1b4acbf43929ad69851718489081dc",
+              "sourceAgentId": "agent:hiddenbench:38:4",
+              "sourcePrivateInformationHash": "sha256:489d02038815a38a10d32bab45d70520e45e2ad26d8c7b8a0b7d1a6301cb4079",
+              "taskDefinitionHash": "sha256:8a7a8785b261a9b859df68e6fa1439958df592d41b3ec5ea5f0bdae59dde15aa",
+              "publicContextHash": "sha256:559363f24a55f2b942b0993d08d0105606023b64e000c413f5a6234c352603e2",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-38:block-1:D",
+              "taskId": 38,
+              "leakageGroup": "relief-clinic",
+              "blockId": "task:38:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 33,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10400,
+              "sourceSelectionKeyHash": "sha256:ae4be687cfab734b9a43198a14b4ba0eae1b4acbf43929ad69851718489081dc",
+              "sourceAgentId": "agent:hiddenbench:38:4",
+              "sourcePrivateInformationHash": "sha256:489d02038815a38a10d32bab45d70520e45e2ad26d8c7b8a0b7d1a6301cb4079",
+              "taskDefinitionHash": "sha256:f2e6a12c18ba71c1a4fe9f82ec166584a468334b4d2475a3b03701d93c61074e",
+              "publicContextHash": "sha256:a049eec40f26ee4ffb3fd8009c74d08240d2d14e503109d416c3db346d5b367f",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:38:block:2",
+          "sourceSelectionSeed": 10401,
+          "sourceSelectionKeyHash": "sha256:36dd39a40edc8bf786ec8d4aff15b0341043dff00a2975ee289a763c3b64a1e2",
+          "sourceAgentId": "agent:hiddenbench:38:1",
+          "sourcePrivateInformationHash": "sha256:a7cfbd9b5cf7e728cb897605bbd1abc47f53748f3956623b4ab117c09ae97da4",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-38:block-2:H",
+              "taskId": 38,
+              "leakageGroup": "relief-clinic",
+              "blockId": "task:38:block:2",
+              "arm": "holdout",
+              "order": 22,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 3,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10401,
+              "sourceSelectionKeyHash": "sha256:36dd39a40edc8bf786ec8d4aff15b0341043dff00a2975ee289a763c3b64a1e2",
+              "sourceAgentId": "agent:hiddenbench:38:1",
+              "sourcePrivateInformationHash": "sha256:a7cfbd9b5cf7e728cb897605bbd1abc47f53748f3956623b4ab117c09ae97da4",
+              "taskDefinitionHash": "sha256:8a7a8785b261a9b859df68e6fa1439958df592d41b3ec5ea5f0bdae59dde15aa",
+              "publicContextHash": "sha256:559363f24a55f2b942b0993d08d0105606023b64e000c413f5a6234c352603e2",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-38:block-2:D",
+              "taskId": 38,
+              "leakageGroup": "relief-clinic",
+              "blockId": "task:38:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 37,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 5,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10401,
+              "sourceSelectionKeyHash": "sha256:36dd39a40edc8bf786ec8d4aff15b0341043dff00a2975ee289a763c3b64a1e2",
+              "sourceAgentId": "agent:hiddenbench:38:1",
+              "sourcePrivateInformationHash": "sha256:a7cfbd9b5cf7e728cb897605bbd1abc47f53748f3956623b4ab117c09ae97da4",
+              "taskDefinitionHash": "sha256:c730993da79d260f81731b2578d901fcced01cc733e6f4b9210a495e9431802a",
+              "publicContextHash": "sha256:e92158f37352ad818f9a3b22274d9512c9bf7e778e924c7ea27bf38c43305b31",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 39,
+      "leakageGroup": "aircraft-landing",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-39-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:39:block:1",
+          "sourceSelectionSeed": 10500,
+          "sourceSelectionKeyHash": "sha256:7240a6c0a1303fca09eacb626d652992151fdae2e596ec188d90e95f07bbe5a2",
+          "sourceAgentId": "agent:hiddenbench:39:1",
+          "sourcePrivateInformationHash": "sha256:713a591e83345c31f7313f2b89ab142b53fc20af42ee8a50871b47f9a4ea10ad",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-39:block-1:H",
+              "taskId": 39,
+              "leakageGroup": "aircraft-landing",
+              "blockId": "task:39:block:1",
+              "arm": "holdout",
+              "order": 16,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10500,
+              "sourceSelectionKeyHash": "sha256:7240a6c0a1303fca09eacb626d652992151fdae2e596ec188d90e95f07bbe5a2",
+              "sourceAgentId": "agent:hiddenbench:39:1",
+              "sourcePrivateInformationHash": "sha256:713a591e83345c31f7313f2b89ab142b53fc20af42ee8a50871b47f9a4ea10ad",
+              "taskDefinitionHash": "sha256:7be4ee156e98bf6886c7f32cdf3b621f13a141e40a170c622dc6d899ae12c025",
+              "publicContextHash": "sha256:7be301891abd0a49ee07ab7c97119b9a9f99d84ced6cfc6d70f12761ed7b5709",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-39:block-1:D",
+              "taskId": 39,
+              "leakageGroup": "aircraft-landing",
+              "blockId": "task:39:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 20,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10500,
+              "sourceSelectionKeyHash": "sha256:7240a6c0a1303fca09eacb626d652992151fdae2e596ec188d90e95f07bbe5a2",
+              "sourceAgentId": "agent:hiddenbench:39:1",
+              "sourcePrivateInformationHash": "sha256:713a591e83345c31f7313f2b89ab142b53fc20af42ee8a50871b47f9a4ea10ad",
+              "taskDefinitionHash": "sha256:d7595b4564216724c3d3afea614000f9742b4d96a9dc29e70f1eff547cc516ea",
+              "publicContextHash": "sha256:1445d69596a7e3c5635d32fea627a126c81e4b7c22e2279c90ac754428741f8f",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:39:block:2",
+          "sourceSelectionSeed": 10501,
+          "sourceSelectionKeyHash": "sha256:11a20791f9a391dd5a21e4cf7d5ecd86c7716ee90a5a655e419b2afe6001c6ee",
+          "sourceAgentId": "agent:hiddenbench:39:2",
+          "sourcePrivateInformationHash": "sha256:376cc5d7c5a53b170cc3d3aa3f3364cc706799d8a218c48f27070a7f66d59cfb",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-39:block-2:H",
+              "taskId": 39,
+              "leakageGroup": "aircraft-landing",
+              "blockId": "task:39:block:2",
+              "arm": "holdout",
+              "order": 5,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10501,
+              "sourceSelectionKeyHash": "sha256:11a20791f9a391dd5a21e4cf7d5ecd86c7716ee90a5a655e419b2afe6001c6ee",
+              "sourceAgentId": "agent:hiddenbench:39:2",
+              "sourcePrivateInformationHash": "sha256:376cc5d7c5a53b170cc3d3aa3f3364cc706799d8a218c48f27070a7f66d59cfb",
+              "taskDefinitionHash": "sha256:7be4ee156e98bf6886c7f32cdf3b621f13a141e40a170c622dc6d899ae12c025",
+              "publicContextHash": "sha256:7be301891abd0a49ee07ab7c97119b9a9f99d84ced6cfc6d70f12761ed7b5709",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-39:block-2:D",
+              "taskId": 39,
+              "leakageGroup": "aircraft-landing",
+              "blockId": "task:39:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 28,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10501,
+              "sourceSelectionKeyHash": "sha256:11a20791f9a391dd5a21e4cf7d5ecd86c7716ee90a5a655e419b2afe6001c6ee",
+              "sourceAgentId": "agent:hiddenbench:39:2",
+              "sourcePrivateInformationHash": "sha256:376cc5d7c5a53b170cc3d3aa3f3364cc706799d8a218c48f27070a7f66d59cfb",
+              "taskDefinitionHash": "sha256:1162cc79acc48508b6601a39a854af474c646cb7aefa7ad3f286ba2852420cb2",
+              "publicContextHash": "sha256:5b767e87ae4dbb132c13566880b75e12300cdaa57c5119ea6209710d4c054b1e",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 45,
+      "leakageGroup": "post-earthquake-lab",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-45-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:45:block:1",
+          "sourceSelectionSeed": 10600,
+          "sourceSelectionKeyHash": "sha256:e92c5fa9e98e9287e8076483f272da7f4312b48ae9706b86ace1174e9b807ae9",
+          "sourceAgentId": "agent:hiddenbench:45:2",
+          "sourcePrivateInformationHash": "sha256:94dac33ae76b755ac93a2f6e6f959af69d3f36120d0d316161181094eb54defa",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-45:block-1:H",
+              "taskId": 45,
+              "leakageGroup": "post-earthquake-lab",
+              "blockId": "task:45:block:1",
+              "arm": "holdout",
+              "order": 17,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 8,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10600,
+              "sourceSelectionKeyHash": "sha256:e92c5fa9e98e9287e8076483f272da7f4312b48ae9706b86ace1174e9b807ae9",
+              "sourceAgentId": "agent:hiddenbench:45:2",
+              "sourcePrivateInformationHash": "sha256:94dac33ae76b755ac93a2f6e6f959af69d3f36120d0d316161181094eb54defa",
+              "taskDefinitionHash": "sha256:4cf4b8bca0d3181c5e674b171df586adcf695efb1b3d97dee9abd00cceb7e5d2",
+              "publicContextHash": "sha256:17610a36d515f3f4d315d3f351897fc6d0016e11c1a1b12bd882303844ff54c8",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-45:block-1:D",
+              "taskId": 45,
+              "leakageGroup": "post-earthquake-lab",
+              "blockId": "task:45:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 36,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 4,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10600,
+              "sourceSelectionKeyHash": "sha256:e92c5fa9e98e9287e8076483f272da7f4312b48ae9706b86ace1174e9b807ae9",
+              "sourceAgentId": "agent:hiddenbench:45:2",
+              "sourcePrivateInformationHash": "sha256:94dac33ae76b755ac93a2f6e6f959af69d3f36120d0d316161181094eb54defa",
+              "taskDefinitionHash": "sha256:f8a000644072af5592958325ccfdb82ae6d3802bd44ee09064a92339572ded4d",
+              "publicContextHash": "sha256:8c8cab944a4edf81207d81e2b6c146015ee6b1620b00fc0741a2fb8090365656",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:45:block:2",
+          "sourceSelectionSeed": 10601,
+          "sourceSelectionKeyHash": "sha256:3a87c597d1e732f1e416866e5ce9bede09641ff121ef81962b95adce063731e5",
+          "sourceAgentId": "agent:hiddenbench:45:4",
+          "sourcePrivateInformationHash": "sha256:bfb0a77ed26dd14d1fc3fdc8100bd88a8cb057219f5c14ca99e4ff6262e0192d",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-45:block-2:H",
+              "taskId": 45,
+              "leakageGroup": "post-earthquake-lab",
+              "blockId": "task:45:block:2",
+              "arm": "holdout",
+              "order": 31,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10601,
+              "sourceSelectionKeyHash": "sha256:3a87c597d1e732f1e416866e5ce9bede09641ff121ef81962b95adce063731e5",
+              "sourceAgentId": "agent:hiddenbench:45:4",
+              "sourcePrivateInformationHash": "sha256:bfb0a77ed26dd14d1fc3fdc8100bd88a8cb057219f5c14ca99e4ff6262e0192d",
+              "taskDefinitionHash": "sha256:4cf4b8bca0d3181c5e674b171df586adcf695efb1b3d97dee9abd00cceb7e5d2",
+              "publicContextHash": "sha256:17610a36d515f3f4d315d3f351897fc6d0016e11c1a1b12bd882303844ff54c8",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-45:block-2:D",
+              "taskId": 45,
+              "leakageGroup": "post-earthquake-lab",
+              "blockId": "task:45:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 30,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10601,
+              "sourceSelectionKeyHash": "sha256:3a87c597d1e732f1e416866e5ce9bede09641ff121ef81962b95adce063731e5",
+              "sourceAgentId": "agent:hiddenbench:45:4",
+              "sourcePrivateInformationHash": "sha256:bfb0a77ed26dd14d1fc3fdc8100bd88a8cb057219f5c14ca99e4ff6262e0192d",
+              "taskDefinitionHash": "sha256:e9db3f421dc379fc2e7eaaa2c43b839596bc75d65295faab76be3e739d65709e",
+              "publicContextHash": "sha256:26899b966eb4a36a9eeb9fb97f46f513fa3ca9fcc879e83492e279e4c0a8520f",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 47,
+      "leakageGroup": "investigation",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-47-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:47:block:1",
+          "sourceSelectionSeed": 10700,
+          "sourceSelectionKeyHash": "sha256:99a1827463c2c5e37b800814dc3692c77cf3ed72212694910c8667399eedbbc1",
+          "sourceAgentId": "agent:hiddenbench:47:1",
+          "sourcePrivateInformationHash": "sha256:15c4c6ee20312e2fc17d4dac52198f6bf8c4e7cda621a096795c034de2399cab",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-47:block-1:H",
+              "taskId": 47,
+              "leakageGroup": "investigation",
+              "blockId": "task:47:block:1",
+              "arm": "holdout",
+              "order": 14,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 8,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10700,
+              "sourceSelectionKeyHash": "sha256:99a1827463c2c5e37b800814dc3692c77cf3ed72212694910c8667399eedbbc1",
+              "sourceAgentId": "agent:hiddenbench:47:1",
+              "sourcePrivateInformationHash": "sha256:15c4c6ee20312e2fc17d4dac52198f6bf8c4e7cda621a096795c034de2399cab",
+              "taskDefinitionHash": "sha256:5c1db4b9982732f7594f5be2efa9f69d7156432122d45f07deb748b4eab7d2fe",
+              "publicContextHash": "sha256:92a771a8199c4ba2e2a1bc8e112f4d684b237ab482106b1149d4697788328c82",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-47:block-1:D",
+              "taskId": 47,
+              "leakageGroup": "investigation",
+              "blockId": "task:47:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 13,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 7,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10700,
+              "sourceSelectionKeyHash": "sha256:99a1827463c2c5e37b800814dc3692c77cf3ed72212694910c8667399eedbbc1",
+              "sourceAgentId": "agent:hiddenbench:47:1",
+              "sourcePrivateInformationHash": "sha256:15c4c6ee20312e2fc17d4dac52198f6bf8c4e7cda621a096795c034de2399cab",
+              "taskDefinitionHash": "sha256:1d19db712cd803ed2faf001ce0954b92c1c04cd483fae14c6aa49f67e1bb9495",
+              "publicContextHash": "sha256:ee1b7599d66cb72d65b55390c47984aa3c45cca53e332845b6041fff80df9462",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:47:block:2",
+          "sourceSelectionSeed": 10701,
+          "sourceSelectionKeyHash": "sha256:2ffb0acb004877ce4751678953b2b165df829c3cf7a3991fcae60f6ff53c8e50",
+          "sourceAgentId": "agent:hiddenbench:47:4",
+          "sourcePrivateInformationHash": "sha256:cdce9d6a323386369b29fe0d37eb9ef599c6a706c78c2db2ee7816d05384ab79",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-47:block-2:H",
+              "taskId": 47,
+              "leakageGroup": "investigation",
+              "blockId": "task:47:block:2",
+              "arm": "holdout",
+              "order": 10,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 4,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10701,
+              "sourceSelectionKeyHash": "sha256:2ffb0acb004877ce4751678953b2b165df829c3cf7a3991fcae60f6ff53c8e50",
+              "sourceAgentId": "agent:hiddenbench:47:4",
+              "sourcePrivateInformationHash": "sha256:cdce9d6a323386369b29fe0d37eb9ef599c6a706c78c2db2ee7816d05384ab79",
+              "taskDefinitionHash": "sha256:5c1db4b9982732f7594f5be2efa9f69d7156432122d45f07deb748b4eab7d2fe",
+              "publicContextHash": "sha256:92a771a8199c4ba2e2a1bc8e112f4d684b237ab482106b1149d4697788328c82",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-47:block-2:D",
+              "taskId": 47,
+              "leakageGroup": "investigation",
+              "blockId": "task:47:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 8,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10701,
+              "sourceSelectionKeyHash": "sha256:2ffb0acb004877ce4751678953b2b165df829c3cf7a3991fcae60f6ff53c8e50",
+              "sourceAgentId": "agent:hiddenbench:47:4",
+              "sourcePrivateInformationHash": "sha256:cdce9d6a323386369b29fe0d37eb9ef599c6a706c78c2db2ee7816d05384ab79",
+              "taskDefinitionHash": "sha256:794e570fc0180b8faff909a12deec4cab68d7d2e2275f515e7086c2950207a06",
+              "publicContextHash": "sha256:0908d145c4700514e7b2c1b2a6d848b3713b6d4a34814517d5082f2ca06c3707",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 50,
+      "leakageGroup": "secure-meeting-room",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-50-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:50:block:1",
+          "sourceSelectionSeed": 10800,
+          "sourceSelectionKeyHash": "sha256:70894a27d8c5dbcd707b8ee1c144317329cb5cc6409a88154651cc00aca93a7c",
+          "sourceAgentId": "agent:hiddenbench:50:3",
+          "sourcePrivateInformationHash": "sha256:c0fc64afdbd02417a0f481ab1cef1e4ddb7fc1bab68e9e3581be2a733772a3bf",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-50:block-1:H",
+              "taskId": 50,
+              "leakageGroup": "secure-meeting-room",
+              "blockId": "task:50:block:1",
+              "arm": "holdout",
+              "order": 34,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10800,
+              "sourceSelectionKeyHash": "sha256:70894a27d8c5dbcd707b8ee1c144317329cb5cc6409a88154651cc00aca93a7c",
+              "sourceAgentId": "agent:hiddenbench:50:3",
+              "sourcePrivateInformationHash": "sha256:c0fc64afdbd02417a0f481ab1cef1e4ddb7fc1bab68e9e3581be2a733772a3bf",
+              "taskDefinitionHash": "sha256:5368d43b3d8402a57026192d1fe8d49f8bbb5c652526a8c429c3428990420c5e",
+              "publicContextHash": "sha256:a7e5a6056a7037d322b1e323cb1aff83614381a0bc96c761b02411ce63e1ae02",
+              "plannedProviderCalls": 9,
+              "estimatedTokens": 18000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-50:block-1:D",
+              "taskId": 50,
+              "leakageGroup": "secure-meeting-room",
+              "blockId": "task:50:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 35,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 11,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10800,
+              "sourceSelectionKeyHash": "sha256:70894a27d8c5dbcd707b8ee1c144317329cb5cc6409a88154651cc00aca93a7c",
+              "sourceAgentId": "agent:hiddenbench:50:3",
+              "sourcePrivateInformationHash": "sha256:c0fc64afdbd02417a0f481ab1cef1e4ddb7fc1bab68e9e3581be2a733772a3bf",
+              "taskDefinitionHash": "sha256:ae905891f2dc852ed5d5bce9fda5ed0c833d275728664b8c9999c13c8ddb829e",
+              "publicContextHash": "sha256:c42a3a1343d7d4b46a0f0d6e6b653010e669fe6f7768b7146103eed3a6eb82b9",
+              "plannedProviderCalls": 9,
+              "estimatedTokens": 18000
+            }
+          ]
+        },
+        {
+          "blockId": "task:50:block:2",
+          "sourceSelectionSeed": 10801,
+          "sourceSelectionKeyHash": "sha256:597bd82026e33d17802c4d75bb5ca950d102696959ef4216ebb19da2e81f27d4",
+          "sourceAgentId": "agent:hiddenbench:50:2",
+          "sourcePrivateInformationHash": "sha256:8d7db4353df22b25e12517f555e93b4a77a4a988f03fd1a143641dc32a4551a4",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-50:block-2:H",
+              "taskId": 50,
+              "leakageGroup": "secure-meeting-room",
+              "blockId": "task:50:block:2",
+              "arm": "holdout",
+              "order": 7,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10801,
+              "sourceSelectionKeyHash": "sha256:597bd82026e33d17802c4d75bb5ca950d102696959ef4216ebb19da2e81f27d4",
+              "sourceAgentId": "agent:hiddenbench:50:2",
+              "sourcePrivateInformationHash": "sha256:8d7db4353df22b25e12517f555e93b4a77a4a988f03fd1a143641dc32a4551a4",
+              "taskDefinitionHash": "sha256:5368d43b3d8402a57026192d1fe8d49f8bbb5c652526a8c429c3428990420c5e",
+              "publicContextHash": "sha256:a7e5a6056a7037d322b1e323cb1aff83614381a0bc96c761b02411ce63e1ae02",
+              "plannedProviderCalls": 9,
+              "estimatedTokens": 18000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-50:block-2:D",
+              "taskId": 50,
+              "leakageGroup": "secure-meeting-room",
+              "blockId": "task:50:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 15,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10801,
+              "sourceSelectionKeyHash": "sha256:597bd82026e33d17802c4d75bb5ca950d102696959ef4216ebb19da2e81f27d4",
+              "sourceAgentId": "agent:hiddenbench:50:2",
+              "sourcePrivateInformationHash": "sha256:8d7db4353df22b25e12517f555e93b4a77a4a988f03fd1a143641dc32a4551a4",
+              "taskDefinitionHash": "sha256:51dbd63c7bdb0a77e0e28b6d2c7882565e81b4e54c20409eab944fe26aacb02d",
+              "publicContextHash": "sha256:9d26a91f62ae9ada4502cb16021b924cddc032b9d6366d9700cefb07620fd053",
+              "plannedProviderCalls": 9,
+              "estimatedTokens": 18000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 55,
+      "leakageGroup": "urgent-transfer",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-55-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:55:block:1",
+          "sourceSelectionSeed": 10900,
+          "sourceSelectionKeyHash": "sha256:11fbdcd3a038175b8347a626bb1426f862002ad598ee5dff52b4b551f5956ef8",
+          "sourceAgentId": "agent:hiddenbench:55:4",
+          "sourcePrivateInformationHash": "sha256:b4175ec123113911c92d9c0f0a1f28b3e7262b1d02271752a5a9bf824fe7c9a5",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-55:block-1:H",
+              "taskId": 55,
+              "leakageGroup": "urgent-transfer",
+              "blockId": "task:55:block:1",
+              "arm": "holdout",
+              "order": 24,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 4,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10900,
+              "sourceSelectionKeyHash": "sha256:11fbdcd3a038175b8347a626bb1426f862002ad598ee5dff52b4b551f5956ef8",
+              "sourceAgentId": "agent:hiddenbench:55:4",
+              "sourcePrivateInformationHash": "sha256:b4175ec123113911c92d9c0f0a1f28b3e7262b1d02271752a5a9bf824fe7c9a5",
+              "taskDefinitionHash": "sha256:1ade17408b6956aced5b42d7d3aae07662d3d0f9ef1c7db1ea308d62b18a5ad7",
+              "publicContextHash": "sha256:3d0b6f12d4ae5135532417e6fec159eb61c72ee09ea413561e8b8df5cbc2905d",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-55:block-1:D",
+              "taskId": 55,
+              "leakageGroup": "urgent-transfer",
+              "blockId": "task:55:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 27,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10900,
+              "sourceSelectionKeyHash": "sha256:11fbdcd3a038175b8347a626bb1426f862002ad598ee5dff52b4b551f5956ef8",
+              "sourceAgentId": "agent:hiddenbench:55:4",
+              "sourcePrivateInformationHash": "sha256:b4175ec123113911c92d9c0f0a1f28b3e7262b1d02271752a5a9bf824fe7c9a5",
+              "taskDefinitionHash": "sha256:42e6b5ea738654209e4700df53ae87c9e1ffac0d709791e9bae36ec4a6d11199",
+              "publicContextHash": "sha256:926a29c165ab117e0e4ebb6557dbf7620cde4db2e41ee0ff5c3c4ac5e0cd5b75",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:55:block:2",
+          "sourceSelectionSeed": 10901,
+          "sourceSelectionKeyHash": "sha256:8444fb80cd7bb0702509bb840672e31939736d7546c7691081fdee61067c72ea",
+          "sourceAgentId": "agent:hiddenbench:55:1",
+          "sourcePrivateInformationHash": "sha256:2a0aa1fd7a1982b340a2d3af71035762532015e51f5cc62f0e1dbb6a3d738343",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-55:block-2:H",
+              "taskId": 55,
+              "leakageGroup": "urgent-transfer",
+              "blockId": "task:55:block:2",
+              "arm": "holdout",
+              "order": 19,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 3,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10901,
+              "sourceSelectionKeyHash": "sha256:8444fb80cd7bb0702509bb840672e31939736d7546c7691081fdee61067c72ea",
+              "sourceAgentId": "agent:hiddenbench:55:1",
+              "sourcePrivateInformationHash": "sha256:2a0aa1fd7a1982b340a2d3af71035762532015e51f5cc62f0e1dbb6a3d738343",
+              "taskDefinitionHash": "sha256:1ade17408b6956aced5b42d7d3aae07662d3d0f9ef1c7db1ea308d62b18a5ad7",
+              "publicContextHash": "sha256:3d0b6f12d4ae5135532417e6fec159eb61c72ee09ea413561e8b8df5cbc2905d",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-screen-v1:task-55:block-2:D",
+              "taskId": 55,
+              "leakageGroup": "urgent-transfer",
+              "blockId": "task:55:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 3,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10901,
+              "sourceSelectionKeyHash": "sha256:8444fb80cd7bb0702509bb840672e31939736d7546c7691081fdee61067c72ea",
+              "sourceAgentId": "agent:hiddenbench:55:1",
+              "sourcePrivateInformationHash": "sha256:2a0aa1fd7a1982b340a2d3af71035762532015e51f5cc62f0e1dbb6a3d738343",
+              "taskDefinitionHash": "sha256:49bc3a8df10d9d07673dab0d5c92b4198ee5c164f9991717c940a71b2264716a",
+              "publicContextHash": "sha256:bb677de5678340d1734c9d4cb2e2ebf2185097665065f7549f9d4c1e42705d06",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "totalRuns": 40,
+  "totalPlannedProviderCalls": 456,
+  "totalEstimatedTokens": 912000,
+  "analysisContract": {
+    "id": "swarmalpha.analysis.v6-source-disclosure-screen-v1",
+    "version": "1.0.0",
+    "clusterUnit": "leakage_group",
+    "bootstrapCount": 10000,
+    "ci": 0.95,
+    "missingnessPolicy": "reference_distribution_for_non_answered"
+  },
+  "createdAt": "2026-08-14T00:00:00.000Z",
+  "contentHash": "sha256:2cbb8699f7b008121c88dc8c29447afc9022387081f61b76a7e8b406265bd5db"
+}

@@ -1543,3 +1543,5 @@ export * from "./actionLifecycle";
 export * from "./standardEpistemicActions";
 export * from "./epistemicEligibilityRules";
 export * from "./eventAssignment";
+export * from "./activeInformationGovernance";
+export * from "./activeInformationControl";

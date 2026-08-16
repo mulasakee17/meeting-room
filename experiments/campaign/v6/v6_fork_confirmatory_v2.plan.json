@@ -1,0 +1,341 @@
+{
+  "experimentRef": {
+    "id": "swarmalpha.experiment.v6-fork-v1",
+    "version": "2.0.0"
+  },
+  "profile": "fork-v1",
+  "taskIds": [
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    25,
+    26,
+    27,
+    29,
+    30,
+    31,
+    34,
+    35,
+    36,
+    37,
+    38,
+    40,
+    41,
+    42,
+    43,
+    44,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65
+  ],
+  "seeds": [
+    0
+  ],
+  "arms": [
+    "CONTROL",
+    "SUPPORTS",
+    "ATTACKS"
+  ],
+  "model": "deepseek:deepseek-chat",
+  "agentCount": 4,
+  "plannedProviderCallsPerRun": 28,
+  "runs": [
+    {
+      "runId": "run:fork-v1:task-14:seed-0",
+      "taskId": 14,
+      "seed": 0,
+      "order": 1
+    },
+    {
+      "runId": "run:fork-v1:task-15:seed-0",
+      "taskId": 15,
+      "seed": 0,
+      "order": 2
+    },
+    {
+      "runId": "run:fork-v1:task-16:seed-0",
+      "taskId": 16,
+      "seed": 0,
+      "order": 3
+    },
+    {
+      "runId": "run:fork-v1:task-17:seed-0",
+      "taskId": 17,
+      "seed": 0,
+      "order": 4
+    },
+    {
+      "runId": "run:fork-v1:task-18:seed-0",
+      "taskId": 18,
+      "seed": 0,
+      "order": 5
+    },
+    {
+      "runId": "run:fork-v1:task-19:seed-0",
+      "taskId": 19,
+      "seed": 0,
+      "order": 6
+    },
+    {
+      "runId": "run:fork-v1:task-20:seed-0",
+      "taskId": 20,
+      "seed": 0,
+      "order": 7
+    },
+    {
+      "runId": "run:fork-v1:task-21:seed-0",
+      "taskId": 21,
+      "seed": 0,
+      "order": 8
+    },
+    {
+      "runId": "run:fork-v1:task-22:seed-0",
+      "taskId": 22,
+      "seed": 0,
+      "order": 9
+    },
+    {
+      "runId": "run:fork-v1:task-23:seed-0",
+      "taskId": 23,
+      "seed": 0,
+      "order": 10
+    },
+    {
+      "runId": "run:fork-v1:task-25:seed-0",
+      "taskId": 25,
+      "seed": 0,
+      "order": 11
+    },
+    {
+      "runId": "run:fork-v1:task-26:seed-0",
+      "taskId": 26,
+      "seed": 0,
+      "order": 12
+    },
+    {
+      "runId": "run:fork-v1:task-27:seed-0",
+      "taskId": 27,
+      "seed": 0,
+      "order": 13
+    },
+    {
+      "runId": "run:fork-v1:task-29:seed-0",
+      "taskId": 29,
+      "seed": 0,
+      "order": 14
+    },
+    {
+      "runId": "run:fork-v1:task-30:seed-0",
+      "taskId": 30,
+      "seed": 0,
+      "order": 15
+    },
+    {
+      "runId": "run:fork-v1:task-31:seed-0",
+      "taskId": 31,
+      "seed": 0,
+      "order": 16
+    },
+    {
+      "runId": "run:fork-v1:task-34:seed-0",
+      "taskId": 34,
+      "seed": 0,
+      "order": 17
+    },
+    {
+      "runId": "run:fork-v1:task-35:seed-0",
+      "taskId": 35,
+      "seed": 0,
+      "order": 18
+    },
+    {
+      "runId": "run:fork-v1:task-36:seed-0",
+      "taskId": 36,
+      "seed": 0,
+      "order": 19
+    },
+    {
+      "runId": "run:fork-v1:task-37:seed-0",
+      "taskId": 37,
+      "seed": 0,
+      "order": 20
+    },
+    {
+      "runId": "run:fork-v1:task-38:seed-0",
+      "taskId": 38,
+      "seed": 0,
+      "order": 21
+    },
+    {
+      "runId": "run:fork-v1:task-40:seed-0",
+      "taskId": 40,
+      "seed": 0,
+      "order": 22
+    },
+    {
+      "runId": "run:fork-v1:task-41:seed-0",
+      "taskId": 41,
+      "seed": 0,
+      "order": 23
+    },
+    {
+      "runId": "run:fork-v1:task-42:seed-0",
+      "taskId": 42,
+      "seed": 0,
+      "order": 24
+    },
+    {
+      "runId": "run:fork-v1:task-43:seed-0",
+      "taskId": 43,
+      "seed": 0,
+      "order": 25
+    },
+    {
+      "runId": "run:fork-v1:task-44:seed-0",
+      "taskId": 44,
+      "seed": 0,
+      "order": 26
+    },
+    {
+      "runId": "run:fork-v1:task-46:seed-0",
+      "taskId": 46,
+      "seed": 0,
+      "order": 27
+    },
+    {
+      "runId": "run:fork-v1:task-47:seed-0",
+      "taskId": 47,
+      "seed": 0,
+      "order": 28
+    },
+    {
+      "runId": "run:fork-v1:task-48:seed-0",
+      "taskId": 48,
+      "seed": 0,
+      "order": 29
+    },
+    {
+      "runId": "run:fork-v1:task-49:seed-0",
+      "taskId": 49,
+      "seed": 0,
+      "order": 30
+    },
+    {
+      "runId": "run:fork-v1:task-50:seed-0",
+      "taskId": 50,
+      "seed": 0,
+      "order": 31
+    },
+    {
+      "runId": "run:fork-v1:task-51:seed-0",
+      "taskId": 51,
+      "seed": 0,
+      "order": 32
+    },
+    {
+      "runId": "run:fork-v1:task-52:seed-0",
+      "taskId": 52,
+      "seed": 0,
+      "order": 33
+    },
+    {
+      "runId": "run:fork-v1:task-53:seed-0",
+      "taskId": 53,
+      "seed": 0,
+      "order": 34
+    },
+    {
+      "runId": "run:fork-v1:task-55:seed-0",
+      "taskId": 55,
+      "seed": 0,
+      "order": 35
+    },
+    {
+      "runId": "run:fork-v1:task-56:seed-0",
+      "taskId": 56,
+      "seed": 0,
+      "order": 36
+    },
+    {
+      "runId": "run:fork-v1:task-57:seed-0",
+      "taskId": 57,
+      "seed": 0,
+      "order": 37
+    },
+    {
+      "runId": "run:fork-v1:task-58:seed-0",
+      "taskId": 58,
+      "seed": 0,
+      "order": 38
+    },
+    {
+      "runId": "run:fork-v1:task-59:seed-0",
+      "taskId": 59,
+      "seed": 0,
+      "order": 39
+    },
+    {
+      "runId": "run:fork-v1:task-60:seed-0",
+      "taskId": 60,
+      "seed": 0,
+      "order": 40
+    },
+    {
+      "runId": "run:fork-v1:task-61:seed-0",
+      "taskId": 61,
+      "seed": 0,
+      "order": 41
+    },
+    {
+      "runId": "run:fork-v1:task-62:seed-0",
+      "taskId": 62,
+      "seed": 0,
+      "order": 42
+    },
+    {
+      "runId": "run:fork-v1:task-63:seed-0",
+      "taskId": 63,
+      "seed": 0,
+      "order": 43
+    },
+    {
+      "runId": "run:fork-v1:task-64:seed-0",
+      "taskId": 64,
+      "seed": 0,
+      "order": 44
+    },
+    {
+      "runId": "run:fork-v1:task-65:seed-0",
+      "taskId": 65,
+      "seed": 0,
+      "order": 45
+    }
+  ],
+  "totalRuns": 45,
+  "totalPlannedProviderCalls": 1260,
+  "createdAt": "2026-08-15T00:00:00.000Z",
+  "contentHash": "sha256:c112b677f4da09a3abdbd79f1eb0dda004ca3abaf2e5a572bb8b541a4a62933f"
+}

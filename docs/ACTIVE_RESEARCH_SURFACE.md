@@ -1,7 +1,7 @@
 # SwarmAlpha Active Research Surface
 
 Status: normative repository navigation map
-Date: 2026-08-13
+Date: 2026-08-14
 
 This document identifies the current research authority. It is a navigation
 contract, not evidence that the proposed measurements or interventions are
@@ -11,12 +11,23 @@ implementation and replayable artifacts, follow the evidence hierarchy in
 
 ## 1. Current research question
 
-**HYPOTHESIS** — Under a fixed compute budget, explicit and auditable epistemic
-state plus preregistered verification or resource-allocation policies may
-improve independently evaluated collective decision quality.
+**HYPOTHESIS** — Under a strict online/offline truth firewall, observable
+pre-action micro-level reports and information flow may define a low-dimensional
+collective state that predicts when an independently randomized information
+intervention helps, does nothing, or harms final decision quality.
 
-The current empirical priority is measurement validity. Governance is an object
-being evaluated; positive governance effects are not assumed.
+The current empirical priority is the zero-provider social-thermodynamic
+response audit defined by
+[`theory/SOCIAL_THERMODYNAMIC_RESPONSE_RESEARCH_CONTRACT_V1.md`](theory/SOCIAL_THERMODYNAMIC_RESPONSE_RESEARCH_CONTRACT_V1.md).
+The frozen task-heldout verification replication is `DEFER`: observed
+apply-minus-holdout pooled Brier was `+0.0985`, opposite the favorable
+development direction, with interval `[-0.3697, +0.7424]`. The earlier
+four-feature failure predictor is also `DEFER`. Therefore no process-state
+predictor, thermodynamic projection, active-information kernel, or selective
+router has control permission.
+
+The current route and methodological boundaries are summarized in
+[`research/CURRENT_ROUTE_AND_METHODOLOGY.md`](research/CURRENT_ROUTE_AND_METHODOLOGY.md).
 
 ## 2. Authoritative path
 
@@ -32,10 +43,13 @@ Research and measurement contracts
 | Role | Authoritative location | Current status |
 |---|---|---|
 | reasoning discipline | `docs/REASONING_PROTOCOL.md` | normative |
-| strategic scope | `docs/strategy/SWARMALPHA_WHITEPAPER_V1.md` | current design/research narrative; claims remain evidence-bounded |
-| research contract | `docs/theory/HETEROGENEOUS_EPISTEMIC_GOVERNANCE_RESEARCH_CONTRACT_V1.md` | current hypothesis and estimand boundary |
+| current route/methodology | `docs/research/CURRENT_ROUTE_AND_METHODOLOGY.md` | current research authority |
+| strategic scope | `docs/strategy/SWARMALPHA_WHITEPAPER_V1.md` | long-term design narrative; not current empirical status |
+| active research contract | `docs/theory/SOCIAL_THERMODYNAMIC_RESPONSE_RESEARCH_CONTRACT_V1.md` | current hypothesis, state, response, and stop/go boundary |
+| future heterogeneous-governance contract | `docs/theory/HETEROGENEOUS_EPISTEMIC_GOVERNANCE_RESEARCH_CONTRACT_V1.md` | future hypothesis; does not govern the first-paper experiment |
 | epistemic state kernel | `src/lib/epistemic/` | implemented and deterministically tested; not direct access to latent belief |
 | governance control kernel | `src/lib/governance/` | implemented and deterministically tested; empirical efficacy not established |
+| truth-blind active information kernel | `src/lib/governance/activeInformationGovernance.ts` | core semantics implemented; adversarial tests + deterministic offline fixture (`experiments/campaign/v6/truthBlindPolicyFixtureV1.ts`) added; no production Runner connection or empirical validity |
 | experimental authority | `src/lib/experimentation/` | implemented and replay-oriented |
 | V6 execution | `experiments/campaign/v6/` | current schema-5 execution path |
 | measurement validity | `experiments/campaign/measurement/` | authority, analysis, runner, and development wiring implemented |
@@ -93,21 +107,29 @@ audit.
 These may illustrate earlier product ambitions. They are not evidence for the
 current paper and are not the default research runtime.
 
-### FUTURE_THEORY
+### ACTIVE_THEORY_AND_FUTURE_EXTENSIONS
 
-Social thermodynamics remains a future macro-theory candidate. Existing
-entropy/temperature/free-energy implementations are not automatically valid
-constructs or control signals. The intended relationship is:
+Social thermodynamics is now the active scientific lens for a zero-provider
+state-response audit. Existing legacy entropy/temperature/free-energy
+implementations are not automatically valid constructs or control signals. The
+current relationship is:
 
 ```text
-auditable microstate
+auditable pre-action microstate
   -> frozen macro projection
-  -> predictive/incremental validity test
-  -> optional detector permission
-  -> optional control permission
+  -> randomized intervention response
+  -> development-to-heldout falsification
+  -> optional one-pilot permission
 ```
 
-Until those gates pass, macro quantities are descriptive or exploratory only.
+Until those gates pass, `R/T/H_E/G_E/kappa` are descriptive or exploratory
+only. No universal free-energy score is authorized.
+
+The earlier no-ground-truth and heterogeneous-governance contracts remain
+supporting/future theory. The active contract is
+[`theory/SOCIAL_THERMODYNAMIC_RESPONSE_RESEARCH_CONTRACT_V1.md`](theory/SOCIAL_THERMODYNAMIC_RESPONSE_RESEARCH_CONTRACT_V1.md).
+Declared or verified-distinct source identity is not statistical independence,
+and public-only reanalysis is not independent verification.
 
 ## 4. Supported commands
 
@@ -179,5 +201,6 @@ measurement characterization, and exploratory observations under recorded
 conditions.
 
 It does not yet establish general measurement validity, general governance
-efficacy, latent-belief access, tamper-proof external provenance, or a universal
-runtime for heterogeneous intelligence.
+efficacy, source-error independence, latent-belief access, tamper-proof external
+provenance, marginal cognitive value, or a universal runtime for heterogeneous
+intelligence.

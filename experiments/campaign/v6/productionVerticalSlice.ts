@@ -306,6 +306,8 @@ export interface V6ProductionVerticalSliceInput {
   governanceRule: GovernanceEligibilityRule;
   interventionContracts: InterventionContract[];
   verificationAdapter?: V6VerificationAdapterV1;
+  /** Optional cross-evidence exchange selector (experiment-side, zero provider). */
+  crossEvidenceSelector?: CrossEvidenceSelectorV1;
   clock?: () => string;
 }
 
@@ -335,6 +337,48 @@ const VERIFICATION_RESULT_EVENT_REF_V2 = Object.freeze({
   id: "swarmalpha.event.verification-result" as const,
   version: "2.0.0" as const,
 });
+
+/**
+ * Cross-evidence exchange (experiment-side, owner 2026-08-14). A zero-provider,
+ * deterministic governance action: on strong round-1 disagreement, the injected
+ * selector surfaces each side's registered supporting evidence to the group.
+ * The slice only recognizes the actionRef and delegates the content to the
+ * optional `crossEvidenceSelector` callback; it never implements the selection.
+ */
+export const CROSS_EVIDENCE_EXCHANGE_ACTION_REF = Object.freeze({
+  id: "swarmalpha.action.cross-evidence-exchange" as const,
+  version: "1.0.0" as const,
+});
+/**
+ * Dedicated diagnosis for the exchange experiment's disagreement gate. It is
+ * distinct from the legacy high-certainty/insufficient-lineage diagnosis: the
+ * exchange eligibility reads only the aggregate round-1 max pairwise TV, never
+ * reported certainty or lineage.
+ */
+export const HIGH_DISAGREEMENT_DIAGNOSIS_REF = Object.freeze({
+  id: "swarmalpha.risk.high-round1-disagreement" as const,
+  version: "1.0.0" as const,
+});
+export const ROUND1_MAX_PAIRWISE_TV_QUANTITY_REF = Object.freeze({
+  id: "swarmalpha.quantity.round1-max-pairwise-tv" as const,
+  version: "1.0.0" as const,
+});
+const CROSS_EVIDENCE_EXCHANGE_EVENT_REF = Object.freeze({
+  id: "swarmalpha.event.cross-evidence-exchange" as const,
+  version: "1.0.0" as const,
+});
+
+export interface CrossEvidenceSelectorInputV1 {
+  runId: string;
+  round1Reports: Array<{
+    agentId: string;
+    probabilities: Record<string, number>;
+    evidenceRefs: Array<{ evidenceId: string; relation: "supports" | "attacks" }>;
+  }>;
+  getEvidence: (evidenceId: string) => { content: string; contentHash: string } | undefined;
+}
+export type CrossEvidenceSelectorV1 = (input: CrossEvidenceSelectorInputV1) => string | null;
+
 const INTERACTION_TRACE_REF = Object.freeze({
   id: "swarmalpha.v6.interaction-trace" as const,
   version: "1.0.0" as const,
@@ -502,7 +546,7 @@ async function withTimeout<T>(timeoutMs: number, operation: (signal: AbortSignal
   }
 }
 
-interface ParsedBeliefResponse {
+export interface ParsedBeliefResponse {
   message: string;
   value: BeliefValue;
   evidence: Array<{ content: string; relation: "supports" | "attacks"; lineageId?: string }>;
@@ -516,7 +560,7 @@ type BeliefParseResult =
   | { ok: true; parsed: ParsedBeliefResponse }
   | { ok: false; code: BeliefParseFailureCode };
 
-function parseBeliefResponse(raw: string, claim: EpistemicClaim): BeliefParseResult {
+export function parseBeliefResponse(raw: string, claim: EpistemicClaim): BeliefParseResult {
   let value: unknown;
   try {
     value = JSON.parse(raw);
@@ -937,6 +981,26 @@ function validateCompletedArtifact(artifact: V6AuditableRawRunData, input: {
   }
   for (const event of toolResults) {
     const payload = event.payload;
+    // Cross-evidence exchange is a zero-provider delivery with no verification
+    // request: validate it directly (publicContent + transcript match).
+    if (event.eventRef.id === CROSS_EVIDENCE_EXCHANGE_EVENT_REF.id) {
+      if (typeof payload.actionInstanceId !== "string"
+        || typeof payload.publicContent !== "string"
+        || payload.publicContent.trim().length === 0
+        || Object.keys(payload).some(key => !["actionInstanceId", "actionRef", "complied", "publicContent"].includes(key))) {
+        throw new Error("v6 cross-evidence exchange payload is malformed");
+      }
+      const exchangeInstance = artifact.governanceAuditTrail.actionInstances
+        .find(candidate => candidate.id === payload.actionInstanceId);
+      if (!exchangeInstance) throw new Error("v6 cross-evidence exchange cannot be linked to its action instance");
+      const expectedExchangeAgentId = `governance:${governanceRefKey(exchangeInstance.actionRef)}`;
+      if (!governanceMessages.some(message =>
+        message.round === event.round && message.agentId === expectedExchangeAgentId
+        && message.content === payload.publicContent)) {
+        throw new Error("v6 cross-evidence exchange differs from the public governance transcript");
+      }
+      continue;
+    }
     const actionInstanceId = payload.actionInstanceId;
     const requestId = payload.requestId;
     const requestHash = payload.requestHash;
@@ -1084,7 +1148,7 @@ function publishCompletedArtifact(input: {
   return { ...persisted, reused: false };
 }
 
-function createEvidenceAndReferences(input: {
+export function createEvidenceAndReferences(input: {
   runId: string;
   round: number;
   agentId: string;
@@ -1118,6 +1182,8 @@ function buildGovernanceDiagnosis(input: {
   preregistrationRef: VersionedGovernanceRef;
   verifierAvailable: boolean;
   verifiedIndependentLineageCount: number;
+  /** Aggregate round-1 pairwise total variation over all reports; NaN when <2 categorical reports. */
+  maxPairwiseTV: number;
   createdAt: string;
 }): GovernanceDiagnosisRecord {
   if (input.report.claimId !== input.claim.id) {
@@ -1140,7 +1206,60 @@ function buildGovernanceDiagnosis(input: {
       claimResolved: false,
       verifierAvailable: input.verifierAvailable,
       verifiedIndependentLineageCount: input.verifiedIndependentLineageCount,
+      maxPairwiseTV: input.maxPairwiseTV,
       lineageMeasurementRef: structuredClone(V6_VERIFIED_LINEAGE_MEASUREMENT_V1),
+    },
+    targetIds: [input.report.agentId],
+    sourceObservationIds: [input.observationId],
+    measurement: {
+      observationCompleteness: "complete",
+      missingFields: [],
+      measurementReliability: {
+        status: "estimated",
+        score: 1,
+        methodRef: { id: "swarmalpha.measurement.architecture-observed-report", version: "1.0.0" },
+      },
+      constructValidity: "predictive_candidate",
+    },
+    controlEvidence: {
+      status: "experimental_candidate",
+      controlUse: "randomized_experiment_only",
+      preregistrationRef: structuredClone(input.preregistrationRef),
+    },
+    createdAt: input.createdAt,
+  };
+  validateGovernanceDiagnosis(diagnosis);
+  return diagnosis;
+}
+
+/**
+ * Exchange-only diagnosis: records the aggregate round-1 max pairwise total
+ * variation as the gate quantity. Built only when a crossEvidenceSelector is
+ * injected, so the verdict/disclosure experiments (which never inject it) keep
+ * their frozen single-diagnosis audit shape byte-for-byte.
+ */
+function buildDisagreementDiagnosis(input: {
+  report: BeliefReport;
+  claimId: string;
+  observationId: string;
+  preregistrationRef: VersionedGovernanceRef;
+  maxPairwiseTV: number;
+  createdAt: string;
+}): GovernanceDiagnosisRecord {
+  const diagnosis: GovernanceDiagnosisRecord = {
+    id: `diagnosis:${input.report.id}:disagreement`,
+    diagnosisRef: structuredClone(HIGH_DISAGREEMENT_DIAGNOSIS_REF),
+    quantityRef: structuredClone(ROUND1_MAX_PAIRWISE_TV_QUANTITY_REF),
+    round: input.report.round,
+    label: "High round-1 pairwise disagreement",
+    interpretation: "descriptive_risk",
+    value: input.maxPairwiseTV,
+    attributes: {
+      claimId: input.claimId,
+      beliefReportId: input.report.id,
+      beliefKind: "categorical",
+      claimResolved: false,
+      maxPairwiseTV: input.maxPairwiseTV,
     },
     targetIds: [input.report.agentId],
     sourceObservationIds: [input.observationId],
@@ -1532,6 +1651,28 @@ export async function runV6ProductionVerticalSlice(
         // records. Therefore self-declared lineage ids correctly contribute 0.
         verifiedEvidenceIds: [],
       });
+      // Aggregate round-1 disagreement: max pairwise total variation over all
+      // categorical round-1 reports. Deterministic and outcome-free; a frozen
+      // eligibility rule can read this to trigger the cross-evidence exchange.
+      const probsOf = (report: BeliefReport): Record<string, number> => report.value.kind === "categorical" ? report.value.probabilities : {};
+      const categoricalReports = firstRoundReports.filter(report => report.value.kind === "categorical");
+      // Finite convention: 0 when fewer than two categorical reports exist (no
+      // measured categorical pairwise disagreement); the exchange is categorical-only.
+      let maxPairwiseTV = 0;
+      if (categoricalReports.length >= 2) {
+        let best = 0;
+        for (let i = 0; i < categoricalReports.length; i++) {
+          for (let j = i + 1; j < categoricalReports.length; j++) {
+            const pi = probsOf(categoricalReports[i]);
+            const pj = probsOf(categoricalReports[j]);
+            const keys = new Set([...Object.keys(pi), ...Object.keys(pj)]);
+            let tv = 0;
+            for (const key of keys) tv += Math.abs((pi[key] ?? 0) - (pj[key] ?? 0));
+            best = Math.max(best, 0.5 * tv);
+          }
+        }
+        maxPairwiseTV = best;
+      }
       const sourceBase = {
         eventRef: { id: "swarmalpha.event.architecture-belief-report", version: "1.0.0" },
         kind: "belief_report" as const,
@@ -1572,11 +1713,25 @@ export async function runV6ProductionVerticalSlice(
         preregistrationRef: input.study.preregistrationRef!,
         verifierAvailable: Boolean(input.verificationAdapter),
         verifiedIndependentLineageCount,
+        maxPairwiseTV,
         createdAt: clock.next("governance diagnosis createdAt"),
       });
+      // Exchange-only: record the disagreement gate as its own diagnosis rather
+      // than borrowing the certainty/lineage diagnosis's maxPairwiseTV attribute.
+      const disagreementDiagnosis = input.crossEvidenceSelector
+        ? buildDisagreementDiagnosis({
+            report: target,
+            claimId: input.task.claim.id,
+            observationId: observation.id,
+            preregistrationRef: input.study.preregistrationRef!,
+            maxPairwiseTV,
+            createdAt: clock.next("governance disagreement diagnosis createdAt"),
+          })
+        : null;
+      const diagnoses = disagreementDiagnosis ? [diagnosis, disagreementDiagnosis] : [diagnosis];
       const decisionBase = {
         policy,
-        diagnoses: [diagnosis],
+        diagnoses,
         availableBudget: { modelCalls: 1, tokenBudget: 300 },
         round: 1,
         sourceEventIds: [observation.id],
@@ -1587,7 +1742,7 @@ export async function runV6ProductionVerticalSlice(
         decidedAt: clock.next("governance eligibility decidedAt"),
       });
       const auditBatch: Parameters<GovernanceAuditTrailBuilder["commit"]>[0] = {
-        sourceEvents: [sourceEvent], observations: [observation], diagnoses: [diagnosis], decisions: [eligibilityDecision],
+        sourceEvents: [sourceEvent], observations: [observation], diagnoses, decisions: [eligibilityDecision],
       };
       if (eligibilityDecision.outcome === "awaiting_assignment") {
         const eventAssignment = createGovernanceEventAssignment({
@@ -1650,6 +1805,51 @@ export async function runV6ProductionVerticalSlice(
         } else {
           addTransition("eligible", "assigned");
           addTransition("assigned", "queued");
+          if (instance.actionRef.id === CROSS_EVIDENCE_EXCHANGE_ACTION_REF.id) {
+            if (!input.crossEvidenceSelector) throw new Error("cross-evidence exchange requires an injected crossEvidenceSelector");
+            const message = input.crossEvidenceSelector({
+              runId: input.runId,
+              round1Reports: firstRoundReports
+                .filter(report => report.value.kind === "categorical")
+                .map(report => ({
+                  agentId: report.agentId,
+                  probabilities: report.value.kind === "categorical" ? report.value.probabilities : {},
+                  evidenceRefs: (report.evidence ?? []).map(ref => ({ evidenceId: ref.evidenceId, relation: ref.relation })),
+                })),
+              getEvidence: (evidenceId) => {
+                const evidence = ledger.getEvidence(evidenceId);
+                return evidence ? { content: evidence.content, contentHash: evidence.provenance.contentHash } : undefined;
+              },
+            });
+            if (!message || message.trim().length === 0) throw new Error("cross-evidence exchange produced empty message");
+            const exchangeBase = {
+              eventRef: CROSS_EVIDENCE_EXCHANGE_EVENT_REF,
+              kind: "tool_result" as const,
+              round: 2,
+              payload: {
+                actionInstanceId: instance.id,
+                actionRef: structuredClone(instance.actionRef),
+                complied: true,
+                publicContent: message,
+              },
+            };
+            const exchangeEvent: GovernanceSourceEvent = {
+              id: `governance-source:${input.runId}:${instance.id}`,
+              ...exchangeBase,
+              contentHash: computeGovernanceSourceEventHash(exchangeBase),
+              recordedAt: clock.next("cross-evidence exchange recordedAt"),
+            };
+            auditBatch.sourceEvents!.push(exchangeEvent);
+            addTransition("queued", "delivered", { sourceEventIds: [exchangeEvent.id] });
+            addTransition("delivered", "compliance_observed", { sourceEventIds: [exchangeEvent.id], observation: { complied: true } });
+            addTransition("compliance_observed", "completed", { sourceEventIds: [exchangeEvent.id] });
+            transcript.push({
+              round: 2,
+              agentId: `governance:${governanceRefKey(instance.actionRef)}`,
+              content: message,
+              source: "governance",
+            });
+          } else {
           const verificationAdapter = input.verificationAdapter!;
           const matchedTokenBudget = selected.parameters.matchedTokenBudget;
           if (!Number.isSafeInteger(matchedTokenBudget) || (matchedTokenBudget as number) < 0) {
@@ -1749,6 +1949,7 @@ export async function runV6ProductionVerticalSlice(
               content: deliveredContent,
               source: "governance",
             });
+          }
           }
         }
         auditBatch.actionInstances = [instance];

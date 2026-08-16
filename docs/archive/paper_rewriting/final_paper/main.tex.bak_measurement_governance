@@ -1,0 +1,509 @@
+\\documentclass[11pt,a4paper]{ctexart}
+\\usepackage[margin=2.2cm]{geometry}
+\\usepackage{amsmath,amssymb,booktabs,longtable,hyperref,xcolor}
+\\setlength{\\parindent}{2em}
+\\setlength{\\parskip}{0.35em}
+\\titleformat{\\section}{\\Large\\bfseries\\color{blue!45!black}}{\\thesection}{0.6em}{}
+\\begin{document}
+\title{SwarmAlpha：从提示词条件化显式信念到可审计认知治理}
+\author{Anonymous for review}
+\date{2026-08-13}
+\maketitle
+
+\section{多智能体集体决策的测量优先方法与研究白皮书}
+
+\textbf{稿件性质：} AAMAS 长文逻辑的中文研究白皮书/论文初稿  
+\textbf{版本日期：} 2026-08-13  
+\textbf{证据状态：} 方法与内部重放已实现；测量效度与 detector validity 仍在验证；已有局部探索性治理信号，尚无 task-held-out 确认
+
+\section{摘要}
+
+多智能体大语言模型系统既可能整合分散信息，也可能因共同模型偏差、提示词依赖和相互暴露而形成相关错误与虚假共识。一个常见做法是要求 Agent 自报 confidence、概率或 evidence，再据此加权、验证或分配计算预算。但这些字段不是从模型内部状态直接读取的量，而是在特定提示词、信息视图、选项顺序、模型版本和解析规则下生成的协议条件化观测。结构合法、公式可算或记录可重放，均不能单独证明该观测稳定、响应证据、预测结果或适合控制。
+
+本文提出 SwarmAlpha，一种测量优先的多智能体认知治理方法。我们把冻结的 claim 与结果空间、逐字 elicitation contract、模型自报概率、架构记录的 exposure、系统派生量、authorized resolution 和治理状态分层表示，并建立一条权限递增的资格链：结构资格（Q0）、响应资格（Q1）、结果资格（Q2）和适用域刻画（Q3）。这些资格决定一个量能否被解释为测量或用于运行时控制。一个尚未授权为 detector 的候选规则，仍可在预先冻结、随机化、truth-blind-at-runtime 的机制实验中作为受限的 eligibility stratifier；这种实验性使用不授予部署控制权。治理效果最终由讨论结束后的 private、arm-invariant 概率报告和 proper loss 评价，而不是由共识、verdict 或影响分布代替。
+
+在一个冻结的 80-run 探索实验中，全部 artifact 通过 schema-5 decision replay；154 个注册的首轮显式报告中，142 个合法，valid coverage 为 0.9221。Exact-repeat 配对的 median Jensen--Shannon divergence 为 0.0050，但 P90 为 0.1348，argmax 一致率为 0.7727，因此只能支持初步重复稳定性。K=3 报告的 mean multiclass Brier loss 为 0.9275，ECE 为 0.4046；预置的 certainty>=0.7 flag 反而对应更高错误率（0.7436 对 0.4884）。原始治理批次仅有 2 个 holdout，按冻结停止规则为 `DEFER_INSUFFICIENT`。随后以新 run identity 续跑的 75 个 G runs 与原批次合并后，eligible apply/holdout 为 41/11，apply-minus-holdout pooled Brier 的 cluster-bootstrap 95\% interval 为 $[-0.5813,0.0033]$。这是在当前任务、模型、提示词与公开信息复核动作下值得 task-held-out 复验的方向性信号，而非已建立的治理效果、detector validity 或机制分解。这个序列说明：可审计性是科学推断的必要条件，却不是测量效度或治理效果的替代品。
+
+\textbf{关键词：} 多智能体系统；大语言模型；认知治理；测量效度；显式概率报告；校准；因果识别；可重放实验
+
+\section{1. 引言}
+
+多 Agent 讨论的直觉很有吸引力：不同实例提出答案、相互批评并修订，或许能够抵消单个模型的盲点。已有研究确实在部分数学、事实与策略任务上观察到收益；但更广泛的比较也发现，多 Agent debate 并不稳定优于 self-consistency 等强单体基线，并且对模型、提示词、轮数和预算十分敏感 \cite{du2024debate,smit2024mad}。在 hidden-profile 任务中，Agent 还必须整合各自私有信息；此时多数意见可能来自共享偏差，而不是独立证据 \cite{li2025hiddenbench}。因此，“更多 Agent”本身既不是正确性的证明，也不是治理机制。
+
+困难随之从答案聚合转向一个更基础的问题：系统用什么量判断何时应继续讨论、调用验证器、保护少数派或停止计算？现在常见的候选信号包括 verbalized confidence、概率分布、证据条数、一致率和 judge verdict。它们都易于取得，却具有不同的认识论身份。模型输出的 0.8 是一次自报；由概率向量计算的 entropy 是派生描述；prompt 中真正交付给 Agent 的消息是架构遥测；resolved outcome 上的 Brier loss 才是结果量。若把这些对象统称为“信念”或“置信度”，系统就可能用一个尚未验证的观测去决定谁更有发言权，从而把 miscalibration 放大为控制错误。
+
+本文把研究问题压缩为：
+
+> 在冻结的 claim、信息视图和提示词条件下，LLM 生成的显式概率报告需要通过哪些验证，才有资格进入多智能体诊断与随机治理？
+
+这个问题不预设治理一定有效。相反，治理是资格链末端的被测对象。SwarmAlpha 的贡献有三点。
+
+1. \textbf{测量对象与权限分层。} 我们将提示词工件、LLM 自报字段、架构遥测、系统派生量、结果量和潜在构念分开，形式化 prompt-conditioned reported distribution，并给每种量规定允许与禁止的解释。
+2. \textbf{从测量到治理的可审计资格链。} 我们定义 Q0--Q3 非补偿资格、detector 的 held-out 验证，以及 protocol-arm assignment 与 governance-action assignment 的双层随机化；完整链条以 append-only event、来源 hash、action lifecycle、private outcome 和 deterministic replay 约束。
+3. \textbf{不把工程完整性或序列探索升级为科学效果。} 原始 80-run 批次的治理主结果按规则为 DEFER；之后的 fresh-identity 续跑给出方向一致、但区间仍跨零的合并探索性信号。本文保留二者及其差异，因而不把候选 certainty rule 提升为已验证 detector，也不把局部差异写成一般治理改善。
+
+本文是一篇研究白皮书与论文初稿。当前实证足以说明方法可执行并暴露候选量的问题，但不足以支持通用测量效度、治理效果或异构智能资源配置结论。
+
+\section{2. 相关工作与未解决缺口}
+
+\subsection{2.1 多智能体讨论、聚合与失败}
+
+Multi-agent debate 让多个模型实例交换推理并修订答案；ReConcile 进一步结合异构模型与 confidence-weighted voting \cite{du2024debate,chen2024reconcile}。这些工作回答“某种协议能否提高最终准确率”，但通常不先验证 confidence 是否在该模型、任务和 prompt 下具有稳定含义。系统级失败研究则归纳了验证失败、角色错配和终止问题，表明过程分析不能只看最终答案 \cite{cemri2025failures}；failure taxonomy 的存在仍不自动提供有效 detector 或干预。
+
+通信拓扑研究还表明，Agent 实际看到哪些消息会改变协作表现 \cite{li2024sparse}。因此 exposure 不是日志中的附属字段，而是实验处理的一部分。仅从最终 transcript 反推“Agent 受到了某消息影响”会混淆交付、阅读、采纳与因果影响。
+
+\subsection{2.2 LLM 自报概率与不确定性}
+
+适当的提示格式可以让模型输出具有预测信息的 P(True) 或 P(IK)，但跨任务校准并不稳定 \cite{kadavath2022know}。后续研究进一步显示，直接询问、答案空间、措辞和其他 prompt 策略都会改变 verbalized confidence 的可靠性 \cite{tian2023calibration,yang2025verbalized}。这并不意味着自报量必然无效；它意味着自报量是一种需要按域验证的测量仪器输出，而不是模型内部“真实信念”的透明窗口。
+
+Sampling-based semantic entropy、生成一致性和辅助 confidence predictor 提供了不同的黑盒不确定性信号 \cite{kuhn2024semantic,xiao2025consistency}。SwarmAlpha 不预设自报概率优于这些方法；在 detector 实验中，它们应作为强基线。我们的差异不在于发明一个新的 uncertainty score，而在于规定任意候选 score 在获得控制权限前必须提供何种证据。
+
+\subsection{2.3 路由、异构协作与 provenance}
+
+RouteLLM、FrugalGPT 和 Mixture-of-Agents 已经研究了在质量、成本和模型能力之间分配调用 \cite{ong2025routellm,wang2024moa}。因此“把多个异构模型放在一起”不是本文的新颖性。更长期的 SwarmAlpha 将考虑当前 claim state、来源相关性和历史验证条件下的边际认知价值，但本文尚不估计这一量。
+
+Provenance 标准区分 entity、activity 与 derivation \cite{w3c2013prov}，为记录来源提供了通用语言；然而来源被记录不等于来源真实，也不等于证据支持命题。本文的 replay 证明 artifact 内部关系可重算，不声称外部时间戳、签名或事实真实性。
+
+\subsection{2.4 缺口：从观测到控制的资格链}
+
+现有工作分别覆盖 debate、confidence、failure taxonomy、routing、proper scoring 与 provenance。尚缺少的是把它们串成一个可证伪的权限问题：提示词条件化报告是否对 nuisance 稳定、是否对已知证据响应、是否对 held-out outcome 提供增量、detector 是否在未参与规则选择的数据上有效，以及随机交付的治理行动是否改善独立结果。SwarmAlpha 将这条链作为统一方法贡献。
+
+\section{3. 研究对象与量的认识论分层}
+
+\subsection{3.1 Claim-relative 状态}
+
+设任务注册一个 claim (c)，其 canonical outcome space 为 
+\(\Omega_c=\{\omega_1,\ldots,\omega_K\}\)。对于 agent \(i\)、轮次 \(t\) 与冻结 elicitation contract \(e\)，系统观测到报告
+
+\[
+\hat{\mathbf p}_{i,c,t}^{(e)}\in\Delta^{K-1}.
+\]
+
+帽号是必要的：它表示“在 contract \(e\) 下观察到的报告”，而不是潜在信念的无偏估计。Contract 至少包含逐字 system/user prompt、public context、该 Agent 的 private view、可见 transcript、canonical option order、模型与版本、temperature、max tokens、response schema、解析器版本和失败政策。改变这些字段可能改变被测对象，因此新版本不能静默继承旧版本的资格。
+
+Claim 由任务拥有，而不是由对话临时创造。Categorical options 必须互斥、穷尽并保持 canonical order；authorized resolver 在所有 measurement response terminal 后才开放 outcome。这样可以避免由最终答案反向改写 claim 或 prompt。
+
+\subsection{3.2 五层对象}
+
+| 层 | 例子 | 数据来源 | 可以说明 | 不能说明 |
+|---|---|---|---|---|
+| 测量仪器 | prompt、option order、model/config、可见信息 | 冻结 contract | 报告在何种条件下产生 | 条件变化后仍是同一测量 |
+| LLM 自报 | message、概率向量、reported evidence | 单次模型响应 | 模型在该条件下生成了什么 | 内心信念、真实知识、证据真实性 |
+| 架构遥测 | exposure、delivery、observedReportIds、token/call | runtime event | 系统实际交付了什么 | Agent 注意、理解、采纳或受因果影响 |
+| 系统派生量 | certainty、entropy、margin、JSD、TV、lineage count、pool | 冻结公式重算 | 报告的几何或记录结构 | 自动具备构念效度、校准或控制价值 |
+| 结果/控制对象 | Brier、ECE、diagnosis、eligible、action state | resolution + policy | 在限定设计下评价结果或执行决策 | 跨域真理、一般治理效果 |
+
+`confidence` 一词在本文中不单独使用。若指 \(\max_k\hat p_k\)，写作 *reported certainty*；若指模型额外输出的自然语言标签，则写作 *self-reported metacognitive telemetry*；若指预测正确的经验频率，则属于 calibration 分析。三者不可互换。
+
+\subsection{3.3 Evidence 与 lineage}
+
+Agent 可以随报告提交 `content`、`relation∈{supports, attacks}` 和可选 `lineageId`。这些都是 reported evidence。系统将 evidence identity、来源引用、verification 和 supersession 作为 append-only events；原记录不被覆盖。`lineageRecordCount=0` 只表示“没有合格的 lineage 记录”，不能解释为该主张没有来源、来源独立或由 Agent 自主产生。外部证据是否真实，需要单独 oracle 或人类核验。
+
+\subsection{3.4 Collective state 的地位}
+
+群体均值、分歧、共识和 Influence Gini 可由 claim-relative reports 与 exposure graph 派生。它们描述讨论状态，可用于 secondary prediction 或 mediator analysis，但默认没有控制权限。共识增长可能来自正确整合，也可能来自从众；影响均匀可能改善程序公平，也可能稀释专家信息。只有其对独立 outcome 的 held-out 增量得到验证后，才可进入 detector 候选。
+
+\section{4. SwarmAlpha 如何测量}
+
+\subsection{4.1 三个测量阶段的信息防火墙}
+
+| 阶段 | 模型可见 | 模型不可见 | 输出用途 |
+|---|---|---|---|
+| Discussion report | public context；自己的 private information；架构实际交付的 public transcript；claim/options | ground truth；resolver outcome；其他 Agent 未公开的 private view；未来消息 | 在线显式报告、讨论文本和 reported evidence |
+| Verification action | public context；claim；待核验的 public message | 所有 Agent private information；ground truth；替代/正确答案 | public-only 的 supported/contradicted/insufficient-evidence verdict |
+| Final private elicitation | public context；自己的原始 private information；完成的 public transcript | ground truth；其他 Agent private view；正确性反馈 | arm-invariant 独立 outcome report，不再回流讨论 |
+
+可见性本身进入 artifact。系统记录“消息被放入 prompt”，不把它写成“Agent 阅读并理解”。这种保守表达为以后随机化 exposure、研究传播和信息隔离保留了因果空间。
+
+\subsection{4.2 Discussion prompt：逐字仪器}
+
+当前 categorical B/G instrument 的 system prompt 是：
+
+\begin{verbatim}
+You are an analyst in a multi-agent group discussion.
+Report your final belief as strict JSON.
+\end{verbatim}
+
+User prompt 按以下逐字模板生成，尖括号由冻结 artifact 填充：
+
+\begin{verbatim}
+Task public context:
+<PUBLIC_CONTEXT>
+
+Your private information:
+<OWN_PRIVATE_INFORMATION>
+
+Visible discussion transcript:
+<TRANSCRIPT_OR_(none)>
+
+Claim <CLAIM_ID>: <PROPOSITION>
+
+Return exactly one strict JSON object with fields: message (string),
+belief ({kind:'categorical', probabilities:{...}}), evidence (array of
+{content, relation:'supports'|'attacks', lineageId?}). The probabilities
+object must contain exactly these canonical options in this order and sum
+to 1: <OPTION_1 | OPTION_2 | ...>. No other fields.
+\end{verbatim}
+
+这个 prompt 同时完成四项操作：限定信息边界；把问题锚定到 task-owned claim；要求 canonical probability vector；把面向群体的 message 与 reported evidence 分开。它也可能诱导格式服从、选项锚定和概率伪精确，因此 prompt hash、option order 和模型配置都属于测量仪器，而不是可忽略的实现细节。
+
+Binary contract 将 belief 改为 `{"kind":"binary","probability":0..1}`。T arm 使用 plain text，不被解释为概率报告。模型不能添加自由 `confidence`、隐藏 scores 或额外字段，避免多个同名量并存。
+
+\subsection{4.3 解析、失败与唯一 terminal record}
+
+系统首先保留 raw response，再执行 strict schema validation。Categorical vector 必须恰好覆盖 canonical options，每项是有限的 `[0,1]` 数，且和为 1；binary probability 必须落在 `[0,1]`。非法 JSON、字段增删、NaN、未归一化或 option 漂移都不会被修复为“近似合法”。每个注册 request 恰好产生一个 terminal status：
+
+\begin{verbatim}
+answered | invalid_response | provider_error | timeout |
+unavailable | abstained
+\end{verbatim}
+
+同一 request 不内部重试。重试会使“第一次失败的困难样本”从观测分布中消失，并把 provider 行为与测量算法混为一谈。若需要新调用，必须注册为新的 replicate，而不是覆盖旧记录。Coverage 的分母始终是注册请求数：
+
+\[
+\text{valid coverage}=\frac{N_{\text{valid reports}}}{N_{\text{registered requests}}},\qquad
+\text{pair coverage}=\frac{N_{\text{complete pairs}}}{N_{\text{registered pairs}}}.
+\]
+
+\subsection{4.4 Report、evidence 与 exposure 事件}
+
+合法报告被规范化为 claim、agent、round、value、evidence references、timestamp 与 supersedes relationship。Evidence 内容与来源分开 hash；exposure event 记录某个 report 是否被架构交付给某个 Agent 的某轮 prompt。后续 revision 追加新 report，并引用被替代记录，绝不覆写历史。
+
+这使 Belief DAG 成为可重放的“报告关系图”，而不是模型内心状态图。边可以表达时间先后、显式引用、evidence lineage 和 supersession；在没有随机 exposure 或其他识别设计时，边不能被解释为因果影响。
+
+\subsection{4.5 Final private elicitation}
+
+讨论结束后，每个 Agent 收到独立、私密且不回流的 outcome prompt。其关键文本如下：
+
+\begin{verbatim}
+The discussion is complete. This is a private outcome measurement.
+Other agents will not see your response, and your response will not
+re-enter the discussion. No correctness feedback is available yet.
+
+Public task context:
+<PUBLIC_CONTEXT>
+
+Your original private information:
+<OWN_PRIVATE_INFORMATION>
+
+Completed discussion transcript:
+<PUBLIC_TRANSCRIPT>
+
+Report your final probabilities for every registered claim:
+- claimId=<ID>: <PROPOSITION>
+  Return a probability for every canonical outcome: <OPTIONS>.
+  The probabilities must sum to 1.
+
+Return only one JSON object ... To decline, use {"status":"abstained"}.
+Do not include evidence, rationale, confidence labels, scores, or any
+additional fields.
+\end{verbatim}
+
+该 prompt 在各 protocol arm 间逐字一致，只允许自己的原始 private information；resolution 尚未开放。它避免用在线 detector 的同一字段循环评价自身，也避免治理消息直接改变评分器。所有 terminal report 关闭后，authorized resolver 才写入 outcome。
+
+\subsection{4.6 单报告派生量}
+
+对 categorical report \(\hat{\mathbf p}\)，定义：
+
+\[
+\text{certainty}(\hat{\mathbf p})=\max_k\hat p_k,
+\qquad
+\text{margin}(\hat{\mathbf p})=\hat p_{(1)}-\hat p_{(2)},
+\]
+
+\[
+H_N(\hat{\mathbf p})=-\frac{\sum_k\hat p_k\ln\hat p_k}{\ln K}.
+\]
+
+Binary report 令 \(\mathbf p=(p,1-p)\)，因而 certainty=`max(p,1-p)`，margin=`|2p-1|`。这些量只描述报告分布的集中程度。高 certainty 不等于正确、知识充分或证据强；低 entropy 也可能是自信的错误。
+
+\subsection{4.7 两报告距离与扰动量}
+
+在同一 canonical coordinates 上：
+
+\[
+TV(\mathbf p,\mathbf q)=\frac12\sum_k|p_k-q_k|,
+\]
+
+\[
+JSD_2(\mathbf p,\mathbf q)=\frac12 KL_2(\mathbf p\|\mathbf m)
++\frac12 KL_2(\mathbf q\|\mathbf m),\quad \mathbf m=\frac{\mathbf p+\mathbf q}{2}.
+\]
+
+Base-2 JSD 落在 `[0,1]`。小距离说明两次报告接近，却不说明二者正确。Option permutation 必须先按冻结 bijection 映回 canonical order；若映射缺项、重复或 claim 漂移，整个 cell fail closed。Tie 定义为所有最大概率选项的集合，不按显示顺序破平。
+
+\subsection{4.8 Proper loss 与 calibration}
+
+Resolution outcome \(y\) 开放后，categorical multiclass Brier loss 为
+
+\[
+L_B(\mathbf p,y)=\sum_{k=1}^{K}(p_k-\mathbb 1[y=\omega_k])^2,
+\]
+
+binary 版本为 \((p-y)^2\)。Brier 是 single-report proper loss，但一个 loss 不是 calibration。Calibration 需要许多可比较 claims；ECE 为
+
+\[
+ECE=\sum_{b=1}^{B}\frac{|S_b|}{N}
+\left|\operatorname{acc}(S_b)-\operatorname{conf}(S_b)\right|,
+\]
+
+并依赖 bins、样本选择与 confidence 定义。因此本文同时报告 bin counts、coverage 和 Brier；ECE 仅为 secondary characterization，不是 Gate primary metric。
+
+\subsection{4.9 群体聚合与来源折扣}
+
+最透明的 operational outcome 是对合法 final reports 等权 linear pool：
+
+\[
+\bar{\mathbf p}_c=\frac{1}{n_c}\sum_{i\in A_c}\hat{\mathbf p}_{i,c}^{\text{final}}.
+\]
+
+所有注册 Agent 保留在 missingness 分母，只有 answered reports 进入数值 pool。更复杂的 lineage-capped 或 reputation-weighted pool 是不同机制，必须携带 method ID、source report IDs 和单独验证；不能被描述为“真实群体信念”。
+
+\section{5. 从测量资格到控制权限}
+
+\subsection{5.1 四级资格}
+
+| 级别 | 必须证明 | 获得的权限 | 仍然禁止 |
+|---|---|---|---|
+| Q0 structural-qualified | request 到唯一 terminal record 闭合；schema/hash/replay 合法 | 描述 coverage、失败和报告几何 | 预测、检测、治理 |
+| Q1 response-qualified | 对语义等价 nuisance 稳定；对已知证据方向/强度有非平凡正确响应 | detector development、secondary trajectory analysis | 自动触发控制；称为 latent belief |
+| Q2 outcome-qualified | 对 held-out authorized outcomes 相对冻结 baseline 有 proper-loss 增量 | 作为 outcome/预测 instrument | 跨域外推；治理有效 |
+| Q3 transport-characterized | 跨模型、任务族、K、prompt/config stratum 报告适用与失效域 | 限定域复用 | “普适测量” |
+
+Q0 不蕴含 Q1，Q1 不蕴含 Q2。Gate 是非补偿式：极高 coverage 不能抵消 evidence response 失败，良好 repeat stability 不能抵消 outcome 反预测。资格按 `instrument × belief kind × K × model/config × task family` 版本化。
+
+\subsection{5.2 扰动家族各自检验什么}
+
+1. \textbf{Exact repeat}：除独立 provider call identity 和预注册 seed 外完全相同，估计生成噪声；不替代语义稳定性。
+2. \textbf{Semantic paraphrase}：只改表述，不改 claim、facts、roles、options 或 evidence relation。人工 accepted semantic review 是必要条件；自动相似度只能筛查。
+3. \textbf{Option permutation}：只改变显示顺序，通过冻结 bijection 检验 coordinate equivariance。
+4. \textbf{Evidence direction}：用受控生成机制提供支持与反向证据，检验 \(p(y^*)\) 是否按预期方向改变。
+5. \textbf{Evidence strength}：至少三阶预注册 ladder，检验 Spearman response、相邻等级 violation 和 response slope。自然语言材料不能事后主观标“强证据”。
+6. \textbf{Information add/remove}：改变了认知条件，不属于 nuisance；用于研究信息整合，不进入 paraphrase stability。
+
+Primary uncertainty 以 `leakageGroupId/baseSemanticTaskRef` 聚类。报告行、同一 run 的多个 Agent、同一 base task 的 variants 都不是独立样本。任何需要 bootstrap Gate 的分析至少需 20 个独立 cluster；不足时输出 `insufficient_cluster_support`。
+
+\subsection{5.3 从 Q1 到 detector 仍需第二道门}
+
+Q1 只说明 instrument 对扰动具有合格响应，不说明某个 threshold 能预测错误。Detector 必须在与规则选择分离的 held-out data 上与 uniform、climatology、sampling consistency/semantic entropy 等基线比较，并报告 discriminative performance、coverage、proper-loss increment 和 domain hash。阈值满足 `certainty>1/K` 只是类型合法性，不是经验校准。
+
+\subsection{5.4 实验性干预授权不等于运行时控制权限}
+
+资格链约束的是把一个量作为\emph{测量}、detector 或部署控制器的解释权限；它不禁止研究一个明确标为候选的机制。为检验此类机制，候选规则可仅充当预先冻结实验中的 eligibility stratifier，前提是：规则、预算、随机化概率和停止规则在 provider 调用前冻结；eligible 之后才随机分配 action；在线动作不读取 ground truth；final outcome 独立于在线规则并在事后评分；结果始终保留为 exploratory。这种\textbf{实验性干预授权}只允许估计该候选动作在限定协议中的局部效果，不能将规则宣传为有效 detector、自动控制器或部署建议。
+
+因此，本文的 `certainty>=0.7` 与 lineage 条件只具有这一实验性角色。它在当前 K=3 数据中初步反预测，尚未达到 detector 的 held-out 资格；其存在不构成对高 certainty 事件应被运行时干预的主张。
+
+\section{6. 治理作为被测对象}
+
+\subsection{6.1 两种随机化不能混淆}
+
+`protocol-arm assignment` 在 run 级分配 T/B/G 等交互协议；`governance-action assignment` 只在 G 内对 eligible event 分配 apply、sham 或 holdout。前者估计协议整体效果，后者估计一次治理行动的局部 ITT 效果。两者的 unit、seed、概率向量和 estimand 分开冻结。
+
+当前 candidate rule 是“高 reported certainty 且缺少合格 lineage 时请求独立验证”。它在本研究中只是用于冻结机制实验的 eligibility stratifier，而非获准部署的 controller。探索结果显示 certainty>=0.7 初步反预测，因此该规则不能因代码已实现、或因为它被用于随机化研究，就获得 detector 或 confirmatory 控制权限。
+
+\subsection{6.2 Apply、sham 与 holdout}
+
+- \textbf{Apply}：调用独立 verifier。Verifier 只看 public context、claim 和目标 public message；若公开材料不足，返回 `insufficient_evidence`；不得猜正确或替代答案。
+- \textbf{Sham}：执行预算和注意力相近的 provider call，但明确禁止评估 claim，不向 transcript 引入任务证据。
+- \textbf{Holdout}：eligible 事件不交付 action，保留自然反事实。
+
+Apply 的代表性 V2 prompt 为：
+
+\begin{verbatim}
+Task public context:
+<PUBLIC_CONTEXT>
+
+Claim <ID>: <PROPOSITION>
+
+Public message to verify:
+<TARGET_PUBLIC_MESSAGE>
+
+Judge only whether the public context supports or contradicts the public
+message. If the public context is underdetermined, use
+insufficient_evidence. Do not identify, recommend, or guess an alternative
+or correct answer. Return exactly one strict JSON object with fields:
+evidenceScope (exactly "public_only"), verdict (exactly "supported",
+"contradicted", or "insufficient_evidence"), and explanation (non-empty
+string). No other fields.
+\end{verbatim}
+
+该 action 的价值必须由之后的 final outcome 判断。Verifier 输出 supported 不是 task truth，delivery completed 也不是 Agent 采纳。
+
+Apply 与 holdout 的比较估计的是\textbf{public-only、task-conditioned 独立复核消息}的总效果：它同时改变了额外再推理、verdict token、解释文本及其在公开 transcript 中的呈现。Sham 对齐一次 provider call 与“无权威 verdict”的过程，但它按设计不读取 task、claim 或目标消息；因此 apply--sham 不能识别纯粹的 verdict-label 效应，也不能充分排除所有内容相关的 attention/compute 路径。本文将三臂差异保留为机制线索，而不作机制归因。
+
+\subsection{6.3 治理质量的主 estimand}
+
+令 \(A_j\) 是 eligible event 的随机 action，\(Y_j\) 是对应 run 的 final pooled operational Brier。局部 primary estimand 为
+
+\[
+\tau_{A-H}=E[Y_j\mid A_j=\text{apply}]-E[Y_j\mid A_j=\text{holdout}],
+\]
+
+lower is better。在当前 eligible 子群、冻结 benchmark/model/prompt/预算及 public-only verification 动作下，$\tau_{A-H}$ 是局部 ITT estimand，不是跨任务、跨模型或真实组织场景的通用效应。Sham 提供受限的过程控制，不能单独分离 verdict 标签、重新分析与解释内容。分析遵循 ITT：投递失败、invalid final report 和 abstention 不从分母消失；推断按 task/leakage cluster，而不是按 report 行。
+
+治理 scorecard 分开报告决策质量、calibration/coverage、错误传播、信息/影响分布、成本/延迟和安全/审计。共识率、Influence Gini、recovery time 与 verifier verdict 都是 mediator 或 secondary outcome，不能替代 \(\tau\)。
+
+\section{7. 实现与重放边界}
+
+V6 将 study contract、task manifest、primary assignment、arm implementation binding、report/evidence/exposure events、diagnosis、eligible decision、action assignment、delivery transition、final elicitation 和 operational outcome 串成 authority chain。确定性对象使用 canonical serialization 与内容 hash；registry 和 policy 以精确版本引用；builder 以批次原子性追加事件，seal 后不可修改。
+
+`sealed_decision_replay_verified` 意味着：给定 artifact 和冻结 rule registry，结构关系、随机分配与派生决策可重算一致。它不意味着数据在仓库外从未被替换，不证明 provider 真正执行了某次调用，也不证明 reported evidence 为真。外部真实性还需要 detached commitment、可信时间戳或签名；本文不使用 `tamper-proof`。
+
+\section{8. 探索性证据}
+
+\subsection{8.1 执行完整性}
+
+冻结实验包含 20 个 HiddenBench 数据投影任务，每题 B arm 两次、G arm 两次，共 80 runs。Provider 为 `deepseek-chat`，temperature=0；Stage-2 预注册 apply/sham/holdout 概率为 0.50/0.25/0.25。实际完成 80/80 runs，产生 948 次 provider calls、1,005,975 tokens。没有内部 retry、补样本、换任务或重抽 seed。80 个 raw-run artifact 均通过 `verifyRawRunData`，状态为 `sealed_decision_replay_verified`。
+
+这些数字建立了执行和内部重放完整性，不建立 prompt instrument 的测量效度。特别是原计划 token estimate 低估实际用量约 70 倍；虽然硬预算未越界，后续预算必须使用本次真实 usage 分布，而不能复用旧公式。
+
+\subsection{8.2 Coverage 与 exact-repeat}
+
+在未受治理处理污染的 B-arm round-1 中，共注册 154 个显式报告请求：142 valid、11 invalid、1 unavailable，valid coverage=0.9221。Exact-repeat 注册 77 个 task-role pairs，66 complete，pair coverage=0.8571。Complete pairs 的 base-2 JSD median=0.0050、P90=0.1348，tie-aware argmax agreement=0.7727。
+
+Median 显示多数完整 pair 的报告接近；P90、argmax 与 missing pairs 又说明稳定性并非一致。更重要的是，两次 prompt 逐字相同，因此这里只估计 repeat stability，不能说明 semantic paraphrase robustness、option-order equivariance 或 evidence responsiveness。
+
+\subsection{8.3 Proper loss、calibration 与候选 detector}
+
+K=3 的 121 个合法 round-1 报告 mean multiclass Brier=0.9275，高于均匀报告的 0.6667；K=4 的 21 个报告 mean Brier=1.0776。K=3 的固定 bins ECE=0.4046。在 `[0.9,1.0]` certainty bin 中，平均 certainty 为 0.956，而经验准确率只有 0.125。
+
+预置 `certainty>=0.7` flag 在 K=3 上的 \(P(error\mid flagged)=0.7436\)，未 flag 为 0.4884；flagged-minus-unflagged Brier gap=+0.4217。也就是说，该候选信号在当前样本上初步反预测。这个结果不是“LLM 永远越自信越错”，却足以阻止该 threshold 获得 detector/control 权限。它也说明结构化 JSON 和低 repeat JSD 不会自动带来 outcome validity。
+
+\subsection{8.4 原始冻结批次的随机治理结果：DEFER}
+
+40 个 G runs 中有 26 个 eligible events：apply=17、sham=7、holdout=2，另有 14 个 ineligible。Apply 的 verifier verdict 为 insufficient_evidence 12、supported 4、contradicted 1。按冻结 primary estimand，naive apply-minus-holdout Brier difference 为 -0.2358，10,000 次 task-cluster bootstrap median=-0.2081，95% interval `[-1.2626,+0.7565]`，valid fraction=0.8775。
+
+这些方向数不作效果解释。冻结停止规则要求 holdout 数和独立 cluster 均至少为 5，bootstrap valid fraction 至少 0.95；三项均未满足。因此 primary 状态是 `DEFER_INSUFFICIENT`。这既不是治理有效的证据，也不是治理无效的证据。方法贡献在于没有用方向有利的 naive difference 绕过样本不足。
+
+\subsection{8.5 Fresh-identity 续跑：值得复验、尚未确认的信号}
+
+为避免以原始任务上的 arm 不平衡作事后补样，本研究没有改动原 80-run plan，而是以新的 run identity 和 seed 执行一个单独冻结的续跑批次。该批次计划 80 个 G runs，因宿主中断完成 75 个；5 个缺失 run 未被替换、插补或以新任务填补。纳入的 75 个 artifact 共消耗 902 次单次 provider call 和 928,907 tokens；它们与原 40 个 G artifact 均通过 `verifyRawRunData`，状态为 `sealed_decision_replay_verified`。另有一次早期沙箱批次产生全 provider-error、零 usage 的 artifact；该基础设施失败批次被保留但不进入效果分析。
+
+合并原批次与续跑后，115 个完成的 G runs 中有 73 个 eligible event：apply=41（17 个任务簇）、sham=21（13 个任务簇）、holdout=11（8 个任务簇）。对应 mean final pooled Brier 分别为 0.5493、0.7497 和 0.8904。apply-minus-holdout 的 naive difference 为 $-0.3412$，10,000 次 task-cluster bootstrap median 为 $-0.3277$，95\% interval 为 $[-0.5813,0.0033]$，valid fraction 为 0.9999。新批次自身方向相同，但 sham 的相对位置跨批次不稳定。
+
+\textbf{探索性推断。} 在这个冻结的开发任务集、`deepseek-chat`、提示词和 public-only verification 动作下，上述结果是值得在新任务簇上复验的正向信号；区间仍跨零，且任务、模型与动作内容均未外推。它不能建立一般治理有效性、certainty-lineage detector 的有效性，或“verdict 本身”优于 attention/compute 的机制解释。
+
+\section{9. 形成 AAMAS 论文所需的下一步证据}
+
+第一优先级是执行已冻结的\textbf{task-held-out replication}，而不是继续添加 schema 或在开发任务上再取样。该设计使用 8 个经人工审阅、与已观察开发任务簇隔离的 HiddenBench 投影任务，每个任务 12 个 G replicates（96 planned G runs），保持同一模型、prompt、阈值、三臂概率、single-attempt 语义和 final pooled Brier。只有 apply 与 holdout 各至少 10 个 eligible event、各覆盖至少 6 个任务簇、bootstrap valid fraction 至少 0.95，且 95\% interval 完全小于零，才可写为“在冻结 task-held-out 条件下观察到可重复的方向性差异”；任一条件失败即 DEFER。该设计是 DESIGN INTENT，尚未产生实验结果。
+
+第二步是 Measurement Validity pilot：至少 20 个独立 leakage/base-task clusters 覆盖 exact repeat、人工审核的 semantic paraphrase、option permutation、受控 evidence direction 和三阶 evidence strength。分析冻结 coverage、JSD/TV、directional shift、strength monotonicity、signal-to-nuisance ratio 与 held-out delta Brier；任何 Gate 失败都保留为失败域。
+
+第三步是在独立 development/held-out split 上验证 detector。比较 reported certainty、margin、entropy、lineage、sampling consistency、semantic entropy 和简单 task-family baseline。仅在 held-out predictive increment、coverage 与 transport domain 均合格时冻结 threshold，用于运行时控制而非仅作实验分层。
+
+在上述证据之外，完整治理主实验还需 compute-matched 单 Agent、self-consistency、majority vote、普通 debate、belief-state-only 与治理臂的比较。Primary 只看 independent pooled proper loss；accuracy、cascade size、recovery time、Influence Gini、abstention、calls/tokens 为 secondary scorecard。
+
+\section{10. 上限：异构智能治理与社会热力学}
+
+\subsection{10.1 异构智能治理}
+
+SwarmAlpha 的中期对象可以从 LLM Agent 扩展到模型、检索器、工具、人类和组织身份组成的异构智能资源。此时问题不是“哪个模型 benchmark 更高”，而是当前证据状态下再调用资源 \(r\) 能带来多少增量决策价值。候选 Marginal Cognitive Value 可写为
+
+\[
+MCV(r\mid s)=E[L(Y,\hat p_s)-L(Y,\hat p_{s+r})\mid s]
+-\lambda_c C_r-\lambda_t T_r-\lambda_\rho R_r,
+\]
+
+其中 \(s\) 是可审计 claim state，\(C,T,R\) 分别为成本、延迟和来源相关风险。该式目前是 DESIGN INTENT；在没有随机或可识别的 resource assignment、held-out outcomes 和跨模型复现前，不称为已估计量。“正交智能”也应操作化为条件增量而不是输出表面多样性。
+
+\subsection{10.2 社会热力学没有被废弃}
+
+旧稿试图用温度、熵、自由能等宏观量解释群体演化。问题不在这个愿景太大，而在微观态尚未取得测量资格。本文建立的 claim-relative reports、exposure、lineage 和 action events 为宏观理论提供更干净的基础。后续证据应分四级：
+
+- \textbf{ST-1 预测：} 预注册宏观统计量能否在 held-out runs 预测 error cascade 或 recovery；
+- \textbf{ST-2 响应：} 随机改变 exposure、verification 或 information access 后，宏观量是否按预期方向变化；
+- \textbf{ST-3 缩放：} 规律是否随 Agent 数、网络拓扑、模型异质性和任务族保持可描述的尺度关系；
+- \textbf{ST-4 理论：} 在前三层成立后，再提出守恒、临界点、相变或自由能类统一理论。
+
+因此，当前工作更像为“社会热力学”建立合格的微观测量，而不是放弃它。没有 ST-1 证据时，热力学术语只能作为假设，不能作为解释真实结果的定律。
+
+\subsection{10.3 局限}
+
+当前自然任务来自 HiddenBench 数据投影，主要为 K=3/K=4 categorical claims；真实运行只使用一个 provider/model stratum。Measurement Validity 的真实 paraphrase 和 controlled-evidence sealed result 尚未完成。报告仍是 prompt-induced 行为，不是 latent belief。Evidence provenance 主要证明记录关系，不证明外部事实。Final pool 使用等权规则，未验证 reputation 权重。原始冻结治理批次的 holdout 过少而必须 DEFER；合并续跑虽给出区间跨零的探索性信号，尚缺任务簇隔离复验，也不能区分 public re-analysis、verdict、解释文本与 attention/compute 的作用。外部 commitment、跨组织身份、Web3 stake/penalty 和在线 MCV 均未实现。
+
+\section{11. 结论}
+
+多智能体治理的薄弱环节往往不是缺少又一个干预，而是用于触发干预的量没有被验证。SwarmAlpha 把 LLM 自报概率明确为提示词条件化观测，把公式派生量限定为描述，把 exposure 与采纳分开，并用 Q0--Q3、held-out detector 和随机 action--outcome 链逐级授予权限。原始 80-run 探索实验说明这条链可执行、可重放，也说明可重放并不等于有效：候选 certainty threshold 初步反预测，治理主结果按样本规则为 DEFER。独立 identity 的续跑提供了方向一致但区间跨零的总效应信号；它有助于决定下一次任务隔离复验的优先级，而不构成一般效果或机制结论。
+
+近期论文的目标不是宣称已经解决认知治理，而是证明“何种信号有资格参与治理”可以被严谨地提出、失败、复验与限制。当前最直接的证据门是冻结 task-held-out replication；其后仍需 measurement pilot、detector held-out validation 与足量 compute-matched 随机治理实验，才可能支撑 AAMAS 长文的更强主张。异构智能治理和社会热力学则在这条可审计证据链上获得可持续的研究上限。
+
+\section{附录 A：完整提示词族与配置}
+
+\subsection{A.1 Discussion system prompt}
+
+\begin{verbatim}
+You are an analyst in a multi-agent group discussion. Report your final
+belief as strict JSON.
+\end{verbatim}
+
+\subsection{A.2 Categorical discussion user prompt}
+
+见正文 4.2。生产配置冻结 `modelRef`、`temperature`、`maxTokens`、response contract、request ID 和 prompt hash；当前探索配置 discussion temperature=0、maxTokens=768。
+
+\subsection{A.3 Binary discussion response contract}
+
+\begin{verbatim}
+Return exactly one strict JSON object with fields: message (string), belief
+({kind:'binary', probability: 0..1}), evidence (array of {content,
+relation:'supports'|'attacks', lineageId?}). No other fields.
+\end{verbatim}
+
+\subsection{A.4 Verification V2 system prompt}
+
+\begin{verbatim}
+You are an independent verifier.
+\end{verbatim}
+
+User prompt 见正文 6.2。探索配置 verification temperature=0、maxTokens=256。
+
+\subsection{A.5 Sham prompt}
+
+\begin{verbatim}
+System: You are executing a matched process-control call; provide no task
+evidence.
+
+User: This is a matched process-control request.
+Do not assess any claim, message, evidence, or likely answer.
+Return exactly one strict JSON object with one field: acknowledgment
+(string). No other fields.
+\end{verbatim}
+
+\subsection{A.6 Final private elicitation}
+
+见正文 4.5。探索配置 final temperature=0、maxTokens=256。该 prompt 各臂相同，不展示 ground truth，不允许 rationale/evidence/confidence labels，响应不回流 discussion。
+
+\section{附录 B：量的快速注册表}
+
+| 量 | 公式/记录 | 角色 | 最小资格 | 典型误用 |
+|---|---|---|---|---|
+| reported probability | \(\hat p\) 或 \(\hat{\mathbf p}\) | LLM 自报观测 | Q0 描述；Q1/Q2 才扩权 | 称作内心信念 |
+| reported certainty | \(\max p_k\) | 派生集中度 | detector 需 held-out valid | 直接当正确概率 |
+| normalized entropy | \(-\sum p\ln p/\ln K\) | 派生分散度 | 同上 | 当知识/无知真值 |
+| margin | \(p_{(1)}-p_{(2)}\) | 派生决断度 | 同上 | 跨 K 直接比较 |
+| TV/JSD | 两报告距离 | 稳定/扰动分析 | canonical mapping | 小距离=正确 |
+| Brier | resolved proper loss | outcome | authorized resolution | 单样本=calibration |
+| ECE | 分箱校准误差 | secondary calibration | 足量同域 claims | 不报 bins/coverage |
+| lineage count | 合格来源记录数 | provenance 描述 | source validation | 0=没有来源/独立 |
+| exposure | prompt 实际交付 event | 架构遥测 | runtime audit | 等同注意/采纳/因果 |
+| consensus/Gini | 群体派生描述 | mediator/secondary | 独立预测验证 | 等同质量/公平 |
+
+\section{参考文献}
+
+\begin{thebibliography}{99}
+\bibitem{du2024debate} Du, Y. et al. Improving Factuality and Reasoning in Language Models through Multiagent Debate. ICML, 2024.
+\bibitem{smit2024mad} Smit, A. et al. Should We Be Going MAD? A Look at Multi-Agent Debate Strategies for LLMs. ICML, 2024.
+\bibitem{li2025hiddenbench} Li, Y., Naito, T., and Shirado, H. HiddenBench: Assessing Collective Reasoning in Multi-Agent LLMs via Hidden Profile Tasks. 2025.
+\bibitem{chen2024reconcile} Chen, J., Saha, S., and Bansal, M. ReConcile: Round-Table Conference Improves Reasoning via Consensus among Diverse LLMs. ACL, 2024.
+\bibitem{cemri2025failures} Cemri, M. et al. Why Do Multi-Agent LLM Systems Fail? 2025.
+\bibitem{li2024sparse} Li, Y. et al. Improving Multi-Agent Debate with Sparse Communication Topology. Findings of EMNLP, 2024.
+\bibitem{kadavath2022know} Kadavath, S. et al. Language Models (Mostly) Know What They Know. 2022.
+\bibitem{tian2023calibration} Tian, K. et al. Just Ask for Calibration: Strategies for Eliciting Calibrated Confidence Scores from Language Models Fine-Tuned with Human Feedback. 2023.
+\bibitem{yang2025verbalized} Yang, A. X., Tsai, M.-H., and Yamada, M. On Verbalized Confidence Scores for LLMs. 2025.
+\bibitem{kuhn2024semantic} Kuhn, L., Gal, Y., and Farquhar, S. Detecting Hallucinations in Large Language Models Using Semantic Entropy. Nature, 2024.
+\bibitem{xiao2025consistency} Xiao, C. et al. The Consistency Hypothesis in Uncertainty Quantification for Large Language Models. UAI, 2025.
+\bibitem{ong2025routellm} Ong, I. et al. RouteLLM: Learning to Route LLMs with Preference Data. ICLR, 2025.
+\bibitem{wang2024moa} Wang, J. et al. Mixture-of-Agents Enhances Large Language Model Capabilities. 2024.
+\bibitem{w3c2013prov} W3C. PROV-DM: The PROV Data Model. W3C Recommendation, 2013.
+\end{thebibliography}
+
+\end{document}

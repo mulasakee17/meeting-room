@@ -1,0 +1,104 @@
+{
+  "seedProbe": {
+    "perRun": [
+      {
+        "taskId": 13,
+        "seed": 0,
+        "providerSeed": 102947,
+        "round1StateHash": "sha256:51209385ae37b81acbdd2a48cf5ddce7e3bbf6eb9b73750df4f7ce65ee0a4f38",
+        "responseSignature": "sha256:ab70ed96c5708dd235aeb1726c9fb8f45cc01a0f7a09da1bc87fd976fc0cd5fe"
+      },
+      {
+        "taskId": 13,
+        "seed": 1,
+        "providerSeed": 207676,
+        "round1StateHash": "sha256:069298cc1e24bf50587f7dad45485ef187430d7affa78150de81c8e8d0128940",
+        "responseSignature": "sha256:584582302b16b2e1d9085f311febc44691be6d563c9855b50e2fa3d99ef2f61b"
+      },
+      {
+        "taskId": 39,
+        "seed": 0,
+        "providerSeed": 308841,
+        "round1StateHash": "sha256:a36e816fb95827b590d285278ab31adc353fdc7ce180c63b6ad97fa2141b4dd9",
+        "responseSignature": "sha256:19567f134300ba50daf0608c40d52a1f98548c5f21499504926b5760257498e6"
+      },
+      {
+        "taskId": 39,
+        "seed": 1,
+        "providerSeed": 413570,
+        "round1StateHash": "sha256:1edcdc4a0a767533317b5abebc8e188d697999af565ff21ad88d7e57e5a68936",
+        "responseSignature": "sha256:bda7f0da7bc3e9f64e92906b982afb45e7a108b786180a9f3b48e4ba3237c6d9"
+      }
+    ],
+    "perTask": [
+      {
+        "taskId": 13,
+        "distinctStateHashes": 2,
+        "distinctResponseSignatures": 2
+      },
+      {
+        "taskId": 39,
+        "distinctStateHashes": 2,
+        "distinctResponseSignatures": 2
+      }
+    ],
+    "anySeedVariation": true,
+    "conclusion": "seed_variation_confirmed"
+  },
+  "preflight": {
+    "checks": [
+      {
+        "name": "five_arm_completeness",
+        "status": "pass",
+        "detail": "20 blocks, 0 incomplete"
+      },
+      {
+        "name": "identical_round1_state_hash",
+        "status": "pass",
+        "detail": "0 blocks with divergent round-1 state"
+      },
+      {
+        "name": "evidence_count_equality",
+        "status": "warn",
+        "detail": "SUPPORTS!=ATTACKS in 5/20 blocks; pool asymmetry 18"
+      },
+      {
+        "name": "token_imbalance_diagnostic",
+        "status": "pass",
+        "detail": "ATTACKS mean=1223.7 vs SUPPORTS mean=1152.2 (ratio=1.06, paired diff=71.5)"
+      },
+      {
+        "name": "option_coverage_diagnostic",
+        "status": "pass",
+        "detail": "mean covered options: ATTACKS=2.15, SUPPORTS=1.90"
+      },
+      {
+        "name": "source_agent_coverage_diagnostic",
+        "status": "pass",
+        "detail": "mean source agents: ATTACKS=2.95, SUPPORTS=3.20"
+      },
+      {
+        "name": "round2_trace_completeness",
+        "status": "pass",
+        "detail": "0/100 rows with empty round-2 trace"
+      },
+      {
+        "name": "analyzer_paired_block_integrity",
+        "status": "pass",
+        "detail": "blocks=20, h1 tasks=20"
+      },
+      {
+        "name": "bootstrap_smoke_test",
+        "status": "pass",
+        "detail": "synthetic CI [-0.110, 0.180]"
+      },
+      {
+        "name": "seed_sensitivity",
+        "status": "pass",
+        "detail": "conclusion=seed_variation_confirmed"
+      }
+    ],
+    "summary": "READY"
+  },
+  "rowCount": 100
+}

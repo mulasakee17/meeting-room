@@ -1,0 +1,960 @@
+{
+  "experimentRef": {
+    "id": "swarmalpha.experiment.v6-source-disclosure-replication-v1",
+    "version": "1.0.0"
+  },
+  "reviewProtocolRef": {
+    "id": "swarmalpha.review.v6-source-disclosure-replication",
+    "version": "1.0.0"
+  },
+  "profile": "source-disclosure-replication-v1",
+  "taskIds": [
+    19,
+    24,
+    32,
+    40,
+    49,
+    51,
+    54,
+    63
+  ],
+  "leakageGroups": [
+    {
+      "groupId": "storm-shelter-siting",
+      "taskIds": [
+        19
+      ]
+    },
+    {
+      "groupId": "offline-data-backup",
+      "taskIds": [
+        24
+      ]
+    },
+    {
+      "groupId": "emergency-vaccine-transit",
+      "taskIds": [
+        32
+      ]
+    },
+    {
+      "groupId": "emergency-hospital-transit",
+      "taskIds": [
+        40
+      ]
+    },
+    {
+      "groupId": "field-station-siting",
+      "taskIds": [
+        49
+      ]
+    },
+    {
+      "groupId": "disaster-supply-distribution",
+      "taskIds": [
+        51
+      ]
+    },
+    {
+      "groupId": "island-research-base-siting",
+      "taskIds": [
+        54
+      ]
+    },
+    {
+      "groupId": "event-relocation",
+      "taskIds": [
+        63
+      ]
+    }
+  ],
+  "blockCount": 2,
+  "protocol": "epistemic_governance_v1",
+  "providerModelRef": {
+    "id": "deepseek:deepseek-chat",
+    "version": "1.0.0"
+  },
+  "providerInvocationConfigHash": "sha256:6d3ec32956724caa8f4cabd4c3d0fc0ed8aa36f8f9b2ac58a7f61074fc6d2733",
+  "maxProviderCalls": 500,
+  "maxTotalTokens": 1600000,
+  "eligibleEventMasterSeed": 0,
+  "tasks": [
+    {
+      "taskId": 19,
+      "leakageGroup": "storm-shelter-siting",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-19-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:19:block:1",
+          "sourceSelectionSeed": 10000,
+          "sourceSelectionKeyHash": "sha256:df665b8d3aadb7a154f4fc424a3e90fcbc66d13588e558ad91c141ec8a905c87",
+          "sourceAgentId": "agent:hiddenbench:19:2",
+          "sourcePrivateInformationHash": "sha256:c348939358bf1246eb7ea733e784c72f0ba2a6ae04e29ac870b1d25ee47b0af6",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-19:block-1:H",
+              "taskId": 19,
+              "leakageGroup": "storm-shelter-siting",
+              "blockId": "task:19:block:1",
+              "arm": "holdout",
+              "order": 3,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 3,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10000,
+              "sourceSelectionKeyHash": "sha256:df665b8d3aadb7a154f4fc424a3e90fcbc66d13588e558ad91c141ec8a905c87",
+              "sourceAgentId": "agent:hiddenbench:19:2",
+              "sourcePrivateInformationHash": "sha256:c348939358bf1246eb7ea733e784c72f0ba2a6ae04e29ac870b1d25ee47b0af6",
+              "taskDefinitionHash": "sha256:729d103a70a3ffd40b35bd9b25741f46cb0bccb763878375c73a4776c5814ac9",
+              "publicContextHash": "sha256:c89740de8106267a86332fb6772988887d7029de509efb72b6cb96909c4492a4",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-19:block-1:D",
+              "taskId": 19,
+              "leakageGroup": "storm-shelter-siting",
+              "blockId": "task:19:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 21,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10000,
+              "sourceSelectionKeyHash": "sha256:df665b8d3aadb7a154f4fc424a3e90fcbc66d13588e558ad91c141ec8a905c87",
+              "sourceAgentId": "agent:hiddenbench:19:2",
+              "sourcePrivateInformationHash": "sha256:c348939358bf1246eb7ea733e784c72f0ba2a6ae04e29ac870b1d25ee47b0af6",
+              "taskDefinitionHash": "sha256:0888c79093739ffb54424a8d7bb934b7c88269675d2c41bdd25fed5c410361d2",
+              "publicContextHash": "sha256:7ec42871733d87b6e7cb711734009d2faf7af3236fc13a12074976c1a142dbe7",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:19:block:2",
+          "sourceSelectionSeed": 10001,
+          "sourceSelectionKeyHash": "sha256:9eab2e35d54484b492bc52803544f11657c39899d82849d0c5ddb54c023081ad",
+          "sourceAgentId": "agent:hiddenbench:19:2",
+          "sourcePrivateInformationHash": "sha256:c348939358bf1246eb7ea733e784c72f0ba2a6ae04e29ac870b1d25ee47b0af6",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-19:block-2:H",
+              "taskId": 19,
+              "leakageGroup": "storm-shelter-siting",
+              "blockId": "task:19:block:2",
+              "arm": "holdout",
+              "order": 9,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10001,
+              "sourceSelectionKeyHash": "sha256:9eab2e35d54484b492bc52803544f11657c39899d82849d0c5ddb54c023081ad",
+              "sourceAgentId": "agent:hiddenbench:19:2",
+              "sourcePrivateInformationHash": "sha256:c348939358bf1246eb7ea733e784c72f0ba2a6ae04e29ac870b1d25ee47b0af6",
+              "taskDefinitionHash": "sha256:729d103a70a3ffd40b35bd9b25741f46cb0bccb763878375c73a4776c5814ac9",
+              "publicContextHash": "sha256:c89740de8106267a86332fb6772988887d7029de509efb72b6cb96909c4492a4",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-19:block-2:D",
+              "taskId": 19,
+              "leakageGroup": "storm-shelter-siting",
+              "blockId": "task:19:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 12,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10001,
+              "sourceSelectionKeyHash": "sha256:9eab2e35d54484b492bc52803544f11657c39899d82849d0c5ddb54c023081ad",
+              "sourceAgentId": "agent:hiddenbench:19:2",
+              "sourcePrivateInformationHash": "sha256:c348939358bf1246eb7ea733e784c72f0ba2a6ae04e29ac870b1d25ee47b0af6",
+              "taskDefinitionHash": "sha256:0888c79093739ffb54424a8d7bb934b7c88269675d2c41bdd25fed5c410361d2",
+              "publicContextHash": "sha256:7ec42871733d87b6e7cb711734009d2faf7af3236fc13a12074976c1a142dbe7",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 24,
+      "leakageGroup": "offline-data-backup",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-24-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:24:block:1",
+          "sourceSelectionSeed": 10100,
+          "sourceSelectionKeyHash": "sha256:164d297b4a8ab8bd3e84b5572e379a6586298eadc906239a7e9b9bcecd9f3ee5",
+          "sourceAgentId": "agent:hiddenbench:24:4",
+          "sourcePrivateInformationHash": "sha256:7f45c7fefe39e2e8a8d8e813f815f9327fcd73b74a4524ff4107c63946247fd1",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-24:block-1:H",
+              "taskId": 24,
+              "leakageGroup": "offline-data-backup",
+              "blockId": "task:24:block:1",
+              "arm": "holdout",
+              "order": 13,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10100,
+              "sourceSelectionKeyHash": "sha256:164d297b4a8ab8bd3e84b5572e379a6586298eadc906239a7e9b9bcecd9f3ee5",
+              "sourceAgentId": "agent:hiddenbench:24:4",
+              "sourcePrivateInformationHash": "sha256:7f45c7fefe39e2e8a8d8e813f815f9327fcd73b74a4524ff4107c63946247fd1",
+              "taskDefinitionHash": "sha256:ddf25e397db74ade12c3554993b2bdfd634dc5fd6ce2a6cb9b8fa1874a26d94c",
+              "publicContextHash": "sha256:520af1f092dfcaf65a498620c55085ab955e0e1b58dcaa987df5736236e2d284",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-24:block-1:D",
+              "taskId": 24,
+              "leakageGroup": "offline-data-backup",
+              "blockId": "task:24:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 6,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 6,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10100,
+              "sourceSelectionKeyHash": "sha256:164d297b4a8ab8bd3e84b5572e379a6586298eadc906239a7e9b9bcecd9f3ee5",
+              "sourceAgentId": "agent:hiddenbench:24:4",
+              "sourcePrivateInformationHash": "sha256:7f45c7fefe39e2e8a8d8e813f815f9327fcd73b74a4524ff4107c63946247fd1",
+              "taskDefinitionHash": "sha256:ef7778391f53715c679445ec9328870f774d575eeb267c89883db533f7f592ed",
+              "publicContextHash": "sha256:bd7134a159522bb075f33985908ffae6ad9fc8e0a1197749759169bebd95eeab",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:24:block:2",
+          "sourceSelectionSeed": 10101,
+          "sourceSelectionKeyHash": "sha256:4d945d9e28dc578bc9b2511c033103a1d0a6002e777c7189dac7a9cab8115481",
+          "sourceAgentId": "agent:hiddenbench:24:3",
+          "sourcePrivateInformationHash": "sha256:b867dcacb1675242aee63a50e12f741e63bc0ae91f6ae98bad3bfc2e898590dd",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-24:block-2:H",
+              "taskId": 24,
+              "leakageGroup": "offline-data-backup",
+              "blockId": "task:24:block:2",
+              "arm": "holdout",
+              "order": 31,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10101,
+              "sourceSelectionKeyHash": "sha256:4d945d9e28dc578bc9b2511c033103a1d0a6002e777c7189dac7a9cab8115481",
+              "sourceAgentId": "agent:hiddenbench:24:3",
+              "sourcePrivateInformationHash": "sha256:b867dcacb1675242aee63a50e12f741e63bc0ae91f6ae98bad3bfc2e898590dd",
+              "taskDefinitionHash": "sha256:ddf25e397db74ade12c3554993b2bdfd634dc5fd6ce2a6cb9b8fa1874a26d94c",
+              "publicContextHash": "sha256:520af1f092dfcaf65a498620c55085ab955e0e1b58dcaa987df5736236e2d284",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-24:block-2:D",
+              "taskId": 24,
+              "leakageGroup": "offline-data-backup",
+              "blockId": "task:24:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 30,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10101,
+              "sourceSelectionKeyHash": "sha256:4d945d9e28dc578bc9b2511c033103a1d0a6002e777c7189dac7a9cab8115481",
+              "sourceAgentId": "agent:hiddenbench:24:3",
+              "sourcePrivateInformationHash": "sha256:b867dcacb1675242aee63a50e12f741e63bc0ae91f6ae98bad3bfc2e898590dd",
+              "taskDefinitionHash": "sha256:463b56976ddf1195663cee74e2becb5c3d55e491c6a41c2b9c6ed645f6859630",
+              "publicContextHash": "sha256:2567598caae206b54f159e64725c73c4d7e78af4ba5e8dd4bedaba93feb02fa4",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 32,
+      "leakageGroup": "emergency-vaccine-transit",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-32-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:32:block:1",
+          "sourceSelectionSeed": 10200,
+          "sourceSelectionKeyHash": "sha256:096e4ba43a765ad77de000d4914de0af016db3cba9400a0ca155a292af6e44d5",
+          "sourceAgentId": "agent:hiddenbench:32:1",
+          "sourcePrivateInformationHash": "sha256:a8075b608eb8cd4d7f8a00251d6c4823cb21f62e90a07f44b38d8c4e2464d9e3",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-32:block-1:H",
+              "taskId": 32,
+              "leakageGroup": "emergency-vaccine-transit",
+              "blockId": "task:32:block:1",
+              "arm": "holdout",
+              "order": 20,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10200,
+              "sourceSelectionKeyHash": "sha256:096e4ba43a765ad77de000d4914de0af016db3cba9400a0ca155a292af6e44d5",
+              "sourceAgentId": "agent:hiddenbench:32:1",
+              "sourcePrivateInformationHash": "sha256:a8075b608eb8cd4d7f8a00251d6c4823cb21f62e90a07f44b38d8c4e2464d9e3",
+              "taskDefinitionHash": "sha256:9de2514d8d20525dc6ba13c5715a3aa0cec1980d855762407762922b3b9b9c6a",
+              "publicContextHash": "sha256:7a15a4dde9f6e6bdd1279ba23edcf01eb833daa544537d6e77420c3c30b4ca17",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-32:block-1:D",
+              "taskId": 32,
+              "leakageGroup": "emergency-vaccine-transit",
+              "blockId": "task:32:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 14,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10200,
+              "sourceSelectionKeyHash": "sha256:096e4ba43a765ad77de000d4914de0af016db3cba9400a0ca155a292af6e44d5",
+              "sourceAgentId": "agent:hiddenbench:32:1",
+              "sourcePrivateInformationHash": "sha256:a8075b608eb8cd4d7f8a00251d6c4823cb21f62e90a07f44b38d8c4e2464d9e3",
+              "taskDefinitionHash": "sha256:2b75dfd0f82111f103e2597c4f19e4dc414317277703b7a7afd361793b8cd8a8",
+              "publicContextHash": "sha256:c7c7bb99f5e7d7cb75e70b0f6a077a0491f715d8271e3cb1470f90ef01923ac9",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:32:block:2",
+          "sourceSelectionSeed": 10201,
+          "sourceSelectionKeyHash": "sha256:5a160db59e543ea02e42745b5a473228bfb77b7e9448a5e0719e5b3ec007356f",
+          "sourceAgentId": "agent:hiddenbench:32:2",
+          "sourcePrivateInformationHash": "sha256:2c3a90eb42eb576bc3aa2250665631d46f0693f9c6530aa5da121b4edddbd4d3",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-32:block-2:H",
+              "taskId": 32,
+              "leakageGroup": "emergency-vaccine-transit",
+              "blockId": "task:32:block:2",
+              "arm": "holdout",
+              "order": 2,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 4,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10201,
+              "sourceSelectionKeyHash": "sha256:5a160db59e543ea02e42745b5a473228bfb77b7e9448a5e0719e5b3ec007356f",
+              "sourceAgentId": "agent:hiddenbench:32:2",
+              "sourcePrivateInformationHash": "sha256:2c3a90eb42eb576bc3aa2250665631d46f0693f9c6530aa5da121b4edddbd4d3",
+              "taskDefinitionHash": "sha256:9de2514d8d20525dc6ba13c5715a3aa0cec1980d855762407762922b3b9b9c6a",
+              "publicContextHash": "sha256:7a15a4dde9f6e6bdd1279ba23edcf01eb833daa544537d6e77420c3c30b4ca17",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-32:block-2:D",
+              "taskId": 32,
+              "leakageGroup": "emergency-vaccine-transit",
+              "blockId": "task:32:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 5,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10201,
+              "sourceSelectionKeyHash": "sha256:5a160db59e543ea02e42745b5a473228bfb77b7e9448a5e0719e5b3ec007356f",
+              "sourceAgentId": "agent:hiddenbench:32:2",
+              "sourcePrivateInformationHash": "sha256:2c3a90eb42eb576bc3aa2250665631d46f0693f9c6530aa5da121b4edddbd4d3",
+              "taskDefinitionHash": "sha256:d3d36b3114b0ca745b3cf71c9daeea5fd1867d9839b13e4d0dd28d46035510d8",
+              "publicContextHash": "sha256:c89fdb67455a2686c80fb4801ea21be96c8ebfc237f8d74130d1684da73ce3c9",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 40,
+      "leakageGroup": "emergency-hospital-transit",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-40-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:40:block:1",
+          "sourceSelectionSeed": 10300,
+          "sourceSelectionKeyHash": "sha256:a5b81d0289c0913bd1629b1ec30e601c0a938eb0deb077c2943e5a956d1d668b",
+          "sourceAgentId": "agent:hiddenbench:40:3",
+          "sourcePrivateInformationHash": "sha256:f06e65701d80184c3df938fad21c676d77254098a94d4dff9640f3f2bde4629b",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-40:block-1:H",
+              "taskId": 40,
+              "leakageGroup": "emergency-hospital-transit",
+              "blockId": "task:40:block:1",
+              "arm": "holdout",
+              "order": 23,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10300,
+              "sourceSelectionKeyHash": "sha256:a5b81d0289c0913bd1629b1ec30e601c0a938eb0deb077c2943e5a956d1d668b",
+              "sourceAgentId": "agent:hiddenbench:40:3",
+              "sourcePrivateInformationHash": "sha256:f06e65701d80184c3df938fad21c676d77254098a94d4dff9640f3f2bde4629b",
+              "taskDefinitionHash": "sha256:a37eecf9c38c5b8a3f6372e68de186f06733badd4ae7e29bd05e3ffaf151d626",
+              "publicContextHash": "sha256:cd34bf503e190d4134c022407cce8858a8c47b58259494c6a1b8cb7a995ef914",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-40:block-1:D",
+              "taskId": 40,
+              "leakageGroup": "emergency-hospital-transit",
+              "blockId": "task:40:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 7,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10300,
+              "sourceSelectionKeyHash": "sha256:a5b81d0289c0913bd1629b1ec30e601c0a938eb0deb077c2943e5a956d1d668b",
+              "sourceAgentId": "agent:hiddenbench:40:3",
+              "sourcePrivateInformationHash": "sha256:f06e65701d80184c3df938fad21c676d77254098a94d4dff9640f3f2bde4629b",
+              "taskDefinitionHash": "sha256:65b3cd6a8158576ec21c5db46f48915d37de8ffa18aa1229542bc11fb5391d72",
+              "publicContextHash": "sha256:c2195df301cffa1cd1848f649eb3213d0ef4401a8b6c13a70d02692d5d5c580c",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:40:block:2",
+          "sourceSelectionSeed": 10301,
+          "sourceSelectionKeyHash": "sha256:66e69607dcfaf4affef508acf225cd55aa30a06dc6530d13337b4817ee1629de",
+          "sourceAgentId": "agent:hiddenbench:40:4",
+          "sourcePrivateInformationHash": "sha256:3215aa47a5d0eb46dd131121b154bdc1834e54bdbeb213c120ecd55fed5e8374",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-40:block-2:H",
+              "taskId": 40,
+              "leakageGroup": "emergency-hospital-transit",
+              "blockId": "task:40:block:2",
+              "arm": "holdout",
+              "order": 27,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10301,
+              "sourceSelectionKeyHash": "sha256:66e69607dcfaf4affef508acf225cd55aa30a06dc6530d13337b4817ee1629de",
+              "sourceAgentId": "agent:hiddenbench:40:4",
+              "sourcePrivateInformationHash": "sha256:3215aa47a5d0eb46dd131121b154bdc1834e54bdbeb213c120ecd55fed5e8374",
+              "taskDefinitionHash": "sha256:a37eecf9c38c5b8a3f6372e68de186f06733badd4ae7e29bd05e3ffaf151d626",
+              "publicContextHash": "sha256:cd34bf503e190d4134c022407cce8858a8c47b58259494c6a1b8cb7a995ef914",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-40:block-2:D",
+              "taskId": 40,
+              "leakageGroup": "emergency-hospital-transit",
+              "blockId": "task:40:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 19,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10301,
+              "sourceSelectionKeyHash": "sha256:66e69607dcfaf4affef508acf225cd55aa30a06dc6530d13337b4817ee1629de",
+              "sourceAgentId": "agent:hiddenbench:40:4",
+              "sourcePrivateInformationHash": "sha256:3215aa47a5d0eb46dd131121b154bdc1834e54bdbeb213c120ecd55fed5e8374",
+              "taskDefinitionHash": "sha256:5e50f4b1e1e1c1d95c514742f8439cadf0eac456bfc5ead4d7e193f925024da8",
+              "publicContextHash": "sha256:43d35e60abb0f65976d5a7af3e37e14575f16e37a57b9ef1b873f048fc0b6f8e",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 49,
+      "leakageGroup": "field-station-siting",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-49-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:49:block:1",
+          "sourceSelectionSeed": 10400,
+          "sourceSelectionKeyHash": "sha256:05981741c8b92ef672188c3e14d05bef6551c0363d7ea684ed87d11508bf6743",
+          "sourceAgentId": "agent:hiddenbench:49:2",
+          "sourcePrivateInformationHash": "sha256:f80c9a1175ff2f58ac44da7bafa25ffbc7f7f58d65464133801a65201495ef02",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-49:block-1:H",
+              "taskId": 49,
+              "leakageGroup": "field-station-siting",
+              "blockId": "task:49:block:1",
+              "arm": "holdout",
+              "order": 22,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10400,
+              "sourceSelectionKeyHash": "sha256:05981741c8b92ef672188c3e14d05bef6551c0363d7ea684ed87d11508bf6743",
+              "sourceAgentId": "agent:hiddenbench:49:2",
+              "sourcePrivateInformationHash": "sha256:f80c9a1175ff2f58ac44da7bafa25ffbc7f7f58d65464133801a65201495ef02",
+              "taskDefinitionHash": "sha256:51f9bf80941ff85ad27e61f75dcf8dd0a176b2bad48e96c3e7304596af2ce8cf",
+              "publicContextHash": "sha256:bab0277aa26261e4059d1038450287b7ccad294a0fb07e75016c172fe2dfdeee",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-49:block-1:D",
+              "taskId": 49,
+              "leakageGroup": "field-station-siting",
+              "blockId": "task:49:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 16,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10400,
+              "sourceSelectionKeyHash": "sha256:05981741c8b92ef672188c3e14d05bef6551c0363d7ea684ed87d11508bf6743",
+              "sourceAgentId": "agent:hiddenbench:49:2",
+              "sourcePrivateInformationHash": "sha256:f80c9a1175ff2f58ac44da7bafa25ffbc7f7f58d65464133801a65201495ef02",
+              "taskDefinitionHash": "sha256:383d7cda965ff66f510ef6a823327396c865b1ed3e1fd36dd18999d4ffa94a96",
+              "publicContextHash": "sha256:d18ac6bbcf62d494aa974eee8bca2f0a81e6a0eca215631cde95ca77d6ba289b",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:49:block:2",
+          "sourceSelectionSeed": 10401,
+          "sourceSelectionKeyHash": "sha256:a5aa425a7302895a1ac66af2dca6e0ef0b67dac47a498b9ebc06263fb079d7f4",
+          "sourceAgentId": "agent:hiddenbench:49:3",
+          "sourcePrivateInformationHash": "sha256:42dc1cb5f485949d362424f621a6672d6932b58c45758c045b2eb43dac7b45c3",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-49:block-2:H",
+              "taskId": 49,
+              "leakageGroup": "field-station-siting",
+              "blockId": "task:49:block:2",
+              "arm": "holdout",
+              "order": 26,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10401,
+              "sourceSelectionKeyHash": "sha256:a5aa425a7302895a1ac66af2dca6e0ef0b67dac47a498b9ebc06263fb079d7f4",
+              "sourceAgentId": "agent:hiddenbench:49:3",
+              "sourcePrivateInformationHash": "sha256:42dc1cb5f485949d362424f621a6672d6932b58c45758c045b2eb43dac7b45c3",
+              "taskDefinitionHash": "sha256:51f9bf80941ff85ad27e61f75dcf8dd0a176b2bad48e96c3e7304596af2ce8cf",
+              "publicContextHash": "sha256:bab0277aa26261e4059d1038450287b7ccad294a0fb07e75016c172fe2dfdeee",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-49:block-2:D",
+              "taskId": 49,
+              "leakageGroup": "field-station-siting",
+              "blockId": "task:49:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 32,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10401,
+              "sourceSelectionKeyHash": "sha256:a5aa425a7302895a1ac66af2dca6e0ef0b67dac47a498b9ebc06263fb079d7f4",
+              "sourceAgentId": "agent:hiddenbench:49:3",
+              "sourcePrivateInformationHash": "sha256:42dc1cb5f485949d362424f621a6672d6932b58c45758c045b2eb43dac7b45c3",
+              "taskDefinitionHash": "sha256:59ce694f3a7c95ab41a4393a3d3d0718935c9b2fed124b0088cfe5542b43dc83",
+              "publicContextHash": "sha256:ae093c2b1dcafe97b3fee1d578fe28554cf401573aa762fee2f31bbe4d3d23c0",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 51,
+      "leakageGroup": "disaster-supply-distribution",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-51-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:51:block:1",
+          "sourceSelectionSeed": 10500,
+          "sourceSelectionKeyHash": "sha256:0028e9b964ccf29d8fc21d5ede4902f11f6a786e3d08a3caa1080e0de9682c78",
+          "sourceAgentId": "agent:hiddenbench:51:2",
+          "sourcePrivateInformationHash": "sha256:a5acd49664be6601b65848c16356e5c7a287ce92636689860514fcf967695b3a",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-51:block-1:H",
+              "taskId": 51,
+              "leakageGroup": "disaster-supply-distribution",
+              "blockId": "task:51:block:1",
+              "arm": "holdout",
+              "order": 18,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10500,
+              "sourceSelectionKeyHash": "sha256:0028e9b964ccf29d8fc21d5ede4902f11f6a786e3d08a3caa1080e0de9682c78",
+              "sourceAgentId": "agent:hiddenbench:51:2",
+              "sourcePrivateInformationHash": "sha256:a5acd49664be6601b65848c16356e5c7a287ce92636689860514fcf967695b3a",
+              "taskDefinitionHash": "sha256:26062858f667ae425f9af61966a3a94e530a32fbc6497a91856410229b9e1444",
+              "publicContextHash": "sha256:873cba6a3ad214b98ae0156ac0eaf9d7e81d8ed4627af6277948d1047f180628",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-51:block-1:D",
+              "taskId": 51,
+              "leakageGroup": "disaster-supply-distribution",
+              "blockId": "task:51:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 29,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10500,
+              "sourceSelectionKeyHash": "sha256:0028e9b964ccf29d8fc21d5ede4902f11f6a786e3d08a3caa1080e0de9682c78",
+              "sourceAgentId": "agent:hiddenbench:51:2",
+              "sourcePrivateInformationHash": "sha256:a5acd49664be6601b65848c16356e5c7a287ce92636689860514fcf967695b3a",
+              "taskDefinitionHash": "sha256:7f4326ea7c048c02bbb13c5fd62e634321af859656302c78651473ef12da1db2",
+              "publicContextHash": "sha256:88fb4329abb6af08d6a5f74549aad70206bdb5580af38c022f00c8ba02667d22",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:51:block:2",
+          "sourceSelectionSeed": 10501,
+          "sourceSelectionKeyHash": "sha256:859786c7e3ed47ffc6a01088f9214e6cac22a2c571021f7edc7421ef15a136f9",
+          "sourceAgentId": "agent:hiddenbench:51:4",
+          "sourcePrivateInformationHash": "sha256:202bc099edfe5f2f8ff189347eaf359b9956d9462ea6a257b4115f8483444369",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-51:block-2:H",
+              "taskId": 51,
+              "leakageGroup": "disaster-supply-distribution",
+              "blockId": "task:51:block:2",
+              "arm": "holdout",
+              "order": 8,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10501,
+              "sourceSelectionKeyHash": "sha256:859786c7e3ed47ffc6a01088f9214e6cac22a2c571021f7edc7421ef15a136f9",
+              "sourceAgentId": "agent:hiddenbench:51:4",
+              "sourcePrivateInformationHash": "sha256:202bc099edfe5f2f8ff189347eaf359b9956d9462ea6a257b4115f8483444369",
+              "taskDefinitionHash": "sha256:26062858f667ae425f9af61966a3a94e530a32fbc6497a91856410229b9e1444",
+              "publicContextHash": "sha256:873cba6a3ad214b98ae0156ac0eaf9d7e81d8ed4627af6277948d1047f180628",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-51:block-2:D",
+              "taskId": 51,
+              "leakageGroup": "disaster-supply-distribution",
+              "blockId": "task:51:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 24,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10501,
+              "sourceSelectionKeyHash": "sha256:859786c7e3ed47ffc6a01088f9214e6cac22a2c571021f7edc7421ef15a136f9",
+              "sourceAgentId": "agent:hiddenbench:51:4",
+              "sourcePrivateInformationHash": "sha256:202bc099edfe5f2f8ff189347eaf359b9956d9462ea6a257b4115f8483444369",
+              "taskDefinitionHash": "sha256:ed4e512d8bdd5c29fd070cc45a0a05ea0bc4cb1a7c2d99466c228a7ce9046ea7",
+              "publicContextHash": "sha256:73c521bed1f873408c76b1d7eba32de9d7ca3d045654c767e416f7eec7fc0b53",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 54,
+      "leakageGroup": "island-research-base-siting",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-54-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:54:block:1",
+          "sourceSelectionSeed": 10600,
+          "sourceSelectionKeyHash": "sha256:03c4625d552d9f851f7b7c2c9f339ffa023592fd50248832f27252eed372a3a1",
+          "sourceAgentId": "agent:hiddenbench:54:2",
+          "sourcePrivateInformationHash": "sha256:5a5d70505a5b8249b9920589e7e050c6d17e597becc8d23c6e33d38897fc4021",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-54:block-1:H",
+              "taskId": 54,
+              "leakageGroup": "island-research-base-siting",
+              "blockId": "task:54:block:1",
+              "arm": "holdout",
+              "order": 4,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10600,
+              "sourceSelectionKeyHash": "sha256:03c4625d552d9f851f7b7c2c9f339ffa023592fd50248832f27252eed372a3a1",
+              "sourceAgentId": "agent:hiddenbench:54:2",
+              "sourcePrivateInformationHash": "sha256:5a5d70505a5b8249b9920589e7e050c6d17e597becc8d23c6e33d38897fc4021",
+              "taskDefinitionHash": "sha256:2c6ea8a5e2bf75a934e4c73579af41f5f51cf04ab99d86b9f32b719a739854a9",
+              "publicContextHash": "sha256:a63c4977167090484d3364a6a88e3352a688b574c5d5d46bc9616ad26080d047",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-54:block-1:D",
+              "taskId": 54,
+              "leakageGroup": "island-research-base-siting",
+              "blockId": "task:54:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 17,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10600,
+              "sourceSelectionKeyHash": "sha256:03c4625d552d9f851f7b7c2c9f339ffa023592fd50248832f27252eed372a3a1",
+              "sourceAgentId": "agent:hiddenbench:54:2",
+              "sourcePrivateInformationHash": "sha256:5a5d70505a5b8249b9920589e7e050c6d17e597becc8d23c6e33d38897fc4021",
+              "taskDefinitionHash": "sha256:d836acd99987477d7d680e1e1e99010cce76503e3170d397b565de8da7c8350f",
+              "publicContextHash": "sha256:9b561b8f2b3bc08439c0944d435cf0e687b948c859fcc2963c26cae5d89e2aaf",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:54:block:2",
+          "sourceSelectionSeed": 10601,
+          "sourceSelectionKeyHash": "sha256:16c7155b85cc4263b2c779e5c6d2ae9ba5464152c7249399c82727cfdf9f700f",
+          "sourceAgentId": "agent:hiddenbench:54:4",
+          "sourcePrivateInformationHash": "sha256:4595d3abbf13666e6a2b61f2c7acc067356899d4cb29456593a3157f8bb0b66b",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-54:block-2:H",
+              "taskId": 54,
+              "leakageGroup": "island-research-base-siting",
+              "blockId": "task:54:block:2",
+              "arm": "holdout",
+              "order": 1,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10601,
+              "sourceSelectionKeyHash": "sha256:16c7155b85cc4263b2c779e5c6d2ae9ba5464152c7249399c82727cfdf9f700f",
+              "sourceAgentId": "agent:hiddenbench:54:4",
+              "sourcePrivateInformationHash": "sha256:4595d3abbf13666e6a2b61f2c7acc067356899d4cb29456593a3157f8bb0b66b",
+              "taskDefinitionHash": "sha256:2c6ea8a5e2bf75a934e4c73579af41f5f51cf04ab99d86b9f32b719a739854a9",
+              "publicContextHash": "sha256:a63c4977167090484d3364a6a88e3352a688b574c5d5d46bc9616ad26080d047",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-54:block-2:D",
+              "taskId": 54,
+              "leakageGroup": "island-research-base-siting",
+              "blockId": "task:54:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 28,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 0,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10601,
+              "sourceSelectionKeyHash": "sha256:16c7155b85cc4263b2c779e5c6d2ae9ba5464152c7249399c82727cfdf9f700f",
+              "sourceAgentId": "agent:hiddenbench:54:4",
+              "sourcePrivateInformationHash": "sha256:4595d3abbf13666e6a2b61f2c7acc067356899d4cb29456593a3157f8bb0b66b",
+              "taskDefinitionHash": "sha256:ce3b3d69f9afafaacec024d074a8396784fbfc28ec47b209ba6c22e92127ca95",
+              "publicContextHash": "sha256:c7f4a4e6187fef6543af24ea7d5527807edb2da30a2e0a450e00f66f877f8a78",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": 63,
+      "leakageGroup": "event-relocation",
+      "studyRef": {
+        "id": "swarmalpha.study.v6-hiddenbench-63-mechanism-verdict-v2-v1",
+        "version": "1.0.0"
+      },
+      "blocks": [
+        {
+          "blockId": "task:63:block:1",
+          "sourceSelectionSeed": 10700,
+          "sourceSelectionKeyHash": "sha256:7a9fb5f665b43f0d958e8ad30ec73570622e8ac9cfa60a4f13e41ef358665a16",
+          "sourceAgentId": "agent:hiddenbench:63:3",
+          "sourcePrivateInformationHash": "sha256:b60873d8b6ed9ca2eca574ef722dc542251bb8b17a9db4526509796acff04168",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-63:block-1:H",
+              "taskId": 63,
+              "leakageGroup": "event-relocation",
+              "blockId": "task:63:block:1",
+              "arm": "holdout",
+              "order": 11,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10700,
+              "sourceSelectionKeyHash": "sha256:7a9fb5f665b43f0d958e8ad30ec73570622e8ac9cfa60a4f13e41ef358665a16",
+              "sourceAgentId": "agent:hiddenbench:63:3",
+              "sourcePrivateInformationHash": "sha256:b60873d8b6ed9ca2eca574ef722dc542251bb8b17a9db4526509796acff04168",
+              "taskDefinitionHash": "sha256:8444d9c1ec1111d6fedeb10f1c815fa5dd12850d7fb64582540feaee5fba399c",
+              "publicContextHash": "sha256:516959e301e14a9cc3a28615f0a35e3036436f7869bab06ac969c0258333413b",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-63:block-1:D",
+              "taskId": 63,
+              "leakageGroup": "event-relocation",
+              "blockId": "task:63:block:1",
+              "arm": "forced_source_disclosure",
+              "order": 15,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 0,
+              "sourceSelectionSeed": 10700,
+              "sourceSelectionKeyHash": "sha256:7a9fb5f665b43f0d958e8ad30ec73570622e8ac9cfa60a4f13e41ef358665a16",
+              "sourceAgentId": "agent:hiddenbench:63:3",
+              "sourcePrivateInformationHash": "sha256:b60873d8b6ed9ca2eca574ef722dc542251bb8b17a9db4526509796acff04168",
+              "taskDefinitionHash": "sha256:ec6aa5cdd28075290bc6204ef74c7b3c304684b199e67e1822bb250c475d9eca",
+              "publicContextHash": "sha256:b734eeb78da51fb98aca3289fe6800ae699cc02546440d63ffe1e52afa5b8f7a",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        },
+        {
+          "blockId": "task:63:block:2",
+          "sourceSelectionSeed": 10701,
+          "sourceSelectionKeyHash": "sha256:bdb39616cd356b7df155ac00981e38c1bfae9e55ccd27a59e11dcd8ea6108cb7",
+          "sourceAgentId": "agent:hiddenbench:63:3",
+          "sourcePrivateInformationHash": "sha256:b60873d8b6ed9ca2eca574ef722dc542251bb8b17a9db4526509796acff04168",
+          "runs": [
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-63:block-2:H",
+              "taskId": 63,
+              "leakageGroup": "event-relocation",
+              "blockId": "task:63:block:2",
+              "arm": "holdout",
+              "order": 10,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 1,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10701,
+              "sourceSelectionKeyHash": "sha256:bdb39616cd356b7df155ac00981e38c1bfae9e55ccd27a59e11dcd8ea6108cb7",
+              "sourceAgentId": "agent:hiddenbench:63:3",
+              "sourcePrivateInformationHash": "sha256:b60873d8b6ed9ca2eca574ef722dc542251bb8b17a9db4526509796acff04168",
+              "taskDefinitionHash": "sha256:8444d9c1ec1111d6fedeb10f1c815fa5dd12850d7fb64582540feaee5fba399c",
+              "publicContextHash": "sha256:516959e301e14a9cc3a28615f0a35e3036436f7869bab06ac969c0258333413b",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            },
+            {
+              "runId": "run:v6-source-disclosure-replication-v1:task-63:block-2:D",
+              "taskId": 63,
+              "leakageGroup": "event-relocation",
+              "blockId": "task:63:block:2",
+              "arm": "forced_source_disclosure",
+              "order": 25,
+              "protocol": "epistemic_governance_v1",
+              "primaryMasterSeed": 2,
+              "eligibleEventMasterSeed": 0,
+              "monitoringMasterSeed": 1,
+              "sourceSelectionSeed": 10701,
+              "sourceSelectionKeyHash": "sha256:bdb39616cd356b7df155ac00981e38c1bfae9e55ccd27a59e11dcd8ea6108cb7",
+              "sourceAgentId": "agent:hiddenbench:63:3",
+              "sourcePrivateInformationHash": "sha256:b60873d8b6ed9ca2eca574ef722dc542251bb8b17a9db4526509796acff04168",
+              "taskDefinitionHash": "sha256:ec6aa5cdd28075290bc6204ef74c7b3c304684b199e67e1822bb250c475d9eca",
+              "publicContextHash": "sha256:b734eeb78da51fb98aca3289fe6800ae699cc02546440d63ffe1e52afa5b8f7a",
+              "plannedProviderCalls": 12,
+              "estimatedTokens": 24000
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "totalRuns": 32,
+  "totalPlannedProviderCalls": 384,
+  "totalEstimatedTokens": 768000,
+  "analysisContract": {
+    "id": "swarmalpha.analysis.v6-source-disclosure-replication-v1",
+    "version": "1.0.0",
+    "clusterUnit": "leakage_group",
+    "bootstrapCount": 10000,
+    "ci": 0.95,
+    "missingnessPolicy": "reference_distribution_for_non_answered"
+  },
+  "createdAt": "2026-08-14T12:00:00.000Z",
+  "contentHash": "sha256:5f03170d72c7d7bb3b067e19959adcb4fce4f94536478ee3b171d5842ee17fd1"
+}

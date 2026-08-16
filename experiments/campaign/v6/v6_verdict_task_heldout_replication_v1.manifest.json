@@ -1,0 +1,48 @@
+{
+  "experimentRef": {
+    "id": "swarmalpha.experiment.v6-verdict-task-heldout-replication-v1",
+    "version": "1.0.0"
+  },
+  "reviewProtocolRef": {
+    "id": "swarmalpha.review.v6-verdict-task-heldout-replication",
+    "version": "1.0.0"
+  },
+  "reviewedAt": "2026-08-13T08:00:00.000Z",
+  "planCreatedAt": "2026-08-13T10:00:00.000Z",
+  "taskLeakageGroups": [
+    {
+      "taskId": 5,
+      "leakageGroup": "hb-v6r1:academic-leadership-selection"
+    },
+    {
+      "taskId": 7,
+      "leakageGroup": "hb-v6r1:requirements-proposal-evaluation"
+    },
+    {
+      "taskId": 14,
+      "leakageGroup": "hb-v6r1:everyday-constraint-choice"
+    },
+    {
+      "taskId": 21,
+      "leakageGroup": "hb-v6r1:emergency-transport-routing"
+    },
+    {
+      "taskId": 57,
+      "leakageGroup": "hb-v6r1:archaeological-site-preservation"
+    },
+    {
+      "taskId": 61,
+      "leakageGroup": "hb-v6r1:infrastructure-fault-diagnosis"
+    },
+    {
+      "taskId": 64,
+      "leakageGroup": "hb-v6r1:public-health-causal-diagnosis"
+    },
+    {
+      "taskId": 65,
+      "leakageGroup": "hb-v6r1:medical-delivery-location-trace"
+    }
+  ],
+  "scopeNote": "task-heldout replication boundary only; not confirmatory task-bank admission; not wired into production",
+  "contentHash": "sha256:f497bae5602c4afbfc311e79be841d5cfe82cb9ae9925dcad71f2c766814c731"
+}
